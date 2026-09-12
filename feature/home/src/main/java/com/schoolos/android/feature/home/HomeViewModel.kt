@@ -275,11 +275,17 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(teacherPendingCount = count.toString(), teacherMaterialsCount = count.toString()) }
             }
             academicRepository.getClasses().onSuccess { classes ->
+                val myClasses = if (homeroom.isNotBlank()) {
+                    val filtered = classes.filter { it.name.equals(homeroom, ignoreCase = true) }
+                    if (filtered.isNotEmpty()) filtered else classes.take(1)
+                } else {
+                    classes.take(1)
+                }
                 _state.update { current ->
                     val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-") {
-                        classes.firstOrNull()?.name ?: current.activeSessionClass
+                        if (homeroom.isNotBlank()) homeroom else (myClasses.firstOrNull()?.name ?: "PAKET A4")
                     } else current.activeSessionClass
-                    current.copy(teacherClasses = classes, activeSessionClass = activeCls)
+                    current.copy(teacherClasses = myClasses, activeSessionClass = activeCls)
                 }
             }
             academicRepository.getSubjects().onSuccess { subjects ->

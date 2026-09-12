@@ -133,9 +133,7 @@ fun AssignmentListScreen(
                         if (isTeacher) {
                             TeacherAssignmentHeroHeader(
                                 activeCount = state.active.size,
-                                pendingGradeCount = state.dueSoon.size,
-                                onCreateAssignment = onCreateAssignment,
-                                onCreateQuiz = onCreateQuiz
+                                pendingGradeCount = state.dueSoon.size
                             )
                         } else {
                             StudentAssignmentHeroHeader(
@@ -162,8 +160,7 @@ fun AssignmentListScreen(
                     if (isTeacher && state.active.isEmpty() && state.dueSoon.isEmpty() && state.completed.isEmpty()) {
                         item {
                             TeacherEmptyState(
-                                onCreateAssignment = onCreateAssignment,
-                                onCreateQuiz = onCreateQuiz
+                                onCreateAssignment = onCreateAssignment
                             )
                         }
                     }
@@ -387,9 +384,7 @@ private fun StudentAssignmentHeroHeader(
 @Composable
 private fun TeacherAssignmentHeroHeader(
     activeCount: Int,
-    pendingGradeCount: Int,
-    onCreateAssignment: () -> Unit = {},
-    onCreateQuiz: () -> Unit = {}
+    pendingGradeCount: Int
 ) {
     Box(
         modifier = Modifier
@@ -518,8 +513,7 @@ private fun HeroMetricCard(
 
 @Composable
 private fun TeacherEmptyState(
-    onCreateAssignment: () -> Unit,
-    onCreateQuiz: () -> Unit
+    onCreateAssignment: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -551,30 +545,21 @@ private fun TeacherEmptyState(
             Text("Belum Ada Tugas Aktif", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
             Spacer(Modifier.height(6.dp))
             Text(
-                "Buat tugas baru atau kuis CBT untuk siswa rombel Anda",
+                "Gunakan tombol di bawah untuk membuat tugas baru bagi siswa rombel Anda",
                 color = TextSecondary,
                 fontSize = 13.sp,
                 textAlign = TextAlign.Center,
                 lineHeight = 18.sp
             )
             Spacer(Modifier.height(20.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Button(
-                    onClick = onCreateAssignment,
-                    colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Buat Tugas", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-                OutlinedButton(
-                    onClick = onCreateQuiz,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue),
-                    shape = RoundedCornerShape(14.dp)
-                ) {
-                    Text("Buat Kuis", color = NeonBlue, fontWeight = FontWeight.Bold)
-                }
+            Button(
+                onClick = onCreateAssignment,
+                colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon),
+                shape = RoundedCornerShape(14.dp)
+            ) {
+                Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(6.dp))
+                Text("Buat Tugas", color = Color.White, fontWeight = FontWeight.Bold)
             }
         }
     }

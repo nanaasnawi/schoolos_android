@@ -47,6 +47,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 )
             } ?: emptyList()
 
+            materialDao.clearAll()
             if (materials.isNotEmpty()) {
                 val entities = materials.map { m ->
                     LearningMaterialEntity(
@@ -63,7 +64,6 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                         completedCount = m.completedCount,
                     )
                 }
-                materialDao.clearAll()
                 materialDao.insertAll(entities)
             }
             return@runCatching materials
