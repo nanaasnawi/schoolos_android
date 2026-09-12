@@ -261,43 +261,6 @@ class LoginViewModel @Inject constructor(
         }
     }
 
-    fun onQuickFillDemo(role: String) {
-        when (role.lowercase()) {
-            "siswa" -> {
-                _state.value = _state.value.copy(
-                    username = "41e992f0@student.schoolos.id",
-                    password = "admin123",
-                    selectedRoleTab = 1,
-                    error = null
-                )
-            }
-            "guru" -> {
-                _state.value = _state.value.copy(
-                    username = "a20acca4@guru.schoolos.id",
-                    password = "admin123",
-                    selectedRoleTab = 2,
-                    error = null
-                )
-            }
-            "wali", "ortu" -> {
-                _state.value = _state.value.copy(
-                    username = "ortu1@schoolos.id",
-                    password = "admin123",
-                    selectedRoleTab = 3,
-                    error = null
-                )
-            }
-            "admin" -> {
-                _state.value = _state.value.copy(
-                    username = "admin@schoolos.id",
-                    password = "admin123",
-                    selectedRoleTab = 0,
-                    error = null
-                )
-            }
-        }
-    }
-
     fun clearError() {
         _state.value = _state.value.copy(error = null)
     }

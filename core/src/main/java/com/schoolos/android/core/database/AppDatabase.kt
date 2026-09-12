@@ -3,14 +3,18 @@ package com.schoolos.android.core.database
 import androidx.room.Database
 import androidx.room.RoomDatabase
 import com.schoolos.android.core.database.dao.AssignmentDao
+import com.schoolos.android.core.database.dao.GradeDao
 import com.schoolos.android.core.database.dao.LearningMaterialDao
 import com.schoolos.android.core.database.dao.NotificationDao
 import com.schoolos.android.core.database.dao.QuizDao
+import com.schoolos.android.core.database.dao.SessionDao
 import com.schoolos.android.core.database.dao.SubmissionQueueDao
 import com.schoolos.android.core.database.entity.AssignmentEntity
+import com.schoolos.android.core.database.entity.GradeEntity
 import com.schoolos.android.core.database.entity.LearningMaterialEntity
 import com.schoolos.android.core.database.entity.NotificationEntity
 import com.schoolos.android.core.database.entity.QuizEntity
+import com.schoolos.android.core.database.entity.SessionEntity
 import com.schoolos.android.core.database.entity.SubmissionQueueEntity
 
 @Database(
@@ -20,8 +24,10 @@ import com.schoolos.android.core.database.entity.SubmissionQueueEntity
         QuizEntity::class,
         LearningMaterialEntity::class,
         SubmissionQueueEntity::class,
+        SessionEntity::class,
+        GradeEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = false,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -30,4 +36,6 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun quizDao(): QuizDao
     abstract fun learningMaterialDao(): LearningMaterialDao
     abstract fun submissionQueueDao(): SubmissionQueueDao
+    abstract fun sessionDao(): SessionDao
+    abstract fun gradeDao(): GradeDao
 }

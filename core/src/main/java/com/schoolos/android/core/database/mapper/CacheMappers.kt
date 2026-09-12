@@ -90,3 +90,63 @@ fun NotificationEntity.toDomain() = Notification(
     readAt = readAt,
     createdAt = createdAt,
 )
+
+fun com.schoolos.android.domain.model.LearningSession.toEntity() = com.schoolos.android.core.database.entity.SessionEntity(
+    id = id,
+    lessonId = lessonId,
+    classId = classId,
+    teacherId = teacherId,
+    scheduledAt = scheduledAt,
+    startedAt = startedAt,
+    endedAt = endedAt,
+    status = status,
+    notes = notes,
+    subjectName = subjectName,
+    teacherName = teacherName,
+    className = className,
+    room = room,
+)
+
+fun com.schoolos.android.core.database.entity.SessionEntity.toDomain() = com.schoolos.android.domain.model.LearningSession(
+    id = id,
+    lessonId = lessonId,
+    classId = classId,
+    teacherId = teacherId,
+    scheduledAt = scheduledAt,
+    startedAt = startedAt,
+    endedAt = endedAt,
+    status = status,
+    notes = notes,
+    subjectName = subjectName,
+    teacherName = teacherName,
+    className = className,
+    room = room,
+)
+
+fun com.schoolos.android.domain.model.GradeEntry.toEntity() = com.schoolos.android.core.database.entity.GradeEntity(
+    id = id,
+    studentId = studentId,
+    classId = classId,
+    subjectId = subjectId,
+    componentName = componentName,
+    sourceType = sourceType,
+    rawScore = rawScore,
+    maxRawScore = maxRawScore,
+    weightedScore = weightedScore,
+    weightPercentage = weightPercentage,
+    calculatedAt = calculatedAt,
+)
+
+fun com.schoolos.android.core.database.entity.GradeEntity.toDomain() = com.schoolos.android.domain.model.GradeEntry(
+    id = id,
+    studentId = studentId,
+    classId = classId,
+    subjectId = subjectId,
+    componentName = componentName,
+    sourceType = sourceType,
+    rawScore = rawScore,
+    maxRawScore = maxRawScore,
+    weightedScore = weightedScore,
+    weightPercentage = weightPercentage,
+    calculatedAt = calculatedAt,
+)

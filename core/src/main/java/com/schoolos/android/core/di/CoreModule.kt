@@ -53,6 +53,14 @@ object CoreModule {
 
     @Provides
     @Singleton
+    fun provideSessionDao(db: AppDatabase): com.schoolos.android.core.database.dao.SessionDao = db.sessionDao()
+
+    @Provides
+    @Singleton
+    fun provideGradeDao(db: AppDatabase): com.schoolos.android.core.database.dao.GradeDao = db.gradeDao()
+
+    @Provides
+    @Singleton
     fun provideSettingsManager(@ApplicationContext context: Context): SettingsManager {
         return SettingsManager(context)
     }
