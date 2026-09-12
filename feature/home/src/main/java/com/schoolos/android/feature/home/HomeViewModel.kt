@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.auth.AuthState
+import com.schoolos.android.domain.model.AcademicClass
+import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.LearningSession
 import com.schoolos.android.domain.model.Progress
 import com.schoolos.android.domain.model.SubjectGradeSummary
@@ -64,6 +66,8 @@ data class HomeUiState(
     val parentPermitDays: String = "-",
     val parentAbsentDays: String = "-",
     val parentAssignmentsCount: String = "0",
+    val teacherClasses: List<AcademicClass> = emptyList(),
+    val teacherSubjects: List<AcademicSubject> = emptyList(),
     val isRefreshing: Boolean = false,
 )
 
@@ -269,6 +273,22 @@ class HomeViewModel @Inject constructor(
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
                 val count = assignments.size
                 _state.update { it.copy(teacherPendingCount = count.toString(), teacherMaterialsCount = count.toString()) }
+            }
+            academicRepository.getClasses().onSuccess { classes ->
+                _state.update { current ->
+                    val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-") {
+                        classes.firstOrNull()?.name ?: current.activeSessionClass
+                    } else current.activeSessionClass
+                    current.copy(teacherClasses = classes, activeSessionClass = activeCls)
+                }
+            }
+            academicRepository.getSubjects().onSuccess { subjects ->
+                _state.update { current ->
+                    val activeSubj = if (current.activeSessionSubject.isBlank() || current.activeSessionSubject == "-") {
+                        subjects.firstOrNull()?.name ?: current.activeSessionSubject
+                    } else current.activeSessionSubject
+                    current.copy(teacherSubjects = subjects, activeSessionSubject = activeSubj)
+                }
             }
         } else if (isParent) {
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->

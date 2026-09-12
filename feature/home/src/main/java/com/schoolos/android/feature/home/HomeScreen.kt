@@ -301,7 +301,9 @@ fun HomeScreen(
                             onNavigateToRombelStudents = onNavigateToRombelStudents,
                             activeSubject            = state.activeSessionSubject,
                             activeClass              = teacherClass,
-                            isHomeroom               = isHomeroom
+                            isHomeroom               = isHomeroom,
+                            teacherClasses           = state.teacherClasses,
+                            teacherSubjects          = state.teacherSubjects,
                         )
                     }
                     isParent -> parentContent(

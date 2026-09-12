@@ -114,7 +114,8 @@ fun MaterialCreatorScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val fileName = queryFileName(context, it) ?: "modul_ajar_${System.currentTimeMillis()}.pdf"
+            val rawName = queryFileName(context, it) ?: "modul_ajar_${System.currentTimeMillis()}.pdf"
+            val fileName = if (!rawName.contains(".")) "$rawName.pdf" else rawName
             val bytes = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
             if (bytes != null) {
                 viewModel.uploadFile(bytes, fileName, "application/pdf")
@@ -126,8 +127,15 @@ fun MaterialCreatorScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val fileName = queryFileName(context, it) ?: "gambar_materi_${System.currentTimeMillis()}.jpg"
             val mime = context.contentResolver.getType(it) ?: "image/jpeg"
+            val ext = when (mime) {
+                "image/png" -> ".png"
+                "image/webp" -> ".webp"
+                "image/gif" -> ".gif"
+                else -> ".jpg"
+            }
+            val rawName = queryFileName(context, it) ?: "gambar_materi_${System.currentTimeMillis()}$ext"
+            val fileName = if (!rawName.contains(".")) "$rawName$ext" else rawName
             val bytes = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
             if (bytes != null) {
                 viewModel.uploadFile(bytes, fileName, mime)

@@ -471,62 +471,6 @@ private fun TeacherAssignmentHeroHeader(
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            Spacer(Modifier.height(16.dp))
-
-            // Quick Action Buttons
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White)
-                        .clickable(onClick = onCreateAssignment)
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = null,
-                            tint = Color(0xFF047857),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "Buat Tugas",
-                            color = Color(0xFF047857),
-                            fontWeight = FontWeight.Black,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(alpha = 0.20f))
-                        .border(1.dp, Color.White.copy(alpha = 0.45f), RoundedCornerShape(14.dp))
-                        .clickable(onClick = onCreateQuiz)
-                        .padding(vertical = 12.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("⚡", fontSize = 14.sp)
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            "Buat Kuis CBT",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
-                        )
-                    }
-                }
-            }
         }
     }
 }
