@@ -196,37 +196,17 @@ fun HomeScreen(
 
                             Spacer(Modifier.height(16.dp))
 
-                            // Date Badge & Quick Summary Pill inside Hero
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically,
+                            // Date Badge inside Hero
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(Color.White.copy(alpha = 0.18f))
+                                    .padding(horizontal = 12.dp, vertical = 6.dp),
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color.White.copy(alpha = 0.18f))
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                                ) {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(13.dp))
-                                        Spacer(Modifier.width(6.dp))
-                                        Text(formatRealTimeToday(), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                    }
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(12.dp))
-                                        .background(Color.White.copy(alpha = 0.18f))
-                                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                                ) {
-                                    Text(
-                                        text = state.userRole.replaceFirstChar { it.uppercase() },
-                                        color = Color.White,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    )
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.CalendarMonth, null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(formatRealTimeToday(), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                                 }
                             }
 

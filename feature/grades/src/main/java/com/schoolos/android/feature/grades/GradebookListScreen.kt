@@ -12,6 +12,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -46,77 +49,121 @@ fun GradebookListScreen(
     var selectedFilter by remember { mutableStateOf("Semua Mapel") }
 
     Scaffold(containerColor = CosmicBlack) { padding ->
-        PullRefreshContainer(
-            isRefreshing = state.isRefreshing,
-            onRefresh = viewModel::refresh,
-            modifier = Modifier.fillMaxSize(),
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .statusBarsPadding()
         ) {
-            if (state.isLoading) {
-                LoadingState()
-            } else if (state.error != null) {
-                ErrorState(message = state.error!!)
-            } else if (state.subjects.isEmpty()) {
-                EmptyState("Belum ada nilai tercatat.", Icons.Default.EmojiEvents)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 46.dp, bottom = 100.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp),
-                ) {
+            // ── COMPACT TOP BAR DENGAN BACK BUTTON ────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (onBack != null) {
+                        IconButton(
+                            onClick = onBack,
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(CosmicNavy)
+                                .border(1.dp, GlassBorder, CircleShape)
+                        ) {
+                            Icon(
+                                imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Kembali",
+                                tint = TextPrimary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                    }
+                    Text(
+                        text = "Buku Nilai",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Black,
+                        color = TextPrimary,
+                        letterSpacing = (-0.5).sp
+                    )
+                }
+            }
+
+            PullRefreshContainer(
+                isRefreshing = state.isRefreshing,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier.weight(1f),
+            ) {
+                if (state.isLoading) {
+                    LoadingState()
+                } else if (state.error != null) {
+                    ErrorState(message = state.error!!)
+                } else if (state.subjects.isEmpty() && !com.schoolos.android.core.auth.isTeacherRole(state.userRole)) {
+                    // Empty state siswa
+                    EmptyState("Belum ada nilai tercatat.", Icons.Default.EmojiEvents)
+                } else {
                     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
 
-                    // ── PERFORMANCE HERO HEADER ─────────────────────────
-                    item { 
-                        if (isTeacher) {
-                            TeacherGradeHeroHeader(state.classes)
-                        } else {
-                            StudentGradeHeroHeader(state.subjects) 
-                        }
+                    // Jika Teacher, kita taruh Inline Stats di atas List (Sticky)
+                    if (isTeacher) {
+                        TeacherInlineStatsRow(state.classes)
+                        Spacer(Modifier.height(10.dp))
                     }
 
-                    // ── PREMIUM FILTER CHIPS ─────────────────────────────
-                    item {
-                        val filters = if (isTeacher) listOf("Semua Kelas") + state.classes.map { it.name }
-                                      else listOf("Semua Mapel", "Wajib", "Muatan Lokal")
-                        
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                        ) {
-                            items(filters) { filter ->
-                                val isSelected = filter == selectedFilter
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(if (isSelected) NeonBlue.copy(alpha = 0.1f) else CosmicNavy)
-                                        .border(
-                                            1.dp,
-                                            if (isSelected) NeonBlue.copy(alpha = 0.4f) else GlassBorder,
-                                            RoundedCornerShape(14.dp),
-                                        )
-                                        .clickable { selectedFilter = filter }
-                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = if (isTeacher) 8.dp else 16.dp, bottom = 100.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                    ) {
+                        // ── STUDENT HERO & FILTERS ─────────────────────────
+                        if (!isTeacher) {
+                            item { 
+                                StudentGradeHeroHeader(state.subjects) 
+                            }
+                            item {
+                                val filters = listOf("Semua Mapel", "Wajib", "Muatan Lokal")
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                                 ) {
-                                    Text(
-                                        filter,
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                                        color = if (isSelected) NeonBlue else TextTertiary,
-                                    )
+                                    items(filters) { filter ->
+                                        val isSelected = filter == selectedFilter
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(if (isSelected) NeonBlue.copy(alpha = 0.1f) else CosmicNavy)
+                                                .border(
+                                                    1.dp,
+                                                    if (isSelected) NeonBlue.copy(alpha = 0.4f) else GlassBorder,
+                                                    RoundedCornerShape(14.dp),
+                                                )
+                                                .clickable { selectedFilter = filter }
+                                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                        ) {
+                                            Text(
+                                                filter,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                                                color = if (isSelected) NeonBlue else TextTertiary,
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    // DELEGATE TO MODULAR CONTENT
-                    if (isTeacher) {
-                        teacherGradebookContent(
-                            classes = state.classes,
-                            selectedFilter = selectedFilter,
-                            onSubjectClick = onSubjectClick
-                        )
-                    } else {
-                        studentGradebookContent(subjects = state.subjects, onSubjectClick = onSubjectClick)
+                        // DELEGATE TO MODULAR CONTENT
+                        if (isTeacher) {
+                            teacherGradebookContent(
+                                classes = state.classes,
+                                onSubjectClick = onSubjectClick
+                            )
+                        } else {
+                            studentGradebookContent(subjects = state.subjects, onSubjectClick = onSubjectClick)
+                        }
                     }
                 }
             }
@@ -210,63 +257,43 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
 }
 
 @Composable
-private fun TeacherGradeHeroHeader(classes: List<AcademicClass>) {
-    Column(
+private fun TeacherInlineStatsRow(classes: List<AcademicClass>) {
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(TeacherNeon, NeonBlue)))
-            .padding(20.dp),
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
+        // Rombel aktif chip
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(TeacherNeon.copy(alpha = 0.14f))
+                .border(1.5.dp, TeacherNeon.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "LAPORAN KELAS",
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Buku Nilai Guru",
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-            Text("📊", fontSize = 42.sp)
+            Text("${classes.size}", fontSize = 16.sp, fontWeight = FontWeight.Black, color = TeacherNeon)
+            Spacer(Modifier.width(5.dp))
+            Text("Kelas Aktif", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = TeacherNeon.copy(alpha = 0.85f))
         }
 
-        Spacer(Modifier.height(24.dp))
-        
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                "${classes.size}",
-                color = Color.White,
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-2).sp,
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.padding(bottom = 6.dp)) {
-                Text("Total Kelas Terdaftar", color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                Text("Buku Nilai Siap Kelola", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
-            }
-        }
-
-        Spacer(Modifier.height(24.dp))
-
+        // Status sinkronisasi chip
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(12.dp))
+                .background(NeonSuccess.copy(alpha = 0.14f))
+                .border(1.5.dp, NeonSuccess.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center
         ) {
-            GradeMetricPill("${classes.size} Rombel", Modifier.weight(1f))
-            GradeMetricPill("Sinkron Dapodik", Modifier.weight(1f))
+            Icon(Icons.Default.CheckCircle, null, tint = NeonSuccess, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(4.dp))
+            Text("Sinkron Dapodik", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonSuccess)
         }
     }
 }

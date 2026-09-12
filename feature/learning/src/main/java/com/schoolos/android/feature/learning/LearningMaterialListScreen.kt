@@ -92,25 +92,17 @@ fun LearningMaterialListScreen(
                                 color = TextPrimary,
                                 letterSpacing = (-0.3).sp
                             )
-                        }
-                    }
-
-                    if (isTeacher) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(TeacherNeon.copy(alpha = 0.12f))
-                                .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                                .clickable(onClick = onCreateMaterial)
-                                .padding(horizontal = 12.dp, vertical = 8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.Add, null, tint = TeacherNeon, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Tambah", color = TeacherNeon, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            if (isTeacher) {
+                                Text(
+                                    "Kelola materi ajar kelas Anda",
+                                    fontSize = 11.sp,
+                                    color = TextTertiary,
+                                    fontWeight = FontWeight.Medium
+                                )
                             }
                         }
                     }
+                    // Tombol +Tambah DIHAPUS — gunakan FAB di kanan bawah
                 }
             }
 
@@ -120,6 +112,16 @@ fun LearningMaterialListScreen(
                     SubjectFilterChip(
                         subject = state.subjectFilter!!,
                         onClear = viewModel::clearSubjectFilter,
+                    )
+                }
+            }
+
+            // ── TEACHER HERO STATS BANNER ────────────────────────────────────────
+            if (isTeacher) {
+                item {
+                    TeacherLearningHeroBanner(
+                        totalMaterials = state.totalMaterials,
+                        completedCount = state.totalCompleted
                     )
                 }
             }
@@ -525,6 +527,123 @@ private fun ModernMaterialCard(item: MaterialItem, isTeacher: Boolean = false, o
                         .clip(RoundedCornerShape(1.5.dp))
                         .background(NeonSuccess)
                 )
+            }
+        }
+    }
+}
+
+// ── TEACHER LEARNING HERO BANNER ──────────────────────────────────────────────
+
+@Composable
+private fun TeacherLearningHeroBanner(
+    totalMaterials: Int,
+    completedCount: Int,
+) {
+    val avgCompletion = if (totalMaterials > 0) (completedCount * 100) / totalMaterials else 0
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color(0xFF0D9488), // Teal
+                        Color(0xFF059669), // Emerald
+                        Color(0xFF047857), // Emerald dark
+                    )
+                )
+            )
+    ) {
+        // Decorative accent circle
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(90.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.07f))
+        )
+
+        Column(modifier = Modifier.padding(18.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("📚", fontSize = 18.sp)
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            "MATERI AJAR KELAS",
+                            color = Color.White.copy(alpha = 0.8f),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp
+                        )
+                        Text(
+                            "Kelola & pantau progres siswa",
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(14.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                // Total materi card
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "$totalMaterials",
+                        color = Color.White,
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        "Total Materi",
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+
+                // Avg completion card
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.15f))
+                        .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                        .padding(10.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Text(
+                        "$avgCompletion%",
+                        color = if (avgCompletion >= 70) Color(0xFF86EFAC) else Color(0xFFFDE047),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                    Text(
+                        "Rata-rata Selesai",
+                        color = Color.White.copy(alpha = 0.75f),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
             }
         }
     }

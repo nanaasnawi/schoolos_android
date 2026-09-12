@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,16 +27,9 @@ import com.schoolos.android.domain.model.AcademicClass
 
 fun LazyListScope.teacherGradebookContent(
     classes: List<AcademicClass>,
-    selectedFilter: String = "Semua Kelas",
     onSubjectClick: (String, String) -> Unit
 ) {
-    val filtered = if (selectedFilter == "Semua Kelas" || selectedFilter.isBlank()) {
-        classes
-    } else {
-        classes.filter { it.name.equals(selectedFilter, ignoreCase = true) }
-    }
-
-    if (filtered.isEmpty()) {
+    if (classes.isEmpty()) {
         item {
             Box(
                 modifier = Modifier
@@ -44,7 +38,7 @@ fun LazyListScope.teacherGradebookContent(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (classes.isEmpty()) "Belum ada data kelas yang terdaftar." else "Tidak ada kelas yang cocok dengan filter.",
+                    text = "Belum ada data kelas yang terdaftar.",
                     color = TextTertiary,
                     fontSize = 13.sp,
                     textAlign = TextAlign.Center
@@ -52,7 +46,7 @@ fun LazyListScope.teacherGradebookContent(
             }
         }
     } else {
-        items(filtered) { cls ->
+        items(classes) { cls ->
             TeacherClassGradeCard(
                 kelas = cls.name,
                 mapel = "Buku Nilai",
@@ -68,61 +62,81 @@ private fun TeacherClassGradeCard(
     mapel: String,
     onClick: () -> Unit
 ) {
-    val color = when (kelas.hashCode().mod(3)) {
+    val accentColor = when (kelas.hashCode().mod(3)) {
         0 -> StudentNeon
         1 -> NeonBlue
         else -> TeacherNeon
     }
 
+    // Re-writing the card structure safely:
     Box(
         modifier = Modifier
-            .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = GlassOverlay)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .shadow(3.dp, RoundedCornerShape(20.dp), spotColor = accentColor.copy(alpha = 0.15f))
+            .clip(RoundedCornerShape(20.dp))
             .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
+            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
     ) {
-        Row(
-            modifier = Modifier.padding(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        Row(modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)) {
             Box(
                 modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(color.copy(alpha = 0.1f))
-                    .border(1.dp, color.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(kelas.take(4), fontWeight = FontWeight.Black, fontSize = 16.sp, color = color)
-            }
+                    .width(4.dp)
+                    .fillMaxHeight()
+                    .background(accentColor)
+            )
+            
+            Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accentColor.copy(alpha = 0.1f))
+                            .border(1.dp, accentColor.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(kelas.take(4), fontWeight = FontWeight.Black, fontSize = 16.sp, color = accentColor)
+                    }
 
-            Spacer(Modifier.width(16.dp))
+                    Spacer(Modifier.width(12.dp))
 
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "$mapel — Kelas $kelas",
-                    fontWeight = FontWeight.Black,
-                    fontSize = 15.sp,
-                    color = TextPrimary
-                )
-                Spacer(Modifier.height(6.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        "Kelas $kelas",
-                        fontSize = 11.sp,
-                        color = TextTertiary,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Spacer(Modifier.width(10.dp))
-                    Text("•", fontSize = 11.sp, color = TextTertiary)
-                    Spacer(Modifier.width(10.dp))
-                    Text("Rekap Nilai Siswa", fontSize = 11.sp, color = NeonSuccess, fontWeight = FontWeight.Black)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            "$mapel — $kelas",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 15.sp,
+                            color = TextPrimary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Laporan Nilai Kelas",
+                                fontSize = 11.sp,
+                                color = TextTertiary,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // CTA Button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(CosmicDark)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text("Buka", fontSize = 11.sp, fontWeight = FontWeight.Black, color = accentColor)
+                            Icon(androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = accentColor, modifier = Modifier.size(11.dp))
+                        }
+                    }
                 }
             }
-
-            Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(20.dp))
         }
     }
 }

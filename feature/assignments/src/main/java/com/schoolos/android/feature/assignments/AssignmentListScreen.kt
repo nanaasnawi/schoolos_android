@@ -1,6 +1,12 @@
 package com.schoolos.android.feature.assignments
 
-import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,8 +20,8 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -27,14 +33,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -45,9 +51,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -68,6 +76,7 @@ fun AssignmentListScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var selectedTab by remember { mutableStateOf("Semua") }
+    var speedDialExpanded by remember { mutableStateOf(false) }
 
     val isParent  = com.schoolos.android.core.auth.isParentRole(state.userRole)
     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
@@ -93,109 +102,244 @@ fun AssignmentListScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             if (isTeacher) {
-                ExtendedFloatingActionButton(
-                    onClick = onCreateAssignment,
-                    containerColor = TeacherNeon,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(16.dp),
-                    icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("Buat Tugas", fontWeight = FontWeight.Black) }
+                TeacherSpeedDialFab(
+                    expanded = speedDialExpanded,
+                    onToggle = { speedDialExpanded = !speedDialExpanded },
+                    onCreateAssignment = {
+                        speedDialExpanded = false
+                        onCreateAssignment()
+                    },
+                    onCreateQuiz = {
+                        speedDialExpanded = false
+                        onCreateQuiz()
+                    }
                 )
             }
         }
     ) { padding ->
-        PullRefreshContainer(
-            isRefreshing = state.isRefreshing,
-            onRefresh = viewModel::refresh,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            if (state.isLoading) {
-                LoadingState()
-            } else if (state.error != null) {
-                ErrorState(message = state.error!!, onRetry = viewModel::refresh)
-            } else if (state.active.isEmpty() && state.dueSoon.isEmpty() && state.completed.isEmpty() && !isTeacher) {
-                EmptyState("Belum ada tugas yang diberikan!", Icons.AutoMirrored.Filled.Assignment)
-            } else {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .statusBarsPadding(),
-                    contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 12.dp,
-                        bottom = 100.dp
-                    ),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    // ── IMMERSIVE HERO HEADER ────────────────────────────
-                    item {
+        Box(modifier = Modifier.fillMaxSize()) {
+            PullRefreshContainer(
+                isRefreshing = state.isRefreshing,
+                onRefresh = viewModel::refresh,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                if (state.isLoading) {
+                    LoadingState()
+                } else if (state.error != null) {
+                    ErrorState(message = state.error!!, onRetry = viewModel::refresh)
+                } else if (state.active.isEmpty() && state.dueSoon.isEmpty() && state.completed.isEmpty() && !isTeacher) {
+                    EmptyState("Belum ada tugas yang diberikan!", Icons.AutoMirrored.Filled.Assignment)
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .statusBarsPadding(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 12.dp,
+                            bottom = 100.dp
+                        ),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                    ) {
+                        // ── IMMERSIVE HERO HEADER ────────────────────────────
+                        item {
+                            if (isTeacher) {
+                                TeacherAssignmentHeroHeader(
+                                    activeCount = state.active.size,
+                                    pendingGradeCount = state.dueSoon.size,
+                                    quizActiveCount = 0 // TODO: wire from ViewModel when quiz count available
+                                )
+                            } else {
+                                StudentAssignmentHeroHeader(
+                                    activeCount = state.active.size,
+                                    dueSoonCount = state.dueSoon.size,
+                                    completedCount = state.completed.size,
+                                    isParent = isParent,
+                                    childName = state.childName
+                                )
+                            }
+                        }
+
+                        // ── ACTIVE SUBJECT FILTER (from session detail) ──────
+                        if (state.subjectFilter != null) {
+                            item {
+                                SubjectFilterChip(
+                                    subject = state.subjectFilter!!,
+                                    onClear = viewModel::clearSubjectFilter,
+                                )
+                            }
+                        }
+
+                        // Empty state for teachers — 2 action cards
+                        if (isTeacher && state.active.isEmpty() && state.dueSoon.isEmpty() && state.completed.isEmpty()) {
+                            item {
+                                TeacherEmptyState(
+                                    onCreateAssignment = onCreateAssignment,
+                                    onCreateQuiz = onCreateQuiz
+                                )
+                            }
+                        }
+
+                        // ── PREMIUM TAB FILTER CHIPS ─────────────────────────
+                        if (!isTeacher || (state.active.isNotEmpty() || state.dueSoon.isNotEmpty() || state.completed.isNotEmpty())) {
+                            item {
+                                AssignmentTabFilter(
+                                    isTeacher = isTeacher,
+                                    selectedTab = selectedTab,
+                                    onTabSelected = { selectedTab = it },
+                                    counts = tabCounts
+                                )
+                            }
+                        }
+
+                        // ── DELEGATE TO MODULAR CONTENT ──────────────────────
                         if (isTeacher) {
-                            TeacherAssignmentHeroHeader(
-                                activeCount = state.active.size,
-                                pendingGradeCount = state.dueSoon.size
+                            teacherAssignmentListContent(
+                                activeItems = state.active,
+                                dueSoonItems = state.dueSoon,
+                                selectedTab = selectedTab,
+                                onAssignmentClick = onAssignmentClick
                             )
                         } else {
-                            StudentAssignmentHeroHeader(
-                                activeCount = state.active.size,
-                                dueSoonCount = state.dueSoon.size,
-                                completedCount = state.completed.size,
-                                isParent = isParent,
-                                childName = state.childName
-                            )
-                        }
-                    }
-
-                    // ── ACTIVE SUBJECT FILTER (from session detail) ──────
-                    if (state.subjectFilter != null) {
-                        item {
-                            SubjectFilterChip(
-                                subject = state.subjectFilter!!,
-                                onClear = viewModel::clearSubjectFilter,
-                            )
-                        }
-                    }
-
-                    // Empty state for teachers
-                    if (isTeacher && state.active.isEmpty() && state.dueSoon.isEmpty() && state.completed.isEmpty()) {
-                        item {
-                            TeacherEmptyState(
-                                onCreateAssignment = onCreateAssignment
-                            )
-                        }
-                    }
-
-                    // ── PREMIUM TAB FILTER CHIPS ─────────────────────────
-                    if (!isTeacher || (state.active.isNotEmpty() || state.dueSoon.isNotEmpty() || state.completed.isNotEmpty())) {
-                        item {
-                            AssignmentTabFilter(
-                                isTeacher = isTeacher,
+                            studentAssignmentListContent(
+                                activeItems = state.active,
+                                dueSoonItems = state.dueSoon,
+                                completedItems = state.completed,
                                 selectedTab = selectedTab,
-                                onTabSelected = { selectedTab = it },
-                                counts = tabCounts
+                                onAssignmentClick = onAssignmentClick
                             )
                         }
-                    }
-
-                    // ── DELEGATE TO MODULAR CONTENT ──────────────────────
-                    if (isTeacher) {
-                        teacherAssignmentListContent(
-                            activeItems = state.active,
-                            dueSoonItems = state.dueSoon,
-                            selectedTab = selectedTab,
-                            onAssignmentClick = onAssignmentClick
-                        )
-                    } else {
-                        studentAssignmentListContent(
-                            activeItems = state.active,
-                            dueSoonItems = state.dueSoon,
-                            completedItems = state.completed,
-                            selectedTab = selectedTab,
-                            onAssignmentClick = onAssignmentClick
-                        )
                     }
                 }
             }
+
+            // Speed dial scrim — tap to dismiss
+            AnimatedVisibility(
+                visible = speedDialExpanded,
+                enter = fadeIn(tween(200)),
+                exit = fadeOut(tween(150))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.32f))
+                        .clickable { speedDialExpanded = false }
+                )
+            }
+        }
+    }
+}
+
+// ── SPEED DIAL FAB ─────────────────────────────────────────────────────────────
+
+@Composable
+private fun TeacherSpeedDialFab(
+    expanded: Boolean,
+    onToggle: () -> Unit,
+    onCreateAssignment: () -> Unit,
+    onCreateQuiz: () -> Unit,
+) {
+    val rotation by animateFloatAsState(
+        targetValue = if (expanded) 45f else 0f,
+        animationSpec = tween(250),
+        label = "fab_rotation"
+    )
+
+    Column(
+        horizontalAlignment = Alignment.End,
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        // Sub-actions — animate in/out
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn(tween(200)) + expandVertically(tween(200), expandFrom = Alignment.Bottom),
+            exit = fadeOut(tween(150)) + shrinkVertically(tween(150), shrinkTowards = Alignment.Bottom)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.End,
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                SpeedDialOption(
+                    label = "Buat Kuis",
+                    icon = Icons.Default.Quiz,
+                    containerColor = NeonBlue,
+                    onClick = onCreateQuiz
+                )
+                SpeedDialOption(
+                    label = "Buat Tugas",
+                    icon = Icons.Default.Edit,
+                    containerColor = TeacherNeon,
+                    onClick = onCreateAssignment
+                )
+            }
+        }
+
+        // Main FAB
+        FloatingActionButton(
+            onClick = onToggle,
+            containerColor = if (expanded) CosmicNavy else TeacherNeon,
+            contentColor = if (expanded) TeacherNeon else Color.White,
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(18.dp),
+                spotColor = TeacherNeon.copy(alpha = 0.4f)
+            )
+        ) {
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = if (expanded) "Tutup" else "Buat",
+                modifier = Modifier.rotate(rotation)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SpeedDialOption(
+    label: String,
+    icon: ImageVector,
+    containerColor: Color,
+    onClick: () -> Unit,
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.End
+    ) {
+        // Label chip
+        Box(
+            modifier = Modifier
+                .shadow(4.dp, RoundedCornerShape(10.dp), spotColor = containerColor.copy(alpha = 0.3f))
+                .clip(RoundedCornerShape(10.dp))
+                .background(CosmicNavy)
+                .border(1.dp, containerColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                .clickable(onClick = onClick)
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+        ) {
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = containerColor
+            )
+        }
+
+        Spacer(Modifier.width(10.dp))
+
+        // Mini FAB
+        SmallFloatingActionButton(
+            onClick = onClick,
+            containerColor = containerColor,
+            contentColor = Color.White,
+            shape = RoundedCornerShape(14.dp),
+            modifier = Modifier.shadow(
+                elevation = 8.dp,
+                shape = RoundedCornerShape(14.dp),
+                spotColor = containerColor.copy(alpha = 0.4f)
+            )
+        ) {
+            Icon(icon, contentDescription = label, modifier = Modifier.size(20.dp))
         }
     }
 }
@@ -384,7 +528,8 @@ private fun StudentAssignmentHeroHeader(
 @Composable
 private fun TeacherAssignmentHeroHeader(
     activeCount: Int,
-    pendingGradeCount: Int
+    pendingGradeCount: Int,
+    quizActiveCount: Int = 0,
 ) {
     Box(
         modifier = Modifier
@@ -400,9 +545,17 @@ private fun TeacherAssignmentHeroHeader(
                     )
                 )
             )
-            .padding(20.dp)
     ) {
-        Column {
+        // Decorative circle
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.07f))
+        )
+
+        Column(modifier = Modifier.padding(20.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -426,6 +579,26 @@ private fun TeacherAssignmentHeroHeader(
                         letterSpacing = 1.2.sp
                     )
                 }
+
+                // Speed Dial hint badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.16f))
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("✚", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            "Tugas / Kuis",
+                            color = Color.White,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(14.dp))
@@ -438,7 +611,7 @@ private fun TeacherAssignmentHeroHeader(
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Kelola penugasan dan berikan penilaian tepat waktu",
+                "Kelola penugasan, kuis, dan beri penilaian tepat waktu",
                 color = Color.White.copy(alpha = 0.85f),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
@@ -446,23 +619,30 @@ private fun TeacherAssignmentHeroHeader(
 
             Spacer(Modifier.height(18.dp))
 
-            // Metric Cards
+            // 3 Metric Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 HeroMetricCard(
-                    label = "AKTIF",
+                    label = "TUGAS AKTIF",
                     value = "$activeCount",
-                    subtitle = "Tugas berjalan",
+                    subtitle = "Berjalan",
                     accent = Color.White,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
                     label = "PERLU NILAI",
                     value = "$pendingGradeCount",
-                    subtitle = "Menunggu review",
+                    subtitle = "Menunggu",
                     accent = if (pendingGradeCount > 0) Color(0xFFFDE047) else Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+                HeroMetricCard(
+                    label = "KUIS AKTIF",
+                    value = "$quizActiveCount",
+                    subtitle = "Berlangsung",
+                    accent = if (quizActiveCount > 0) Color(0xFF93C5FD) else Color.White,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -513,54 +693,123 @@ private fun HeroMetricCard(
 
 @Composable
 private fun TeacherEmptyState(
-    onCreateAssignment: () -> Unit
+    onCreateAssignment: () -> Unit,
+    onCreateQuiz: () -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = GlassOverlay)
-            .clip(RoundedCornerShape(24.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-            .padding(32.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                modifier = Modifier
-                    .size(68.dp)
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(TeacherNeon.copy(alpha = 0.12f))
-                    .border(1.dp, TeacherNeon.copy(alpha = 0.25f), RoundedCornerShape(20.dp)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Assignment,
-                    contentDescription = null,
-                    tint = TeacherNeon,
-                    modifier = Modifier.size(32.dp)
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Info card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = GlassOverlay)
+                .clip(RoundedCornerShape(24.dp))
+                .background(CosmicNavy)
+                .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
+                .padding(28.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .size(64.dp)
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(TeacherNeon.copy(alpha = 0.1f))
+                        .border(1.dp, TeacherNeon.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("📋", fontSize = 28.sp)
+                }
+                Spacer(Modifier.height(14.dp))
+                Text(
+                    "Belum Ada Penugasan",
+                    color = TextPrimary,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "Mulai dengan membuat tugas atau kuis baru\nuntuk siswa di kelas Anda",
+                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 19.sp
                 )
             }
-            Spacer(Modifier.height(18.dp))
-            Text("Belum Ada Tugas Aktif", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(6.dp))
-            Text(
-                "Gunakan tombol di bawah untuk membuat tugas baru bagi siswa rombel Anda",
-                color = TextSecondary,
-                fontSize = 13.sp,
-                textAlign = TextAlign.Center,
-                lineHeight = 18.sp
-            )
-            Spacer(Modifier.height(20.dp))
-            Button(
+        }
+
+        // 2 action cards side by side — no duplicate button inside
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            TeacherActionCard(
+                emoji = "📝",
+                title = "Buat Tugas",
+                subtitle = "Penugasan teks\natau file upload",
+                accentColor = TeacherNeon,
                 onClick = onCreateAssignment,
-                colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon),
-                shape = RoundedCornerShape(14.dp)
+                modifier = Modifier.weight(1f)
+            )
+            TeacherActionCard(
+                emoji = "🧠",
+                title = "Buat Kuis",
+                subtitle = "Pilihan ganda\ndengan batas waktu",
+                accentColor = NeonBlue,
+                onClick = onCreateQuiz,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TeacherActionCard(
+    emoji: String,
+    title: String,
+    subtitle: String,
+    accentColor: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = accentColor.copy(alpha = 0.2f))
+            .clip(RoundedCornerShape(20.dp))
+            .background(CosmicNavy)
+            .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+            .clickable(onClick = onClick)
+            .padding(18.dp)
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(accentColor.copy(alpha = 0.12f))
+                    .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(Icons.Default.Add, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(6.dp))
-                Text("Buat Tugas", color = Color.White, fontWeight = FontWeight.Bold)
+                Text(emoji, fontSize = 22.sp)
             }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                title,
+                color = accentColor,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                subtitle,
+                color = TextTertiary,
+                fontSize = 11.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 15.sp
+            )
         }
     }
 }
@@ -621,19 +870,22 @@ private fun AssignmentTabFilter(
                         fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
                         color = contentColor,
                     )
-                    Spacer(Modifier.width(6.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) Color.White.copy(alpha = 0.25f) else CosmicDark)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "$count",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (isSelected) Color.White else TextTertiary
-                        )
+                    // Only show count badge when there's something to show
+                    if (count > 0) {
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isSelected) Color.White.copy(alpha = 0.25f) else CosmicDark)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "$count",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (isSelected) Color.White else TextTertiary
+                            )
+                        }
                     }
                 }
             }

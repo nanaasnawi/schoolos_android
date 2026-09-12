@@ -572,47 +572,6 @@ private fun DateNavigationStrip(
                 }
             }
         }
-
-        // ── SELECTED DAY AMBIENT INFO BANNER ──────────────────────────────
-        selectedDay?.let { day ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(CosmicNavy)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                    .padding(horizontal = 14.dp, vertical = 9.dp)
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Today,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = day.fullDate,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
-
-                    Text(
-                        text = if (day.isToday) "Hari Ini" else "Agenda Terjadwal",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (day.isToday) NeonSuccess else TextTertiary
-                    )
-                }
-            }
-        }
     }
 }
 
