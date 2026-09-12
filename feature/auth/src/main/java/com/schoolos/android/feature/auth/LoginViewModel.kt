@@ -289,7 +289,7 @@ class LoginViewModel @Inject constructor(
             }
             "admin" -> {
                 _state.value = _state.value.copy(
-                    username = "admin@pkbmsalafiyah.com",
+                    username = "admin@schoolos.id",
                     password = "admin123",
                     selectedRoleTab = 0,
                     error = null
