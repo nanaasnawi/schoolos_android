@@ -51,9 +51,6 @@ fun ProfileScreen(
     val state by viewModel.state.collectAsState()
     val user = state.user
 
-    var showSecurityDialog by remember { mutableStateOf(false) }
-    var showHelpDialog by remember { mutableStateOf(false) }
-    var showAboutDialog by remember { mutableStateOf(false) }
     var showLogoutDialog by remember { mutableStateOf(false) }
 
     val isDarkTheme = LocalIsDarkTheme.current
@@ -115,10 +112,10 @@ fun ProfileScreen(
             ProfileSettingsGroup(
                 isDarkTheme = isDarkTheme,
                 onToggleTheme = toggleTheme,
-                onSecurityClick = { showSecurityDialog = true },
+                onSecurityClick = onNavigateToSecurity,
                 onNotificationsClick = onNavigateToNotifications,
-                onHelpClick = { showHelpDialog = true },
-                onAboutClick = { showAboutDialog = true },
+                onHelpClick = onNavigateToHelp,
+                onAboutClick = onNavigateToAbout,
                 onLogoutClick = { showLogoutDialog = true },
             )
 
@@ -126,29 +123,6 @@ fun ProfileScreen(
         }
 
         // Dialogs
-        if (showSecurityDialog) {
-            ProfileChangePasswordDialog(
-                context = context,
-                onDismissRequest = { showSecurityDialog = false },
-            )
-        }
-
-        if (showHelpDialog) {
-            ProfileHelpDialog(
-                schoolName = state.schoolName,
-                context = context,
-                onDismissRequest = { showHelpDialog = false },
-            )
-        }
-
-        if (showAboutDialog) {
-            ProfileAboutDialog(
-                schoolName = state.schoolName,
-                appVersion = state.appVersion,
-                onDismissRequest = { showAboutDialog = false },
-            )
-        }
-
         if (showLogoutDialog) {
             ProfileLogoutDialog(
                 userName = user?.name,

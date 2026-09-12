@@ -15,6 +15,9 @@ interface SchoolOsApi {
     @POST("auth/refresh")
     suspend fun refreshToken(@Body request: RefreshTokenRequest): ApiResponse<RefreshTokenResponse>
 
+    @POST("auth/change-password")
+    suspend fun changePassword(@Body request: ChangePasswordRequestDto): ApiResponse<Map<String, String>>
+
 
     // Public school info — no token required, used on login screen
     @GET("schools/info")

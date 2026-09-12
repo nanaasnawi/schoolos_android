@@ -60,6 +60,7 @@ data class InquiryDetailDto(
 
 @Serializable
 data class CreateInquiryRequestDto(
+    @SerialName("id") val id: String? = null,
     @SerialName("student_id") val studentId: String? = null,
     @SerialName("student_name") val studentName: String? = null,
     @SerialName("student_class") val studentClass: String? = null,

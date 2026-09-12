@@ -85,6 +85,10 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch { settingsManager.setLanguage(language) }
     }
 
+    suspend fun changePassword(current: String, newPass: String): Result<Unit> {
+        return authRepository.changePassword(current, newPass)
+    }
+
     fun logout() {
         viewModelScope.launch {
             _state.value = _state.value.copy(loggingOut = true)

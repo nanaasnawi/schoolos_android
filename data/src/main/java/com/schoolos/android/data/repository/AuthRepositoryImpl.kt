@@ -130,4 +130,16 @@ class AuthRepositoryImpl @Inject constructor(
 
         User(id = data.id, name = data.fullName, email = data.email, role = data.role)
     }
+
+    override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> = runCatching {
+        val response = api.changePassword(
+            com.schoolos.android.data.remote.dto.ChangePasswordRequestDto(
+                currentPassword = currentPassword,
+                newPassword = newPassword,
+            )
+        )
+        if (!response.success) {
+            throw Exception(response.error?.message ?: "Gagal memperbarui kata sandi.")
+        }
+    }
 }

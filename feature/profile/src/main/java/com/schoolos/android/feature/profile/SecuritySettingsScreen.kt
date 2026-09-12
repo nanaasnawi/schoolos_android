@@ -28,12 +28,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.*
 
+import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SecuritySettingsScreen(
     onBack: () -> Unit = {},
+    viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
 
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
@@ -325,6 +330,7 @@ fun SecuritySettingsScreen(
 
                     // Submit button
                     Button(
+                        enabled = !isSubmitting,
                         onClick = {
                             if (currentPassword.isBlank()) {
                                 Toast.makeText(context, "Masukkan kata sandi saat ini", Toast.LENGTH_SHORT).show()
@@ -338,12 +344,20 @@ fun SecuritySettingsScreen(
                                 Toast.makeText(context, "Konfirmasi kata sandi tidak cocok", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-                            isSubmitting = true
-                            Toast.makeText(context, "Kata sandi berhasil diperbarui! Silakan simpan sandi Anda.", Toast.LENGTH_LONG).show()
-                            currentPassword = ""
-                            newPassword = ""
-                            confirmPassword = ""
-                            isSubmitting = false
+                            scope.launch {
+                                isSubmitting = true
+                                val res = viewModel.changePassword(currentPassword, newPassword)
+                                isSubmitting = false
+                                if (res.isSuccess) {
+                                    Toast.makeText(context, "Kata sandi berhasil diperbarui!", Toast.LENGTH_LONG).show()
+                                    currentPassword = ""
+                                    newPassword = ""
+                                    confirmPassword = ""
+                                } else {
+                                    val err = res.exceptionOrNull()?.message ?: "Gagal memperbarui kata sandi"
+                                    Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+                                }
+                            }
                         },
                         colors = ButtonDefaults.buttonColors(containerColor = StudentNeon),
                         shape = RoundedCornerShape(14.dp),
@@ -351,7 +365,15 @@ fun SecuritySettingsScreen(
                             .fillMaxWidth()
                             .height(48.dp)
                     ) {
-                        Text("Simpan Kata Sandi Baru", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        if (isSubmitting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = Color.White,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Text("Simpan Kata Sandi Baru", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                        }
                     }
                 }
             }

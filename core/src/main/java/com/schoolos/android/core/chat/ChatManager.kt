@@ -144,6 +144,7 @@ class ChatManager @Inject constructor(
         if (response.success && response.data != null) {
             val dbThreads = response.data
             val currentMap = _threads.value.associateBy { it.id }
+            val dbIds = dbThreads.map { it.id }.toSet()
 
             val updatedThreads = dbThreads.map { dto ->
                 val type = when (dto.inquiryType.uppercase()) {
@@ -161,7 +162,7 @@ class ChatManager @Inject constructor(
                 } else if (!dto.lastMessageContent.isNullOrBlank()) {
                     listOf(
                         ChatMessage(
-                            id = "msg-${dto.id}",
+                            id = dto.id,
                             threadId = dto.id,
                             senderId = dto.studentId,
                             senderName = dto.studentName,
@@ -192,7 +193,9 @@ class ChatManager @Inject constructor(
                 )
             }
 
-            _threads.value = updatedThreads
+            // Keep any local threads currently pending server persistence
+            val pendingLocal = _threads.value.filter { it.id !in dbIds }
+            _threads.value = pendingLocal + updatedThreads
         }
     }
 
@@ -245,7 +248,7 @@ class ChatManager @Inject constructor(
     ): ChatMessage {
         val isTeacher = senderRole.equals("TEACHER", ignoreCase = true)
         val now = System.currentTimeMillis()
-        val tempId = "msg-${UUID.randomUUID()}"
+        val tempId = UUID.randomUUID().toString()
         val localMsg = ChatMessage(
             id = tempId,
             threadId = threadId,
@@ -281,6 +284,15 @@ class ChatManager @Inject constructor(
                 )
                 val resp = api.sendMessage(threadId, req)
                 if (resp.success && resp.data != null) {
+                    val canonicalMsg = resp.data
+                    _threads.value = _threads.value.map { th ->
+                        if (th.id == threadId) {
+                            val updatedMsgs = th.messages.map { msg ->
+                                if (msg.id == tempId) msg.copy(id = canonicalMsg.id) else msg
+                            }
+                            th.copy(messages = updatedMsgs)
+                        } else th
+                    }
                     // Refresh detail to ensure canonical sync
                     loadThreadDetail(threadId)
                 }
@@ -303,9 +315,10 @@ class ChatManager @Inject constructor(
         referenceId: String? = null,
         initialQuestion: String,
     ): ChatThread {
-        val newThreadId = "thread-${UUID.randomUUID()}"
+        val newThreadId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
         val initialMsg = ChatMessage(
+            id = UUID.randomUUID().toString(),
             threadId = newThreadId,
             senderId = studentId,
             senderName = studentName,
@@ -336,6 +349,7 @@ class ChatManager @Inject constructor(
         scope.launch {
             try {
                 val req = CreateInquiryRequestDto(
+                    id = newThreadId,
                     studentId = if (studentId.contains("-") && studentId.length == 36) studentId else null,
                     studentName = studentName,
                     studentClass = studentClass,
