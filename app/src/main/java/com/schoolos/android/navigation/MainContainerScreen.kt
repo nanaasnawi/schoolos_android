@@ -112,11 +112,11 @@ fun MainContainerScreen(
             BottomNavItem(Screen.Profile.route,       "Profil",   Icons.Default.Person),
         )
         else -> listOf(
-            BottomNavItem(Screen.Home.route,          "Beranda",  Icons.Default.Home),
-            BottomNavItem(Screen.Sessions.route,      "Jadwal",   Icons.Default.CalendarMonth),
-            BottomNavItem(Screen.Assignments.route,   "Tugas",    Icons.AutoMirrored.Filled.Assignment),
-            BottomNavItem(Screen.Grades.route,        "Nilai",    Icons.Default.Assessment),
-            BottomNavItem(Screen.Profile.route,       "Akun",     Icons.Default.Person),
+            BottomNavItem(Screen.Home.route,          "Beranda",     Icons.Default.Home),
+            BottomNavItem(Screen.Sessions.route,      "Jadwal",      Icons.Default.CalendarMonth),
+            BottomNavItem(Screen.Assignments.route,   "Tugas",       Icons.AutoMirrored.Filled.Assignment),
+            BottomNavItem(Screen.Chat.route,          "Tanya Jawab", Icons.Default.Forum),
+            BottomNavItem(Screen.Profile.route,       "Akun",        Icons.Default.Person),
         )
     }
 

@@ -380,9 +380,10 @@ fun NavGraph(
             composable(Screen.Chat.route) {
                 TeacherChatScreen(
                     chatManager = chatManager,
-                    onOpenThread = { threadId, studentName ->
-                        navController.navigate(Screen.ChatDetail.createRoute(threadId, studentName))
-                    }
+                    onOpenThread = { threadId, recipientName ->
+                        navController.navigate(Screen.ChatDetail.createRoute(threadId, recipientName))
+                    },
+                    isTeacherMode = authState?.isTeacher ?: true
                 )
             }
             composable(

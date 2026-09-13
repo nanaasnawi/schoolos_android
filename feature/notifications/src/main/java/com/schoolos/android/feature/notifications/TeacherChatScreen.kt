@@ -89,6 +89,7 @@ import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
+import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
@@ -106,7 +107,8 @@ enum class ChatFilter {
 @Composable
 fun TeacherChatScreen(
     chatManager: ChatManager,
-    onOpenThread: (threadId: String, studentName: String) -> Unit,
+    onOpenThread: (threadId: String, recipientName: String) -> Unit,
+    isTeacherMode: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val threads by chatManager.threads.collectAsState()
@@ -121,7 +123,11 @@ fun TeacherChatScreen(
     val answeredCount = threads.count { it.status == InquiryStatus.ANSWERED }
     val materialCount = threads.count { it.inquiryType == InquiryType.MATERIAL }
     val assignmentCount = threads.count { it.inquiryType == InquiryType.ASSIGNMENT }
-    val uniqueStudents = threads.map { it.studentId }.distinct().size
+    val uniqueContacts = if (isTeacherMode) {
+        threads.map { it.studentId }.distinct().size
+    } else {
+        threads.map { it.teacherName }.distinct().size
+    }
 
     val filteredThreads = threads.filter { thread ->
         val matchesFilter = when (selectedFilter) {
@@ -133,6 +139,7 @@ fun TeacherChatScreen(
         }
         val matchesSearch = searchQuery.isBlank() ||
             thread.studentName.contains(searchQuery, ignoreCase = true) ||
+            thread.teacherName.contains(searchQuery, ignoreCase = true) ||
             thread.referenceTitle.contains(searchQuery, ignoreCase = true) ||
             thread.studentClass.contains(searchQuery, ignoreCase = true) ||
             thread.subjectName.contains(searchQuery, ignoreCase = true) ||
@@ -180,19 +187,21 @@ fun TeacherChatScreen(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFFF59E0B))
+                                .background(NeonWarning)
                         )
                         Spacer(Modifier.width(5.dp))
                         Text(
-                            text = "$waitingCount pertanyaan belum dijawab",
+                            text = if (isTeacherMode) "$waitingCount pertanyaan belum dijawab"
+                                   else "$waitingCount pertanyaan menunggu jawaban guru",
                             fontSize = 11.sp,
-                            color = Color(0xFFF59E0B),
+                            color = NeonWarning,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
                 } else {
                     Text(
-                        text = "Semua pertanyaan terjawab",
+                        text = if (isTeacherMode) "Semua pertanyaan terjawab"
+                               else "Konsultasi materi & tugas dengan guru",
                         fontSize = 11.sp,
                         color = TextTertiary,
                         fontWeight = FontWeight.Medium
@@ -257,7 +266,7 @@ fun TeacherChatScreen(
             InlineStatChip(
                 value = "${threads.size}",
                 label = "Diskusi",
-                color = TeacherNeon,
+                color = if (isTeacherMode) TeacherNeon else StudentNeon,
                 isSelected = selectedFilter == ChatFilter.ALL,
                 onClick = { selectedFilter = ChatFilter.ALL },
                 modifier = Modifier.weight(1f)
@@ -265,16 +274,20 @@ fun TeacherChatScreen(
             // Perlu dijawab chip
             InlineStatChip(
                 value = "$waitingCount",
-                label = if (waitingCount > 0) "Belum Dijawab" else "Semua Terjawab",
-                color = if (waitingCount > 0) Color(0xFFF59E0B) else NeonSuccess,
+                label = if (waitingCount > 0) {
+                    if (isTeacherMode) "Belum Dijawab" else "Menunggu"
+                } else {
+                    if (isTeacherMode) "Semua Terjawab" else "Sudah Dibalas"
+                },
+                color = if (waitingCount > 0) NeonWarning else NeonSuccess,
                 isSelected = selectedFilter == ChatFilter.WAITING,
                 onClick = { selectedFilter = ChatFilter.WAITING },
                 modifier = Modifier.weight(1f)
             )
-            // Siswa chip
+            // Kontak chip
             InlineStatChip(
-                value = "$uniqueStudents",
-                label = "Siswa Aktif",
+                value = "$uniqueContacts",
+                label = if (isTeacherMode) "Siswa Aktif" else "Guru",
                 color = NeonBlue,
                 isSelected = false,
                 onClick = {},
@@ -291,7 +304,8 @@ fun TeacherChatScreen(
                 .padding(horizontal = 16.dp),
             placeholder = {
                 Text(
-                    "Cari nama siswa, topik, atau kelas...",
+                    if (isTeacherMode) "Cari nama siswa, topik, atau kelas..."
+                    else "Cari nama guru, materi, topik...",
                     fontSize = 12.sp,
                     color = TextTertiary
                 )
@@ -321,7 +335,7 @@ fun TeacherChatScreen(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = CosmicNavy,
                 unfocusedContainerColor = CosmicNavy,
-                focusedBorderColor = TeacherNeon.copy(alpha = 0.6f),
+                focusedBorderColor = (if (isTeacherMode) TeacherNeon else StudentNeon).copy(alpha = 0.6f),
                 unfocusedBorderColor = GlassBorder,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary,
@@ -342,10 +356,10 @@ fun TeacherChatScreen(
                 if (waitingCount > 0) {
                     item {
                         SmartFilterChip(
-                            label = "Belum Dijawab",
+                            label = if (isTeacherMode) "Belum Dijawab" else "Menunggu Balasan",
                             count = waitingCount,
                             isSelected = selectedFilter == ChatFilter.WAITING,
-                            activeColor = Color(0xFFF59E0B),
+                            activeColor = NeonWarning,
                             emoji = "⏳",
                             onClick = {
                                 selectedFilter = if (selectedFilter == ChatFilter.WAITING) ChatFilter.ALL else ChatFilter.WAITING
@@ -384,7 +398,7 @@ fun TeacherChatScreen(
                 if (answeredCount > 0) {
                     item {
                         SmartFilterChip(
-                            label = "Terjawab",
+                            label = if (isTeacherMode) "Terjawab" else "Sudah Dibalas",
                             count = answeredCount,
                             isSelected = selectedFilter == ChatFilter.ANSWERED,
                             activeColor = NeonSuccess,
@@ -476,18 +490,21 @@ fun TeacherChatScreen(
                                     "Coba kata kunci lain"
                                 else if (selectedFilter != ChatFilter.ALL)
                                     "Tidak ada diskusi dengan filter ini"
+                                else if (isTeacherMode)
+                                    "Pertanyaan siswa akan muncul di sini"
                                 else
-                                    "Pertanyaan siswa akan muncul di sini",
+                                    "Pertanyaan Anda seputar materi dan tugas kepada guru akan muncul di sini",
                                 fontSize = 13.sp,
                                 color = TextSecondary,
                                 textAlign = TextAlign.Center
                             )
                             if (searchQuery.isNotBlank() || selectedFilter != ChatFilter.ALL) {
+                                val resetColor = if (isTeacherMode) TeacherNeon else StudentNeon
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(12.dp))
-                                        .background(TeacherNeon.copy(alpha = 0.12f))
-                                        .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                                        .background(resetColor.copy(alpha = 0.12f))
+                                        .border(1.dp, resetColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                                         .clickable {
                                             searchQuery = ""
                                             selectedFilter = ChatFilter.ALL
@@ -496,7 +513,7 @@ fun TeacherChatScreen(
                                 ) {
                                     Text(
                                         text = "Tampilkan Semua",
-                                        color = TeacherNeon,
+                                        color = resetColor,
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -520,7 +537,8 @@ fun TeacherChatScreen(
                         items(sorted, key = { it.id }) { thread ->
                             ThreadCard(
                                 thread = thread,
-                                onClick = { onOpenThread(thread.id, thread.studentName) }
+                                isTeacherMode = isTeacherMode,
+                                onClick = { onOpenThread(thread.id, if (isTeacherMode) thread.studentName else thread.teacherName) }
                             )
                         }
                         item { Spacer(Modifier.height(80.dp)) }
@@ -643,6 +661,7 @@ private fun SmartFilterChip(
 @Composable
 private fun ThreadCard(
     thread: ChatThread,
+    isTeacherMode: Boolean,
     onClick: () -> Unit,
 ) {
     val isWaiting = thread.status == InquiryStatus.WAITING_REPLY
@@ -650,11 +669,11 @@ private fun ThreadCard(
     val isMat = thread.inquiryType == InquiryType.MATERIAL
 
     val priorityColor = when {
-        isWaiting  -> Color(0xFFF59E0B) // Amber — urgent
-        isAnswered -> NeonSuccess       // Green — done
-        else       -> GlassBorder      // Default
+        isWaiting  -> NeonWarning
+        isAnswered -> NeonSuccess
+        else       -> GlassBorder
     }
-    val tagColor = if (isMat) NeonBlue else StudentNeon
+    val tagColor = if (isMat) NeonBlue else (if (isTeacherMode) StudentNeon else TeacherNeon)
 
     Row(
         modifier = Modifier
@@ -674,29 +693,36 @@ private fun ThreadCard(
         )
 
         Column(modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 14.dp, bottom = 12.dp)) {
-            // ── Row 1: Avatar + Student Info + Status Badge ──
+            // ── Row 1: Avatar + Contact Info + Status Badge ──
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Gradient Avatar
+                val avatarGradient = if (isTeacherMode) {
+                    listOf(
+                        StudentNeon.copy(alpha = 0.85f),
+                        NeonBlue.copy(alpha = 0.85f)
+                    )
+                } else {
+                    listOf(
+                        TeacherNeon.copy(alpha = 0.85f),
+                        NeonBlue.copy(alpha = 0.85f)
+                    )
+                }
+                val contactInitial = if (isTeacherMode) thread.studentName.take(1).uppercase()
+                                     else thread.teacherName.take(1).uppercase()
+
                 Box(
                     modifier = Modifier
                         .size(42.dp)
                         .clip(CircleShape)
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    StudentNeon.copy(alpha = 0.85f),
-                                    NeonBlue.copy(alpha = 0.85f)
-                                )
-                            )
-                        )
+                        .background(Brush.linearGradient(avatarGradient))
                         .border(1.5.dp, Color.White.copy(alpha = 0.2f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = thread.studentName.take(1).uppercase(),
+                        text = contactInitial,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Black,
                         color = Color.White
@@ -707,7 +733,7 @@ private fun ThreadCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = thread.studentName,
+                        text = if (isTeacherMode) thread.studentName else thread.teacherName,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
@@ -718,7 +744,7 @@ private fun ThreadCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        // Class badge
+                        // Class/Role badge
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(5.dp))
@@ -726,13 +752,13 @@ private fun ThreadCard(
                                 .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
-                                thread.studentClass,
+                                text = if (isTeacherMode) thread.studentClass else "Guru Pengampu",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextTertiary
                             )
                         }
-                        Text("\u2022", fontSize = 8.sp, color = TextTertiary)
+                        Text("•", fontSize = 8.sp, color = TextTertiary)
                         Text(
                             thread.subjectName,
                             fontSize = 10.sp,
@@ -755,8 +781,8 @@ private fun ThreadCard(
                 ) {
                     Text(
                         text = when {
-                            isWaiting  -> "⏳ Pending"
-                            isAnswered -> "✔ Selesai"
+                            isWaiting  -> if (isTeacherMode) "⏳ Pending" else "⏳ Menunggu"
+                            isAnswered -> if (isTeacherMode) "✔ Selesai" else "✔ Dibalas Guru"
                             else       -> "Aktif"
                         },
                         fontSize = 9.sp,
@@ -869,6 +895,7 @@ private fun ThreadCard(
                 }
 
                 // Action Button
+                val actionColor = if (isWaiting) priorityColor else (if (isTeacherMode) TeacherNeon else StudentNeon)
                 Box(
                     modifier = Modifier
                         .shadow(if (isWaiting) 4.dp else 0.dp, RoundedCornerShape(20.dp), spotColor = priorityColor.copy(alpha = 0.3f))
@@ -890,15 +917,15 @@ private fun ThreadCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = if (isWaiting) "Balas" else "Buka",
+                            text = if (isWaiting) (if (isTeacherMode) "Balas" else "Buka") else "Lihat",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
-                            color = if (isWaiting) priorityColor else TeacherNeon
+                            color = actionColor
                         )
                         Icon(
                             Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
-                            tint = if (isWaiting) priorityColor else TeacherNeon,
+                            tint = actionColor,
                             modifier = Modifier.size(11.dp)
                         )
                     }
