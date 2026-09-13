@@ -44,11 +44,6 @@ fun LearningMaterialListScreen(
     val role = state.userRole.lowercase()
     val isTeacher = role in listOf("teacher", "guru")
 
-    val categories = if (isTeacher) {
-        listOf("Semua", "IPAS", "Matematika") // Teachers distribute — no personal-progress filters
-    } else {
-        listOf("Semua", "IPAS", "Matematika", "Belum Selesai", "Selesai")
-    }
 
     Scaffold(
         containerColor = CosmicBlack,
@@ -255,38 +250,6 @@ fun LearningMaterialListScreen(
                 }
             }
 
-            // ── CATEGORY FILTER CHIPS ────────────────────────────────────────
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    categories.forEach { cat ->
-                        val isSelected = state.selectedCategory == cat
-                        val chipBg = if (isSelected) NeonBlue else CosmicNavy
-                        val chipTextColor = if (isSelected) Color.White else TextSecondary
-                        val chipBorder = if (isSelected) NeonBlue else GlassBorder
-
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(chipBg)
-                                .border(1.dp, chipBorder, RoundedCornerShape(10.dp))
-                                .clickable { viewModel.onCategorySelected(cat) }
-                                .padding(horizontal = 14.dp, vertical = 7.dp)
-                        ) {
-                            Text(
-                                text = cat,
-                                color = chipTextColor,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
-                            )
-                        }
-                    }
-                }
-            }
 
             // ── LOADING STATE ────────────────────────────────────────────────
             if (state.isLoading) {

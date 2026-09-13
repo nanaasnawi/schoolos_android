@@ -199,7 +199,7 @@ data class StartAttemptRequest(
 
 @kotlinx.serialization.Serializable
 data class CreateAssignmentRequestDto(
-    @kotlinx.serialization.SerialName("lesson_id") val lessonId: String,
+    @kotlinx.serialization.SerialName("lesson_id") val lessonId: String? = null,
     val title: String,
     val description: String? = null,
     val instructions: String? = null,
@@ -211,7 +211,7 @@ data class CreateAssignmentRequestDto(
 
 @kotlinx.serialization.Serializable
 data class CreateQuizRequestDto(
-    @kotlinx.serialization.SerialName("lesson_id") val lessonId: String,
+    @kotlinx.serialization.SerialName("lesson_id") val lessonId: String? = null,
     val title: String,
     val description: String? = null,
     @kotlinx.serialization.SerialName("duration_minutes") val durationMinutes: Int? = 30,

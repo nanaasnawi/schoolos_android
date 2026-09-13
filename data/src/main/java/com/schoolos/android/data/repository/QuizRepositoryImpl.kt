@@ -65,9 +65,8 @@ class QuizRepositoryImpl @Inject constructor(
         maxScore: Int
     ): Result<Quiz> = runCatching {
         val targetClassId = classId.ifBlank { null }
-        val lessonId = java.util.UUID.randomUUID().toString()
         val request = com.schoolos.android.data.remote.CreateQuizRequestDto(
-            lessonId = lessonId,
+            lessonId = null,
             title = title,
             description = description,
             durationMinutes = timeLimitMinutes ?: 30,

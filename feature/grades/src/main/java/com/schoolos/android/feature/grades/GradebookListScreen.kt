@@ -10,13 +10,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.IconButton
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -35,7 +33,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.*
-import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.SubjectGradeSummary
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -48,40 +45,71 @@ fun GradebookListScreen(
     val state by viewModel.state.collectAsState()
     var selectedFilter by remember { mutableStateOf("Semua Mapel") }
 
+    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
+
+    val filteredSubjects = remember(state.subjects, selectedFilter) {
+        when (selectedFilter) {
+            "MIPA" -> state.subjects.filter {
+                it.subjectName.contains("Matematika", ignoreCase = true) ||
+                it.subjectName.contains("IPA", ignoreCase = true) ||
+                it.subjectName.contains("Fisika", ignoreCase = true) ||
+                it.subjectName.contains("Biologi", ignoreCase = true) ||
+                it.subjectName.contains("Kimia", ignoreCase = true)
+            }
+            "Bahasa" -> state.subjects.filter {
+                it.subjectName.contains("Bahasa", ignoreCase = true) ||
+                it.subjectName.contains("Inggris", ignoreCase = true) ||
+                it.subjectName.contains("Indonesia", ignoreCase = true)
+            }
+            "Wajib" -> state.subjects.filter {
+                it.subjectName.contains("Indonesia", ignoreCase = true) ||
+                it.subjectName.contains("Matematika", ignoreCase = true) ||
+                it.subjectName.contains("Agama", ignoreCase = true) ||
+                it.subjectName.contains("PPKn", ignoreCase = true)
+            }
+            "Muatan Lokal" -> state.subjects.filter {
+                it.subjectName.contains("Seni", ignoreCase = true) ||
+                it.subjectName.contains("Prakarya", ignoreCase = true) ||
+                it.subjectName.contains("Daerah", ignoreCase = true) ||
+                it.subjectName.contains("Jawa", ignoreCase = true) ||
+                it.subjectName.contains("Sunda", ignoreCase = true)
+            }
+            else -> state.subjects
+        }
+    }
+
     Scaffold(containerColor = CosmicBlack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .statusBarsPadding()
         ) {
-            // ── COMPACT TOP BAR DENGAN BACK BUTTON ────────────────────────
+            // ── TOP BAR WITH PERSISTENT BACK BUTTON & IDENTITY ───────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (onBack != null) {
-                        IconButton(
-                            onClick = onBack,
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(CosmicNavy)
-                                .border(1.dp, GlassBorder, CircleShape)
-                        ) {
-                            Icon(
-                                imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.ArrowBack,
-                                contentDescription = "Kembali",
-                                tint = TextPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(12.dp))
+                if (onBack != null) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(CosmicNavy)
+                            .border(1.dp, GlassBorder, CircleShape)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Kembali",
+                            tint = TextPrimary,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
+                    Spacer(Modifier.width(12.dp))
+                }
+                Column {
                     Text(
                         text = "Buku Nilai",
                         fontSize = 24.sp,
@@ -89,6 +117,14 @@ fun GradebookListScreen(
                         color = TextPrimary,
                         letterSpacing = (-0.5).sp
                     )
+                    if (isTeacher && state.className.isNotBlank()) {
+                        Text(
+                            text = "Wali Kelas • Kelas ${state.className}",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TeacherNeon
+                        )
+                    }
                 }
             }
 
@@ -101,32 +137,23 @@ fun GradebookListScreen(
                     LoadingState()
                 } else if (state.error != null) {
                     ErrorState(message = state.error!!)
-                } else if (state.subjects.isEmpty() && !com.schoolos.android.core.auth.isTeacherRole(state.userRole)) {
-                    // Empty state siswa
-                    EmptyState("Belum ada nilai tercatat.", Icons.Default.EmojiEvents)
+                } else if (state.subjects.isEmpty()) {
+                    EmptyState("Belum ada mata pelajaran tercatat.", Icons.Default.EmojiEvents)
                 } else {
-                    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
-
-                    // Jika Teacher, kita taruh Inline Stats di atas List (Sticky)
-                    if (isTeacher) {
-                        TeacherInlineStatsRow(state.classes)
-                        Spacer(Modifier.height(10.dp))
-                    }
-
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = if (isTeacher) 8.dp else 16.dp, bottom = 100.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 100.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
-                        // ── STUDENT HERO & FILTERS ─────────────────────────
+                        // ── STUDENT VIEW ─────────────────────────────────
                         if (!isTeacher) {
-                            item { 
-                                StudentGradeHeroHeader(state.subjects) 
+                            item {
+                                StudentGradeHeroHeader(state.subjects)
                             }
                             item {
-                                val filters = listOf("Semua Mapel", "Wajib", "Muatan Lokal")
+                                val filters = listOf("Semua Mapel", "Wajib", "MIPA", "Muatan Lokal")
                                 LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                                     modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                                 ) {
                                     items(filters) { filter ->
@@ -134,14 +161,14 @@ fun GradebookListScreen(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(14.dp))
-                                                .background(if (isSelected) NeonBlue.copy(alpha = 0.1f) else CosmicNavy)
+                                                .background(if (isSelected) NeonBlue.copy(alpha = 0.12f) else CosmicNavy)
                                                 .border(
                                                     1.dp,
-                                                    if (isSelected) NeonBlue.copy(alpha = 0.4f) else GlassBorder,
+                                                    if (isSelected) NeonBlue.copy(alpha = 0.45f) else GlassBorder,
                                                     RoundedCornerShape(14.dp),
                                                 )
                                                 .clickable { selectedFilter = filter }
-                                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                                                .padding(horizontal = 14.dp, vertical = 8.dp),
                                         ) {
                                             Text(
                                                 filter,
@@ -153,16 +180,17 @@ fun GradebookListScreen(
                                     }
                                 }
                             }
-                        }
-
-                        // DELEGATE TO MODULAR CONTENT
-                        if (isTeacher) {
-                            teacherGradebookContent(
-                                classes = state.classes,
+                            studentGradebookContent(
+                                subjects = filteredSubjects,
                                 onSubjectClick = onSubjectClick
                             )
                         } else {
-                            studentGradebookContent(subjects = state.subjects, onSubjectClick = onSubjectClick)
+                            // ── TEACHER VIEW (WALIKELAS LEGER NILAI) ───────────
+                            teacherGradebookContent(
+                                subjects = filteredSubjects,
+                                className = state.className,
+                                onSubjectClick = onSubjectClick
+                            )
                         }
                     }
                 }
@@ -219,7 +247,7 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
         }
 
         Spacer(Modifier.height(24.dp))
-        
+
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 if (gradedSubjects.isNotEmpty()) "%.1f".format(avgScore) else "-",
@@ -252,48 +280,6 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
         ) {
             GradeMetricPill("${subjects.size} Mapel", Modifier.weight(1f))
             GradeMetricPill("$totalGraded / $totalComponents Done", Modifier.weight(1.5f))
-        }
-    }
-}
-
-@Composable
-private fun TeacherInlineStatsRow(classes: List<AcademicClass>) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        // Rombel aktif chip
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(TeacherNeon.copy(alpha = 0.14f))
-                .border(1.5.dp, TeacherNeon.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Text("${classes.size}", fontSize = 16.sp, fontWeight = FontWeight.Black, color = TeacherNeon)
-            Spacer(Modifier.width(5.dp))
-            Text("Kelas Aktif", fontSize = 10.sp, fontWeight = FontWeight.Medium, color = TeacherNeon.copy(alpha = 0.85f))
-        }
-
-        // Status sinkronisasi chip
-        Row(
-            modifier = Modifier
-                .weight(1f)
-                .clip(RoundedCornerShape(12.dp))
-                .background(NeonSuccess.copy(alpha = 0.14f))
-                .border(1.5.dp, NeonSuccess.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center
-        ) {
-            Icon(Icons.Default.CheckCircle, null, tint = NeonSuccess, modifier = Modifier.size(14.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Sinkron Dapodik", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonSuccess)
         }
     }
 }

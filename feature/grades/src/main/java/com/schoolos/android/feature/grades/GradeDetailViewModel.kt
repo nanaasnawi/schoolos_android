@@ -8,10 +8,12 @@ import com.schoolos.android.domain.model.SubjectGradeDetail
 import com.schoolos.android.domain.model.SubjectGradeSummary
 import com.schoolos.android.domain.model.WeightComponent
 import com.schoolos.android.domain.model.toSubjectSummary
+import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.GradeRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -26,6 +28,7 @@ data class GradeDetailUiState(
 class GradeDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: GradeRepository,
+    private val academicRepository: AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
 ) : ViewModel() {
 
@@ -47,7 +50,15 @@ class GradeDetailViewModel @Inject constructor(
     fun load() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            repository.getGradebook("", subjectId)
+
+            val auth = authManager.authState.first()
+            var targetClassId = auth.classId.orEmpty()
+            if (targetClassId.isBlank() && !auth.className.isNullOrBlank()) {
+                val classes = academicRepository.getClasses().getOrDefault(emptyList())
+                targetClassId = classes.find { it.name.equals(auth.className, ignoreCase = true) }?.id.orEmpty()
+            }
+
+            repository.getGradebook(targetClassId.ifBlank { null }, subjectId)
                 .onSuccess { entries ->
                     val summary = entries.toSubjectSummary(subjectId, subjectName)
                     val breakdown = entries.map { e ->

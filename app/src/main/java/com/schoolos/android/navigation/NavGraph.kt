@@ -350,6 +350,7 @@ fun NavGraph(
             // Gradebook
             composable(Screen.Grades.route) {
                 GradebookListScreen(
+                    onBack = { navController.popBackStack() },
                     onSubjectClick = { subjectId, subjectName ->
                         navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
                     },

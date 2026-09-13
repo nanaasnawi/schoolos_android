@@ -87,9 +87,8 @@ class AssignmentRepositoryImpl @Inject constructor(
         assignmentType: String
     ): Result<Assignment> = runCatching {
         val targetClassId = classId.ifBlank { null }
-        val lessonId = java.util.UUID.randomUUID().toString()
         val request = com.schoolos.android.data.remote.CreateAssignmentRequestDto(
-            lessonId = lessonId,
+            lessonId = null,
             title = title,
             description = description,
             instructions = instructions,

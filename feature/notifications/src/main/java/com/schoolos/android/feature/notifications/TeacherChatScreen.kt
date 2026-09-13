@@ -330,69 +330,70 @@ fun TeacherChatScreen(
             keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
         )
 
-        Spacer(Modifier.height(10.dp))
-
-        // ── FILTER CHIPS ROW ─────────────────────────────────────────────
-        LazyRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            item {
-                SmartFilterChip(
-                    label = "Semua",
-                    count = threads.size,
-                    isSelected = selectedFilter == ChatFilter.ALL,
-                    activeColor = TeacherNeon,
-                    onClick = { selectedFilter = ChatFilter.ALL }
-                )
-            }
-            if (waitingCount > 0) {
-                item {
-                    SmartFilterChip(
-                        label = "Belum Dijawab",
-                        count = waitingCount,
-                        isSelected = selectedFilter == ChatFilter.WAITING,
-                        activeColor = Color(0xFFF59E0B),
-                        emoji = "⏳",
-                        onClick = { selectedFilter = ChatFilter.WAITING }
-                    )
+        // ── FILTER CHIPS ROW (Only shown when contextual categories exist) ───
+        val hasCategoryFilters = waitingCount > 0 || materialCount > 0 || assignmentCount > 0 || answeredCount > 0
+        if (hasCategoryFilters) {
+            Spacer(Modifier.height(10.dp))
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                if (waitingCount > 0) {
+                    item {
+                        SmartFilterChip(
+                            label = "Belum Dijawab",
+                            count = waitingCount,
+                            isSelected = selectedFilter == ChatFilter.WAITING,
+                            activeColor = Color(0xFFF59E0B),
+                            emoji = "⏳",
+                            onClick = {
+                                selectedFilter = if (selectedFilter == ChatFilter.WAITING) ChatFilter.ALL else ChatFilter.WAITING
+                            }
+                        )
+                    }
                 }
-            }
-            if (materialCount > 0) {
-                item {
-                    SmartFilterChip(
-                        label = "Materi",
-                        count = materialCount,
-                        isSelected = selectedFilter == ChatFilter.MATERIAL,
-                        activeColor = NeonBlue,
-                        emoji = "📚",
-                        onClick = { selectedFilter = ChatFilter.MATERIAL }
-                    )
+                if (materialCount > 0) {
+                    item {
+                        SmartFilterChip(
+                            label = "Materi",
+                            count = materialCount,
+                            isSelected = selectedFilter == ChatFilter.MATERIAL,
+                            activeColor = NeonBlue,
+                            emoji = "📚",
+                            onClick = {
+                                selectedFilter = if (selectedFilter == ChatFilter.MATERIAL) ChatFilter.ALL else ChatFilter.MATERIAL
+                            }
+                        )
+                    }
                 }
-            }
-            if (assignmentCount > 0) {
-                item {
-                    SmartFilterChip(
-                        label = "Tugas",
-                        count = assignmentCount,
-                        isSelected = selectedFilter == ChatFilter.ASSIGNMENT,
-                        activeColor = StudentNeon,
-                        emoji = "📝",
-                        onClick = { selectedFilter = ChatFilter.ASSIGNMENT }
-                    )
+                if (assignmentCount > 0) {
+                    item {
+                        SmartFilterChip(
+                            label = "Tugas",
+                            count = assignmentCount,
+                            isSelected = selectedFilter == ChatFilter.ASSIGNMENT,
+                            activeColor = StudentNeon,
+                            emoji = "📝",
+                            onClick = {
+                                selectedFilter = if (selectedFilter == ChatFilter.ASSIGNMENT) ChatFilter.ALL else ChatFilter.ASSIGNMENT
+                            }
+                        )
+                    }
                 }
-            }
-            if (answeredCount > 0) {
-                item {
-                    SmartFilterChip(
-                        label = "Terjawab",
-                        count = answeredCount,
-                        isSelected = selectedFilter == ChatFilter.ANSWERED,
-                        activeColor = NeonSuccess,
-                        emoji = "✓",
-                        onClick = { selectedFilter = ChatFilter.ANSWERED }
-                    )
+                if (answeredCount > 0) {
+                    item {
+                        SmartFilterChip(
+                            label = "Terjawab",
+                            count = answeredCount,
+                            isSelected = selectedFilter == ChatFilter.ANSWERED,
+                            activeColor = NeonSuccess,
+                            emoji = "✓",
+                            onClick = {
+                                selectedFilter = if (selectedFilter == ChatFilter.ANSWERED) ChatFilter.ALL else ChatFilter.ANSWERED
+                            }
+                        )
+                    }
                 }
             }
         }

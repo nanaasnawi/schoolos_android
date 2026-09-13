@@ -20,3 +20,24 @@ fun String.toReadableTime(): String {
 }
 
 fun Double.toPercentage(): String = "${(this * 100).toInt()}%"
+
+object DapodikPeriod {
+    fun getActiveSemester(): String {
+        val calendar = java.util.Calendar.getInstance()
+        val month = calendar.get(java.util.Calendar.MONTH) // 0-based: 0=Jan, 6=Jul, 8=Sep, 11=Dec
+        return if (month in java.util.Calendar.JULY..java.util.Calendar.DECEMBER) "Semester Ganjil" else "Semester Genap"
+    }
+
+    fun getAcademicYear(): String {
+        val calendar = java.util.Calendar.getInstance()
+        val month = calendar.get(java.util.Calendar.MONTH)
+        val year = calendar.get(java.util.Calendar.YEAR)
+        return if (month in java.util.Calendar.JULY..java.util.Calendar.DECEMBER) {
+            "$year/${year + 1}"
+        } else {
+            "${year - 1}/$year"
+        }
+    }
+
+    fun getFullPeriodLabel(): String = "${getActiveSemester()} • Tahun Ajaran ${getAcademicYear()}"
+}

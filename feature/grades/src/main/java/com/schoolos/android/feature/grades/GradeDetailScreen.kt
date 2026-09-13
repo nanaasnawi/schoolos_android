@@ -26,6 +26,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.schoolos.android.core.common.DapodikPeriod
 import com.schoolos.android.core.designsystem.*
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -159,7 +160,7 @@ fun GradeDetailScreen(
                                             )
                                             Spacer(Modifier.width(6.dp))
                                             Text(
-                                                "Semester Genap • Tahun Ajaran 2026/2027",
+                                                DapodikPeriod.getFullPeriodLabel(),
                                                 fontSize = 12.sp,
                                                 color = Color.White.copy(alpha = 0.85f),
                                                 fontWeight = FontWeight.Medium,
