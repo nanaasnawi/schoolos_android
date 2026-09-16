@@ -14,21 +14,32 @@ object NotificationDeepLink {
         if (referenceType == null) return null
 
         return when {
-            referenceType.contains("assignment.published") ||
-            referenceType.contains("assignment.submitted") ||
-            referenceType.contains("assignment.grade") -> {
+            referenceType.contains("material") ||
+            referenceType.contains("reading_assignment") ||
+            referenceType.contains("learning") -> {
+                if (referenceId != null) Screen.LearningDetail.createRoute(referenceId)
+                else Screen.Learning.route
+            }
+            referenceType.contains("assignment") -> {
                 if (referenceId != null) Screen.AssignmentDetail.createRoute(referenceId)
                 else Screen.Assignments.route
             }
-            referenceType.contains("quiz.published") ||
-            referenceType.contains("quiz.attempt") ||
-            referenceType.contains("quiz.graded") -> {
+            referenceType.contains("quiz") ||
+            referenceType.contains("cbt") -> {
                 if (referenceId != null) Screen.QuizDetail.createRoute(referenceId)
                 else Screen.Quizzes.route
             }
-            referenceType.contains("session.lesson") -> {
+            referenceType.contains("session") -> {
                 if (referenceId != null) Screen.SessionDetail.createRoute(referenceId)
                 else Screen.Sessions.route
+            }
+            referenceType.contains("inquiry") ||
+            referenceType.contains("chat") -> {
+                Screen.Chat.route
+            }
+            referenceType.contains("announcement") ||
+            referenceType.contains("broadcast") -> {
+                Screen.Notifications.route
             }
             referenceType.contains("assessment.grade") ||
             referenceType.contains("grade.released") ||

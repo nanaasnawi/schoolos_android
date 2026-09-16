@@ -227,6 +227,13 @@ class ChatManager @Inject constructor(
                             )
                         } else th
                     }
+
+                    // Mark as read in server persistence
+                    launch {
+                        try {
+                            api.markAsRead(threadId)
+                        } catch (_: Exception) {}
+                    }
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Error loading thread detail $threadId")
@@ -273,10 +280,11 @@ class ChatManager @Inject constructor(
             }
         }
 
-        // Persist to real database via backend API
+        // Persist to real database via backend API with idempotent client_message_id
         scope.launch {
             try {
                 val req = SendInquiryMessageRequestDto(
+                    clientMessageId = tempId,
                     senderId = senderId,
                     senderName = senderName,
                     senderRole = senderRole,

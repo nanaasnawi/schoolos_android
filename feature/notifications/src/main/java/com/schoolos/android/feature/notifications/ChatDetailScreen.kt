@@ -339,7 +339,7 @@ fun ChatDetailScreen(
 
                             Spacer(Modifier.width(8.dp))
 
-                            // Text Input Field
+                            // Text Input Field (Enter adds new line, send button submits)
                             BasicTextField(
                                 value = inputText,
                                 onValueChange = { inputText = it },
@@ -352,13 +352,8 @@ fun ChatDetailScreen(
                                 ),
                                 cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
                                 maxLines = 4,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
-                                keyboardActions = KeyboardActions(onSend = {
-                                    sendMessage(inputText, thread, isTeacherMode, chatManager) {
-                                        inputText = ""
-                                        focusManager.clearFocus()
-                                    }
-                                }),
+                                singleLine = false,
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
                                 decorationBox = { innerTextField ->
                                     if (inputText.isEmpty()) {
                                         Text(

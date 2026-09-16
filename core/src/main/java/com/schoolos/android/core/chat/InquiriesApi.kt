@@ -75,10 +75,16 @@ data class CreateInquiryRequestDto(
 
 @Serializable
 data class SendInquiryMessageRequestDto(
+    @SerialName("client_message_id") val clientMessageId: String? = null,
     @SerialName("sender_id") val senderId: String? = null,
     @SerialName("sender_name") val senderName: String? = null,
     @SerialName("sender_role") val senderRole: String,
     @SerialName("content") val content: String,
+)
+
+@Serializable
+data class InquiryUnreadCountDto(
+    @SerialName("unread_count") val unreadCount: Long = 0,
 )
 
 interface InquiriesApi {
@@ -91,6 +97,9 @@ interface InquiriesApi {
         @Query("teacher_id") teacherId: String? = null,
         @Query("teacher_name") teacherName: String? = null,
     ): ChatApiResponse<List<InquiryThreadDto>>
+
+    @GET("learning/inquiries/unread-count")
+    suspend fun getUnreadCount(): ChatApiResponse<InquiryUnreadCountDto>
 
     @GET("learning/inquiries/{id}")
     suspend fun getInquiryDetail(
@@ -107,4 +116,9 @@ interface InquiriesApi {
         @Path("id") threadId: String,
         @Body request: SendInquiryMessageRequestDto,
     ): ChatApiResponse<InquiryMessageDto>
+
+    @POST("learning/inquiries/{id}/read")
+    suspend fun markAsRead(
+        @Path("id") threadId: String,
+    ): ChatApiResponse<Boolean>
 }
