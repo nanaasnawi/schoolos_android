@@ -595,22 +595,42 @@ fun HeaderDateWidget(
 }
 
 /**
- * CustomBackButton — A minimalist circular back button
+ * CustomBackButton — A consistent, theme-reactive circular back button.
+ * Automatically adapts to Light and Dark themes with zero hardcoded colors.
+ * When [onHero] is true (placed over saturated gradient/banner), applies a subtle adaptive overlay.
  */
 @Composable
 fun CustomBackButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    backgroundColor: Color = CosmicNavy,
-    contentColor: Color = TextPrimary,
+    onHero: Boolean = false,
+    backgroundColor: Color = if (onHero) {
+        Color.White.copy(alpha = 0.2f)
+    } else {
+        MaterialTheme.colorScheme.surface
+    },
+    contentColor: Color = if (onHero) {
+        Color.White
+    } else {
+        MaterialTheme.colorScheme.onSurface
+    },
+    borderColor: Color = if (onHero) {
+        Color.White.copy(alpha = 0.25f)
+    } else {
+        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    },
 ) {
     Box(
         modifier = modifier
-            .shadow(2.dp, CircleShape, spotColor = GlassOverlay)
-            .size(38.dp)
+            .shadow(
+                elevation = if (onHero) 0.dp else 2.dp,
+                shape = CircleShape,
+                spotColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
+            )
+            .size(40.dp)
             .clip(CircleShape)
             .background(backgroundColor)
-            .border(1.dp, GlassBorder, CircleShape)
+            .border(1.dp, borderColor, CircleShape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -618,7 +638,7 @@ fun CustomBackButton(
             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
             contentDescription = "Kembali",
             tint = contentColor,
-            modifier = Modifier.size(18.dp)
+            modifier = Modifier.size(20.dp)
         )
     }
 }

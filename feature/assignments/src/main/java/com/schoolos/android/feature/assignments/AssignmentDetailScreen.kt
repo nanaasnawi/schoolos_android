@@ -99,8 +99,7 @@ fun AssignmentDetailScreen(
                                 ) {
                                     CustomBackButton(
                                         onClick = { onBack?.invoke() },
-                                        backgroundColor = Color.White.copy(alpha = 0.15f),
-                                        contentColor = Color.White,
+                                        onHero = true,
                                     )
                                     StatusChip(label = a.status)
                                 }

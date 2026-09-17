@@ -26,3 +26,29 @@ data class MaterialDto(
     @SerialName("is_completed") val isCompleted: Boolean? = null,
     @SerialName("completed_count") val completedCount: Long? = null,
 )
+
+@Serializable
+data class LibraryBookDto(
+    val id: String,
+    val title: String,
+    val author: String? = null,
+    val publisher: String? = null,
+    @SerialName("subject_id") val subjectId: String? = null,
+    @SerialName("subject_name") val subjectName: String? = null,
+    @SerialName("grade_level_id") val gradeLevelId: String? = null,
+    @SerialName("grade_level_name") val gradeLevelName: String? = null,
+    @SerialName("total_pages") val totalPages: Int = 100,
+    @SerialName("cover_url") val coverUrl: String? = null,
+    @SerialName("file_url") val fileUrl: String? = null,
+)
+
+@Serializable
+data class AssignReadingMaterialRequestDto(
+    @SerialName("book_id") val bookId: String,
+    val title: String,
+    val instructions: String? = null,
+    @SerialName("class_id") val classId: String,
+    @SerialName("subject_id") val subjectId: String? = null,
+    @SerialName("start_page") val startPage: Int,
+    @SerialName("end_page") val endPage: Int,
+)

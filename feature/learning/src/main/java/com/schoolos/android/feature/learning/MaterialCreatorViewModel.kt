@@ -22,7 +22,9 @@ data class MaterialCreatorUiState(
     val error: String? = null,
     val availableClasses: List<AcademicClass> = emptyList(),
     val availableSubjects: List<AcademicSubject> = emptyList(),
+    val availableBooks: List<com.schoolos.android.domain.model.LibraryBook> = emptyList(),
     val isLoadingAcademicData: Boolean = false,
+    val isLoadingBooks: Boolean = false,
 )
 
 @HiltViewModel
@@ -36,6 +38,7 @@ class MaterialCreatorViewModel @Inject constructor(
 
     init {
         loadAcademicData()
+        loadLibraryBooks()
     }
 
     fun loadAcademicData() {
@@ -104,6 +107,52 @@ class MaterialCreatorViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     isLoading = false,
                     error = err.message ?: "Gagal membuat materi ajar."
+                )
+            }
+        }
+    }
+
+    fun loadLibraryBooks(search: String? = null) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoadingBooks = true)
+            repository.getLibraryBooks(search = search)
+                .onSuccess { books ->
+                    _state.value = _state.value.copy(
+                        isLoadingBooks = false,
+                        availableBooks = books
+                    )
+                }
+                .onFailure {
+                    _state.value = _state.value.copy(isLoadingBooks = false)
+                }
+        }
+    }
+
+    fun assignReadingBook(
+        book: com.schoolos.android.domain.model.LibraryBook,
+        startPage: Int,
+        endPage: Int,
+        instructions: String?,
+        classId: String,
+        subjectId: String?
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val title = "Materi Bacaan: ${book.title} (Hal. $startPage–$endPage)"
+            repository.assignReadingMaterial(
+                bookId = book.id,
+                title = title,
+                instructions = instructions,
+                classId = classId,
+                subjectId = subjectId,
+                startPage = startPage,
+                endPage = endPage
+            ).onSuccess {
+                _state.value = _state.value.copy(isLoading = false, success = true)
+            }.onFailure { err ->
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = err.message ?: "Gagal menugaskan materi buku perpustakaan."
                 )
             }
         }

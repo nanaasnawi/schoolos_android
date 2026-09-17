@@ -217,4 +217,45 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         val data = response.data ?: throw Exception(response.error?.message ?: "Gagal memperbarui status selesai modul.")
         data.isCompleted
     }
+
+    override suspend fun getLibraryBooks(search: String?): Result<List<com.schoolos.android.domain.model.LibraryBook>> = runCatching {
+        val response = api.getLibraryBooks(search = search)
+        response.data?.map { dto ->
+            com.schoolos.android.domain.model.LibraryBook(
+                id = dto.id,
+                title = dto.title,
+                author = dto.author,
+                publisher = dto.publisher,
+                subjectId = dto.subjectId,
+                subjectName = dto.subjectName,
+                gradeLevelId = dto.gradeLevelId,
+                gradeLevelName = dto.gradeLevelName,
+                totalPages = dto.totalPages,
+                coverUrl = dto.coverUrl,
+                fileUrl = dto.fileUrl,
+            )
+        } ?: emptyList()
+    }
+
+    override suspend fun assignReadingMaterial(
+        bookId: String,
+        title: String,
+        instructions: String?,
+        classId: String,
+        subjectId: String?,
+        startPage: Int,
+        endPage: Int
+    ): Result<String> = runCatching {
+        val request = com.schoolos.android.data.remote.dto.AssignReadingMaterialRequestDto(
+            bookId = bookId,
+            title = title,
+            instructions = instructions,
+            classId = classId,
+            subjectId = subjectId,
+            startPage = startPage,
+            endPage = endPage
+        )
+        val response = api.assignReadingMaterial(request)
+        response.data ?: throw Exception(response.error?.message ?: "Gagal menugaskan materi bacaan perpustakaan.")
+    }
 }

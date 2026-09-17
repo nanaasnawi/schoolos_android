@@ -138,6 +138,19 @@ interface SchoolOsApi {
         @Path("id") id: String
     ): ApiResponse<com.schoolos.android.data.remote.dto.MaterialCompletionToggleDto>
 
+    // Library Books (Katalog Buku Kurikulum & Perpustakaan Digital)
+    @GET("learning/library/books")
+    suspend fun getLibraryBooks(
+        @Query("subject_id") subjectId: String? = null,
+        @Query("grade_level_id") gradeLevelId: String? = null,
+        @Query("search") search: String? = null,
+    ): ApiResponse<List<com.schoolos.android.data.remote.dto.LibraryBookDto>>
+
+    @POST("learning/library/assign")
+    suspend fun assignReadingMaterial(
+        @Body request: com.schoolos.android.data.remote.dto.AssignReadingMaterialRequestDto,
+    ): ApiResponse<String>
+
     // Grades
     @GET("learning/assessment/gradebook")
     suspend fun getGradebook(

@@ -92,21 +92,7 @@ fun GradebookListScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 if (onBack != null) {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(CosmicNavy)
-                            .border(1.dp, GlassBorder, CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                            tint = TextPrimary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    CustomBackButton(onClick = onBack)
                     Spacer(Modifier.width(12.dp))
                 }
                 Column {

@@ -161,8 +161,7 @@ private fun DetailHeroHeader(
             ) {
                 CustomBackButton(
                     onClick = onBack,
-                    backgroundColor = Color.White.copy(alpha = 0.2f),
-                    contentColor = Color.White,
+                    onHero = true,
                 )
                 StatusChip(label = session.status)
             }

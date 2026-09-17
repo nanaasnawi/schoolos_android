@@ -20,4 +20,14 @@ interface LearningMaterialRepository {
         mimeType: String
     ): Result<String>
     suspend fun toggleMaterialCompletion(id: String): Result<Boolean>
+    suspend fun getLibraryBooks(search: String? = null): Result<List<com.schoolos.android.domain.model.LibraryBook>>
+    suspend fun assignReadingMaterial(
+        bookId: String,
+        title: String,
+        instructions: String?,
+        classId: String,
+        subjectId: String?,
+        startPage: Int,
+        endPage: Int
+    ): Result<String>
 }

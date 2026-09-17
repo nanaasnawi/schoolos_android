@@ -97,8 +97,7 @@ fun GradeDetailScreen(
                                 ) {
                                     CustomBackButton(
                                         onClick = onBack,
-                                        backgroundColor = Color.White.copy(alpha = 0.15f),
-                                        contentColor = Color.White,
+                                        onHero = true,
                                     )
 
                                     if (isTeacher) {

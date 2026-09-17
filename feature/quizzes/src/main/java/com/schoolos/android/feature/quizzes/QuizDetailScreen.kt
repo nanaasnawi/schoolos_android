@@ -191,8 +191,7 @@ private fun QuizHeroHeaderRefactored(
             ) {
                 CustomBackButton(
                     onClick = onBack,
-                    backgroundColor = Color.White.copy(alpha = 0.2f),
-                    contentColor = Color.White
+                    onHero = true,
                 )
             }
 
