@@ -11,7 +11,13 @@ data class LearningMaterial(
     val subject: String,
     val size: String? = null,
     val isCompleted: Boolean = false,
-    val completedCount: Long = 0L
+    val completedCount: Long = 0L,
+    val teacherName: String? = null,
+    val teacherId: String? = null,
+    val className: String? = null,
+    val classId: String? = null,
+    val startPage: Int? = null,
+    val endPage: Int? = null,
 )
 
 enum class MaterialType {

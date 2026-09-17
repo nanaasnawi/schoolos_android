@@ -33,7 +33,7 @@ fun LearningMaterialDetailScreen(
     materialId: String,
     onBack: () -> Unit = {},
     onCreateMaterial: () -> Unit = {},
-    onAskTeacher: ((materialTitle: String, materialId: String, subjectName: String) -> Unit)? = null,
+    onAskTeacher: ((materialTitle: String, materialId: String, subjectName: String, teacherName: String) -> Unit)? = null,
     viewModel: LearningViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -313,18 +313,18 @@ fun LearningMaterialDetailScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                    .padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Spacer(Modifier.height(2.dp))
                 // ── HERO MATERIAL OVERVIEW CARD ─────────────────────────────
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
+                        .clip(RoundedCornerShape(16.dp))
                         .background(CosmicNavy)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
-                        .padding(18.dp)
+                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                        .padding(14.dp)
                 ) {
                     Column {
                         // Top Meta Badges
@@ -399,11 +399,13 @@ fun LearningMaterialDetailScreen(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                val descParts = (material.description ?: "").split(" • ")
-                                val teacherName = if (descParts.size >= 3 && descParts[2].isNotBlank()) descParts[2] else "Guru Pengampu"
-                                val className = if (descParts.size >= 2 && descParts[1].isNotBlank()) descParts[1] else "Semua Rombel"
+                            val descParts = (material.description ?: "").split(" • ")
+                            val teacherName = material.teacherName?.ifBlank { null }
+                                ?: if (descParts.size >= 3 && descParts[2].isNotBlank()) descParts[2] else "Guru Pengampu"
+                            val className = material.className?.ifBlank { null }
+                                ?: if (descParts.size >= 2 && descParts[1].isNotBlank()) descParts[1] else "Semua Rombel"
 
+                            Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
                                     modifier = Modifier
                                         .size(38.dp)
@@ -450,6 +452,10 @@ fun LearningMaterialDetailScreen(
                 }
 
                 // ── TANYA GURU / KONSULTASI MATERI (In-App Q&A) ──────────────
+                val descPartsForQ = (material.description ?: "").split(" • ")
+                val resolvedTeacherName = material.teacherName?.ifBlank { null }
+                    ?: if (descPartsForQ.size >= 3 && descPartsForQ[2].isNotBlank()) descPartsForQ[2] else "Guru Pengampu"
+
                 if (!isTeacher && onAskTeacher != null) {
                     Box(
                         modifier = Modifier
@@ -457,7 +463,7 @@ fun LearningMaterialDetailScreen(
                             .clip(RoundedCornerShape(16.dp))
                             .background(TeacherNeon.copy(alpha = 0.08f))
                             .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                            .clickable { onAskTeacher(material.title, material.id, material.subject) }
+                            .clickable { onAskTeacher(material.title, material.id, material.subject, resolvedTeacherName) }
                             .padding(14.dp)
                     ) {
                         Row(
@@ -492,7 +498,7 @@ fun LearningMaterialDetailScreen(
                                         color = TextPrimary
                                     )
                                     Text(
-                                        text = "Tanya guru pengampu langsung tanpa keluar app",
+                                        text = "Tanya $resolvedTeacherName langsung tanpa keluar app",
                                         fontSize = 11.sp,
                                         color = TextSecondary
                                     )
@@ -521,59 +527,55 @@ fun LearningMaterialDetailScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .background(CosmicNavy)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
-                            .padding(18.dp)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                            .padding(14.dp)
                     ) {
                         Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(30.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(NeonBlue.copy(alpha = 0.12f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = NeonBlue, modifier = Modifier.size(18.dp))
-                                }
-                                Spacer(Modifier.width(10.dp))
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = NeonBlue, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
                                 Text(
                                     "Capaian & Tujuan Pembelajaran",
                                     color = TextPrimary,
-                                    fontSize = 14.sp,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
 
-                            Spacer(Modifier.height(12.dp))
+                            Spacer(Modifier.height(10.dp))
 
-                            val parts = matDesc.split(" • ").filter { it.isNotBlank() }
-                            parts.forEach { part ->
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(vertical = 4.dp),
-                                    verticalAlignment = Alignment.Top
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .padding(top = 4.dp)
-                                            .size(7.dp)
-                                            .clip(CircleShape)
-                                            .background(NeonBlue)
-                                    )
-                                    Spacer(Modifier.width(10.dp))
-                                    Text(
-                                        text = part.trim(),
-                                        color = TextSecondary,
-                                        fontSize = (13 * textSizeMultiplier).sp,
-                                        lineHeight = (19 * textSizeMultiplier).sp
-                                    )
+                            val bulletPoints = matDesc.split("\n").filter { it.isNotBlank() }
+                            if (bulletPoints.size > 1) {
+                                bulletPoints.forEach { point ->
+                                    Row(
+                                        modifier = Modifier.padding(vertical = 3.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .padding(top = 6.dp)
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(NeonBlue)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            point.trim().removePrefix("- ").removePrefix("• "),
+                                            color = TextSecondary,
+                                            fontSize = (12 * textSizeMultiplier).sp,
+                                            lineHeight = (18 * textSizeMultiplier).sp
+                                        )
+                                    }
                                 }
+                            } else {
+                                Text(
+                                    text = matDesc,
+                                    color = TextSecondary,
+                                    fontSize = (12 * textSizeMultiplier).sp,
+                                    lineHeight = (18 * textSizeMultiplier).sp
+                                )
                             }
                         }
                     }
@@ -584,14 +586,14 @@ fun LearningMaterialDetailScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
+                            .clip(RoundedCornerShape(16.dp))
                             .background(CosmicNavy)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
-                            .padding(16.dp)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                            .padding(12.dp)
                     ) {
                         Column {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -606,17 +608,26 @@ fun LearningMaterialDetailScreen(
                                         .background(CosmicDark)
                                         .padding(horizontal = 8.dp, vertical = 3.dp)
                                 ) {
-                                    Text("HD Multi-Page", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                                    Text(
+                                        if (material.startPage != null && material.endPage != null)
+                                            "Hal. ${material.startPage} — ${material.endPage}"
+                                        else "Buku Resmi",
+                                        color = TextSecondary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
                                 }
                             }
 
-                            Spacer(Modifier.height(14.dp))
+                            Spacer(Modifier.height(10.dp))
 
                             InAppPdfViewer(
                                 pdfUrl = mediaUrl ?: "",
                                 title = material.title,
                                 subject = material.subject,
                                 description = material.description ?: "",
+                                startPage = material.startPage,
+                                endPage = material.endPage,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }

@@ -203,7 +203,8 @@ fun NavGraph(
                     materialId = materialId,
                     onBack = { navController.popBackStack() },
                     onCreateMaterial = { navController.navigate(Screen.MaterialCreator.route) },
-                    onAskTeacher = { title, id, subject ->
+                    onAskTeacher = { title, id, subject, teacherName ->
+                        val greeting = if (teacherName.isNotBlank() && teacherName != "Guru Pengampu") "Halo $teacherName," else "Halo Bapak/Ibu guru,"
                         val thread = chatManager.createInquiry(
                             studentId = authState?.userId ?: "std-current",
                             studentName = authState?.name ?: "Siswa",
@@ -212,9 +213,9 @@ fun NavGraph(
                             inquiryType = InquiryType.MATERIAL,
                             referenceTitle = title,
                             referenceId = id,
-                            initialQuestion = "Halo Bapak/Ibu guru, saya ingin bertanya mengenai materi '$title' ini karena ada bagian yang belum saya pahami."
+                            initialQuestion = "$greeting saya ingin bertanya mengenai materi '$title' ini karena ada bagian yang belum saya pahami."
                         )
-                        navController.navigate(Screen.ChatDetail.createRoute(thread.id, thread.studentName))
+                        navController.navigate(Screen.ChatDetail.createRoute(thread.id, teacherName.ifBlank { thread.studentName }))
                     }
                 )
             }

@@ -112,11 +112,11 @@ fun HomeScreen(
                     // Edge-to-edge safe: never draw under the status bar
                     .statusBarsPadding(),
                 contentPadding = PaddingValues(
-                    start = 16.dp, end = 16.dp,
-                    top = 12.dp,
+                    start = 12.dp, end = 12.dp,
+                    top = 8.dp,
                     bottom = padding.calculateBottomPadding() + 0.dp,
                 ),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 // ── VIBRANT HERO BANNER (Top of Screen) ─────────────────────────
                 item {
