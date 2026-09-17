@@ -23,6 +23,7 @@ data class MaterialCreatorUiState(
     val availableClasses: List<AcademicClass> = emptyList(),
     val availableSubjects: List<AcademicSubject> = emptyList(),
     val availableBooks: List<com.schoolos.android.domain.model.LibraryBook> = emptyList(),
+    val recommendedBooks: List<com.schoolos.android.domain.model.LibraryBook> = emptyList(),
     val isLoadingAcademicData: Boolean = false,
     val isLoadingBooks: Boolean = false,
 )
@@ -39,6 +40,55 @@ class MaterialCreatorViewModel @Inject constructor(
     init {
         loadAcademicData()
         loadLibraryBooks()
+    }
+
+    fun updateRecommendation(className: String?, subjectName: String?) {
+        val books = _state.value.availableBooks
+        if (books.isEmpty() || (className.isNullOrBlank() && subjectName.isNullOrBlank())) {
+            _state.value = _state.value.copy(recommendedBooks = emptyList())
+            return
+        }
+
+        val s = (subjectName ?: "").lowercase()
+        val c = (className ?: "").lowercase()
+
+        val matches = books.filter { b ->
+            val title = b.title.lowercase()
+            val bookSubj = (b.subjectName ?: "").lowercase()
+
+            val subjMatch = s.isNotBlank() && (
+                title.contains(s) || bookSubj.contains(s) ||
+                (s.contains("matematika") && (title.contains("matematika") || bookSubj.contains("matematika"))) ||
+                (s.contains("indonesia") && (title.contains("indonesia") || bookSubj.contains("indonesia"))) ||
+                (s.contains("inggris") && (title.contains("inggris") || bookSubj.contains("inggris"))) ||
+                (s.contains("fisika") && (title.contains("fisika") || bookSubj.contains("fisika"))) ||
+                (s.contains("biologi") && (title.contains("biologi") || bookSubj.contains("biologi"))) ||
+                (s.contains("kimia") && (title.contains("kimia") || bookSubj.contains("kimia"))) ||
+                (s.contains("komputer") && (title.contains("informatika") || title.contains("koding"))) ||
+                (s.contains("pancasila") && (title.contains("pancasila") || title.contains("ppkn")))
+            )
+
+            val classMatch = if (c.contains("10") || c.contains(" x") || c.contains("x ")) {
+                title.contains("kelas x") || title.contains("kelas 10") || (b.gradeLevelName?.contains("10") == true)
+            } else if (c.contains("11") || c.contains(" xi") || c.contains("xi ")) {
+                title.contains("kelas xi") || title.contains("kelas 11") || (b.gradeLevelName?.contains("11") == true)
+            } else if (c.contains("12") || c.contains(" xii") || c.contains("xii ")) {
+                title.contains("kelas xii") || title.contains("kelas 12") || (b.gradeLevelName?.contains("12") == true)
+            } else if (c.contains("7") || c.contains("vii")) {
+                title.contains("kelas vii") || title.contains("kelas 7") || (b.gradeLevelName?.contains("7") == true)
+            } else if (c.contains("8") || c.contains("viii")) {
+                title.contains("kelas viii") || title.contains("kelas 8") || (b.gradeLevelName?.contains("8") == true)
+            } else if (c.contains("9") || c.contains("ix")) {
+                title.contains("kelas ix") || title.contains("kelas 9") || (b.gradeLevelName?.contains("9") == true)
+            } else true
+
+            subjMatch && classMatch
+        }.sortedByDescending { b ->
+            val title = b.title.lowercase()
+            if (!title.contains("panduan guru") && !title.contains("buku guru")) 2 else 1
+        }
+
+        _state.value = _state.value.copy(recommendedBooks = matches)
     }
 
     fun loadAcademicData() {

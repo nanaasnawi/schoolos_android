@@ -109,6 +109,10 @@ fun MaterialCreatorScreen(
         }
     }
 
+    LaunchedEffect(selectedClass, selectedSubject, state.availableBooks) {
+        viewModel.updateRecommendation(selectedClass, selectedSubject)
+    }
+
     var selectedType by remember { mutableStateOf(MaterialType.DOCUMENT) }
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
@@ -484,16 +488,118 @@ fun MaterialCreatorScreen(
                         }
                     }
 
-                    Button(
+                    if (selectedBook == null && state.recommendedBooks.isNotEmpty()) {
+                        val primaryBook = state.recommendedBooks.first()
+                        val otherBooks = state.recommendedBooks.drop(1).take(3)
+
+                        Surface(
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("💡", fontSize = 16.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Buku Resmi yang Direkomendasikan (${state.recommendedBooks.size} Pilihan):",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 12.sp,
+                                        color = MaterialTheme.colorScheme.primary
+                                    )
+                                }
+                                Text(
+                                    text = primaryBook.title,
+                                    fontWeight = FontWeight.Black,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                )
+                                Text(
+                                    text = "${primaryBook.publisher ?: "Kemendikdasmen"} • ${primaryBook.totalPages} Halaman",
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
+                                )
+                                Button(
+                                    onClick = {
+                                        selectedBook = primaryBook
+                                        if (title.isBlank()) {
+                                            title = "Materi: ${primaryBook.title}"
+                                        }
+                                        startPageInput = "1"
+                                        endPageInput = minOf(20, primaryBook.totalPages).toString()
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(38.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow)
+                                ) {
+                                    Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(15.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Gunakan Buku Utama Ini", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+
+                                if (otherBooks.isNotEmpty()) {
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "Pilihan Terkait Lainnya:",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                    )
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        otherBooks.forEach { altBook ->
+                                            Surface(
+                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
+                                                shape = RoundedCornerShape(6.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        selectedBook = altBook
+                                                        if (title.isBlank()) {
+                                                            title = "Materi: ${altBook.title}"
+                                                        }
+                                                        startPageInput = "1"
+                                                        endPageInput = minOf(20, altBook.totalPages).toString()
+                                                    }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = altBook.title,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        modifier = Modifier.weight(1f),
+                                                        maxLines = 1,
+                                                        color = MaterialTheme.colorScheme.onSurface
+                                                    )
+                                                    Text(
+                                                        text = "Pilih →",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = MaterialTheme.colorScheme.primary
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedButton(
                         onClick = { showBookCatalogSheet = true },
                         modifier = Modifier.fillMaxWidth().height(42.dp),
                         shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
                     ) {
                         Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = if (selectedBook != null) "Ganti Buku dari Katalog" else "Pilih Buku dari Katalog Perpustakaan (${state.availableBooks.size} Buku)",
+                            text = if (selectedBook != null) "Ganti Buku dari Katalog" else "Jelajahi Katalog Lengkap (${state.availableBooks.size} Buku)",
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp
                         )
@@ -799,8 +905,10 @@ fun MaterialCreatorScreen(
                     description = "Buku Teks: ${book.title} oleh ${book.author ?: book.publisher ?: "Kemendikbudristek"}. Silakan pelajari dan baca halaman $sInt sampai $eInt."
                     selectedType = MaterialType.DOCUMENT
                     mediaUrl = book.fileUrl ?: ""
-                    if (book.subjectName != null && subjectOptions.any { it.equals(book.subjectName, ignoreCase = true) }) {
-                        selectedSubject = subjectOptions.first { it.equals(book.subjectName, ignoreCase = true) }
+                    book.subjectName?.let { subj ->
+                        if (subjectOptions.any { it.equals(subj, ignoreCase = true) }) {
+                            selectedSubject = subjectOptions.first { it.equals(subj, ignoreCase = true) }
+                        }
                     }
                     showBookCatalogSheet = false
                     Toast.makeText(context, "Buku dipilih: ${book.title} (Hal. $sInt–$eInt)", Toast.LENGTH_SHORT).show()
@@ -1203,13 +1311,14 @@ private fun LibraryBookCatalogSheetContent(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                                         modifier = Modifier.padding(top = 4.dp)
                                     ) {
-                                        if (book.subjectName != null) {
+                                        val subj = book.subjectName
+                                        if (subj != null) {
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
                                                 color = MaterialTheme.colorScheme.secondaryContainer
                                             ) {
                                                 Text(
-                                                    book.subjectName,
+                                                    subj,
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     color = MaterialTheme.colorScheme.onSecondaryContainer,
