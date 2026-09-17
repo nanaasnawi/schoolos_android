@@ -38,12 +38,38 @@ object SystemNotificationHelper {
         }
     }
 
+    private fun isDuplicate(context: Context, title: String, message: String): Boolean {
+        return try {
+            val prefs = context.getSharedPreferences("schoolos_notif_dedup", Context.MODE_PRIVATE)
+            val cleanTitle = title.removePrefix("📢").trim().lowercase()
+            val cleanMsg = message.trim().lowercase()
+            val key = "dedup_${(cleanTitle + "_" + cleanMsg.take(60)).hashCode()}"
+            val now = System.currentTimeMillis()
+
+            val lastShown = prefs.getLong(key, 0L)
+            if (now - lastShown < 60_000L) {
+                // Duplicate notification within 60 seconds, drop it
+                true
+            } else {
+                prefs.edit().putLong(key, now).apply()
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun showNotification(
         context: Context,
         notificationId: Int,
         title: String,
         message: String,
     ) {
+        // 1. Drop duplicate notifications from multi-channel triggers (FCM + SSE + Polling)
+        if (isDuplicate(context, title, message)) {
+            return
+        }
+
         // Check Android 13+ permission
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(
@@ -73,6 +99,21 @@ object SystemNotificationHelper {
             }
         } catch (_: Exception) {}
 
+        // Deterministic notification slot based on title hash so even if any rapid event arrives,
+        // it updates the exact same notification slot instead of creating a second duplicate banner!
+        val cleanTitle = title.removePrefix("📢").trim().lowercase()
+        val stableId = cleanTitle.hashCode()
+
+        // Sync with shown IDs in NotificationSyncManager
+        try {
+            val syncPrefs = context.getSharedPreferences("schoolos_notif_sync", Context.MODE_PRIVATE)
+            val shownIds = syncPrefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
+            val mutableShown = shownIds.toMutableSet()
+            mutableShown.add(notificationId.toString())
+            mutableShown.add(stableId.toString())
+            syncPrefs.edit().putStringSet("shown_notif_ids", mutableShown).apply()
+        } catch (_: Exception) {}
+
         val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("navigate_to", "notifications")
@@ -80,7 +121,7 @@ object SystemNotificationHelper {
 
         val pendingIntent = PendingIntent.getActivity(
             context,
-            notificationId,
+            stableId,
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -102,7 +143,7 @@ object SystemNotificationHelper {
             .setFullScreenIntent(pendingIntent, false)
 
         try {
-            NotificationManagerCompat.from(context).notify(notificationId, builder.build())
+            NotificationManagerCompat.from(context).notify(stableId, builder.build())
         } catch (e: SecurityException) {
             // Permission not granted
         }
