@@ -87,7 +87,7 @@ fun GradeDetailScreen(
                                     .fillMaxWidth()
                                     // Edge-to-edge safe: keep controls clear of the device status bar
                                     .statusBarsPadding()
-                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
                             ) {
                                 // TOP NAVIGATION ROW
                                 Row(
@@ -175,7 +175,7 @@ fun GradeDetailScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 10.dp, vertical = 12.dp),
+                                .padding(horizontal = 12.dp, vertical = 12.dp),
                         ) {
                             if (isTeacher) {
                                 TeacherGradeDetailContent(detail = d)

@@ -135,8 +135,8 @@ fun AssignmentListScreen(
                             .fillMaxSize()
                             .statusBarsPadding(),
                         contentPadding = PaddingValues(
-                            start = 10.dp,
-                            end = 10.dp,
+                            start = 12.dp,
+                            end = 12.dp,
                             top = 8.dp,
                             bottom = 100.dp
                         ),

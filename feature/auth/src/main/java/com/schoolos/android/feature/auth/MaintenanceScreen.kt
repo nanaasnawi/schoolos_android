@@ -148,7 +148,7 @@ fun MaintenanceScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(CosmicBlack)
-            .padding(horizontal = 12.dp, vertical = 16.dp),
+            .padding(horizontal = 14.dp, vertical = 16.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(

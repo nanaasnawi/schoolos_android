@@ -84,7 +84,7 @@ fun AchievementScreen(
                         .fillMaxSize()
                         // Edge-to-edge safe: never draw under the status bar
                         .statusBarsPadding(),
-                    contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 100.dp),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 100.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     // ── REFACTORED NON-OVERLAPPING LIST HEADER ─────────────

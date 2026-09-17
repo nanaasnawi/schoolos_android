@@ -75,7 +75,7 @@ fun QuizBuilderScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 12.dp)
+                        .padding(horizontal = 12.dp, vertical = 12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         CustomBackButton(

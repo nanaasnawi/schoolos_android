@@ -5,26 +5,28 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -43,7 +45,6 @@ fun LearningMaterialListScreen(
     val materials = state.materials
     val role = state.userRole.lowercase()
     val isTeacher = role in listOf("teacher", "guru")
-
 
     Scaffold(
         containerColor = CosmicBlack,
@@ -64,15 +65,15 @@ fun LearningMaterialListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 30.dp),
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // ── HEADER ────────────────────────────────────────────────────────
+            // ── TOP APP BAR ──────────────────────────────────────────────────
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp, bottom = 4.dp),
+                        .padding(top = 2.dp, bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
@@ -81,27 +82,41 @@ fun LearningMaterialListScreen(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                "Modul Pembelajaran",
+                                text = "Modul Pembelajaran",
                                 fontSize = 20.sp,
-                                fontWeight = FontWeight.ExtraBold,
+                                fontWeight = FontWeight.Black,
                                 color = TextPrimary,
                                 letterSpacing = (-0.3).sp
                             )
-                            if (isTeacher) {
-                                Text(
-                                    "Kelola materi ajar kelas Anda",
-                                    fontSize = 11.sp,
-                                    color = TextTertiary,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
+                            Text(
+                                text = if (isTeacher) "Kelola bahan ajar & modul kelas" else "Bahan bacaan & video materi",
+                                fontSize = 11.sp,
+                                color = TextTertiary,
+                                fontWeight = FontWeight.Medium
+                            )
                         }
                     }
-                    // Tombol +Tambah DIHAPUS — gunakan FAB di kanan bawah
+
+                    // Role pill badge
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isTeacher) TeacherNeon.copy(alpha = 0.12f) else StudentNeon.copy(alpha = 0.12f))
+                            .border(1.dp, if (isTeacher) TeacherNeon.copy(alpha = 0.25f) else StudentNeon.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 9.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = if (isTeacher) "GURU" else "SISWA",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isTeacher) TeacherNeon else StudentNeon,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
                 }
             }
 
-            // ── ACTIVE SUBJECT FILTER (from session detail) ──────────────────
+            // ── ACTIVE SUBJECT FILTER (passed from schedule/session) ─────────
             if (state.subjectFilter != null) {
                 item {
                     SubjectFilterChip(
@@ -111,102 +126,19 @@ fun LearningMaterialListScreen(
                 }
             }
 
-            // ── TEACHER HERO STATS BANNER ────────────────────────────────────────
-            if (isTeacher) {
-                item {
+            // ── HERO BANNER ──────────────────────────────────────────────────
+            item {
+                if (isTeacher) {
                     TeacherLearningHeroBanner(
                         totalMaterials = state.totalMaterials,
                         completedCount = state.totalCompleted
                     )
-                }
-            }
-
-            // ── PROGRESS MOTIVATION BANNER (For Students) ────────────────────
-            if (!isTeacher && state.totalMaterials > 0) {
-                item {
-                    val progressFraction = if (state.totalMaterials > 0) {
-                        state.totalCompleted.toFloat() / state.totalMaterials.toFloat()
-                    } else 0f
-                    val animatedProgress by animateFloatAsState(targetValue = progressFraction, label = "prog")
-
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                Brush.horizontalGradient(
-                                    listOf(
-                                        NeonBlue.copy(alpha = 0.08f),
-                                        StudentNeon.copy(alpha = 0.08f)
-                                    )
-                                )
-                            )
-                            .border(1.dp, NeonBlue.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                            .padding(14.dp)
-                    ) {
-                        Column {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(CircleShape)
-                                            .background(NeonBlue.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.AutoAwesome, null, tint = NeonBlue, modifier = Modifier.size(16.dp))
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "Progres Modul Belajar",
-                                        color = TextPrimary,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(if (progressFraction >= 1f) NeonSuccess.copy(alpha = 0.15f) else NeonBlue.copy(alpha = 0.15f))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Text(
-                                        "${state.totalCompleted}/${state.totalMaterials} Selesai (${(progressFraction * 100).toInt()}%)",
-                                        color = if (progressFraction >= 1f) NeonSuccess else NeonBlue,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.height(10.dp))
-
-                            // Custom Rounded Progress Track
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(CosmicDark)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth(animatedProgress)
-                                        .fillMaxHeight()
-                                        .clip(RoundedCornerShape(3.dp))
-                                        .background(
-                                            Brush.horizontalGradient(
-                                                listOf(NeonBlue, if (progressFraction >= 1f) NeonSuccess else StudentNeon)
-                                            )
-                                        )
-                                )
-                            }
-                        }
-                    }
+                } else {
+                    StudentMaterialHeroBanner(
+                        totalMaterials = state.totalMaterials,
+                        completedCount = state.totalCompleted,
+                        pendingCount = state.pendingCount
+                    )
                 }
             }
 
@@ -215,9 +147,10 @@ fun LearningMaterialListScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .shadow(2.dp, RoundedCornerShape(16.dp), spotColor = GlassOverlay, ambientColor = GlassOverlay)
+                        .clip(RoundedCornerShape(16.dp))
                         .background(CosmicNavy)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
                         .padding(horizontal = 14.dp, vertical = 11.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -231,7 +164,7 @@ fun LearningMaterialListScreen(
                             singleLine = true,
                             decorationBox = { innerTextField ->
                                 if (state.searchQuery.isEmpty()) {
-                                    Text("Cari judul materi atau topik...", color = TextTertiary, fontSize = 14.sp)
+                                    Text("Cari judul materi, bab, topik...", color = TextTertiary, fontSize = 13.sp)
                                 }
                                 innerTextField()
                             }
@@ -250,6 +183,19 @@ fun LearningMaterialListScreen(
                 }
             }
 
+            // ── CATEGORY / FORMAT FILTER TABS ────────────────────────────────
+            item {
+                MaterialCategoryTabs(
+                    selectedCategory = state.selectedCategory,
+                    onSelect = { viewModel.onCategorySelected(it) },
+                    totalCount = state.totalMaterials,
+                    bookPdfCount = state.bookPdfCount,
+                    videoCount = state.videoCount,
+                    pendingCount = state.pendingCount,
+                    completedCount = state.totalCompleted,
+                    isTeacher = isTeacher
+                )
+            }
 
             // ── LOADING STATE ────────────────────────────────────────────────
             if (state.isLoading) {
@@ -271,6 +217,7 @@ fun LearningMaterialListScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .shadow(3.dp, RoundedCornerShape(20.dp), spotColor = GlassOverlay)
                             .clip(RoundedCornerShape(20.dp))
                             .background(CosmicNavy)
                             .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
@@ -281,17 +228,17 @@ fun LearningMaterialListScreen(
                             Text("📚", fontSize = 44.sp)
                             Spacer(Modifier.height(12.dp))
                             Text(
-                                "Materi Tidak Ditemukan",
+                                text = "Materi Tidak Ditemukan",
                                 color = TextPrimary,
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                if (state.searchQuery.isNotEmpty()) "Coba kata kunci pencarian yang lain" else "Belum ada materi ajar pada kategori ini",
+                                text = if (state.searchQuery.isNotEmpty()) "Coba kata kunci pencarian yang lain" else "Belum ada materi ajar pada kategori ini",
                                 color = TextTertiary,
                                 fontSize = 12.sp,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                textAlign = TextAlign.Center
                             )
                         }
                     }
@@ -299,64 +246,374 @@ fun LearningMaterialListScreen(
             }
 
             // ── MATERIAL CARDS ───────────────────────────────────────────────
-            items(materials) { item ->
-                ModernMaterialCard(item = item, isTeacher = isTeacher, onClick = { onMaterialClick(item.id) })
+            items(materials, key = { it.id }) { item ->
+                ModernMaterialCard(
+                    item = item,
+                    isTeacher = isTeacher,
+                    onClick = { onMaterialClick(item.id) }
+                )
+            }
+        }
+    }
+}
+
+// ── STUDENT MATERIAL HERO BANNER ──────────────────────────────────────────────
+
+@Composable
+private fun StudentMaterialHeroBanner(
+    totalMaterials: Int,
+    completedCount: Int,
+    pendingCount: Int,
+) {
+    val progressFraction = if (totalMaterials > 0) completedCount.toFloat() / totalMaterials.toFloat() else 0f
+    val animatedProgress by animateFloatAsState(targetValue = progressFraction, label = "materialProgress")
+    val completionPercent = (progressFraction * 100).toInt()
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color(0x302563EB), ambientColor = Color(0x152563EB))
+            .clip(RoundedCornerShape(24.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(
+                        Color(0xFF1E40AF), // Deep Royal Blue
+                        Color(0xFF2563EB), // Vibrant Electric Blue
+                        Color(0xFF6D28D9), // Rich Violet
+                    )
+                )
+            )
+    ) {
+        // Decorative background geometry
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 24.dp, y = (-20).dp)
+                .size(120.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.08f))
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = (-16).dp, y = 16.dp)
+                .size(70.dp)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.06f))
+        )
+
+        Column(modifier = Modifier.padding(16.dp)) {
+            // Top Tag Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text("📚", fontSize = 12.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "MODUL & BAHAN AJAR",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.1.sp
+                    )
+                }
+
+                // Completion Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "$completionPercent% Selesai",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = "Modul Belajar Siswa",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-0.3).sp
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "Pelajari modul mandiri, bab buku kurikulum, dan video materi.",
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
+
+            Spacer(Modifier.height(14.dp))
+
+            // Quick Stats Cards Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StatMiniCard(
+                    title = "Total Modul",
+                    value = "$totalMaterials",
+                    emoji = "📖",
+                    modifier = Modifier.weight(1f)
+                )
+                StatMiniCard(
+                    title = "Selesai",
+                    value = "$completedCount",
+                    emoji = "✅",
+                    valueColor = Color(0xFF86EFAC),
+                    modifier = Modifier.weight(1f)
+                )
+                StatMiniCard(
+                    title = "Belum",
+                    value = "$pendingCount",
+                    emoji = "⏳",
+                    valueColor = Color(0xFFFDE047),
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Animated Smooth Progress Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(Color.Black.copy(alpha = 0.25f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(animatedProgress)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color(0xFF38BDF8),
+                                    Color(0xFF34D399)
+                                )
+                            )
+                        )
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ModernMaterialCard(item: MaterialItem, isTeacher: Boolean = false, onClick: () -> Unit) {
+private fun StatMiniCard(
+    title: String,
+    value: String,
+    emoji: String,
+    valueColor: Color = Color.White,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White.copy(alpha = 0.12f))
+            .border(1.dp, Color.White.copy(alpha = 0.20f), RoundedCornerShape(12.dp))
+            .padding(vertical = 8.dp, horizontal = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(emoji, fontSize = 11.sp)
+            Spacer(Modifier.width(4.dp))
+            Text(
+                text = value,
+                color = valueColor,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Black
+            )
+        }
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = title,
+            color = Color.White.copy(alpha = 0.75f),
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Medium
+        )
+    }
+}
+
+// ── CATEGORY & FORMAT TABS ────────────────────────────────────────────────────
+
+@Composable
+private fun MaterialCategoryTabs(
+    selectedCategory: String,
+    onSelect: (String) -> Unit,
+    totalCount: Int,
+    bookPdfCount: Int,
+    videoCount: Int,
+    pendingCount: Int,
+    completedCount: Int,
+    isTeacher: Boolean,
+) {
+    data class TabDef(val id: String, val label: String, val count: Int, val emoji: String)
+
+    val tabs = if (isTeacher) {
+        listOf(
+            TabDef("Semua", "Semua", totalCount, "🌐"),
+            TabDef("Buku & PDF", "Buku & PDF", bookPdfCount, "📖"),
+            TabDef("Video", "Video", videoCount, "🎥"),
+        )
+    } else {
+        listOf(
+            TabDef("Semua", "Semua", totalCount, "🌐"),
+            TabDef("Buku & PDF", "Buku & PDF", bookPdfCount, "📖"),
+            TabDef("Video", "Video", videoCount, "🎥"),
+            TabDef("Belum Selesai", "Belum", pendingCount, "⏳"),
+            TabDef("Selesai", "Selesai", completedCount, "✅"),
+        )
+    }
+
+    LazyRow(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        items(tabs) { tab ->
+            val isSelected = tab.id == selectedCategory
+            val activeColor = when (tab.id) {
+                "Selesai" -> NeonSuccess
+                "Belum Selesai" -> NeonWarning
+                "Video" -> StudentNeon
+                else -> NeonBlue
+            }
+
+            Box(
+                modifier = Modifier
+                    .shadow(if (isSelected) 3.dp else 1.dp, RoundedCornerShape(12.dp), spotColor = if (isSelected) activeColor.copy(alpha = 0.35f) else GlassOverlay)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isSelected) activeColor else CosmicNavy)
+                    .border(1.dp, if (isSelected) activeColor else GlassBorder, RoundedCornerShape(12.dp))
+                    .clickable { onSelect(tab.id) }
+                    .padding(horizontal = 12.dp, vertical = 7.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(tab.emoji, fontSize = 12.sp)
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = tab.label,
+                        color = if (isSelected) Color.White else TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isSelected) Color.White.copy(alpha = 0.25f) else CosmicDark)
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            text = "${tab.count}",
+                            color = if (isSelected) Color.White else TextTertiary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── MODERN MATERIAL CARD ─────────────────────────────────────────────────────
+
+@Composable
+private fun ModernMaterialCard(
+    item: MaterialItem,
+    isTeacher: Boolean = false,
+    onClick: () -> Unit
+) {
+    // Determine card accent
+    val cardAccent = if (item.isCompleted) NeonSuccess else item.color
+    val isLibraryBook = item.startPage != null
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
+            .shadow(3.dp, RoundedCornerShape(20.dp), spotColor = GlassOverlay, ambientColor = GlassOverlay)
+            .clip(RoundedCornerShape(20.dp))
             .background(CosmicNavy)
-            .border(1.dp, if (item.isCompleted) NeonSuccess.copy(alpha = 0.35f) else GlassBorder, RoundedCornerShape(18.dp))
+            .border(
+                width = if (item.isCompleted) 1.5.dp else 1.dp,
+                color = if (item.isCompleted) NeonSuccess.copy(alpha = 0.4f) else GlassBorder,
+                shape = RoundedCornerShape(20.dp)
+            )
             .clickable(onClick = onClick)
+            .padding(14.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
-            // Top Row: Subject Pill + Status Badge
+        Column {
+            // ── TOP ROW: SUBJECT TAG & STATUS BADGE ──────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Subject Tag
-                Box(
+                // Genuine Subject Tag with Dot Indicator
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
+                        .weight(1f, fill = false)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(item.color.copy(alpha = 0.12f))
-                        .border(1.dp, item.color.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                        .background(cardAccent.copy(alpha = 0.10f))
+                        .border(1.dp, cardAccent.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(cardAccent)
+                    )
+                    Spacer(Modifier.width(6.dp))
                     Text(
-                        text = item.subject,
-                        color = item.color,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                        text = item.subject.uppercase(),
+                        color = cardAccent,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.4.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Status Badge (role-aware)
+                Spacer(Modifier.width(8.dp))
+
+                // Status Badge
                 if (isTeacher) {
-                    // Teachers see how many students completed — not personal progress
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(TeacherNeon.copy(alpha = 0.14f))
-                            .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .background(TeacherNeon.copy(alpha = 0.12f))
+                            .border(1.dp, TeacherNeon.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.People, null, tint = TeacherNeon, modifier = Modifier.size(13.dp))
+                            Icon(Icons.Default.People, null, tint = TeacherNeon, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("${item.completedCount} siswa selesai", color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("${item.completedCount} selesai", color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 } else if (item.isCompleted) {
@@ -368,9 +625,9 @@ private fun ModernMaterialCard(item: MaterialItem, isTeacher: Boolean = false, o
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.CheckCircle, null, tint = NeonSuccess, modifier = Modifier.size(13.dp))
+                            Icon(Icons.Default.CheckCircle, null, tint = NeonSuccess, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Selesai", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Selesai", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 } else {
@@ -378,46 +635,131 @@ private fun ModernMaterialCard(item: MaterialItem, isTeacher: Boolean = false, o
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(CosmicDark)
-                            .padding(horizontal = 8.dp, vertical = 5.dp)
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Schedule, null, tint = TextTertiary, modifier = Modifier.size(12.dp))
-                            Spacer(Modifier.width(2.dp))
-                            Text("Belum Selesai", color = TextTertiary, fontSize = 8.sp, fontWeight = FontWeight.Medium)
+                            Icon(Icons.Default.Schedule, null, tint = TextTertiary, modifier = Modifier.size(11.dp))
+                            Spacer(Modifier.width(3.dp))
+                            Text("Belum Selesai", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Title
-            Text(
-                text = item.title,
-                fontWeight = FontWeight.ExtraBold,
-                fontSize = 15.sp,
-                color = TextPrimary,
-                lineHeight = 21.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            // ── MAIN ROW: MEDIA ICON + TITLE & METADATA ─────────────────────
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                // Media Icon Container
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    cardAccent.copy(alpha = 0.18f),
+                                    cardAccent.copy(alpha = 0.08f)
+                                )
+                            )
+                        )
+                        .border(1.dp, cardAccent.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = when {
+                            item.type == "VIDEO" -> Icons.Default.PlayCircleFilled
+                            isLibraryBook -> Icons.AutoMirrored.Filled.MenuBook
+                            item.type == "PDF" -> Icons.Default.Description
+                            else -> Icons.Default.Article
+                        },
+                        contentDescription = null,
+                        tint = cardAccent,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
 
-            // Description preview if available
+                Spacer(Modifier.width(12.dp))
+
+                // Title & Subtitle Info
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = item.title,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 14.sp,
+                        color = TextPrimary,
+                        lineHeight = 20.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    // Library Book Page Range Pill
+                    if (item.startPage != null && item.endPage != null) {
+                        Spacer(Modifier.height(6.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(Color(0xFFFEF3C7))
+                                .border(1.dp, Color(0xFFFDE68A), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("📖", fontSize = 10.sp)
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Halaman ${item.startPage} — ${item.endPage}",
+                                color = Color(0xFF92400E),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // Teacher & Class Info Row
+                    val teacher = item.teacherName?.takeIf { it.isNotBlank() }
+                    val rombel = item.className?.takeIf { it.isNotBlank() }
+                    if (teacher != null || rombel != null) {
+                        Spacer(Modifier.height(5.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = listOfNotNull(
+                                    teacher?.let { "👨‍🏫 $it" },
+                                    rombel?.let { "🏫 $it" }
+                                ).joinToString(" • "),
+                                color = TextTertiary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Description / Excerpt (Clean excerpt if not just duplicate instructions)
             val descExcerpt = item.description?.replace(" • ", " - ")
-            if (!descExcerpt.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
+            if (!descExcerpt.isNullOrBlank() && !descExcerpt.startsWith("Materi Bacaan Buku (Halaman")) {
+                Spacer(Modifier.height(8.dp))
                 Text(
                     text = descExcerpt,
                     color = TextSecondary,
-                    fontSize = 12.sp,
-                    maxLines = 1,
+                    fontSize = 11.sp,
+                    lineHeight = 16.sp,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Bottom Meta Row: Format Chip + Reading Time + Action Button
+            // ── BOTTOM META ROW: FORMAT CHIP + TIME + ACTION BUTTON ─────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -425,7 +767,7 @@ private fun ModernMaterialCard(item: MaterialItem, isTeacher: Boolean = false, o
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     // Format Chip
                     Row(
@@ -435,54 +777,47 @@ private fun ModernMaterialCard(item: MaterialItem, isTeacher: Boolean = false, o
                             .background(CosmicDark)
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Icon(
-                            imageVector = when (item.type) {
-                                "VIDEO" -> Icons.Default.PlayCircleOutline
-                                else -> Icons.Default.Description
-                            },
-                            contentDescription = null,
-                            tint = item.color,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
                         Text(
-                            text = if (item.type == "VIDEO") "Video Pelajaran" else "Modul PDF",
+                            text = when {
+                                item.type == "VIDEO" -> "🎥 Video Pelajaran"
+                                isLibraryBook -> "📖 Buku Siswa"
+                                else -> "📄 Modul PDF"
+                            },
                             color = TextSecondary,
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.SemiBold
                         )
                     }
 
                     // Reading / Watch Time
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "⏱️ ${item.readTimeMinutes} mnt baca",
-                            color = TextTertiary,
-                            fontSize = 11.sp
-                        )
-                    }
+                    Text(
+                        text = "⏱️ ${item.readTimeMinutes} mnt baca",
+                        color = TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
 
-                // Action Pill
+                // Action Forward Button
                 Box(
                     modifier = Modifier
                         .size(32.dp)
                         .clip(CircleShape)
-                        .background(if (item.isCompleted) NeonSuccess.copy(alpha = 0.12f) else NeonBlue.copy(alpha = 0.1f)),
+                        .background(if (item.isCompleted) NeonSuccess.copy(alpha = 0.12f) else NeonBlue.copy(alpha = 0.10f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                         contentDescription = "Buka",
                         tint = if (item.isCompleted) NeonSuccess else NeonBlue,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                 }
             }
 
-            // Bottom progress bar (if completed show 100% green bar)
+            // Bottom completion bar
             if (item.isCompleted) {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(10.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -507,13 +842,14 @@ private fun TeacherLearningHeroBanner(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .shadow(8.dp, RoundedCornerShape(24.dp), spotColor = Color(0x30059669), ambientColor = Color(0x15059669))
+            .clip(RoundedCornerShape(24.dp))
             .background(
                 Brush.linearGradient(
                     listOf(
-                        Color(0xFF0D9488), // Teal
+                        Color(0xFF047857), // Deep Emerald
                         Color(0xFF059669), // Emerald
-                        Color(0xFF047857), // Emerald dark
+                        Color(0xFF0D9488), // Teal
                     )
                 )
             )
@@ -522,37 +858,69 @@ private fun TeacherLearningHeroBanner(
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .size(90.dp)
+                .offset(x = 20.dp, y = (-16).dp)
+                .size(100.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.07f))
+                .background(Color.White.copy(alpha = 0.08f))
         )
 
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("📚", fontSize = 18.sp)
-                    Spacer(Modifier.width(8.dp))
-                    Column {
-                        Text(
-                            "MATERI AJAR KELAS",
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 1.sp
-                        )
-                        Text(
-                            "Kelola & pantau progres siswa",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text("👨‍🏫", fontSize = 12.sp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        "PORTAL MATERI GURU",
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.1.sp
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color.White.copy(alpha = 0.18f))
+                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        "$totalMaterials Materi Aktif",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold
+                    )
                 }
             }
+
+            Spacer(Modifier.height(12.dp))
+
+            Text(
+                text = "Manajemen Bahan Ajar",
+                color = Color.White,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = (-0.3).sp
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = "Pantau modul belajar siswa dan distribusikan bahan bacaan baru.",
+                color = Color.White.copy(alpha = 0.85f),
+                fontSize = 12.sp,
+                lineHeight = 16.sp
+            )
 
             Spacer(Modifier.height(14.dp))
 
@@ -565,19 +933,19 @@ private fun TeacherLearningHeroBanner(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.15f))
-                        .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                        .padding(10.dp),
+                        .background(Color.White.copy(alpha = 0.14f))
+                        .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(12.dp))
+                        .padding(vertical = 8.dp, horizontal = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         "$totalMaterials",
                         color = Color.White,
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Black
                     )
                     Text(
-                        "Total Materi",
+                        "Total Modul",
                         color = Color.White.copy(alpha = 0.75f),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Medium
@@ -589,15 +957,15 @@ private fun TeacherLearningHeroBanner(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.15f))
-                        .border(1.dp, Color.White.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-                        .padding(10.dp),
+                        .background(Color.White.copy(alpha = 0.14f))
+                        .border(1.dp, Color.White.copy(alpha = 0.22f), RoundedCornerShape(12.dp))
+                        .padding(vertical = 8.dp, horizontal = 10.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
                         "$avgCompletion%",
                         color = if (avgCompletion >= 70) Color(0xFF86EFAC) else Color(0xFFFDE047),
-                        fontSize = 22.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Black
                     )
                     Text(

@@ -169,7 +169,7 @@ fun TeacherChatScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 10.dp),
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -258,7 +258,7 @@ fun TeacherChatScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 18.dp)
                 .padding(bottom = 10.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -301,7 +301,7 @@ fun TeacherChatScreen(
             onValueChange = { searchQuery = it },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 18.dp),
             placeholder = {
                 Text(
                     if (isTeacherMode) "Cari nama siswa, topik, atau kelas..."
@@ -350,7 +350,7 @@ fun TeacherChatScreen(
             Spacer(Modifier.height(10.dp))
             LazyRow(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                contentPadding = PaddingValues(horizontal = 10.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 if (waitingCount > 0) {
@@ -526,7 +526,7 @@ fun TeacherChatScreen(
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         // Sort: waiting first, then by latest update

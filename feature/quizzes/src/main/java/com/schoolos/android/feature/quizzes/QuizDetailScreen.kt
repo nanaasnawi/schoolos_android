@@ -99,7 +99,7 @@ fun QuizDetailScreen(
 
                         Column(
                             modifier = Modifier
-                                .padding(horizontal = 10.dp)
+                                .padding(horizontal = 12.dp)
                                 .offset(y = (-14).dp)
                         ) {
                             // COMPACT METRICS ROW
@@ -181,7 +181,7 @@ private fun QuizHeroHeaderRefactored(
             .fillMaxWidth()
             .height(220.dp)
             .background(Brush.verticalGradient(listOf(gradient.first(), gradient.last().copy(alpha = 0.6f))))
-            .padding(horizontal = 12.dp, vertical = 12.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             // TOP NAVIGATION ROW

@@ -107,8 +107,8 @@ fun TodayScreen(
                         // Edge-to-edge safe: never draw under the status bar
                         .statusBarsPadding(),
                     contentPadding = PaddingValues(
-                        start = 10.dp,
-                        end = 10.dp,
+                        start = 12.dp,
+                        end = 12.dp,
                         top = 8.dp,
                         bottom = 24.dp
                     ),

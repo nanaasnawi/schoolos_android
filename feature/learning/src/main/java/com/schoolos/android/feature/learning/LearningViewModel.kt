@@ -27,6 +27,12 @@ data class MaterialItem(
     val completedCount: Long = 0L,
     val readTimeMinutes: Int = 8,
     val description: String? = null,
+    val teacherName: String? = null,
+    val className: String? = null,
+    val startPage: Int? = null,
+    val endPage: Int? = null,
+    val mediaUrl: String? = null,
+    val thumbnailUrl: String? = null,
 )
 
 data class LearningUiState(
@@ -39,6 +45,9 @@ data class LearningUiState(
     val totalMaterials: Int = 0,
     val userRole: String = "student",
     val subjectFilter: String? = null,
+    val bookPdfCount: Int = 0,
+    val videoCount: Int = 0,
+    val pendingCount: Int = 0,
 )
 
 @HiltViewModel
@@ -96,6 +105,12 @@ class LearningViewModel @Inject constructor(
                             completedCount = m.completedCount,
                             readTimeMinutes = if (typeLabel == "VIDEO") 12 else 8,
                             description = m.description,
+                            teacherName = m.teacherName,
+                            className = m.className,
+                            startPage = m.startPage,
+                            endPage = m.endPage,
+                            mediaUrl = m.mediaUrl,
+                            thumbnailUrl = m.thumbnailUrl,
                         )
                     }
                     allMaterials = mapped
@@ -198,6 +213,8 @@ class LearningViewModel @Inject constructor(
         when (category) {
             "Selesai" -> filtered = filtered.filter { it.isCompleted }
             "Belum Selesai" -> filtered = filtered.filter { !it.isCompleted }
+            "Buku & PDF" -> filtered = filtered.filter { it.type == "PDF" || it.startPage != null }
+            "Video" -> filtered = filtered.filter { it.type == "VIDEO" }
             "Semua" -> {}
             else -> {
                 filtered = filtered.filter {
@@ -207,11 +224,18 @@ class LearningViewModel @Inject constructor(
         }
 
         val completedCount = allMaterials.count { it.isCompleted }
+        val pendingCount = allMaterials.size - completedCount
+        val bookPdfCount = allMaterials.count { it.type == "PDF" || it.startPage != null }
+        val videoCount = allMaterials.count { it.type == "VIDEO" }
+
         _state.value = _state.value.copy(
             isLoading = false,
             materials = filtered,
             totalCompleted = completedCount,
             totalMaterials = allMaterials.size,
+            pendingCount = pendingCount,
+            bookPdfCount = bookPdfCount,
+            videoCount = videoCount,
             subjectFilter = subjectFilter,
         )
     }
