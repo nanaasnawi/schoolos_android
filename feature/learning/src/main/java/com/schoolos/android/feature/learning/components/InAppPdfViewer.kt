@@ -172,6 +172,12 @@ fun InAppPdfViewer(
                 }
             } catch (e: Exception) {
                 Timber.e(e, "Error opening PDF document")
+                try {
+                    val cleanUrl = pdfUrl.trim()
+                    val cacheFileName = "book_pdf_${cleanUrl.hashCode().toString().replace("-", "n")}.pdf"
+                    val pdfFile = File(context.cacheDir, cacheFileName)
+                    if (pdfFile.exists()) pdfFile.delete()
+                } catch (_: Exception) {}
                 withContext(Dispatchers.Main) {
                     errorMessage = "Gagal memproses dokumen PDF: ${e.localizedMessage}"
                     isLoading = false
