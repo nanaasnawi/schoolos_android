@@ -112,11 +112,11 @@ fun HomeScreen(
                     // Edge-to-edge safe: never draw under the status bar
                     .statusBarsPadding(),
                 contentPadding = PaddingValues(
-                    start = 12.dp, end = 12.dp,
+                    start = 8.dp, end = 8.dp,
                     top = 8.dp,
                     bottom = padding.calculateBottomPadding() + 0.dp,
                 ),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 // ── VIBRANT HERO BANNER (Top of Screen) ─────────────────────────
                 item {
@@ -129,7 +129,7 @@ fun HomeScreen(
                                 Brush.linearGradient(heroGradient)
                             )
                             .shadow(6.dp, RoundedCornerShape(24.dp), spotColor = heroGradient.first().copy(alpha = 0.4f))
-                            .padding(20.dp),
+                            .padding(14.dp),
                     ) {
                         Column {
                             Row(
@@ -218,7 +218,7 @@ fun HomeScreen(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(16.dp))
                                     .background(Color.Black.copy(alpha = 0.22f))
-                                    .padding(vertical = 12.dp, horizontal = 10.dp),
+                                    .padding(vertical = 10.dp, horizontal = 4.dp),
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),

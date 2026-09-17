@@ -59,8 +59,8 @@ fun QuizListScreen(
                         .fillMaxSize()
                         // Edge-to-edge safe: never draw under the status bar
                         .statusBarsPadding(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 100.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 8.dp, bottom = 100.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     // ── REFACTORED NON-OVERLAPPING LIST HEADER ─────────────
                     item {
@@ -121,7 +121,7 @@ private fun CompactQuizBannerCard(pendingCount: Int) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(Brush.linearGradient(listOf(StudentNeon, NeonBlue)))
-            .padding(18.dp),
+            .padding(14.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -154,7 +154,7 @@ private fun CompactTeacherQuizBanner(activeCount: Int) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
             .background(Brush.linearGradient(listOf(TeacherNeon, NeonBlue)))
-            .padding(18.dp),
+            .padding(14.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),

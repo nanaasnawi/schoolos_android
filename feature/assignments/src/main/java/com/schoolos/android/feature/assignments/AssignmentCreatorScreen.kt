@@ -118,7 +118,7 @@ fun AssignmentCreatorScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = 10.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CustomBackButton(
@@ -169,8 +169,8 @@ fun AssignmentCreatorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
@@ -530,7 +530,7 @@ fun AssignmentCreatorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
+                        .padding(horizontal = 10.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(NeonError.copy(alpha = 0.12f))
                         .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))

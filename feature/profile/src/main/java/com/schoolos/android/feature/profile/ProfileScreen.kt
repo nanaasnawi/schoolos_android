@@ -80,7 +80,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 10.dp),
             verticalArrangement = Arrangement.spacedBy(18.dp),
         ) {
             Spacer(Modifier.height(4.dp))

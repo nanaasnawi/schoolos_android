@@ -55,7 +55,7 @@ fun StudentSessionDetailContent(
                     )
                 )
                 .border(1.dp, accentColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                .padding(16.dp),
+                .padding(12.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -116,7 +116,7 @@ fun StudentSessionDetailContent(
 
         // Personal Attendance
         GlassCard(cornerRadius = 16.dp) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -186,7 +186,7 @@ private fun SectionTitle(title: String) {
 @Composable
 private fun EmptyStateContent(message: String, subtitle: String, accentColor: Color) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(24.dp),
+        modifier = Modifier.fillMaxWidth().padding(14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

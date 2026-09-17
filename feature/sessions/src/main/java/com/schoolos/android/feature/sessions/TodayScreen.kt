@@ -107,12 +107,12 @@ fun TodayScreen(
                         // Edge-to-edge safe: never draw under the status bar
                         .statusBarsPadding(),
                     contentPadding = PaddingValues(
-                        start = 16.dp,
-                        end = 16.dp,
-                        top = 12.dp,
+                        start = 10.dp,
+                        end = 10.dp,
+                        top = 8.dp,
                         bottom = 24.dp
                     ),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     val role = state.userRole.lowercase()
                     val isTeacher = role == "teacher" || role == "guru"
@@ -234,7 +234,7 @@ private fun HeroHeader(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(20.dp)
+                .padding(14.dp)
         ) {
             // Top Navigation Row
             Row(

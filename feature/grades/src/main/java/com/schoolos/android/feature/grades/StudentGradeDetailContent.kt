@@ -101,7 +101,7 @@ fun StudentGradeDetailContent(
                     ),
                     shape = RoundedCornerShape(22.dp)
                 )
-                .padding(20.dp)
+                .padding(14.dp)
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -415,7 +415,7 @@ fun StudentGradeDetailContent(
                 .clip(RoundedCornerShape(20.dp))
                 .background(CosmicNavy)
                 .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                .padding(18.dp)
+                .padding(14.dp)
         ) {
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {

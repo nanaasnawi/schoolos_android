@@ -164,7 +164,7 @@ fun LazyListScope.studentContent(
         }
 
         LightCard {
-            Column(modifier = Modifier.padding(18.dp)) {
+            Column(modifier = Modifier.padding(14.dp)) {
                 LightSectionHeader("Agenda Belajar Hari Ini", if (agendaItems.isNotEmpty()) "${agendaItems.size} Sesi" else "", onSeeAll = onNavigateToSessions)
                 Spacer(Modifier.height(14.dp))
                 if (agendaItems.isNotEmpty()) {
@@ -200,7 +200,7 @@ fun LazyListScope.studentContent(
     // ── 4. REFINED DYNAMIC GRADE OVERVIEW ──
     item {
         LightCard {
-            Column(modifier = Modifier.padding(18.dp)) {
+            Column(modifier = Modifier.padding(14.dp)) {
                 LightSectionHeader("Performa Akademik", "Semester Aktif", onSeeAll = onNavigateToGrades)
                 Spacer(Modifier.height(16.dp))
                 Row(verticalAlignment = Alignment.Bottom) {
@@ -323,7 +323,7 @@ fun LazyListScope.studentContent(
         val overallDisplayPct = p?.overallProgress?.toInt()?.coerceIn(0, 100) ?: 0
 
         LightCard {
-            Column(modifier = Modifier.padding(18.dp)) {
+            Column(modifier = Modifier.padding(14.dp)) {
                 LightSectionHeader("Progres Belajar", if (p != null) "$overallDisplayPct% Selesai" else "", onSeeAll = onNavigateToProgress)
                 Spacer(Modifier.height(14.dp))
                 progressItems.forEach { (subj, pct, color) ->
@@ -351,7 +351,7 @@ private fun StudentLearningHubGlass(
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.horizontalGradient(listOf(StudentNeon, NeonBlue)))
             .clickable(onClick = onClick)
-            .padding(20.dp)
+            .padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {

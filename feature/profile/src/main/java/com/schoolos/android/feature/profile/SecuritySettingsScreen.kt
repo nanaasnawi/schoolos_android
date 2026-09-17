@@ -75,7 +75,7 @@ fun SecuritySettingsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -105,7 +105,7 @@ fun SecuritySettingsScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ── 1. SECURITY STATUS HERO CARD ─────────────────────
@@ -123,7 +123,7 @@ fun SecuritySettingsScreen(
                             )
                         )
                     )
-                    .padding(20.dp)
+                    .padding(14.dp)
             ) {
                 Column {
                     Row(
@@ -188,7 +188,7 @@ fun SecuritySettingsScreen(
                     .clip(RoundedCornerShape(20.dp))
                     .background(CosmicNavy)
                     .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                    .padding(18.dp)
+                    .padding(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
@@ -371,7 +371,7 @@ fun SecuritySettingsScreen(
                     .clip(RoundedCornerShape(20.dp))
                     .background(CosmicNavy)
                     .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                    .padding(18.dp)
+                    .padding(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     Text(

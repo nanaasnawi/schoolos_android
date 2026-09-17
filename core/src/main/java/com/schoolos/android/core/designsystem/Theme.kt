@@ -14,6 +14,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
@@ -136,6 +137,11 @@ val Slate400: Color @Composable get() = TextDisabled
 val Slate200: Color @Composable get() = GlassBorder2
 val Slate100: Color @Composable get() = GlassBorder
 val Slate50: Color  @Composable get() = CosmicDark
+
+// ─── Standard Layout Spacing Tokens (Full-Width Mobile UX) ─────────────────────
+val ScreenHorizontalPadding = 10.dp
+val ScreenCompactPadding    = 8.dp
+val CardInnerPadding        = 14.dp
 
 // ─── Typography ─────────────────────────────────────────────────────────────
 val SchoolOsTypography = Typography(

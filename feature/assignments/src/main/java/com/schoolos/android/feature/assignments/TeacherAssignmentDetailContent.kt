@@ -129,7 +129,7 @@ fun TeacherAssignmentDetailContent(
                 .clip(RoundedCornerShape(20.dp))
                 .background(CosmicNavy)
                 .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                .padding(18.dp)
+                .padding(14.dp)
         ) {
             Column {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -416,7 +416,7 @@ private fun GradingDialog(
             Column(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
-                    .padding(20.dp),
+                    .padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header

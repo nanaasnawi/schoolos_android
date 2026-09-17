@@ -135,12 +135,12 @@ fun AssignmentListScreen(
                             .fillMaxSize()
                             .statusBarsPadding(),
                         contentPadding = PaddingValues(
-                            start = 16.dp,
-                            end = 16.dp,
-                            top = 12.dp,
+                            start = 10.dp,
+                            end = 10.dp,
+                            top = 8.dp,
                             bottom = 100.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         // ── IMMERSIVE HERO HEADER ────────────────────────────
                         item {
@@ -390,7 +390,7 @@ private fun StudentAssignmentHeroHeader(
 
         // Content
         Column(
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(14.dp)
         ) {
             // Top Tag Row
             Row(
@@ -555,7 +555,7 @@ private fun TeacherAssignmentHeroHeader(
                 .background(Color.White.copy(alpha = 0.07f))
         )
 
-        Column(modifier = Modifier.padding(20.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -705,7 +705,7 @@ private fun TeacherEmptyState(
                 .clip(RoundedCornerShape(24.dp))
                 .background(CosmicNavy)
                 .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-                .padding(28.dp),
+                .padding(16.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -778,7 +778,7 @@ private fun TeacherActionCard(
             .background(CosmicNavy)
             .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
             .clickable(onClick = onClick)
-            .padding(18.dp)
+            .padding(14.dp)
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
