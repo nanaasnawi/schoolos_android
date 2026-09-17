@@ -43,7 +43,7 @@ fun AboutAppScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                    .padding(horizontal = 10.dp, vertical = 10.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -73,7 +73,7 @@ fun AboutAppScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // ── HERO APP CARD ────────────────────────────────────
@@ -91,7 +91,7 @@ fun AboutAppScreen(
                             )
                         )
                     )
-                    .padding(24.dp),
+                    .padding(14.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -153,7 +153,7 @@ fun AboutAppScreen(
                 .clip(RoundedCornerShape(20.dp))
                 .background(CosmicNavy)
                 .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                .padding(18.dp)
+                .padding(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
@@ -180,7 +180,7 @@ fun AboutAppScreen(
                     .clip(RoundedCornerShape(20.dp))
                     .background(CosmicNavy)
                     .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                    .padding(18.dp)
+                    .padding(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text(
@@ -209,7 +209,7 @@ fun AboutAppScreen(
                     .clip(RoundedCornerShape(20.dp))
                     .background(CosmicNavy)
                     .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                    .padding(18.dp)
+                    .padding(14.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(

@@ -54,7 +54,7 @@ fun LoginErrorToast(
             targetOffsetY = { it },
         ),
         modifier = modifier
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 12.dp)
             .padding(bottom = 32.dp)
             .fillMaxWidth(),
     ) {

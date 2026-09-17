@@ -167,7 +167,7 @@ fun QrScannerModalBottomSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             // Header
@@ -236,7 +236,7 @@ fun QrScannerModalBottomSheet(
                     ScannerOverlay(isScanning = true)
                 } else {
                     Column(
-                        modifier = Modifier.padding(20.dp),
+                        modifier = Modifier.padding(14.dp),
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Center
                     ) {

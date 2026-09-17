@@ -64,8 +64,8 @@ fun LearningMaterialListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 30.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 30.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // ── HEADER ────────────────────────────────────────────────────────
             item {
@@ -527,7 +527,7 @@ private fun TeacherLearningHeroBanner(
                 .background(Color.White.copy(alpha = 0.07f))
         )
 
-        Column(modifier = Modifier.padding(18.dp)) {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,

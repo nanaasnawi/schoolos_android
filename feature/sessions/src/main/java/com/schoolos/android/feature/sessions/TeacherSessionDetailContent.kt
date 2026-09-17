@@ -56,7 +56,7 @@ fun TeacherSessionDetailContent(
                     )
                 )
                 .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                .padding(16.dp)
+                .padding(12.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 // Period badge row
@@ -202,7 +202,7 @@ fun TeacherSessionDetailContent(
         }
 
         GlassCard(cornerRadius = 16.dp) {
-            Column(modifier = Modifier.padding(16.dp)) {
+            Column(modifier = Modifier.padding(12.dp)) {
                 if (attendance.isEmpty()) {
                     EmptyStateContent(
                         message = "Data presensi belum tersedia",
@@ -346,7 +346,7 @@ private fun ResourceAction(
 @Composable
 private fun EmptyStateContent(message: String, subtitle: String) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(24.dp),
+        modifier = Modifier.fillMaxWidth().padding(14.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {

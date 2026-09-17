@@ -89,7 +89,7 @@ fun LazyListScope.teacherContent(
                         onNavigateToRombelStudents(displayClass)
                     }
                 }
-                .padding(18.dp)
+                .padding(14.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -229,7 +229,7 @@ fun LazyListScope.teacherContent(
                 .background(CosmicNavy)
                 .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
                 .clickable(onClick = onNavigateToBroadcastCenter)
-                .padding(horizontal = 16.dp, vertical = 14.dp)
+                .padding(horizontal = 12.dp, vertical = 12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -280,7 +280,7 @@ private fun TeacherActionCard(
             .background(CosmicNavy)
             .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
             .clickable(onClick = onClick)
-            .padding(14.dp)
+            .padding(12.dp)
     ) {
         Column {
             Box(

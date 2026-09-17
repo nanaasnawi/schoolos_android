@@ -117,7 +117,7 @@ fun LazyListScope.parentContent(
     // ── 3. ATTENDANCE & ACADEMIC HUB ──
     item {
         LightCard {
-            Column(modifier = Modifier.padding(18.dp)) {
+            Column(modifier = Modifier.padding(14.dp)) {
                 LightSectionHeader("Ringkasan Kehadiran", "Semester Ganjil 2026/2027")
                 Spacer(Modifier.height(16.dp))
                 val parsedRate = attendanceRate.removeSuffix("%").toFloatOrNull()?.let { it / 100f } ?: 0f
@@ -198,7 +198,7 @@ private fun ParentIntegratedChildHub(
             .clip(RoundedCornerShape(24.dp))
             .background(Brush.horizontalGradient(listOf(ParentNeon, Color(0xFFBE185D))))
             .clickable(onClick = onClick)
-            .padding(20.dp)
+            .padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(

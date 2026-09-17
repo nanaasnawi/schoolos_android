@@ -93,7 +93,7 @@ fun LoginFormCard(
             .clip(RoundedCornerShape(28.dp))
             .background(CosmicNavy.copy(alpha = 0.98f))
             .border(1.2.dp, GlassBorder, RoundedCornerShape(28.dp))
-            .padding(22.dp),
+            .padding(16.dp),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             // Card Sub-Header

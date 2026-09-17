@@ -198,7 +198,7 @@ fun MaterialCreatorScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .padding(horizontal = 10.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     CustomBackButton(
@@ -250,8 +250,8 @@ fun MaterialCreatorScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        .padding(horizontal = 10.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
@@ -610,7 +610,7 @@ fun MaterialCreatorScreen(
             Spacer(Modifier.height(8.dp))
 
             // ── SECTION 1: FORMAT MATERI ──
-            Column(modifier = Modifier.padding(horizontal = 16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 10.dp)) {
                 Spacer(Modifier.height(4.dp))
                 SectionHeader(
                     number = null,
@@ -686,7 +686,7 @@ fun MaterialCreatorScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     SectionHeader(
@@ -733,7 +733,7 @@ fun MaterialCreatorScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 16.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     SectionHeader(
@@ -1071,7 +1071,7 @@ private fun UploadingIndicator(message: String, accentColor: Color) {
             .clip(RoundedCornerShape(14.dp))
             .background(accentColor.copy(alpha = 0.08f))
             .border(1.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-            .padding(20.dp),
+            .padding(14.dp),
         contentAlignment = Alignment.Center
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -1146,7 +1146,7 @@ private fun FileDropzone(
                 shape = RoundedCornerShape(16.dp)
             )
             .clickable(onClick = onClick)
-            .padding(24.dp),
+            .padding(14.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -1193,7 +1193,7 @@ private fun LibraryBookCatalogSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 8.dp)
+            .padding(horizontal = 10.dp, vertical = 8.dp)
             .navigationBarsPadding()
     ) {
         // Header

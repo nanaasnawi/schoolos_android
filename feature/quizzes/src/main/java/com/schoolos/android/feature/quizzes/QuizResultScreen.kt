@@ -125,7 +125,7 @@ fun QuizResultScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 24.dp),
+                        .padding(horizontal = 12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(Modifier.height(32.dp))
@@ -167,7 +167,7 @@ fun QuizResultScreen(
                         color = gradeColor.copy(alpha = 0.12f),
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
@@ -199,7 +199,7 @@ fun QuizResultScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(CosmicNavy)
                             .border(1.dp, GlassBorder2, RoundedCornerShape(20.dp))
-                            .padding(20.dp),
+                            .padding(14.dp),
                     ) {
                         Column {
                             Text(
@@ -225,7 +225,7 @@ fun QuizResultScreen(
                             .clip(RoundedCornerShape(20.dp))
                             .background(gradeColor.copy(alpha = 0.08f))
                             .border(1.dp, gradeColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                            .padding(20.dp),
+                            .padding(14.dp),
                     ) {
                         Text(
                             motivationQuote(score, maxScore),

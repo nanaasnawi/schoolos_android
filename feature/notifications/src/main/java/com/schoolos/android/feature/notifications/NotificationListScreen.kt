@@ -139,8 +139,8 @@ fun NotificationListScreen(
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 46.dp, bottom = 100.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp),
+                        contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 46.dp, bottom = 100.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
                         // ── 1. COSMIC TOP HEADER ─────────────────────────────
                         item {
@@ -336,7 +336,7 @@ private fun NotificationHeroCard(
                 )
             )
             .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-            .padding(18.dp)
+            .padding(14.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -509,7 +509,7 @@ private fun NotificationDetailDialog(
                 .clip(RoundedCornerShape(24.dp))
                 .background(CosmicNavy)
                 .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-                .padding(20.dp)
+                .padding(14.dp)
         ) {
             Column {
                 Row(

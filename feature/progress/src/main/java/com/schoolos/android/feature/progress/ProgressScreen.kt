@@ -128,8 +128,8 @@ private fun ProgressContent(
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 46.dp, bottom = 100.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+        contentPadding = PaddingValues(start = 10.dp, end = 10.dp, top = 46.dp, bottom = 100.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         // ── REFACTORED NON-OVERLAPPING LIST HEADER ─────────────
         item {
@@ -291,7 +291,7 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
             .clip(RoundedCornerShape(22.dp))
             .background(Brush.linearGradient(colors = listOf(Color(0xFFE11D48), Color(0xFF9F1239))))
             .border(1.dp, GlassBorder2, RoundedCornerShape(22.dp))
-            .padding(20.dp)
+            .padding(14.dp)
     ) {
         Column {
             Row(
@@ -486,7 +486,7 @@ private fun TeacherRemarksCard(progress: Progress) {
             .clip(RoundedCornerShape(18.dp))
             .background(CosmicNavy)
             .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
-            .padding(18.dp)
+            .padding(14.dp)
     ) {
         Column {
             Row(
@@ -576,7 +576,7 @@ private fun CompactOverallProgressCard(progress: Progress) {
             .fillMaxWidth()
             .clip(RoundedCornerShape(18.dp))
             .background(Brush.linearGradient(colors = listOf(NeonBlue, StudentNeon)))
-            .padding(20.dp),
+            .padding(14.dp),
         contentAlignment = Alignment.Center,
     ) {
         Row(

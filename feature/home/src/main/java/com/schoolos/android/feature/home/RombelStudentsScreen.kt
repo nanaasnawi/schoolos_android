@@ -123,7 +123,7 @@ fun RombelStudentsScreen(
                     )
                 )
         ) {
-            Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp)) {
                 // Nav row
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -233,7 +233,7 @@ fun RombelStudentsScreen(
         }
 
         // ── Search Bar ──────────────────────────────────────────────────
-        Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
+        Box(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
@@ -271,7 +271,7 @@ fun RombelStudentsScreen(
         // Section divider label
         if (filteredStudents.isNotEmpty()) {
             Row(
-                modifier = Modifier.padding(horizontal = 22.dp, vertical = 2.dp),
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
@@ -413,7 +413,7 @@ fun RombelStudentsScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .navigationBarsPadding(),
-                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 6.dp),
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     itemsIndexed(filteredStudents, key = { _, s -> s.id }) { index, student ->
