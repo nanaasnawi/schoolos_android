@@ -79,7 +79,7 @@ fun SessionDetailScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 10.dp, end = 10.dp, top = 8.dp),
+                                .padding(start = 12.dp, end = 12.dp, top = 8.dp),
                         ) {
                             if (isTeacher) {
                                 TeacherSessionDetailContent(
@@ -151,7 +151,7 @@ private fun DetailHeroHeader(
                 .fillMaxSize()
                 // Immersive hero: content stays clear of the status bar
                 .statusBarsPadding()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
         ) {
             // Top Navigation Row
             Row(

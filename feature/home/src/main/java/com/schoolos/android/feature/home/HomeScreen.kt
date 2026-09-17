@@ -112,8 +112,8 @@ fun HomeScreen(
                     // Edge-to-edge safe: never draw under the status bar
                     .statusBarsPadding(),
                 contentPadding = PaddingValues(
-                    start = 8.dp, end = 8.dp,
-                    top = 8.dp,
+                    start = 10.dp, end = 10.dp,
+                    top = 0.dp,
                     bottom = padding.calculateBottomPadding() + 0.dp,
                 ),
                 verticalArrangement = Arrangement.spacedBy(10.dp),

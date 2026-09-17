@@ -45,7 +45,7 @@ fun BroadcastCenterScreen(
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
-            Box(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Box(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     CustomBackButton(onClick = onBack)
                     Spacer(Modifier.width(16.dp))
@@ -58,7 +58,7 @@ fun BroadcastCenterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(horizontal = 10.dp)
+                .padding(horizontal = 12.dp)
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {

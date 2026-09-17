@@ -29,7 +29,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     else -> MaterialType.ARTICLE
                 }
                 val parts = (dto.description ?: "").split(" • ")
-                val subject = if (parts.isNotEmpty() && parts[0].isNotBlank()) parts[0] else (dto.subjectName ?: "Umum")
+                val subject = dto.subjectName?.takeIf { it.isNotBlank() }
+                    ?: if (parts.size > 1 && parts[0].isNotBlank()) parts[0] else "Umum"
                 val rawUrl = dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey
 
                 LearningMaterial(
@@ -120,7 +121,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 else -> MaterialType.ARTICLE
             }
             val parts = (dto.description ?: "").split(" • ")
-            val subject = if (parts.isNotEmpty() && parts[0].isNotBlank()) parts[0] else (dto.subjectName ?: "Umum")
+            val subject = dto.subjectName?.takeIf { it.isNotBlank() }
+                ?: if (parts.size > 1 && parts[0].isNotBlank()) parts[0] else "Umum"
             val rawUrl = dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey
 
             val domain = LearningMaterial(

@@ -137,7 +137,7 @@ fun QuizAttemptScreen(
 
                     // ── QUESTION NAVIGATOR PILLS ──────────────────────────────
                     LazyRow(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         itemsIndexed(state.questions) { index, question ->
@@ -190,7 +190,7 @@ fun QuizAttemptScreen(
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 16.dp),
+                                    .padding(horizontal = 18.dp),
                             ) {
                                 val gradients = subjectGradient(question.questionText)
                                 val icon = subjectIcon(question.questionText)
@@ -394,7 +394,7 @@ private fun QuizTopBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 12.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 8.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -528,7 +528,7 @@ private fun QuizBottomBar(
         modifier = Modifier
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.surface)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 18.dp, vertical = 12.dp),
     ) {
         submitError?.let {
             Text(it, color = MaterialTheme.colorScheme.error,

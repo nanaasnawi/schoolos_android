@@ -139,8 +139,8 @@ val Slate100: Color @Composable get() = GlassBorder
 val Slate50: Color  @Composable get() = CosmicDark
 
 // ─── Standard Layout Spacing Tokens (Full-Width Mobile UX) ─────────────────────
-val ScreenHorizontalPadding = 10.dp
-val ScreenCompactPadding    = 8.dp
+val ScreenHorizontalPadding = 12.dp
+val ScreenCompactPadding    = 10.dp
 val CardInnerPadding        = 14.dp
 
 // ─── Typography ─────────────────────────────────────────────────────────────
