@@ -54,6 +54,30 @@ class MainActivity : ComponentActivity() {
         // Start background notification & maintenance sync listener
         notificationSyncManager.start()
 
+        // Initialize Firebase Cloud Messaging (Topic: school_announcements)
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                .subscribeToTopic("school_announcements")
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        timber.log.Timber.d("Subscribed to FCM topic: school_announcements")
+                    }
+                }
+            com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                .addOnCompleteListener { task ->
+                    if (task.isSuccessful) {
+                        val token = task.result
+                        timber.log.Timber.d("FCM Token: %s", token)
+                        getSharedPreferences("schoolos_fcm", Context.MODE_PRIVATE)
+                            .edit()
+                            .putString("fcm_token", token)
+                            .apply()
+                    }
+                }
+        } catch (e: Exception) {
+            timber.log.Timber.e(e, "Firebase initialization error")
+        }
+
         // Initial check for system maintenance mode
         lifecycleScope.launch {
             maintenanceManager.checkServerStatus()
