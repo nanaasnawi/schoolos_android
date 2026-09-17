@@ -64,8 +64,8 @@ fun LearningMaterialListScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 20.dp, bottom = 30.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 30.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             // ── HEADER ────────────────────────────────────────────────────────
             item {

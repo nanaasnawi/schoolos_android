@@ -16,5 +16,11 @@ data class LearningMaterialEntity(
     val size: String?,
     val isCompleted: Boolean,
     val completedCount: Long,
+    val teacherName: String? = null,
+    val teacherId: String? = null,
+    val className: String? = null,
+    val classId: String? = null,
+    val startPage: Int? = null,
+    val endPage: Int? = null,
     val cachedAt: Long = System.currentTimeMillis(),
 )

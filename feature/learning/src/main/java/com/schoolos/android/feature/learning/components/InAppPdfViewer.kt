@@ -1,10 +1,8 @@
 package com.schoolos.android.feature.learning.components
 
-import android.graphics.Canvas
-import android.graphics.Paint
-import android.graphics.Typeface
-import android.graphics.pdf.PdfDocument
+import android.content.Intent
 import android.graphics.pdf.PdfRenderer
+import android.net.Uri
 import android.os.ParcelFileDescriptor
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -15,6 +13,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +28,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -37,12 +37,20 @@ import androidx.core.graphics.createBitmap
 import com.schoolos.android.core.designsystem.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
 import java.net.URL
 
+data class RenderedPdfPage(
+    val pageNumber: Int,
+    val bitmap: ImageBitmap
+)
+
 /**
- * Native in-app PDF viewer rendering multi-page images using PdfRenderer
+ * Native in-app PDF viewer rendering real multi-page images using PdfRenderer
+ * directly from Kemendikdasmen CDN books or uploaded documents.
  */
 @Composable
 fun InAppPdfViewer(
@@ -50,164 +58,122 @@ fun InAppPdfViewer(
     title: String,
     subject: String,
     description: String = "",
+    startPage: Int? = null,
+    endPage: Int? = null,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    var pages by remember { mutableStateOf<List<ImageBitmap>>(emptyList()) }
+    var pages by remember { mutableStateOf<List<RenderedPdfPage>>(emptyList()) }
+    var totalDocPages by remember { mutableIntStateOf(0) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var retryTrigger by remember { mutableIntStateOf(0) }
 
-    LaunchedEffect(pdfUrl, title, description) {
+    LaunchedEffect(pdfUrl, title, startPage, endPage, retryTrigger) {
         isLoading = true
         errorMessage = null
         withContext(Dispatchers.IO) {
             try {
-                val pdfFile = File(context.cacheDir, "material_doc_${title.hashCode()}.pdf")
-                
-                var downloadSuccess = false
-                if (pdfUrl.startsWith("http://", ignoreCase = true) || pdfUrl.startsWith("https://", ignoreCase = true)) {
+                val cleanUrl = pdfUrl.trim()
+                if (cleanUrl.isBlank()) {
+                    withContext(Dispatchers.Main) {
+                        errorMessage = "Tautan dokumen PDF buku belum disematkan."
+                        isLoading = false
+                    }
+                    return@withContext
+                }
+
+                // Deterministic cache file based on URL
+                val cacheFileName = "book_pdf_${cleanUrl.hashCode().toString().replace("-", "n")}.pdf"
+                val pdfFile = File(context.cacheDir, cacheFileName)
+
+                var downloadSuccess = pdfFile.exists() && pdfFile.length() > 5000
+
+                if (!downloadSuccess && (cleanUrl.startsWith("http://", ignoreCase = true) || cleanUrl.startsWith("https://", ignoreCase = true))) {
                     try {
-                        val connection = URL(pdfUrl).openConnection()
-                        connection.connectTimeout = 8000
-                        connection.readTimeout = 15000
-                        val inputStream = connection.getInputStream()
-                        val outputStream = FileOutputStream(pdfFile)
-                        inputStream.copyTo(outputStream)
-                        outputStream.close()
-                        inputStream.close()
-                        downloadSuccess = true
+                        val connection = URL(cleanUrl).openConnection() as HttpURLConnection
+                        connection.connectTimeout = 15000
+                        connection.readTimeout = 60000
+                        connection.instanceFollowRedirects = true
+                        connection.setRequestProperty("User-Agent", "SchoolOS-Android-Client/1.0")
+                        connection.connect()
+
+                        val code = connection.responseCode
+                        if (code in 200..299) {
+                            val tempFile = File(context.cacheDir, "${cacheFileName}.tmp")
+                            val inputStream = connection.inputStream
+                            val outputStream = FileOutputStream(tempFile)
+                            val buffer = ByteArray(16384)
+                            var bytesRead: Int
+                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                outputStream.write(buffer, 0, bytesRead)
+                            }
+                            outputStream.flush()
+                            outputStream.close()
+                            inputStream.close()
+
+                            if (tempFile.length() > 5000) {
+                                if (pdfFile.exists()) pdfFile.delete()
+                                tempFile.renameTo(pdfFile)
+                                downloadSuccess = true
+                            }
+                        } else {
+                            Timber.w("PDF download responded with HTTP code $code from $cleanUrl")
+                        }
                     } catch (e: Exception) {
+                        Timber.e(e, "Failed to download PDF: $cleanUrl")
                         downloadSuccess = false
                     }
                 }
 
-                // If remote download failed or url was local/empty, generate structured PDF pages using REAL database data
-                if (!downloadSuccess || !pdfFile.exists() || pdfFile.length() < 100) {
-                    val pdfDoc = PdfDocument()
-                    
-                    // Parse dynamic description parts: Subject • Grade • Teacher • Detail
-                    val descParts = description.split(" • ").map { it.trim() }.filter { it.isNotBlank() }
-                    val teacherName = if (descParts.size >= 3) descParts[2] else "Guru Pengampu"
-                    val className = if (descParts.size >= 2) descParts[1] else "Semua Rombel"
-                    val mainContent = if (descParts.size >= 4) descParts.drop(3).joinToString(" • ") else description.ifBlank { "Materi pembelajaran terstruktur Kurikulum Sekolah." }
-
-                    // Page 1: Cover & Capaian Pembelajaran dari Database
-                    val pageInfo1 = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-                    val page1 = pdfDoc.startPage(pageInfo1)
-                    val canvas1: Canvas = page1.canvas
-
-                    val paintBg = Paint().apply { color = android.graphics.Color.parseColor("#0F172A") }
-                    canvas1.drawRect(0f, 0f, 595f, 842f, paintBg)
-
-                    val paintHeader = Paint().apply {
-                        color = android.graphics.Color.parseColor("#38BDF8")
-                        textSize = 13f
-                        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+                if (!downloadSuccess || !pdfFile.exists() || pdfFile.length() < 1000) {
+                    withContext(Dispatchers.Main) {
+                        errorMessage = "Gagal mengunduh berkas PDF buku dari server. Periksa koneksi internet Anda."
+                        isLoading = false
                     }
-                    canvas1.drawText("MODUL AJAR DIGITAL RESMI • $className", 50f, 60f, paintHeader)
-
-                    val paintTitle = Paint().apply {
-                        color = android.graphics.Color.WHITE
-                        textSize = 20f
-                        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    }
-                    val titleLines = splitTextIntoLines(title, 38)
-                    var yOffset = 105f
-                    for (line in titleLines) {
-                        canvas1.drawText(line, 50f, yOffset, paintTitle)
-                        yOffset += 28f
-                    }
-
-                    val paintMeta = Paint().apply {
-                        color = android.graphics.Color.parseColor("#94A3B8")
-                        textSize = 12f
-                    }
-                    canvas1.drawText("Mata Pelajaran: $subject  |  Pengampu: $teacherName", 50f, yOffset + 10f, paintMeta)
-
-                    val paintLine = Paint().apply {
-                        color = android.graphics.Color.parseColor("#334155")
-                        strokeWidth = 2f
-                    }
-                    canvas1.drawLine(50f, yOffset + 26f, 545f, yOffset + 26f, paintLine)
-
-                    val paintSubTitle = Paint().apply {
-                        color = android.graphics.Color.parseColor("#38BDF8")
-                        textSize = 13f
-                        typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-                    }
-                    canvas1.drawText("RINGKASAN & TUJUAN PEMBELAJARAN", 50f, yOffset + 54f, paintSubTitle)
-
-                    val paintBody = Paint().apply {
-                        color = android.graphics.Color.parseColor("#E2E8F0")
-                        textSize = 11.5f
-                    }
-                    var textY = yOffset + 80f
-                    val contentLines = splitTextIntoLines(mainContent, 65)
-                    for (line in contentLines) {
-                        if (textY < 790f) {
-                            canvas1.drawText(line, 50f, textY, paintBody)
-                            textY += 18f
-                        }
-                    }
-
-                    pdfDoc.finishPage(page1)
-
-                    // Page 2: Panduan Belajar & Evaluasi Mandiri
-                    val pageInfo2 = PdfDocument.PageInfo.Builder(595, 842, 2).create()
-                    val page2 = pdfDoc.startPage(pageInfo2)
-                    val canvas2: Canvas = page2.canvas
-                    canvas2.drawRect(0f, 0f, 595f, 842f, paintBg)
-
-                    canvas2.drawText("PANDUAN BELAJAR & INSTRUKSI SISWA", 50f, 60f, paintHeader)
-
-                    val guideItems = listOf(
-                        "1. Pemahaman Materi Mandiri",
-                        "   Pelajari dan catat poin-poin penting pada modul $subject ini secara saksama.",
-                        "",
-                        "2. Tugas Terstruktur & Evaluasi CBT",
-                        "   Setelah menyelesaikan modul, akses menu Tugas atau Kuis CBT untuk mengukur pemahaman.",
-                        "",
-                        "3. Konsultasi dengan Guru Pengampu",
-                        "   Diskusikan kendala pembelajaran langsung dengan $teacherName di sesi kelas berikutnya.",
-                        "",
-                        "Dokumen digital terverifikasi dan disinkronkan otomatis dari Database Akademik School OS."
-                    )
-                    var text2Y = 100f
-                    for (line in guideItems) {
-                        canvas2.drawText(line, 50f, text2Y, paintBody)
-                        text2Y += 21f
-                    }
-
-                    pdfDoc.finishPage(page2)
-
-                    val fos = FileOutputStream(pdfFile)
-                    pdfDoc.writeTo(fos)
-                    fos.close()
-                    pdfDoc.close()
+                    return@withContext
                 }
 
+                // Render real PDF pages via native Android PdfRenderer
                 val pfd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
                 val renderer = PdfRenderer(pfd)
-                val renderedBitmaps = mutableListOf<ImageBitmap>()
-                val pageCount = minOf(renderer.pageCount, 15)
-                for (i in 0 until pageCount) {
-                    val page = renderer.openPage(i)
-                    val bitmap = createBitmap(page.width * 2, page.height * 2)
+                val totalPages = renderer.pageCount
+
+                // Compute page slice according to teacher assignment
+                val reqStart = startPage ?: 1
+                val reqEnd = endPage ?: minOf(totalPages, reqStart + 14)
+
+                val startIndex = (reqStart - 1).coerceIn(0, totalPages - 1)
+                val endIndex = (reqEnd - 1).coerceIn(startIndex, totalPages - 1)
+
+                val renderedBitmaps = mutableListOf<RenderedPdfPage>()
+                val displayMetrics = context.resources.displayMetrics
+                val screenWidth = displayMetrics.widthPixels
+
+                for (idx in startIndex..endIndex) {
+                    val page = renderer.openPage(idx)
+                    val scale = (screenWidth.toFloat() / page.width.toFloat()).coerceIn(1.0f, 1.6f)
+                    val bmpWidth = (page.width * scale).toInt()
+                    val bmpHeight = (page.height * scale).toInt()
+                    val bitmap = createBitmap(bmpWidth, bmpHeight)
                     bitmap.eraseColor(android.graphics.Color.WHITE)
                     page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    renderedBitmaps.add(bitmap.asImageBitmap())
+                    renderedBitmaps.add(RenderedPdfPage(pageNumber = idx + 1, bitmap = bitmap.asImageBitmap()))
                     page.close()
                 }
+
                 renderer.close()
                 pfd.close()
 
                 withContext(Dispatchers.Main) {
                     pages = renderedBitmaps
+                    totalDocPages = totalPages
                     isLoading = false
                 }
             } catch (e: Exception) {
+                Timber.e(e, "Error opening PDF document")
                 withContext(Dispatchers.Main) {
-                    errorMessage = e.message ?: "Gagal memuat dokumen PDF"
+                    errorMessage = "Gagal memproses dokumen PDF: ${e.localizedMessage}"
                     isLoading = false
                 }
             }
@@ -224,36 +190,83 @@ fun InAppPdfViewer(
                     .fillMaxWidth()
                     .height(200.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy),
+                    .background(CosmicDark),
                 verticalArrangement = Arrangement.Center,
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 CircularProgressIndicator(color = NeonBlue, modifier = Modifier.size(36.dp))
-                Spacer(Modifier.height(10.dp))
-                Text("Merender Dokumen PDF In-App...", color = TextSecondary, fontSize = 12.sp)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = "Mengunduh & Merender Buku Digital...",
+                    color = TextPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = if (startPage != null && endPage != null) "Halaman $startPage — $endPage" else "Menyiapkan lembar bacaan resmi",
+                    color = TextTertiary,
+                    fontSize = 11.sp
+                )
             }
         } else if (pages.isNotEmpty()) {
             val totalPages = pages.size
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            val sPage = startPage ?: pages.first().pageNumber
+            val ePage = endPage ?: pages.last().pageNumber
+
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                // Header Bar with Full PDF Reader Action
                 Row(
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        "📑 Pembaca Dokumen ($totalPages Halaman)",
-                        color = NeonBlue,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = NeonBlue, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "Hal. $sPage — $ePage ($totalPages Lembar)",
+                            color = TextPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    if (pdfUrl.isNotBlank()) {
+                        Button(
+                            onClick = {
+                                val intent = Intent(Intent.ACTION_VIEW).apply {
+                                    setDataAndType(Uri.parse(pdfUrl), "application/pdf")
+                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                                }
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                    context.startActivity(webIntent)
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = NeonBlue,
+                                contentColor = Color.White
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Icon(Icons.Default.OpenInNew, null, modifier = Modifier.size(13.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Buka Dokumen Penuh", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
                 }
 
-                pages.forEachIndexed { index: Int, pageBitmap: ImageBitmap ->
-                    val pageNumber = index + 1
+                // Rendered Real Pages
+                pages.forEachIndexed { index: Int, item: RenderedPdfPage ->
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(12.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { fullscreenPageIndex = index }
@@ -261,27 +274,31 @@ fun InAppPdfViewer(
                         Column {
                             Box {
                                 Image(
-                                    bitmap = pageBitmap,
-                                    contentDescription = "Halaman $pageNumber",
-                                    modifier = Modifier.fillMaxWidth().wrapContentHeight(),
+                                    bitmap = item.bitmap,
+                                    contentDescription = "Halaman ${item.pageNumber}",
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .wrapContentHeight(),
                                     contentScale = ContentScale.FillWidth
                                 )
-                                // Fullscreen hint overlay (bottom-right)
+
+                                // Fullscreen Hint Pill Overlay
                                 Box(
                                     modifier = Modifier
                                         .align(Alignment.BottomEnd)
                                         .padding(8.dp)
                                         .clip(RoundedCornerShape(6.dp))
-                                        .background(Color.Black.copy(alpha = 0.65f))
+                                        .background(Color.Black.copy(alpha = 0.70f))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Fullscreen, null, tint = Color.White, modifier = Modifier.size(14.dp))
+                                        Icon(Icons.Default.Fullscreen, null, tint = Color.White, modifier = Modifier.size(13.dp))
                                         Spacer(Modifier.width(3.dp))
                                         Text("Perbesar", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -290,8 +307,8 @@ fun InAppPdfViewer(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "Halaman $pageNumber dari $totalPages",
-                                    color = Color.White.copy(alpha = 0.8f),
+                                    text = "Buku Resmi • Halaman ${item.pageNumber}${if (totalDocPages > 0) " dari $totalDocPages" else ""}",
+                                    color = Color.White.copy(alpha = 0.9f),
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.SemiBold
                                 )
@@ -301,15 +318,57 @@ fun InAppPdfViewer(
                 }
             }
         } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .padding(20.dp),
-                contentAlignment = Alignment.Center
+            // Error Card with Retry and Direct Browser View
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CosmicDark),
+                shape = RoundedCornerShape(12.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
             ) {
-                Text(errorMessage ?: "Dokumen belum dapat ditampilkan.", color = TextSecondary, fontSize = 12.sp)
+                Column(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(Icons.Default.WarningAmber, null, tint = NeonWarning, modifier = Modifier.size(36.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = errorMessage ?: "Dokumen belum dapat ditampilkan.",
+                        color = TextPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center
+                    )
+                    Spacer(Modifier.height(12.dp))
+
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button(
+                            onClick = { retryTrigger++ },
+                            colors = ButtonDefaults.buttonColors(containerColor = NeonBlue),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            modifier = Modifier.height(34.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, null, modifier = Modifier.size(14.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Coba Lagi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        if (pdfUrl.isNotBlank()) {
+                            OutlinedButton(
+                                onClick = {
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                    context.startActivity(intent)
+                                },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                modifier = Modifier.height(34.dp)
+                            ) {
+                                Icon(Icons.Default.OpenInBrowser, null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Buka di Browser", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -317,10 +376,10 @@ fun InAppPdfViewer(
     // ── FULLSCREEN PDF PAGE LIGHTBOX ─────────────────────────────────────────
     val fsIndex = fullscreenPageIndex
     if (fsIndex != null && pages.isNotEmpty() && fsIndex in pages.indices) {
-        var currentPage by remember(fsIndex) { mutableStateOf(fsIndex) }
-        var scale by remember { mutableStateOf(1f) }
-        var offsetX by remember { mutableStateOf(0f) }
-        var offsetY by remember { mutableStateOf(0f) }
+        var currentPage by remember(fsIndex) { mutableIntStateOf(fsIndex) }
+        var scale by remember { mutableFloatStateOf(1f) }
+        var offsetX by remember { mutableFloatStateOf(0f) }
+        var offsetY by remember { mutableFloatStateOf(0f) }
 
         Dialog(
             onDismissRequest = { fullscreenPageIndex = null },
@@ -361,12 +420,12 @@ fun InAppPdfViewer(
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
                         modifier = Modifier
-                            .padding(horizontal = 12.dp, vertical = 68.dp)
+                            .padding(horizontal = 10.dp, vertical = 64.dp)
                             .fillMaxSize()
                     ) {
                         Image(
-                            bitmap = pages[currentPage],
-                            contentDescription = "Halaman ${currentPage + 1}",
+                            bitmap = pages[currentPage].bitmap,
+                            contentDescription = "Halaman ${pages[currentPage].pageNumber}",
                             contentScale = ContentScale.Fit,
                             modifier = Modifier
                                 .fillMaxSize()
@@ -402,7 +461,7 @@ fun InAppPdfViewer(
                             .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            "Halaman ${currentPage + 1} / ${pages.size}",
+                            "Halaman ${pages[currentPage].pageNumber} (Lembar ${currentPage + 1}/${pages.size})",
                             color = Color.White,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -424,7 +483,7 @@ fun InAppPdfViewer(
                     }
                 }
 
-                // Floating Zoom Controls (Zoom In / Percentage / Zoom Out)
+                // Floating Zoom Controls
                 Column(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
@@ -437,9 +496,7 @@ fun InAppPdfViewer(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     IconButton(
-                        onClick = {
-                            scale = (scale + 0.5f).coerceAtMost(6f)
-                        },
+                        onClick = { scale = (scale + 0.5f).coerceAtMost(6f) },
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(Icons.Default.ZoomIn, contentDescription = "Perbesar", tint = Color.White)
@@ -453,89 +510,58 @@ fun InAppPdfViewer(
                     )
 
                     IconButton(
-                        onClick = {
-                            val newScale = (scale - 0.5f).coerceAtLeast(1f)
-                            scale = newScale
-                            if (scale == 1f) {
-                                offsetX = 0f
-                                offsetY = 0f
-                            }
-                        },
+                        onClick = { scale = (scale - 0.5f).coerceAtLeast(1f) },
                         modifier = Modifier.size(36.dp)
                     ) {
                         Icon(Icons.Default.ZoomOut, contentDescription = "Perkecil", tint = Color.White)
                     }
                 }
 
-                // Bottom navigation: prev / next page
-                if (pages.size > 1) {
-                    Row(
+                // Bottom bar overlay: page switching
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(horizontal = 24.dp, vertical = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                            .navigationBarsPadding()
-                            .padding(horizontal = 24.dp, vertical = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (currentPage > 0) NeonBlue.copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.3f))
+                            .clickable(enabled = currentPage > 0) {
+                                currentPage--
+                                scale = 1f; offsetX = 0f; offsetY = 0f
+                            }
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (currentPage > 0) NeonBlue.copy(alpha = 0.8f)
-                                    else Color.Black.copy(alpha = 0.3f)
-                                )
-                                .clickable(enabled = currentPage > 0) {
-                                    currentPage--
-                                    scale = 1f; offsetX = 0f; offsetY = 0f
-                                }
-                                .padding(horizontal = 20.dp, vertical = 10.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Sebelumnya", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                            }
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(4.dp))
+                            Text("Sebelumnya", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
+                    }
 
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (currentPage < pages.size - 1) NeonBlue.copy(alpha = 0.8f)
-                                    else Color.Black.copy(alpha = 0.3f)
-                                )
-                                .clickable(enabled = currentPage < pages.size - 1) {
-                                    currentPage++
-                                    scale = 1f; offsetX = 0f; offsetY = 0f
-                                }
-                                .padding(horizontal = 20.dp, vertical = 10.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Berikutnya", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(4.dp))
-                                Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (currentPage < pages.size - 1) NeonBlue.copy(alpha = 0.8f) else Color.Black.copy(alpha = 0.3f))
+                            .clickable(enabled = currentPage < pages.size - 1) {
+                                currentPage++
+                                scale = 1f; offsetX = 0f; offsetY = 0f
                             }
+                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("Berikutnya", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.width(4.dp))
+                            Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(18.dp))
                         }
                     }
                 }
             }
         }
     }
-}
-
-fun splitTextIntoLines(text: String, maxCharsPerLine: Int): List<String> {
-    val words = text.split(" ")
-    val lines = mutableListOf<String>()
-    var currentLine = ""
-    for (word in words) {
-        if ((currentLine + " " + word).trim().length <= maxCharsPerLine) {
-            currentLine = (currentLine + " " + word).trim()
-        } else {
-            if (currentLine.isNotEmpty()) lines.add(currentLine)
-            currentLine = word
-        }
-    }
-    if (currentLine.isNotEmpty()) lines.add(currentLine)
-    return lines
 }

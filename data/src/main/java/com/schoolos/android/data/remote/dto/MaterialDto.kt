@@ -25,6 +25,10 @@ data class MaterialDto(
     @SerialName("published_at") val publishedAt: String? = null,
     @SerialName("is_completed") val isCompleted: Boolean? = null,
     @SerialName("completed_count") val completedCount: Long? = null,
+    @SerialName("teacher_id") val teacherId: String? = null,
+    @SerialName("class_id") val classId: String? = null,
+    @SerialName("start_page") val startPage: Int? = null,
+    @SerialName("end_page") val endPage: Int? = null,
 )
 
 @Serializable

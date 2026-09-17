@@ -44,6 +44,12 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     size = dto.storageKey ?: dto.pdfFileName ?: "PDF Digital",
                     isCompleted = dto.isCompleted ?: false,
                     completedCount = dto.completedCount ?: 0L,
+                    teacherName = dto.teacherName,
+                    teacherId = dto.teacherId,
+                    className = dto.className,
+                    classId = dto.classId,
+                    startPage = dto.startPage,
+                    endPage = dto.endPage,
                 )
             } ?: emptyList()
 
@@ -62,6 +68,12 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                         size = m.size,
                         isCompleted = m.isCompleted,
                         completedCount = m.completedCount,
+                        teacherName = m.teacherName,
+                        teacherId = m.teacherId,
+                        className = m.className,
+                        classId = m.classId,
+                        startPage = m.startPage,
+                        endPage = m.endPage,
                     )
                 }
                 materialDao.insertAll(entities)
@@ -87,6 +99,12 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 size = entity.size,
                 isCompleted = entity.isCompleted,
                 completedCount = entity.completedCount,
+                teacherName = entity.teacherName,
+                teacherId = entity.teacherId,
+                className = entity.className,
+                classId = entity.classId,
+                startPage = entity.startPage,
+                endPage = entity.endPage,
             )
         }
     }
@@ -117,6 +135,12 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 size = dto.storageKey ?: dto.pdfFileName ?: "PDF Digital",
                 isCompleted = dto.isCompleted ?: false,
                 completedCount = dto.completedCount ?: 0L,
+                teacherName = dto.teacherName,
+                teacherId = dto.teacherId,
+                className = dto.className,
+                classId = dto.classId,
+                startPage = dto.startPage,
+                endPage = dto.endPage,
             )
 
             materialDao.insert(
@@ -132,6 +156,12 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     size = domain.size,
                     isCompleted = domain.isCompleted,
                     completedCount = domain.completedCount,
+                    teacherName = domain.teacherName,
+                    teacherId = domain.teacherId,
+                    className = domain.className,
+                    classId = domain.classId,
+                    startPage = domain.startPage,
+                    endPage = domain.endPage,
                 )
             )
 
@@ -156,6 +186,12 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             size = cached.size,
             isCompleted = cached.isCompleted,
             completedCount = cached.completedCount,
+            teacherName = cached.teacherName,
+            teacherId = cached.teacherId,
+            className = cached.className,
+            classId = cached.classId,
+            startPage = cached.startPage,
+            endPage = cached.endPage,
         )
     }
 
