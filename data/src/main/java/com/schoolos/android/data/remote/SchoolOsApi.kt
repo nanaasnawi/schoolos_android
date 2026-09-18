@@ -189,6 +189,15 @@ interface SchoolOsApi {
     @POST("learning/materials")
     suspend fun createMaterial(@Body request: CreateMaterialRequestDto): ApiResponse<com.schoolos.android.data.remote.dto.MaterialDto>
 
+    @PATCH("learning/materials/{id}")
+    suspend fun updateMaterial(
+        @Path("id") id: String,
+        @Body request: UpdateMaterialRequestDto
+    ): ApiResponse<com.schoolos.android.data.remote.dto.MaterialDto>
+
+    @DELETE("learning/materials/{id}")
+    suspend fun deleteMaterial(@Path("id") id: String): ApiResponse<Unit>
+
     @PATCH("notifications/{id}/read")
     suspend fun markNotificationRead(@Path("id") id: String): ApiResponse<Unit>
 
@@ -244,6 +253,15 @@ data class CreateMaterialRequestDto(
     @kotlinx.serialization.SerialName("order_index") val orderIndex: Int = 0,
     val visibility: String = "published",
     @kotlinx.serialization.SerialName("class_id") val classId: String? = null,
+)
+
+@kotlinx.serialization.Serializable
+data class UpdateMaterialRequestDto(
+    val title: String? = null,
+    val description: String? = null,
+    @kotlinx.serialization.SerialName("storage_key") val storageKey: String? = null,
+    @kotlinx.serialization.SerialName("external_url") val externalUrl: String? = null,
+    val visibility: String? = null,
 )
 
 @kotlinx.serialization.Serializable

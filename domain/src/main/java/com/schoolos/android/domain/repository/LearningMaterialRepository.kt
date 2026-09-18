@@ -30,4 +30,12 @@ interface LearningMaterialRepository {
         startPage: Int,
         endPage: Int
     ): Result<String>
+    suspend fun updateMaterial(
+        id: String,
+        title: String?,
+        description: String?,
+        mediaUrl: String? = null,
+        storageKey: String? = null
+    ): Result<LearningMaterial>
+    suspend fun deleteMaterial(id: String): Result<Unit>
 }

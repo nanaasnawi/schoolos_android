@@ -296,4 +296,45 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         val response = api.assignReadingMaterial(request)
         response.data ?: throw Exception(response.error?.message ?: "Gagal menugaskan materi bacaan perpustakaan.")
     }
+
+    override suspend fun updateMaterial(
+        id: String,
+        title: String?,
+        description: String?,
+        mediaUrl: String?,
+        storageKey: String?
+    ): Result<LearningMaterial> = runCatching {
+        val request = com.schoolos.android.data.remote.UpdateMaterialRequestDto(
+            title = title,
+            description = description,
+            externalUrl = mediaUrl,
+            storageKey = storageKey,
+        )
+        val response = api.updateMaterial(id, request)
+        val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal memperbarui materi.")
+        val matType = when (dto.materialType.lowercase()) {
+            "video" -> MaterialType.VIDEO
+            "document" -> MaterialType.DOCUMENT
+            "image" -> MaterialType.IMAGE
+            else -> MaterialType.ARTICLE
+        }
+        LearningMaterial(
+            id = dto.id,
+            title = dto.title,
+            description = dto.description,
+            materialType = matType,
+            contentBody = dto.description,
+            mediaUrl = dto.externalUrl,
+            thumbnailUrl = dto.imagePreviewUrl,
+            subject = dto.subjectName ?: "Materi Pelajaran",
+            size = dto.storageKey ?: "Modul Digital"
+        )
+    }
+
+    override suspend fun deleteMaterial(id: String): Result<Unit> = runCatching {
+        val response = api.deleteMaterial(id)
+        if (response.error != null) {
+            throw Exception(response.error.message)
+        }
+    }
 }
