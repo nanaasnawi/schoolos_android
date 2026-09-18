@@ -1,5 +1,10 @@
 package com.schoolos.android.feature.home
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,34 +19,33 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Assessment
+import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Grade
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Science
-import androidx.compose.material.icons.filled.SportsHandball
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.LineTrendChart
 import com.schoolos.android.core.designsystem.NeonBlue
@@ -51,14 +55,6 @@ import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
-
-data class AgendaItemData(
-    val time: String,
-    val code: String,
-    val color: Color,
-    val sessionId: String,
-    val status: String,
-)
 
 fun LazyListScope.studentContent(
     onNavigateToSessions: () -> Unit,
@@ -84,354 +80,269 @@ fun LazyListScope.studentContent(
     studentProgress: com.schoolos.android.domain.model.Progress? = null,
     progressPercentage: Float = 0f,
 ) {
-    // ── 1. INTEGRATED LEARNING HUB (Next Class) ──
-    item {
-        StudentLearningHubGlass(
-            subject = nextSessionSubject,
-            room = nextSessionRoom,
-            timeLeft = nextSessionTime,
-            isLive = nextSessionIsLive,
-            onClick = onNavigateToSessions
-        )
-    }
-
-    // ── 2. STUDENT TOOLBOX (Minimalist Circular) ──
-    // Determine current/active subject from today's sessions for context-aware navigation
     val currentSubject = todaySessions.firstOrNull { it.status == "active" }?.subjectName
         ?: todaySessions.firstOrNull()?.subjectName
         ?: todaySessions.firstOrNull()?.notes?.substringBefore(" • ")?.trim()
         ?: ""
     val currentSubjectClean = currentSubject.substringBefore(" • ").substringBefore(" (Ruang").trim()
 
+    // ── 1. BENTO QUICK ACCESS GRID (2x2) ─────────────────────────────────────────
     item {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            val tools = listOf(
-                QuickAction("Tugas", Icons.AutoMirrored.Filled.Assignment, StudentNeon, { onNavigateToAssignmentWithSubject(currentSubjectClean) }),
-                QuickAction("Kuis", Icons.Default.Quiz, NeonWarning, { onNavigateToQuizWithSubject(currentSubjectClean) }),
-                QuickAction("Materi", Icons.Default.Book, NeonBlue, { onNavigateToMaterialWithSubject(currentSubjectClean) }),
-                QuickAction("Nilai", Icons.Default.Assessment, NeonSuccess, onNavigateToGrades),
-                QuickAction("Badge", Icons.Default.EmojiEvents, StudentNeon, onNavigateToAchievements),
-            )
-            tools.forEach { tool -> StudentToolboxButton(tool) }
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Row 1: Tugas & Kuis
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                BentoActionCard(
+                    title = "Tugas Sekolah",
+                    subtitle = "Cek tenggat PR & proyek",
+                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    accentColor = StudentNeon,
+                    badgeText = "Aktif",
+                    onClick = { onNavigateToAssignmentWithSubject(currentSubjectClean) },
+                    modifier = Modifier.weight(1f),
+                )
+
+                BentoActionCard(
+                    title = "Kuis & Ujian",
+                    subtitle = "Latihan & evaluasi",
+                    icon = Icons.Default.Quiz,
+                    accentColor = NeonWarning,
+                    badgeText = "Online",
+                    onClick = { onNavigateToQuizWithSubject(currentSubjectClean) },
+                    modifier = Modifier.weight(1f),
+                )
+            }
+
+            // Row 2: Materi & Nilai Rapor
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                BentoActionCard(
+                    title = "Materi Belajar",
+                    subtitle = "Buku digital & modul",
+                    icon = Icons.Default.Book,
+                    accentColor = NeonBlue,
+                    onClick = { onNavigateToMaterialWithSubject(currentSubjectClean) },
+                    modifier = Modifier.weight(1f),
+                )
+
+                BentoActionCard(
+                    title = "Rapor & Nilai",
+                    subtitle = "Transkrip akademik",
+                    icon = Icons.Default.Assessment,
+                    accentColor = NeonSuccess,
+                    badgeText = if (gradeAverage != "-") "Rata $gradeAverage" else "",
+                    onClick = onNavigateToGrades,
+                    modifier = Modifier.weight(1f),
+                )
+            }
         }
     }
 
-    // ── 3. COMPACT DAILY AGENDA STRIP (Clickable) ──
+    // ── 2. TODAY'S CLASS SCHEDULE TIMELINE PREVIEW ──────────────────────────────
     item {
-        val agendaItems = todaySessions.map { s ->
-            val title = s.subjectName ?: s.notes?.substringBefore(" • ") ?: "Mapel"
-            val code = when {
-                title.contains("Matematika", ignoreCase = true) -> "MTK"
-                title.contains("IPA", ignoreCase = true) || title.contains("Sains", ignoreCase = true) -> "IPA"
-                title.contains("IPS", ignoreCase = true) -> "IPS"
-                title.contains("Bahasa Indonesia", ignoreCase = true) -> "BIND"
-                title.contains("Bahasa Inggris", ignoreCase = true) -> "BING"
-                title.contains("Agama", ignoreCase = true) -> "PAI"
-                title.contains("Penjaskes", ignoreCase = true) || title.contains("Olahraga", ignoreCase = true) -> "PJOK"
-                else -> title.take(4).uppercase()
-            }
-            val color = when {
-                title.contains("Matematika", ignoreCase = true) -> StudentNeon
-                title.contains("IPA", ignoreCase = true) || title.contains("Sains", ignoreCase = true) -> NeonBlue
-                title.contains("Bahasa", ignoreCase = true) -> NeonSuccess
-                title.contains("Agama", ignoreCase = true) -> NeonSuccess
-                else -> NeonWarning
-            }
-            val rawTime = s.scheduledAt ?: s.startedAt
-            val time = rawTime?.let {
-                try {
-                    val parser = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).apply {
-                        timeZone = java.util.TimeZone.getTimeZone("UTC")
-                    }
-                    val out = java.text.SimpleDateFormat("HH.mm", java.util.Locale.getDefault()).apply {
-                        timeZone = java.util.TimeZone.getTimeZone("Asia/Jakarta")
-                    }
-                    out.format(parser.parse(it.substringBefore(".")) ?: java.util.Date())
-                } catch (e: Exception) {
-                    try {
-                        java.time.ZonedDateTime.parse(rawTime)
-                            .withZoneSameInstant(java.time.ZoneId.of("Asia/Jakarta"))
-                            .format(java.time.format.DateTimeFormatter.ofPattern("HH.mm"))
-                    } catch (_: Exception) {
-                        "-"
-                    }
-                }
-            } ?: "-"
-            AgendaItemData(time, code, color, s.id, s.status ?: "")
-        }
+        LightSectionHeader(
+            title = "Jadwal Pelajaran Hari Ini",
+            sub = "${todaySessions.size} Sesi terjadwal",
+            onSeeAll = onNavigateToSessions,
+        )
+    }
 
-        LightCard {
-            Column(modifier = Modifier.padding(14.dp)) {
-                LightSectionHeader("Agenda Belajar Hari Ini", if (agendaItems.isNotEmpty()) "${agendaItems.size} Sesi" else "", onSeeAll = onNavigateToSessions)
-                Spacer(Modifier.height(14.dp))
-                if (agendaItems.isNotEmpty()) {
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(agendaItems, key = { it.sessionId }) { item ->
-                            CompactAgendaItem(
-                                time = item.time,
-                                code = item.code,
-                                color = item.color,
-                                isActive = item.status == "active",
-                                onClick = { onNavigateToSessionDetail(item.sessionId) }
+    item {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = GlassBorder)
+                .clip(RoundedCornerShape(22.dp))
+                .background(CosmicNavy)
+                .border(1.dp, GlassBorder, RoundedCornerShape(22.dp)),
+        ) {
+            if (todaySessions.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Text("🏝️", fontSize = 32.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        text = "Tidak Ada Kelas Hari Ini",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        text = "Nikmati waktu istirahat atau pelajari materi berikutnya.",
+                        fontSize = 12.sp,
+                        color = TextTertiary,
+                    )
+                }
+            } else {
+                Column {
+                    todaySessions.take(4).forEachIndexed { index, s ->
+                        val title = s.subjectName ?: s.notes?.substringBefore(" • ") ?: "Mapel"
+                        val room = s.room ?: "Ruang Kelas"
+                        val teacher = s.notes?.substringAfter(" • ")?.substringBefore(" (")?.trim() ?: ""
+                        val time = formatSessionTime(s.scheduledAt ?: s.startedAt)
+
+                        ModernTimelineRow(
+                            time = time,
+                            subject = title,
+                            room = room,
+                            teacher = teacher,
+                            status = s.status,
+                            accentColor = StudentNeon,
+                            onClick = { onNavigateToSessionDetail(s.id) },
+                        )
+
+                        if (index < todaySessions.take(4).size - 1) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(horizontal = 16.dp),
+                                color = GlassBorder.copy(alpha = 0.6f),
+                                thickness = 0.7.dp,
                             )
                         }
                     }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = 0.04f))
-                            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
-                            .clickable(onClick = onNavigateToSessions)
-                            .padding(14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Buka Jadwal Pelajaran Mingguan ➔", fontSize = 12.sp, color = TextTertiary, fontWeight = FontWeight.SemiBold)
-                    }
                 }
             }
         }
     }
 
-    // ── 4. REFINED DYNAMIC GRADE OVERVIEW ──
+    // ── 3. ACADEMIC PERFORMANCE & LEVEL SNAPSHOT ─────────────────────────────────
     item {
-        LightCard {
-            Column(modifier = Modifier.padding(14.dp)) {
-                LightSectionHeader("Performa Akademik", "Semester Aktif", onSeeAll = onNavigateToGrades)
-                Spacer(Modifier.height(16.dp))
-                Row(verticalAlignment = Alignment.Bottom) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (gradeAverage.isNotBlank()) gradeAverage else "-",
-                            fontWeight = FontWeight.Black,
-                            fontSize = 36.sp,
-                            color = StudentNeon,
-                            letterSpacing = (-1).sp
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(gradeStatus, fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.SemiBold)
-                        }
-                    }
-                    if (gradeTrendPoints.isNotEmpty()) {
-                        LineTrendChart(
-                            dataPoints = gradeTrendPoints,
-                            lineColor = StudentNeon,
-                            fillColor = StudentNeon.copy(alpha = 0.08f),
-                            modifier = Modifier.size(width = 120.dp, height = 54.dp),
-                        )
-                    }
-                }
+        LightSectionHeader(
+            title = "Performa & Capaian Belajar",
+            sub = "Ringkasan nilai semester berjalan",
+            onSeeAll = onNavigateToGrades,
+        )
+    }
 
-                if (topGradeSubjects.isNotEmpty()) {
-                    Spacer(Modifier.height(14.dp))
-                    HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f), thickness = 0.8.dp)
-                    Spacer(Modifier.height(12.dp))
-                    topGradeSubjects.take(3).forEach { subj ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp)
-                                .clickable(onClick = onNavigateToGrades),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
+    item {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .shadow(6.dp, RoundedCornerShape(22.dp), spotColor = GlassBorder)
+                .clip(RoundedCornerShape(22.dp))
+                .background(CosmicNavy)
+                .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
+                .clickable(onClick = onNavigateToGrades)
+                .padding(18.dp),
+        ) {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column {
+                        Text(
+                            text = "RATA-RATA NILAI",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TextTertiary,
+                            letterSpacing = 0.6.sp,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Row(verticalAlignment = Alignment.Bottom) {
                             Text(
-                                subj.subjectName,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
+                                text = gradeAverage,
+                                fontSize = 34.sp,
+                                fontWeight = FontWeight.Black,
+                                color = StudentNeon,
+                                letterSpacing = (-1).sp,
                             )
                             Spacer(Modifier.width(8.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .padding(bottom = 6.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(NeonSuccess.copy(alpha = 0.15f))
+                                    .padding(horizontal = 7.dp, vertical = 3.dp),
+                            ) {
                                 Text(
-                                    "%.1f".format(subj.finalScore),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextSecondary
+                                    text = "Stabil",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = NeonSuccess,
                                 )
-                                Spacer(Modifier.width(6.dp))
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(
-                                            when (subj.letterGrade) {
-                                                "A" -> NeonSuccess.copy(alpha = 0.15f)
-                                                "B" -> NeonBlue.copy(alpha = 0.15f)
-                                                else -> NeonWarning.copy(alpha = 0.15f)
-                                            }
-                                        )
-                                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                                ) {
-                                    Text(
-                                        subj.letterGrade,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = when (subj.letterGrade) {
-                                            "A" -> NeonSuccess
-                                            "B" -> NeonBlue
-                                            else -> NeonWarning
-                                        }
-                                    )
-                                }
                             }
                         }
                     }
+
+                    // Level & Badge Button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(StudentNeon.copy(alpha = 0.18f), StudentNeon.copy(alpha = 0.06f))
+                                )
+                            )
+                            .border(1.dp, StudentNeon.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                            .clickable(onClick = onNavigateToAchievements)
+                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(
+                                imageVector = Icons.Default.EmojiEvents,
+                                contentDescription = null,
+                                tint = StudentNeon,
+                                modifier = Modifier.size(18.dp),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Prestasi Siswa",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = StudentNeon,
+                            )
+                        }
+                    }
                 }
-            }
-        }
-    }
 
-    // ── 5. REFINED DYNAMIC SUBJECT PROGRESS ──
-    item {
-        val p = studentProgress
-        val progressItems = if (p != null) {
-            val list = mutableListOf<Triple<String, Float, Color>>()
-            val lessonPct = if (p.lessonTotal > 0) (p.lessonCompleted.toFloat() / p.lessonTotal.toFloat()).coerceIn(0f, 1f) else 0f
-            val lessonLabel = if (p.lessonTotal > 0) "Materi & Modul (${p.lessonCompleted}/${p.lessonTotal})" else "Materi & Modul"
-            list.add(Triple(lessonLabel, lessonPct, NeonBlue))
-
-            val assignPct = if (p.assignmentTotal > 0) (p.assignmentCompleted.toFloat() / p.assignmentTotal.toFloat()).coerceIn(0f, 1f) else 0f
-            val assignLabel = if (p.assignmentTotal > 0) "Tugas Mandiri (${p.assignmentCompleted}/${p.assignmentTotal})" else "Tugas Mandiri"
-            list.add(Triple(assignLabel, assignPct, NeonSuccess))
-
-            val quizPct = if (p.quizTotal > 0) (p.quizCompleted.toFloat() / p.quizTotal.toFloat()).coerceIn(0f, 1f) else 0f
-            val quizLabel = if (p.quizTotal > 0) "Kuis & Evaluasi (${p.quizCompleted}/${p.quizTotal})" else "Kuis & Evaluasi"
-            list.add(Triple(quizLabel, quizPct, NeonWarning))
-
-            val sessionPct = if (p.sessionTotal > 0) (p.sessionAttended.toFloat() / p.sessionTotal.toFloat()).coerceIn(0f, 1f) else 0f
-            val sessionLabel = if (p.sessionTotal > 0) "Kehadiran Sesi (${p.sessionAttended}/${p.sessionTotal})" else "Kehadiran Sesi"
-            list.add(Triple(sessionLabel, sessionPct, StudentNeon))
-
-            list
-        } else {
-            listOf(
-                Triple("Materi & Modul", 0f, NeonBlue),
-                Triple("Tugas Mandiri", 0f, NeonSuccess),
-                Triple("Kuis & Evaluasi", 0f, NeonWarning),
-                Triple("Kehadiran Sesi", 0f, StudentNeon),
-            )
-        }
-
-        val overallDisplayPct = p?.overallProgress?.toInt()?.coerceIn(0, 100) ?: 0
-
-        LightCard {
-            Column(modifier = Modifier.padding(14.dp)) {
-                LightSectionHeader("Progres Belajar", if (p != null) "$overallDisplayPct% Selesai" else "", onSeeAll = onNavigateToProgress)
                 Spacer(Modifier.height(14.dp))
-                progressItems.forEach { (subj, pct, color) ->
-                    LightProgressRow(subj, pct, color)
+
+                // Trend chart or visual meter
+                if (gradeTrendPoints.isNotEmpty() && gradeTrendPoints.size > 1) {
+                    LineTrendChart(
+                        dataPoints = gradeTrendPoints,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(65.dp),
+                        lineColor = StudentNeon,
+                    )
                     Spacer(Modifier.height(12.dp))
                 }
-            }
-        }
-    }
-    
-    item { Spacer(Modifier.height(20.dp)) }
-}
 
-@Composable
-private fun StudentLearningHubGlass(
-    subject: String,
-    room: String,
-    timeLeft: String,
-    isLive: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.horizontalGradient(listOf(StudentNeon, NeonBlue)))
-            .clickable(onClick = onClick)
-            .padding(14.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(6.dp).clip(CircleShape).background(if (isLive) NeonSuccess else Color.White))
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        if (isLive) "SEDANG BERLANGSUNG" else "KELAS BERIKUTNYA",
-                        color = Color.White.copy(alpha = 0.9f), fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp
-                    )
-                }
-                Spacer(Modifier.height(8.dp))
-                Text(subject, color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Black)
-                Text("$room • $timeLeft", color = Color.White.copy(alpha = 0.8f), fontSize = 12.sp, fontWeight = FontWeight.Medium)
-            }
-            
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color.White.copy(alpha = 0.2f))
-                    .padding(horizontal = 14.dp, vertical = 10.dp)
-            ) {
-                Text(if (isLive) "Masuk" else "Jadwal", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-private fun StudentToolboxButton(action: QuickAction) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.clickable(onClick = action.onClick)) {
-        Box(
-            modifier = Modifier
-                .size(56.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(action.accentColor.copy(alpha = 0.16f))
-                .border(1.dp, action.accentColor.copy(alpha = 0.3f), RoundedCornerShape(18.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(action.icon, null, tint = action.accentColor, modifier = Modifier.size(24.dp))
-        }
-        Spacer(Modifier.height(8.dp))
-        Text(action.label, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextSecondary)
-    }
-}
-
-@Composable
-private fun CompactAgendaItem(
-    time: String,
-    code: String,
-    color: Color,
-    isActive: Boolean = false,
-    onClick: () -> Unit = {}
-) {
-    Box(
-        modifier = Modifier
-            .width(80.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (isActive) color.copy(alpha = 0.12f) else color.copy(alpha = 0.06f))
-            .border(
-                width = if (isActive) 1.5.dp else 1.dp,
-                color = if (isActive) color.copy(alpha = 0.5f) else color.copy(alpha = 0.2f),
-                shape = RoundedCornerShape(16.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(12.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (isActive) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(color)
+                // Status message
+                Text(
+                    text = gradeStatus,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextSecondary,
                 )
-                Spacer(Modifier.height(4.dp))
             }
-            Text(code, fontWeight = FontWeight.Black, fontSize = 14.sp, color = color)
-            Text(time, fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
         }
+    }
+}
+
+private fun formatSessionTime(rawTime: String?): String {
+    if (rawTime == null) return "--:--"
+    return try {
+        val parser = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", java.util.Locale.getDefault()).apply {
+            timeZone = java.util.TimeZone.getTimeZone("UTC")
+        }
+        val out = java.text.SimpleDateFormat("HH.mm", java.util.Locale.getDefault()).apply {
+            timeZone = java.util.TimeZone.getTimeZone("Asia/Jakarta")
+        }
+        out.format(parser.parse(rawTime.substringBefore(".")) ?: java.util.Date())
+    } catch (e: Exception) {
+        "--:--"
     }
 }

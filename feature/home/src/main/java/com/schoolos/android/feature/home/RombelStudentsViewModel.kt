@@ -3,8 +3,11 @@ package com.schoolos.android.feature.home
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.domain.model.Achievement
 import com.schoolos.android.domain.model.ClassStudent
+import com.schoolos.android.domain.model.Progress
 import com.schoolos.android.domain.repository.AcademicRepository
+import com.schoolos.android.domain.repository.AchievementRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,6 +22,10 @@ data class RombelStudentsUiState(
     val isLoading: Boolean = true,
     val errorMessage: String? = null,
     val searchQuery: String = "",
+    val selectedStudent: ClassStudent? = null,
+    val selectedStudentProgress: Progress? = null,
+    val selectedStudentAchievements: List<Achievement> = emptyList(),
+    val isLoadingDetail: Boolean = false,
 ) {
     val filteredStudents: List<ClassStudent>
         get() = if (searchQuery.isBlank()) students
@@ -35,6 +42,7 @@ data class RombelStudentsUiState(
 @HiltViewModel
 class RombelStudentsViewModel @Inject constructor(
     private val academicRepository: AcademicRepository,
+    private val achievementRepository: AchievementRepository,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -79,6 +87,42 @@ class RombelStudentsViewModel @Inject constructor(
                         )
                     }
                 }
+        }
+    }
+
+    fun selectStudent(student: ClassStudent?) {
+        if (student == null) {
+            _uiState.update {
+                it.copy(
+                    selectedStudent = null,
+                    selectedStudentProgress = null,
+                    selectedStudentAchievements = emptyList(),
+                    isLoadingDetail = false
+                )
+            }
+            return
+        }
+
+        _uiState.update {
+            it.copy(
+                selectedStudent = student,
+                isLoadingDetail = true,
+                selectedStudentProgress = null,
+                selectedStudentAchievements = emptyList()
+            )
+        }
+
+        viewModelScope.launch {
+            val progressResult = academicRepository.getStudentProgress(student.id)
+            val achievementsResult = achievementRepository.getStudentAchievements(student.id)
+
+            _uiState.update {
+                it.copy(
+                    isLoadingDetail = false,
+                    selectedStudentProgress = progressResult.getOrNull(),
+                    selectedStudentAchievements = achievementsResult.getOrDefault(emptyList())
+                )
+            }
         }
     }
 }

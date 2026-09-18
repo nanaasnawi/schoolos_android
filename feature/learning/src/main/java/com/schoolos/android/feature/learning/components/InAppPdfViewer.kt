@@ -308,7 +308,7 @@ fun InAppPdfViewer(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .background(Color(0xFF0F172A))
+                                    .background(Color(0xFF000000))
                                     .padding(vertical = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {

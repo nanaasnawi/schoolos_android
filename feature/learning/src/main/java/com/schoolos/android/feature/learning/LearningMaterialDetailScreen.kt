@@ -87,10 +87,13 @@ fun LearningMaterialDetailScreen(
     // Role-aware UX: teachers distribute materials, students consume them
     val learningState by viewModel.state.collectAsState()
     val isTeacher = learningState.userRole.lowercase() in listOf("teacher", "guru")
+    val materialCompletions by viewModel.materialCompletions.collectAsState()
+    val isLoadingCompletions by viewModel.isLoadingCompletions.collectAsState()
 
     var textSizeMultiplier by remember { mutableStateOf(1.0f) }
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showCompletionsSheet by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = CosmicBlack,
@@ -185,8 +188,17 @@ fun LearningMaterialDetailScreen(
                 ) {
                     if (isTeacher) {
                         // ── TEACHER: completion count + edit & delete management ──
-                        Column {
-                            Text("Pemanfaatan Kelas", color = TextTertiary, fontSize = 11.sp)
+                        Column(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable { showCompletionsSheet = true }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Pemanfaatan Kelas", color = TextTertiary, fontSize = 11.sp)
+                                Spacer(Modifier.width(3.dp))
+                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(12.dp))
+                            }
                             Spacer(Modifier.height(2.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -196,8 +208,10 @@ fun LearningMaterialDetailScreen(
                                         .background(TeacherNeon)
                                 )
                                 Spacer(Modifier.width(6.dp))
+                                val completedCount = materialCompletions.count { it.isCompleted }
+                                val totalCount = materialCompletions.size
                                 Text(
-                                    "${material.completedCount} siswa menyelesaikan",
+                                    if (totalCount > 0) "$completedCount / $totalCount siswa selesai" else "${material.completedCount} siswa menyelesaikan",
                                     color = TeacherNeon,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.ExtraBold
@@ -490,6 +504,16 @@ fun LearningMaterialDetailScreen(
                     }
                 }
 
+                // ── MONITORING KETERBACAAN SISWA (Role: Guru) ────────────────
+                if (isTeacher) {
+                    TeacherCompletionsTrackerCard(
+                        completions = materialCompletions,
+                        isLoading = isLoadingCompletions,
+                        className = material.className,
+                        onOpenFullSheet = { showCompletionsSheet = true }
+                    )
+                }
+
                 // ── TANYA GURU / KONSULTASI MATERI (In-App Q&A) ──────────────
                 val descPartsForQ = (material.description ?: "").split(" • ")
                 val resolvedTeacherName = material.teacherName?.ifBlank { null }
@@ -762,6 +786,14 @@ fun LearningMaterialDetailScreen(
                         Text("Batal", color = TextTertiary, fontSize = 12.sp)
                     }
                 }
+            )
+        }
+
+        // ── ROSTER KETERBACAAN SISWA BOTTOM SHEET (Guru) ──
+        if (showCompletionsSheet) {
+            MaterialCompletionsBottomSheet(
+                completions = materialCompletions,
+                onDismiss = { showCompletionsSheet = false }
             )
         }
     }

@@ -20,4 +20,10 @@ class AchievementRepositoryImpl @Inject constructor(
         response.data?.map { it.toDomain() }
             ?: throw Exception(response.error?.message ?: "Gagal memuat lencana pencapaian dari server API.")
     }
+
+    override suspend fun getStudentAchievements(studentId: String): Result<List<Achievement>> = runCatching {
+        val response = api.getStudentAchievements(studentId.trim())
+        response.data?.map { it.toDomain() }
+            ?: throw Exception(response.error?.message ?: "Gagal memuat lencana pencapaian murid.")
+    }
 }

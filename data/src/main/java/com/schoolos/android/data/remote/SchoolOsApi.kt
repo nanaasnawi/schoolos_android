@@ -138,6 +138,11 @@ interface SchoolOsApi {
         @Path("id") id: String
     ): ApiResponse<com.schoolos.android.data.remote.dto.MaterialCompletionToggleDto>
 
+    @GET("learning/materials/{id}/completions")
+    suspend fun getMaterialCompletions(
+        @Path("id") id: String
+    ): ApiResponse<List<com.schoolos.android.data.remote.dto.MaterialStudentCompletionDto>>
+
     // Library Books (Katalog Buku Kurikulum & Perpustakaan Digital)
     @GET("learning/library/books")
     suspend fun getLibraryBooks(
@@ -161,6 +166,11 @@ interface SchoolOsApi {
     // Progress
     @GET("learning/progress/me")
     suspend fun getMyProgress(): ApiResponse<ProgressDto>
+
+    @GET("learning/progress/student/{student_id}")
+    suspend fun getStudentProgress(
+        @Path("student_id") studentId: String
+    ): ApiResponse<ProgressDto>
 
     @GET("learning/progress/{student_id}/{class_id}/{subject_id}")
     suspend fun getProgress(

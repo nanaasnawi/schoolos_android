@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Badge
 import androidx.compose.material.icons.filled.Female
 import androidx.compose.material.icons.filled.Groups
@@ -85,6 +87,7 @@ import com.schoolos.android.domain.model.ClassStudent
 fun RombelStudentsScreen(
     className: String? = null,
     onBack: () -> Unit,
+    onNavigateToStudentDetail: (ClassStudent) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: RombelStudentsViewModel = hiltViewModel(),
 ) {
@@ -424,7 +427,11 @@ fun RombelStudentsScreen(
                             enter = fadeIn(tween(180 + index * 35)) +
                                     slideInVertically(tween(180 + index * 35)) { it / 3 }
                         ) {
-                            StudentCard(student = student, index = index + 1)
+                            StudentCard(
+                                student = student,
+                                index = index + 1,
+                                onClick = { onNavigateToStudentDetail(student) }
+                            )
                         }
                     }
                     item { Spacer(Modifier.height(24.dp)) }
@@ -438,6 +445,7 @@ fun RombelStudentsScreen(
 private fun StudentCard(
     student: ClassStudent,
     index: Int,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isFemale = student.gender?.trim()?.uppercase() == "P"
@@ -457,10 +465,11 @@ private fun StudentCard(
             .border(
                 width = 1.dp,
                 brush = Brush.linearGradient(
-                    listOf(genderColor.copy(alpha = 0.18f), GlassBorder)
+                    listOf(genderColor.copy(alpha = 0.25f), GlassBorder)
                 ),
                 shape = RoundedCornerShape(20.dp)
             )
+            .clickable { onClick() }
             .padding(14.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -527,52 +536,77 @@ private fun StudentCard(
                 Spacer(Modifier.height(5.dp))
 
                 Row(
+                    modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // NISN badge
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(CosmicSurface)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Badge,
-                            contentDescription = null,
-                            tint = TextTertiary,
-                            modifier = Modifier.size(10.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = student.nisn ?: "-",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextSecondary
-                        )
+                        // NISN badge
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(CosmicSurface)
+                                .border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 7.dp, vertical = 3.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Badge,
+                                contentDescription = null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = student.nisn ?: "-",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary
+                            )
+                        }
+                        // Gender badge
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(genderColor.copy(alpha = 0.1f))
+                                .padding(horizontal = 7.dp, vertical = 3.dp)
+                        ) {
+                            Icon(
+                                imageVector = genderIcon,
+                                contentDescription = null,
+                                tint = genderColor,
+                                modifier = Modifier.size(10.dp)
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Text(
+                                text = genderLabel,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = genderColor
+                            )
+                        }
                     }
-                    // Gender badge
+
+                    // Click Indicator Pill
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(genderColor.copy(alpha = 0.1f))
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                        horizontalArrangement = Arrangement.spacedBy(1.dp)
                     ) {
-                        Icon(
-                            imageVector = genderIcon,
-                            contentDescription = null,
-                            tint = genderColor,
-                            modifier = Modifier.size(10.dp)
-                        )
-                        Spacer(Modifier.width(3.dp))
                         Text(
-                            text = genderLabel,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = genderColor
+                            text = "Detail",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TeacherNeon
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = "Detail Murid",
+                            tint = TeacherNeon,
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                 }

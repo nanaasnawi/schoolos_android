@@ -1,5 +1,6 @@
 package com.schoolos.android.data.repository
 
+import com.schoolos.android.data.mapper.toDomain
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
@@ -53,5 +54,11 @@ class AcademicRepositoryImpl @Inject constructor(
                 className = dto.className,
             )
         }
+    }
+
+    override suspend fun getStudentProgress(studentId: String): Result<com.schoolos.android.domain.model.Progress> = runCatching {
+        val response = api.getStudentProgress(studentId.trim())
+        val data = response.data ?: throw Exception(response.error?.message ?: "Gagal memuat progres akademik murid.")
+        data.toDomain()
     }
 }

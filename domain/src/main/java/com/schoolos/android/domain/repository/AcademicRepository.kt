@@ -8,4 +8,5 @@ interface AcademicRepository {
     suspend fun getClasses(): Result<List<AcademicClass>>
     suspend fun getSubjects(): Result<List<AcademicSubject>>
     suspend fun getClassStudents(className: String): Result<List<ClassStudent>>
+    suspend fun getStudentProgress(studentId: String): Result<com.schoolos.android.domain.model.Progress>
 }
