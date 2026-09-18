@@ -15,6 +15,7 @@ import com.schoolos.android.domain.repository.AchievementRepository
 import com.schoolos.android.domain.repository.AssignmentRepository
 import com.schoolos.android.domain.repository.AuthRepository
 import com.schoolos.android.domain.repository.GradeRepository
+import com.schoolos.android.domain.repository.LearningMaterialRepository
 import com.schoolos.android.domain.repository.NotificationRepository
 import com.schoolos.android.domain.repository.ProgressRepository
 import com.schoolos.android.domain.repository.SessionRepository
@@ -82,6 +83,7 @@ class HomeViewModel @Inject constructor(
     private val assignmentRepository: AssignmentRepository,
     private val achievementRepository: AchievementRepository,
     private val sessionRepository: SessionRepository,
+    private val learningMaterialRepository: LearningMaterialRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -191,6 +193,23 @@ class HomeViewModel @Inject constructor(
             val activeSubj = activeTeacherSession?.let { it.subjectName ?: it.notes?.substringBefore(" • ") ?: "-" } ?: "-"
             val activeClass = activeTeacherSession?.classId?.ifBlank { null } ?: if (homeroom.isNotBlank()) homeroom else "-"
 
+            val scheduleCount = if (todaySessions.isNotEmpty()) todaySessions.size else sessions.size
+            val attendanceRate = if (todaySessions.isNotEmpty()) {
+                val completedOrActive = todaySessions.count {
+                    it.status.equals("completed", ignoreCase = true) || it.status.equals("active", ignoreCase = true)
+                }
+                if (completedOrActive > 0) {
+                    val pct = (completedOrActive.toFloat() / todaySessions.size.toFloat()) * 100f
+                    "${pct.toInt()}%"
+                } else {
+                    "100%"
+                }
+            } else if (sessions.isNotEmpty()) {
+                "100%"
+            } else {
+                "0%"
+            }
+
             _state.update { current ->
                 current.copy(
                     todaySessions = todaySessions,
@@ -198,8 +217,8 @@ class HomeViewModel @Inject constructor(
                     nextSessionRoom = nextRm,
                     nextSessionTime = timeText,
                     nextSessionIsLive = isLive,
-                    teacherScheduleCount = sessions.size.toString(),
-                    teacherAttendanceRate = if (sessions.isNotEmpty()) "100%" else "0%",
+                    teacherScheduleCount = scheduleCount.toString(),
+                    teacherAttendanceRate = attendanceRate,
                     activeSessionSubject = activeSubj,
                     activeSessionClass = activeClass,
                 )
@@ -271,8 +290,10 @@ class HomeViewModel @Inject constructor(
             }
         } else if (isTeacher) {
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
-                val count = assignments.size
-                _state.update { it.copy(teacherPendingCount = count.toString(), teacherMaterialsCount = count.toString()) }
+                _state.update { it.copy(teacherPendingCount = assignments.size.toString()) }
+            }
+            learningMaterialRepository.getMaterials().onSuccess { materials ->
+                _state.update { it.copy(teacherMaterialsCount = materials.size.toString()) }
             }
             academicRepository.getClasses().onSuccess { classes ->
                 val myClasses = if (homeroom.isNotBlank()) {
@@ -310,10 +331,10 @@ class HomeViewModel @Inject constructor(
 
     private fun parseDate(iso: String): LocalDate? {
         return try {
-            ZonedDateTime.parse(iso).toLocalDate()
+            Instant.parse(iso).atZone(ZoneId.systemDefault()).toLocalDate()
         } catch (_: Exception) {
             try {
-                Instant.parse(iso).atZone(ZoneId.systemDefault()).toLocalDate()
+                ZonedDateTime.parse(iso).withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
             } catch (_: Exception) {
                 try {
                     LocalDate.parse(iso.substringBefore("T"))
