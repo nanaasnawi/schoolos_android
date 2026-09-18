@@ -11,27 +11,37 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.PowerManager
+import android.media.AudioAttributes
+import android.media.RingtoneManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
 object SystemNotificationHelper {
 
-    const val CHANNEL_ID = "school_os_announcements_v2"
+    const val CHANNEL_ID = "school_os_announcements_v3"
     private const val CHANNEL_NAME = "Pengumuman & Broadcast Sekolah"
     private const val CHANNEL_DESC = "Pemberitahuan resmi dan pengumuman sekolah"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_HIGH
+            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val audioAttributes = AudioAttributes.Builder()
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .build()
+
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
                 description = CHANNEL_DESC
                 enableLights(true)
                 lightColor = Color.BLUE
                 enableVibration(true)
                 vibrationPattern = longArrayOf(0, 300, 150, 300)
+                setSound(soundUri, audioAttributes)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
                 setBypassDnd(true)
+                setShowBadge(true)
             }
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             manager?.createNotificationChannel(channel)
@@ -129,6 +139,8 @@ object SystemNotificationHelper {
         val iconRes = context.applicationInfo.icon.takeIf { it != 0 }
             ?: android.R.drawable.ic_dialog_info
 
+        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(iconRes)
             .setContentTitle(title)
@@ -138,9 +150,11 @@ object SystemNotificationHelper {
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
+            .setSound(soundUri)
+            .setVibrate(longArrayOf(0, 300, 150, 300))
+            .setLights(Color.BLUE, 1000, 1000)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setFullScreenIntent(pendingIntent, false)
 
         try {
             NotificationManagerCompat.from(context).notify(stableId, builder.build())

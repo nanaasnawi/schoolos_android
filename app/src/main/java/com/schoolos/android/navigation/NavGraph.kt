@@ -59,6 +59,7 @@ fun NavGraph(
     maintenanceManager: MaintenanceManager,
     chatManager: ChatManager,
     navController: NavHostController = rememberNavController(),
+    pendingDeepLink: String? = null,
 ) {
     var startCheck by remember { mutableStateOf(false) }
     var isLoggedIn by remember { mutableStateOf(false) }
@@ -68,6 +69,17 @@ fun NavGraph(
     LaunchedEffect(Unit) {
         isLoggedIn = authManager.isLoggedIn
         startCheck = true
+    }
+
+    // Auto-navigate if deep link / notification click occurred (e.g. from lockscreen)
+    LaunchedEffect(pendingDeepLink, isLoggedIn, startCheck) {
+        if (startCheck && isLoggedIn && !pendingDeepLink.isNullOrBlank()) {
+            if (pendingDeepLink == "notifications") {
+                navController.navigate(Screen.Notifications.route) {
+                    launchSingleTop = true
+                }
+            }
+        }
     }
 
     // Auto-redirect if maintenance activates while user is logged in / using app

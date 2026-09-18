@@ -37,8 +37,11 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var maintenanceManager: MaintenanceManager
     @Inject lateinit var chatManager: com.schoolos.android.core.chat.ChatManager
 
+    private var pendingNavigationRoute by mutableStateOf<String?>(null)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        extractNavigationTarget(intent)
         enableEdgeToEdge()
 
         // Create Android Notification Channel
@@ -106,10 +109,25 @@ class MainActivity : ComponentActivity() {
                             authManager = authManager,
                             maintenanceManager = maintenanceManager,
                             chatManager = chatManager,
+                            pendingDeepLink = pendingNavigationRoute,
                         )
                     }
                 }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        extractNavigationTarget(intent)
+    }
+
+    private fun extractNavigationTarget(intent: android.content.Intent?) {
+        val target = intent?.getStringExtra("navigate_to")
+            ?: intent?.extras?.getString("navigate_to")
+        if (!target.isNullOrBlank()) {
+            pendingNavigationRoute = target
         }
     }
 }
