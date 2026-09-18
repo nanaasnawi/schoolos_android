@@ -89,6 +89,8 @@ fun LearningMaterialDetailScreen(
     val isTeacher = learningState.userRole.lowercase() in listOf("teacher", "guru")
 
     var textSizeMultiplier by remember { mutableStateOf(1.0f) }
+    var showEditDialog by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     Scaffold(
         containerColor = CosmicBlack,
@@ -123,11 +125,26 @@ fun LearningMaterialDetailScreen(
                         }
                     }
 
-                    // Font Size Adjuster
+                    // Actions (Teacher Management & Font Size Adjuster)
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
+                        if (isTeacher) {
+                            IconButton(
+                                onClick = { showEditDialog = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Edit, contentDescription = "Edit Materi", tint = TeacherNeon, modifier = Modifier.size(17.dp))
+                            }
+                            IconButton(
+                                onClick = { showDeleteDialog = true },
+                                modifier = Modifier.size(32.dp)
+                            ) {
+                                Icon(Icons.Default.Delete, contentDescription = "Hapus Materi", tint = NeonError, modifier = Modifier.size(17.dp))
+                            }
+                            Spacer(Modifier.width(4.dp))
+                        }
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
@@ -162,14 +179,14 @@ fun LearningMaterialDetailScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isTeacher) {
-                        // ── TEACHER: distribution panel (no student "mark as done" UX) ──
+                        // ── TEACHER: completion count + edit & delete management ──
                         Column {
-                            Text("Status Distribusi", color = TextTertiary, fontSize = 11.sp)
+                            Text("Pemanfaatan Kelas", color = TextTertiary, fontSize = 11.sp)
                             Spacer(Modifier.height(2.dp))
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Box(
@@ -188,26 +205,48 @@ fun LearningMaterialDetailScreen(
                             }
                         }
 
-                        Button(
-                            onClick = onCreateMaterial,
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = TeacherNeon,
-                                contentColor = Color.White
-                            ),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier.height(44.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "Buat Materi",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp
-                            )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            OutlinedButton(
+                                onClick = { showDeleteDialog = true },
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonError),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonError.copy(alpha = 0.4f)),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.height(44.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = "Hapus",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
+
+                            Button(
+                                onClick = { showEditDialog = true },
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = TeacherNeon,
+                                    contentColor = Color.White
+                                ),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier.height(44.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = "Edit Materi",
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp
+                                )
+                            }
                         }
                     } else {
                         // ── STUDENT: learning progress + mark-as-done ──
@@ -646,6 +685,198 @@ fun LearningMaterialDetailScreen(
                 Spacer(Modifier.height(30.dp))
             }
         }
+
+        // ── EDIT MATERIAL DIALOG ──
+        if (showEditDialog) {
+            EditMaterialDialog(
+                material = material,
+                onDismiss = { showEditDialog = false },
+                onSave = { updatedTitle, updatedDesc, updatedUrl ->
+                    viewModel.updateMaterial(
+                        id = material.id,
+                        title = updatedTitle,
+                        description = updatedDesc,
+                        mediaUrl = updatedUrl,
+                    ) { success, err ->
+                        if (success) {
+                            showEditDialog = false
+                            Toast.makeText(context, "✓ Materi berhasil diperbarui!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, "Gagal: ${err ?: "Terjadi kesalahan"}", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            )
+        }
+
+        // ── DELETE CONFIRMATION DIALOG ──
+        if (showDeleteDialog) {
+            AlertDialog(
+                onDismissRequest = { showDeleteDialog = false },
+                containerColor = CosmicNavy,
+                shape = RoundedCornerShape(20.dp),
+                title = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(NeonError.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = null, tint = NeonError, modifier = Modifier.size(18.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text("Hapus Materi?", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                },
+                text = {
+                    Text(
+                        "Materi \"${material.title}\" akan dihapus secara permanen dari portal siswa. Tindakan ini tidak dapat dibatalkan.",
+                        color = TextSecondary,
+                        fontSize = 13.sp,
+                        lineHeight = 18.sp
+                    )
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            viewModel.deleteMaterial(material.id) { success, err ->
+                                if (success) {
+                                    showDeleteDialog = false
+                                    Toast.makeText(context, "✓ Materi berhasil dihapus!", Toast.LENGTH_SHORT).show()
+                                    onBack()
+                                } else {
+                                    Toast.makeText(context, "Gagal: ${err ?: "Terjadi kesalahan"}", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        },
+                        colors = ButtonDefaults.buttonColors(containerColor = NeonError, contentColor = Color.White),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text("Ya, Hapus", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteDialog = false }) {
+                        Text("Batal", color = TextTertiary, fontSize = 12.sp)
+                    }
+                }
+            )
+        }
     }
 }
+
+@Composable
+private fun EditMaterialDialog(
+    material: LearningMaterial,
+    onDismiss: () -> Unit,
+    onSave: (title: String, description: String, mediaUrl: String?) -> Unit,
+) {
+    var title by remember { mutableStateOf(material.title) }
+    var description by remember { mutableStateOf(material.description ?: "") }
+    var mediaUrl by remember { mutableStateOf(material.mediaUrl ?: "") }
+    var isSaving by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CosmicNavy,
+        shape = RoundedCornerShape(20.dp),
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(TeacherNeon.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(18.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Text("Edit Materi Pembelajaran", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedTextField(
+                    value = title,
+                    onValueChange = { title = it },
+                    label = { Text("Judul Materi *", fontSize = 12.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = TeacherNeon,
+                        unfocusedBorderColor = GlassBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    )
+                )
+
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Deskripsi / Petunjuk", fontSize = 12.sp) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp),
+                    maxLines = 4,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = TeacherNeon,
+                        unfocusedBorderColor = GlassBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    )
+                )
+
+                OutlinedTextField(
+                    value = mediaUrl,
+                    onValueChange = { mediaUrl = it },
+                    label = { Text("URL Media / File / Video (opsional)", fontSize = 12.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = TeacherNeon,
+                        unfocusedBorderColor = GlassBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    if (title.isNotBlank()) {
+                        isSaving = true
+                        onSave(title.trim(), description.trim(), mediaUrl.trim().ifBlank { null })
+                    }
+                },
+                enabled = title.isNotBlank() && !isSaving,
+                colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                if (isSaving) {
+                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(14.dp))
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text("Simpan Perubahan", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss, enabled = !isSaving) {
+                Text("Batal", color = TextTertiary, fontSize = 12.sp)
+            }
+        }
+    )
+}
+
 

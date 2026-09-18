@@ -9,7 +9,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
 import java.time.ZonedDateTime
 import javax.inject.Inject
 
@@ -20,9 +22,13 @@ data class TodayUiState(
     val userRole: String = "student",
     val className: String = "",
     val classId: String? = null,
+    val selectedDate: LocalDate = LocalDate.now(),
+    val selectedFilter: String = "ALL", // "ALL", "ACTIVE", "UPCOMING", "COMPLETED"
+    val weekScheduleCounts: Map<LocalDate, Int> = emptyMap(),
     val active: List<LearningSession> = emptyList(),
     val upcoming: List<LearningSession> = emptyList(),
     val completed: List<LearningSession> = emptyList(),
+    val displayedSessions: List<LearningSession> = emptyList(),
 )
 
 @HiltViewModel
@@ -34,6 +40,8 @@ class TodayViewModel @Inject constructor(
     private val _state = MutableStateFlow(TodayUiState())
     val state = _state.asStateFlow()
 
+    private var allSessionsCache: List<LearningSession> = emptyList()
+
     init {
         viewModelScope.launch {
             authManager.authState.collect { auth ->
@@ -44,19 +52,26 @@ class TodayViewModel @Inject constructor(
                 )
             }
         }
-        load()
+        load(_state.value.selectedDate)
     }
 
     fun refresh() {
         _state.value = _state.value.copy(isRefreshing = true)
-        load(_selectedDate.value)
+        load(_state.value.selectedDate)
     }
 
-    private val _selectedDate = MutableStateFlow(LocalDate.now())
-
     fun onDateSelected(date: LocalDate) {
-        _selectedDate.value = date
-        load(date)
+        _state.value = _state.value.copy(selectedDate = date)
+        if (allSessionsCache.isNotEmpty()) {
+            filterAndGroupSessions(allSessionsCache, date, _state.value.selectedFilter)
+        } else {
+            load(date)
+        }
+    }
+
+    fun onFilterSelected(filter: String) {
+        _state.value = _state.value.copy(selectedFilter = filter)
+        filterAndGroupSessions(allSessionsCache, _state.value.selectedDate, filter)
     }
 
     private fun load(targetDate: LocalDate = LocalDate.now()) {
@@ -64,28 +79,69 @@ class TodayViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true, error = null)
             repository.getSessions(_state.value.classId)
                 .onSuccess { sessions ->
-                    val targetSessions = sessions.filter { s ->
-                        val scheduled = s.scheduledAt?.let { parseDate(it) }
-                        val started = s.startedAt?.let { parseDate(it) }
-                        scheduled == targetDate || started == targetDate
-                    }
-                    val grouped = groupSessions(targetSessions)
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        isRefreshing = false,
-                        active = grouped.active,
-                        upcoming = grouped.upcoming,
-                        completed = grouped.completed,
-                    )
+                    allSessionsCache = sessions
+                    filterAndGroupSessions(sessions, targetDate, _state.value.selectedFilter)
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.message ?: "Failed to load sessions",
+                        error = e.message ?: "Gagal memuat jadwal pelajaran",
                     )
                 }
         }
+    }
+
+    private fun filterAndGroupSessions(
+        allSessions: List<LearningSession>,
+        targetDate: LocalDate,
+        filter: String,
+    ) {
+        // Compute schedule count per date for weekly calendar indicator dots
+        val dateCounts = mutableMapOf<LocalDate, Int>()
+        allSessions.forEach { s ->
+            val d = s.scheduledAt?.let { parseDate(it) } ?: s.startedAt?.let { parseDate(it) }
+            if (d != null) {
+                dateCounts[d] = (dateCounts[d] ?: 0) + 1
+            }
+        }
+
+        // Filter sessions that belong to targetDate
+        val targetSessions = allSessions.filter { s ->
+            val scheduled = s.scheduledAt?.let { parseDate(it) }
+            val started = s.startedAt?.let { parseDate(it) }
+            scheduled == targetDate || started == targetDate
+        }
+
+        val grouped = groupSessions(targetSessions)
+
+        // Apply tab filter
+        val displayed = when (filter) {
+            "ACTIVE" -> grouped.active
+            "UPCOMING" -> grouped.upcoming
+            "COMPLETED" -> grouped.completed
+            else -> targetSessions.sortedWith(
+                compareBy<LearningSession> {
+                    when (it.status.lowercase()) {
+                        "active" -> 0
+                        "scheduled" -> 1
+                        "completed" -> 2
+                        else -> 3
+                    }
+                }.thenBy { it.scheduledAt ?: it.startedAt ?: "" }
+            )
+        }
+
+        _state.value = _state.value.copy(
+            isLoading = false,
+            isRefreshing = false,
+            selectedDate = targetDate,
+            weekScheduleCounts = dateCounts,
+            active = grouped.active,
+            upcoming = grouped.upcoming,
+            completed = grouped.completed,
+            displayedSessions = displayed,
+        )
     }
 
     private fun groupSessions(sessions: List<LearningSession>): Grouped {
@@ -94,7 +150,7 @@ class TodayViewModel @Inject constructor(
         val completed = mutableListOf<LearningSession>()
 
         for (s in sessions) {
-            when (s.status) {
+            when (s.status.lowercase()) {
                 "active" -> active.add(s)
                 "completed" -> completed.add(s)
                 else -> upcoming.add(s)
@@ -110,11 +166,15 @@ class TodayViewModel @Inject constructor(
 
     private fun parseDate(iso: String): LocalDate? {
         return try {
-            ZonedDateTime.parse(iso).toLocalDate()
+            Instant.parse(iso).atZone(ZoneId.systemDefault()).toLocalDate()
         } catch (_: Exception) {
             try {
-                java.time.Instant.parse(iso).atZone(java.time.ZoneId.systemDefault()).toLocalDate()
-            } catch (_: Exception) { null }
+                ZonedDateTime.parse(iso).withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+            } catch (_: Exception) {
+                try {
+                    LocalDate.parse(iso.substringBefore("T"))
+                } catch (_: Exception) { null }
+            }
         }
     }
 

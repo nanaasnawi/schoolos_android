@@ -239,4 +239,42 @@ class LearningViewModel @Inject constructor(
             subjectFilter = subjectFilter,
         )
     }
+
+    fun deleteMaterial(id: String, onResult: (Boolean, String?) -> Unit = { _, _ -> }) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
+            repository.deleteMaterial(id)
+                .onSuccess {
+                    loadMaterials()
+                    onResult(true, null)
+                }
+                .onFailure { err ->
+                    _state.value = _state.value.copy(isLoading = false, error = err.message)
+                    onResult(false, err.message)
+                }
+        }
+    }
+
+    fun updateMaterial(
+        id: String,
+        title: String?,
+        description: String?,
+        mediaUrl: String? = null,
+        onResult: (Boolean, String?) -> Unit = { _, _ -> }
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
+            repository.updateMaterial(id, title, description, mediaUrl)
+                .onSuccess { updated ->
+                    selectedMaterial.value = updated
+                    loadMaterials()
+                    onResult(true, null)
+                }
+                .onFailure { err ->
+                    _state.value = _state.value.copy(isLoading = false, error = err.message)
+                    onResult(false, err.message)
+                }
+        }
+    }
 }
+
