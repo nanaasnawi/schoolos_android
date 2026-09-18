@@ -219,17 +219,14 @@ private fun PillNavItem(
             NavIcon(item, selected, activeColor, iconSize)
         }
 
-        if (selected) {
-            Spacer(Modifier.height(3.dp))
-            Box(
-                modifier = Modifier
-                    .size(4.dp)
-                    .clip(CircleShape)
-                    .background(activeColor)
-            )
-        } else {
-            Spacer(Modifier.height(7.dp))
-        }
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = item.label,
+            fontSize = 10.sp,
+            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+            color = if (selected) activeColor else TextTertiary,
+            maxLines = 1,
+        )
     }
 }
 

@@ -52,6 +52,25 @@ sealed class Screen(val route: String) {
     data object RombelStudents : Screen("rombel/{className}/students") {
         fun createRoute(className: String) = "rombel/${Uri.encode(className)}/students"
     }
+    data object StudentDetail : Screen("rombel/student/{studentId}?studentName={studentName}&nisn={nisn}&gender={gender}&className={className}&phone={phone}&email={email}") {
+        fun createRoute(
+            studentId: String,
+            studentName: String,
+            nisn: String = "",
+            gender: String? = null,
+            className: String = "",
+            phone: String? = null,
+            email: String? = null,
+        ): String {
+            val safeName = Uri.encode(studentName)
+            val safeNisn = Uri.encode(nisn)
+            val safeGender = Uri.encode(gender ?: "")
+            val safeClass = Uri.encode(className)
+            val safePhone = Uri.encode(phone ?: "")
+            val safeEmail = Uri.encode(email ?: "")
+            return "rombel/student/${Uri.encode(studentId)}?studentName=$safeName&nisn=$safeNisn&gender=$safeGender&className=$safeClass&phone=$safePhone&email=$safeEmail"
+        }
+    }
     
     // Management Routes (Teacher)
     data object AssignmentCreator : Screen("management/assignments/new")

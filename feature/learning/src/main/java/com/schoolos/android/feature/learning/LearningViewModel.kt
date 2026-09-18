@@ -66,6 +66,8 @@ class LearningViewModel @Inject constructor(
     private var subjectFilter: String? = savedStateHandle.get<String>("subjectId")?.takeIf { it.isNotBlank() }
 
     val selectedMaterial = MutableStateFlow<com.schoolos.android.domain.model.LearningMaterial?>(null)
+    val materialCompletions = MutableStateFlow<List<com.schoolos.android.domain.model.MaterialStudentCompletion>>(emptyList())
+    val isLoadingCompletions = MutableStateFlow(false)
 
     init {
         viewModelScope.launch {
@@ -135,10 +137,28 @@ class LearningViewModel @Inject constructor(
         filterMaterials(_state.value.searchQuery, category)
     }
 
+    fun loadMaterialCompletions(materialId: String) {
+        viewModelScope.launch {
+            isLoadingCompletions.value = true
+            repository.getMaterialCompletions(materialId)
+                .onSuccess { completions ->
+                    materialCompletions.value = completions
+                    isLoadingCompletions.value = false
+                }
+                .onFailure {
+                    materialCompletions.value = emptyList()
+                    isLoadingCompletions.value = false
+                }
+        }
+    }
+
     fun loadMaterialDetail(id: String) {
         viewModelScope.launch {
             repository.getMaterialById(id)
-                .onSuccess { selectedMaterial.value = it }
+                .onSuccess {
+                    selectedMaterial.value = it
+                    loadMaterialCompletions(id)
+                }
                 .onFailure { selectedMaterial.value = null }
         }
     }
@@ -168,6 +188,7 @@ class LearningViewModel @Inject constructor(
                         if (it.id == id) it.copy(isCompleted = serverIsCompleted) else it
                     }
                     filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
+                    loadMaterialCompletions(id)
                 }
                 .onFailure {
                     // Revert on error

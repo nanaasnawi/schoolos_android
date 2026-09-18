@@ -84,48 +84,48 @@ val InfoBlue     = NeonInfo
 
 // ─── Reactive Theme Color Tokens (SOLID NON-GLASS FOR MAXIMUM CLARITY) ──────
 val TextPrimary: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF0F172A)
 
 val TextSecondary: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFCBD5E1) else Color(0xFF334155)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFD1D5DB) else Color(0xFF334155)
 
 val TextTertiary: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF94A3B8) else Color(0xFF64748B)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF9CA3AF) else Color(0xFF64748B)
 
 val TextDisabled: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF64748B) else Color(0xFF94A3B8)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF6B7280) else Color(0xFF94A3B8)
 
-// Solid Page Background
+// Solid Page Background — PURE PITCH BLACK (True OLED Black #000000)
 val CosmicBlack: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF0A0E1A) else Color(0xFFF1F5F9)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF000000) else Color(0xFFF1F5F9)
 
-// Solid Container Background
+// Solid Container Background — Deep Obsidian Container
 val CosmicDark: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF151D35) else Color(0xFFE2E8F0)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF080808) else Color(0xFFE2E8F0)
 
-// SOLID Pure White Card Background (No Semi-Transparency/Glass!)
+// SOLID Card Background — Pure Dark Surface (#101010)
 val CosmicNavy: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF1E293B) else Color(0xFFFFFFFF)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF101010) else Color(0xFFFFFFFF)
 
 // Solid Surface Background
 val CosmicSurface: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF1E293B) else Color(0xFFFFFFFF)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF101010) else Color(0xFFFFFFFF)
 
 val CosmicSurface2: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF27354A) else Color(0xFFEEF2FF)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF18181A) else Color(0xFFEEF2FF)
 
 val CosmicSurface3: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF334155) else Color(0xFFCBD5E1)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF222225) else Color(0xFFCBD5E1)
 
-// Solid Clean Borders
+// Solid Clean Borders for Pitch Black
 val GlassBorder: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF334155) else Color(0xFFE2E8F0)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
 
 val GlassBorder2: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF475569) else Color(0xFFCBD5E1)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF2E2E33) else Color(0xFFCBD5E1)
 
 val GlassOverlay: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0x40000000) else Color(0x0F000000)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0x60000000) else Color(0x0F000000)
 
 val Slate950: Color @Composable get() = TextPrimary
 val Slate900: Color @Composable get() = TextPrimary
@@ -193,11 +193,11 @@ private val LightColorScheme = lightColorScheme(
     scrim                = Color(0x66000000),
 )
 
-// DARK (optional dark mode scheme)
+// DARK (True OLED Pitch Black)
 private val DarkColorScheme = darkColorScheme(
     primary              = Color(0xFF3B82F6),
     onPrimary            = Color.White,
-    primaryContainer     = Color(0xFF1E293B),
+    primaryContainer     = Color(0xFF141416),
     onPrimaryContainer   = Color(0xFF93C5FD),
     secondary            = Color(0xFF8B5CF6),
     onSecondary          = Color.White,
@@ -207,19 +207,19 @@ private val DarkColorScheme = darkColorScheme(
     onTertiary           = Color.White,
     tertiaryContainer    = Color(0xFF064E3B),
     onTertiaryContainer  = Color(0xFFA7F3D0),
-    background           = Color(0xFF0F172A), // Dark space background
-    onBackground         = Color(0xFFF8FAFC), // Pure white / bright text
-    surface              = Color(0xFF1E293B), // Dark surface / card background
+    background           = Color(0xFF000000), // Pure Pitch Black
+    onBackground         = Color(0xFFFFFFFF), // Pure white / bright text
+    surface              = Color(0xFF101010), // Solid pitch black card background
     onSurface            = Color(0xFFF8FAFC),
-    surfaceVariant       = Color(0xFF334155), // Secondary dark surface
-    onSurfaceVariant     = Color(0xFF94A3B8), // Secondary text color in dark mode
-    outline              = Color(0xFF475569), // Dark mode border
-    outlineVariant       = Color(0xFF334155),
+    surfaceVariant       = Color(0xFF18181A), // Secondary dark surface
+    onSurfaceVariant     = Color(0xFFA1A1AA), // Secondary text color in dark mode
+    outline              = Color(0xFF27272A), // Dark mode border
+    outlineVariant       = Color(0xFF1F1F23),
     error                = Color(0xFFEF4444),
     onError              = Color.White,
     errorContainer       = Color(0xFF7F1D1D),
     onErrorContainer     = Color(0xFFFECACA),
-    scrim                = Color(0xCC000000),
+    scrim                = Color(0xEE000000),
 )
 
 // ─── Theme Entry Point ───────────────────────────────────────────────────────

@@ -19,28 +19,32 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonError
-import com.schoolos.android.core.designsystem.StudentNeon
+import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
@@ -65,237 +69,193 @@ fun LazyListScope.teacherContent(
     teacherClasses: List<AcademicClass> = emptyList(),
     teacherSubjects: List<AcademicSubject> = emptyList(),
 ) {
-    // Determine the teacher's single homeroom/assigned class (e.g. "PAKET A4")
     val displayClass = when {
         activeClass.isNotBlank() && activeClass != "-" -> activeClass
         isHomeroom && teacherClasses.isNotEmpty() -> teacherClasses.first().name
         teacherClasses.isNotEmpty() -> teacherClasses.first().name
-        else -> "PAKET A4"
+        else -> "KELAS VII A"
     }
 
-    // ── 1. WALI KELAS RESMI HERO CARD (KHUSUS KELAS BINAAN) ──
+    // ── 1. HOMEROOM / TEACHING CLASS HERO ────────────────────────────────────────
     item {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .shadow(6.dp, RoundedCornerShape(22.dp), spotColor = TeacherNeon.copy(alpha = 0.25f))
                 .clip(RoundedCornerShape(22.dp))
+                .background(CosmicNavy)
                 .background(
                     Brush.linearGradient(
-                        listOf(Color(0xFF047857), Color(0xFF0D9488))
+                        listOf(TeacherNeon.copy(alpha = 0.12f), Color.Transparent)
                     )
                 )
+                .border(1.dp, TeacherNeon.copy(alpha = 0.30f), RoundedCornerShape(22.dp))
                 .clickable {
-                    if (displayClass.isNotBlank()) {
-                        onNavigateToRombelStudents(displayClass)
-                    }
+                    if (displayClass.isNotBlank()) onNavigateToRombelStudents(displayClass)
                 }
-                .padding(14.dp)
+                .padding(18.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color.White.copy(alpha = 0.22f))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(
-                                text = if (isHomeroom) "WALI KELAS RESMI" else "KELAS AMPUAN",
-                                color = Color.White,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = "Dapodik Terverifikasi",
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(50.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(TeacherNeon.copy(alpha = 0.18f))
+                            .border(1.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Group,
+                            contentDescription = null,
+                            tint = TeacherNeon,
+                            modifier = Modifier.size(28.dp),
                         )
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.width(14.dp))
 
-                    Text(
-                        text = "Rombel $displayClass",
-                        color = Color.White,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black
-                    )
-
-                    Spacer(Modifier.height(3.dp))
-
-                    Text(
-                        text = "Lihat & kelola daftar murid rombel binaan Anda",
-                        color = Color.White.copy(alpha = 0.88f),
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(TeacherNeon.copy(alpha = 0.18f))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp),
+                            ) {
+                                Text(
+                                    text = if (isHomeroom) "WALI KELAS RESMI" else "KELAS AMPUAN",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = TeacherNeon,
+                                    letterSpacing = 0.5.sp,
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            text = displayClass,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "Ketuk untuk melihat daftar & presensi siswa",
+                            fontSize = 11.sp,
+                            color = TextTertiary,
+                        )
+                    }
                 }
 
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
+                        .size(36.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
-                    contentAlignment = Alignment.Center
+                        .background(TeacherNeon.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Buka",
-                        tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        contentDescription = null,
+                        tint = TeacherNeon,
+                        modifier = Modifier.size(18.dp),
                     )
                 }
             }
         }
     }
 
-    // ── 2. MENU UTAMA GURU ──
+    // ── 2. BENTO ACTION GRID GURU ────────────────────────────────────────────────
     item {
-        Text(
-            text = "Menu Utama Guru",
-            fontWeight = FontWeight.Black,
-            fontSize = 15.sp,
-            color = TextPrimary,
-            modifier = Modifier.padding(start = 4.dp, top = 6.dp, bottom = 2.dp)
+        LightSectionHeader(
+            title = "Pusat Aksi Pengajar",
+            sub = "Kelola materi, tugas, dan evaluasi",
         )
     }
 
     item {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Row 1: Presensi & Tugas
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                TeacherActionCard(
-                    title = "Agenda & Presensi",
-                    subtitle = "Absensi siswa rombel",
-                    icon = Icons.Default.People,
-                    accent = NeonBlue,
-                    modifier = Modifier.weight(1f),
-                    onClick = onNavigateToSessions
-                )
-                TeacherActionCard(
-                    title = "Tugas Siswa",
-                    subtitle = "Kelola & periksa tugas",
+                BentoActionCard(
+                    title = "Buat Tugas",
+                    subtitle = "Tugaskan PR/proyek",
                     icon = Icons.AutoMirrored.Filled.Assignment,
-                    accent = StudentNeon,
+                    accentColor = TeacherNeon,
+                    badgeText = "Baru",
+                    onClick = onNavigateToAssignmentCreator,
                     modifier = Modifier.weight(1f),
-                    onClick = onNavigateToAssignments
+                )
+
+                BentoActionCard(
+                    title = "Buat Kuis",
+                    subtitle = "Ujian & bank soal",
+                    icon = Icons.Default.Quiz,
+                    accentColor = NeonWarning,
+                    onClick = onNavigateToQuizBuilder,
+                    modifier = Modifier.weight(1f),
                 )
             }
 
-            // Row 2: Penilaian & Materi
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                TeacherActionCard(
-                    title = "Buku Nilai",
-                    subtitle = "Input nilai & rapor",
-                    icon = Icons.Default.Assessment,
-                    accent = TeacherNeon,
+                BentoActionCard(
+                    title = "Pengumuman",
+                    subtitle = "Broadcast ke siswa/wali",
+                    icon = Icons.Default.Campaign,
+                    accentColor = NeonBlue,
+                    onClick = onNavigateToBroadcastCenter,
                     modifier = Modifier.weight(1f),
-                    onClick = onNavigateToGrades
                 )
-                TeacherActionCard(
-                    title = "Materi Ajar",
-                    subtitle = "Modul & bahan ajar",
+
+                BentoActionCard(
+                    title = "Bahan Ajar",
+                    subtitle = "Kelola modul belajar",
                     icon = Icons.Default.Book,
-                    accent = Color(0xFFF59E0B),
+                    accentColor = TeacherNeon,
+                    onClick = onNavigateToLearning,
                     modifier = Modifier.weight(1f),
-                    onClick = onNavigateToLearning
                 )
             }
         }
     }
 
-    // ── 3. BROADCAST BANNER ──
+    // ── 3. QUICK NAVIGATION TILES ────────────────────────────────────────────────
     item {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-                .clickable(onClick = onNavigateToBroadcastCenter)
-                .padding(horizontal = 12.dp, vertical = 12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(NeonError.copy(alpha = 0.12f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(Icons.Default.Campaign, null, tint = NeonError, modifier = Modifier.size(20.dp))
-                    }
-                    Spacer(Modifier.width(12.dp))
-                    Column {
-                        Text("Kirim Pengumuman Rombel", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = TextPrimary)
-                        Text("Broadcast info penting ke siswa $displayClass", fontSize = 10.sp, color = TextTertiary)
-                    }
-                }
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = TextTertiary,
-                    modifier = Modifier.size(16.dp)
-                )
-            }
-        }
+        LightSectionHeader(
+            title = "Akses Cepat",
+            sub = "Menu operasional harian",
+        )
     }
 
-    item { Spacer(Modifier.height(16.dp)) }
-}
-
-@Composable
-private fun TeacherActionCard(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    accent: Color,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
-            .clickable(onClick = onClick)
-            .padding(12.dp)
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(accent.copy(alpha = 0.12f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(22.dp))
+    item {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            val quickItems = listOf(
+                QuickAction("Jadwal", Icons.Default.School, TeacherNeon, onNavigateToSessions),
+                QuickAction("Tugas", Icons.AutoMirrored.Filled.Assignment, TeacherNeon, onNavigateToAssignments),
+                QuickAction("Kuis", Icons.Default.Quiz, NeonWarning, onNavigateToQuizzes),
+                QuickAction("Nilai", Icons.Default.Assessment, NeonBlue, onNavigateToGrades),
+            )
+            quickItems.forEach { action ->
+                LightQuickActionBtn(action = action)
             }
-            Spacer(Modifier.height(10.dp))
-            Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 13.sp, color = TextPrimary)
-            Spacer(Modifier.height(2.dp))
-            Text(subtitle, fontSize = 10.sp, color = TextTertiary)
         }
     }
 }

@@ -25,6 +25,7 @@ import com.schoolos.android.feature.grades.GradeDetailScreen
 import com.schoolos.android.feature.grades.GradebookListScreen
 import com.schoolos.android.feature.home.HomeScreen
 import com.schoolos.android.feature.home.RombelStudentsScreen
+import com.schoolos.android.feature.home.StudentDetailScreen
 import com.schoolos.android.feature.learning.LearningMaterialDetailScreen
 import com.schoolos.android.feature.learning.LearningMaterialListScreen
 import com.schoolos.android.feature.notifications.BroadcastCenterScreen
@@ -517,6 +518,37 @@ fun NavGraph(
                 val className = backStackEntry.arguments?.getString("className") ?: ""
                 RombelStudentsScreen(
                     className = className,
+                    onBack = { navController.popBackStack() },
+                    onNavigateToStudentDetail = { student ->
+                        navController.navigate(
+                            Screen.StudentDetail.createRoute(
+                                studentId = student.id,
+                                studentName = student.fullName,
+                                nisn = student.nisn,
+                                gender = student.gender,
+                                className = student.className,
+                                phone = student.noHp,
+                                email = student.email,
+                            )
+                        )
+                    }
+                )
+            }
+
+            // Student Detail Screen (Full-Screen Dedicated Page)
+            composable(
+                route = Screen.StudentDetail.route,
+                arguments = listOf(
+                    navArgument("studentId") { type = NavType.StringType },
+                    navArgument("studentName") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("nisn") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("gender") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("className") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("phone") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("email") { type = NavType.StringType; defaultValue = "" },
+                ),
+            ) {
+                StudentDetailScreen(
                     onBack = { navController.popBackStack() },
                 )
             }

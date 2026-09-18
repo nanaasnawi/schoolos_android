@@ -256,6 +256,24 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         data.isCompleted
     }
 
+    override suspend fun getMaterialCompletions(id: String): Result<List<com.schoolos.android.domain.model.MaterialStudentCompletion>> = runCatching {
+        val response = api.getMaterialCompletions(id)
+        val list = response.data ?: throw Exception(response.error?.message ?: "Gagal memuat data keterbacaan materi oleh siswa.")
+        list.map { dto ->
+            com.schoolos.android.domain.model.MaterialStudentCompletion(
+                studentId = dto.studentId,
+                studentName = dto.studentName,
+                nisn = dto.nisn,
+                gender = dto.gender,
+                className = dto.className,
+                isCompleted = dto.isCompleted,
+                completedAt = dto.completedAt,
+                currentPage = dto.currentPage,
+                lastReadAt = dto.lastReadAt,
+            )
+        }
+    }
+
     override suspend fun getLibraryBooks(search: String?): Result<List<com.schoolos.android.domain.model.LibraryBook>> = runCatching {
         val response = api.getLibraryBooks(search = search)
         response.data?.map { dto ->
