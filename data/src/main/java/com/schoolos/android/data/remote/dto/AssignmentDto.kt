@@ -20,4 +20,5 @@ data class AssignmentDto(
     @SerialName("class_name") val className: String? = null,
     @SerialName("subject_name") val subjectName: String? = null,
     @SerialName("teacher_name") val teacherName: String? = null,
+    val questions: List<AssignmentQuestionDto> = emptyList(),
 )

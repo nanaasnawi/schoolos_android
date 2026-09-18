@@ -15,7 +15,14 @@ interface AssignmentRepository {
         classId: String,
         assignmentType: String
     ): Result<Assignment>
-    suspend fun submitAssignment(assignmentId: String, content: String?, fileUrl: String?): Result<AssignmentSubmission>
+    // answers: list of Pair(questionId, chosenChoiceId or textAnswer)
+    suspend fun submitAssignment(
+        assignmentId: String,
+        content: String?,
+        fileUrl: String?,
+        answers: List<Pair<String, String?>> = emptyList(), // (questionId to chosenChoiceId), or (questionId to null) for essay
+        textAnswers: Map<String, String> = emptyMap(), // questionId -> text answer for ESSAY
+    ): Result<AssignmentSubmission>
     suspend fun getSubmissions(assignmentId: String): Result<List<AssignmentSubmission>>
     suspend fun gradeSubmission(assignmentId: String, submissionId: String, score: Int, feedback: String?): Result<AssignmentSubmission>
 }

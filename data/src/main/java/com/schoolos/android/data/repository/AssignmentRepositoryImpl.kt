@@ -8,6 +8,7 @@ import com.schoolos.android.core.network.NetworkMonitor
 import com.schoolos.android.core.sync.OfflineSubmissionSyncManager
 import com.schoolos.android.data.mapper.toDomain as dtoToDomain
 import com.schoolos.android.data.remote.SchoolOsApi
+import com.schoolos.android.data.remote.dto.SubmitAnswerDto
 import com.schoolos.android.data.remote.dto.SubmitAssignmentRequest
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.AssignmentSubmission
@@ -105,12 +106,27 @@ class AssignmentRepositoryImpl @Inject constructor(
         assignmentId: String,
         content: String?,
         fileUrl: String?,
+        answers: List<Pair<String, String?>> ,
+        textAnswers: Map<String, String>,
     ): Result<AssignmentSubmission> = runCatching {
         val studentId = authManager.getStudentId() ?: throw Exception("Sesi pengguna tidak valid. Silakan login kembali.")
+        // Build SubmitAnswerDto list: PG uses chosenChoiceId, ESSAY uses textAnswer
+        val answerDtos = answers.map { (questionId, chosenChoiceId) ->
+            SubmitAnswerDto(
+                questionId = questionId,
+                chosenChoiceId = chosenChoiceId,
+                textAnswer = textAnswers[questionId],
+            )
+        }
         try {
             val response = api.submitAssignment(
                 assignmentId,
-                SubmitAssignmentRequest(studentId = studentId, content = content, fileUrl = fileUrl),
+                SubmitAssignmentRequest(
+                    studentId = studentId,
+                    content = content,
+                    fileUrl = fileUrl,
+                    answers = answerDtos,
+                ),
             )
             val domain = response.data?.dtoToDomain()
             if (domain != null) return@runCatching domain

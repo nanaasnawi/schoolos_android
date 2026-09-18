@@ -326,11 +326,15 @@ private fun TeacherSubmissionRow(
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Siswa: ${submission.studentId.take(8)}...",
+                    submission.studentName ?: "Siswa: ${submission.studentId.take(8)}...",
                     fontWeight = FontWeight.Bold,
                     fontSize = 13.sp,
                     color = TextPrimary
                 )
+                if (submission.studentNisn != null) {
+                    Spacer(Modifier.height(1.dp))
+                    Text("NISN: ${submission.studentNisn}", fontSize = 10.sp, color = TextTertiary)
+                }
                 Spacer(Modifier.height(2.dp))
                 Text(
                     "Kumpul: ${submission.submittedAt.take(10)}",
@@ -437,8 +441,14 @@ private fun GradingDialog(
                         }
                         Spacer(Modifier.width(12.dp))
                         Column {
-                            Text("Beri Nilai", fontSize = 16.sp, fontWeight = FontWeight.Black, color = TextPrimary)
-                            Text("ID: ${submission.studentId.take(8)}", fontSize = 10.sp, color = TextTertiary)
+                            Text(
+                                "Beri Nilai",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black,
+                                color = TextPrimary
+                            )
+                            val displayName = submission.studentName ?: "ID: ${submission.studentId.take(8)}"
+                            Text(displayName, fontSize = 10.sp, color = TextTertiary)
                         }
                     }
                     IconButton(onClick = { if (!isGrading) onDismiss() }) {
@@ -448,7 +458,76 @@ private fun GradingDialog(
 
                 HorizontalDivider(color = GlassBorder)
 
-                // Student Answer Preview
+                // Structured per-question answers (PG + Essay)
+                if (submission.answers.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "JAWABAN PER SOAL",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black,
+                            color = NeonBlue,
+                            letterSpacing = 1.sp
+                        )
+                        submission.answers.forEachIndexed { idx, answer ->
+                            val answerBg = when {
+                                answer.questionType.uppercase() == "MULTIPLE_CHOICE" && answer.isCorrect == true -> NeonSuccess
+                                answer.questionType.uppercase() == "MULTIPLE_CHOICE" && answer.isCorrect == false -> NeonError
+                                else -> NeonInfo
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(answerBg.copy(alpha = 0.06f))
+                                    .border(1.dp, answerBg.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                                    .padding(10.dp)
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(
+                                            "${idx + 1}. ${answer.questionText}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = TextPrimary,
+                                            modifier = Modifier.weight(1f)
+                                        )
+                                        Text(
+                                            "${answer.pointsEarned}/${answer.maxPoints}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = answerBg
+                                        )
+                                    }
+                                    if (answer.questionType.uppercase() == "MULTIPLE_CHOICE") {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            val icon = if (answer.isCorrect == true) Icons.Default.CheckCircle else Icons.Default.Cancel
+                                            Icon(icon, null, tint = answerBg, modifier = Modifier.size(12.dp))
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(
+                                                answer.chosenChoiceText ?: "-",
+                                                fontSize = 11.sp,
+                                                color = answerBg
+                                            )
+                                        }
+                                    } else {
+                                        Text(
+                                            answer.textAnswer ?: "-",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary,
+                                            lineHeight = 16.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    HorizontalDivider(color = GlassBorder)
+                }
+
+                // Legacy free-text answer preview
                 val dialogContent = submission.content
                 if (!dialogContent.isNullOrBlank()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

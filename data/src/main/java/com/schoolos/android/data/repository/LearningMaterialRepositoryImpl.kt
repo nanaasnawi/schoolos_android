@@ -312,7 +312,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         )
         val response = api.updateMaterial(id, request)
         val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal memperbarui materi.")
-        val matType = when (dto.materialType.lowercase()) {
+        val matType = when (dto.materialType?.lowercase()) {
             "video" -> MaterialType.VIDEO
             "document" -> MaterialType.DOCUMENT
             "image" -> MaterialType.IMAGE

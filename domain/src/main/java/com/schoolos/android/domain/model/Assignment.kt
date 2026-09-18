@@ -17,4 +17,5 @@ data class Assignment(
     val className: String? = null,
     val subjectName: String? = null,
     val teacherName: String? = null,
+    val questions: List<AssignmentQuestion> = emptyList(),
 )

@@ -12,4 +12,7 @@ data class AssignmentSubmission(
     val feedback: String?,
     val gradedAt: String?,
     val gradedBy: String?,
+    val studentName: String? = null,
+    val studentNisn: String? = null,
+    val answers: List<SubmissionAnswer> = emptyList(),
 )
