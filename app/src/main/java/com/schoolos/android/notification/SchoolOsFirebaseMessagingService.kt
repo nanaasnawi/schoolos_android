@@ -15,6 +15,12 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             .putString("fcm_token", token)
             .putBoolean("fcm_token_synced", false)
             .apply()
+
+        // Auto re-subscribe to announcement topic on token refresh
+        try {
+            com.google.firebase.messaging.FirebaseMessaging.getInstance()
+                .subscribeToTopic("school_announcements")
+        } catch (_: Exception) {}
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
