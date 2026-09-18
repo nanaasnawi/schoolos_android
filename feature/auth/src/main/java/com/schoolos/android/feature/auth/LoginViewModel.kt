@@ -217,8 +217,9 @@ class LoginViewModel @Inject constructor(
 
             // Test connection
             val client = OkHttpClient.Builder()
-                .connectTimeout(3, TimeUnit.SECONDS)
-                .readTimeout(4, TimeUnit.SECONDS)
+                .dns(com.schoolos.android.core.network.ResilientDns())
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
                 .build()
 
             var success = false
@@ -234,7 +235,12 @@ class LoginViewModel @Inject constructor(
                         testMsg = "Server merespons kode: ${res.code}"
                     }
                 } catch (e: Exception) {
-                    testMsg = "URL disimpan, namun server belum merespons: ${e.message ?: "Connection error"}"
+                    val msg = e.message ?: ""
+                    testMsg = if (msg.contains("Unable to resolve host", ignoreCase = true) || msg.contains("No address associated", ignoreCase = true)) {
+                        "URL disimpan, namun domain server tidak dapat ditemukan (periksa koneksi/DNS)."
+                    } else {
+                        "URL disimpan, namun server belum merespons: ${msg.ifBlank { "Connection error" }}"
+                    }
                 }
             }
 
@@ -278,7 +284,12 @@ class LoginViewModel @Inject constructor(
                 .onFailure { e ->
                     val errMsg = e.message ?: ""
                     val formatted = when {
-                        errMsg.contains("Failed to connect", ignoreCase = true) || errMsg.contains("CLEARTEXT", ignoreCase = true) || errMsg.contains("Connection refused", ignoreCase = true) || errMsg.contains("timeout", ignoreCase = true) -> {
+                        errMsg.contains("Failed to connect", ignoreCase = true)
+                            || errMsg.contains("CLEARTEXT", ignoreCase = true)
+                            || errMsg.contains("Connection refused", ignoreCase = true)
+                            || errMsg.contains("timeout", ignoreCase = true)
+                            || errMsg.contains("Unable to resolve host", ignoreCase = true)
+                            || errMsg.contains("No address associated", ignoreCase = true) -> {
                             "Gagal terhubung ke server. Periksa koneksi internet Anda atau hubungi Administrator Sekolah."
                         }
                         else -> errMsg.ifBlank { "Login gagal. Silakan periksa kembali akun Anda." }
@@ -302,13 +313,17 @@ class LoginViewModel @Inject constructor(
     fun loginWithQr(rawToken: String) {
         val s = _state.value
         val trimmed = rawToken.trim().trim('"', '\'', '`')
-        val cleanToken = if (trimmed.contains("sch_qr_v1_")) {
-            val startIdx = trimmed.indexOf("sch_qr_v1_")
-            val sub = trimmed.substring(startIdx)
-            val endIdx = sub.indexOfFirst { !it.isLetterOrDigit() && it != '_' }
-            if (endIdx != -1) sub.substring(0, endIdx) else sub
-        } else {
-            trimmed
+        val cleanToken = when {
+            trimmed.contains("sch_qr_v1_") -> {
+                val startIdx = trimmed.indexOf("sch_qr_v1_")
+                val sub = trimmed.substring(startIdx)
+                val endIdx = sub.indexOfFirst { !it.isLetterOrDigit() && it != '_' }
+                if (endIdx != -1) sub.substring(0, endIdx) else sub
+            }
+            trimmed.startsWith("schoolos://auth?token=", ignoreCase = true) -> {
+                trimmed.substringAfter("token=")
+            }
+            else -> trimmed
         }
 
         if (cleanToken.isBlank()) {
@@ -325,7 +340,12 @@ class LoginViewModel @Inject constructor(
                 .onFailure { e ->
                     val errMsg = e.message ?: ""
                     val formatted = when {
-                        errMsg.contains("Failed to connect", ignoreCase = true) || errMsg.contains("CLEARTEXT", ignoreCase = true) || errMsg.contains("Connection refused", ignoreCase = true) || errMsg.contains("timeout", ignoreCase = true) -> {
+                        errMsg.contains("Failed to connect", ignoreCase = true)
+                            || errMsg.contains("CLEARTEXT", ignoreCase = true)
+                            || errMsg.contains("Connection refused", ignoreCase = true)
+                            || errMsg.contains("timeout", ignoreCase = true)
+                            || errMsg.contains("Unable to resolve host", ignoreCase = true)
+                            || errMsg.contains("No address associated", ignoreCase = true) -> {
                             "Gagal terhubung ke server. Periksa koneksi internet Anda atau hubungi Administrator Sekolah."
                         }
                         else -> errMsg.ifBlank { "QR Login gagal. Silakan gunakan QR Code aktif yang sah." }
