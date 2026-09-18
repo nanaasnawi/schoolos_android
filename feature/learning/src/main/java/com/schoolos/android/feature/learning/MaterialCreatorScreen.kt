@@ -270,7 +270,7 @@ fun MaterialCreatorScreen(
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            if (showPreview) "Tutup Preview" else "Preview Siswa",
+                            if (showPreview) "Tutup Preview" else "Preview",
                             fontWeight = FontWeight.Bold,
                             fontSize = 13.sp
                         )

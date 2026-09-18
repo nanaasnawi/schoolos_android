@@ -123,6 +123,7 @@ class ApiClient @Inject constructor(
 
     val httpClient: OkHttpClient by lazy {
         OkHttpClient.Builder()
+            .dns(ResilientDns())
             .addInterceptor(DynamicHostInterceptor(authManager))
             .addInterceptor(MaintenanceInterceptor(maintenanceManager))
             .addInterceptor(AuthInterceptor(authManager))
@@ -137,9 +138,9 @@ class ApiClient @Inject constructor(
                     }
                 }
             )
-            .connectTimeout(5, TimeUnit.SECONDS)
-            .readTimeout(15, TimeUnit.SECONDS)
-            .writeTimeout(15, TimeUnit.SECONDS)
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(20, TimeUnit.SECONDS)
+            .writeTimeout(20, TimeUnit.SECONDS)
             .certificatePinner(CertificatePinnerFactory.create())
             .build()
     }
