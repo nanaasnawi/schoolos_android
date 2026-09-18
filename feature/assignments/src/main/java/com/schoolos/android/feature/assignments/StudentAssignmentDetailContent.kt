@@ -76,9 +76,11 @@ import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.domain.model.Assignment
+import com.schoolos.android.domain.model.AssignmentQuestion
 import com.schoolos.android.domain.model.AssignmentSubmission
 import com.schoolos.android.domain.model.LearningMaterial
 import com.schoolos.android.domain.model.MaterialType
+import com.schoolos.android.domain.model.SubmissionAnswer
 
 @Composable
 fun StudentAssignmentDetailContent(
@@ -92,6 +94,12 @@ fun StudentAssignmentDetailContent(
     onSubmitClick: () -> Unit,
     childName: String = "",
     onAskTeacher: (() -> Unit)? = null,
+    // PG answers: questionId -> chosenChoiceId
+    pgAnswers: Map<String, String> = emptyMap(),
+    // Essay answers: questionId -> text
+    essayAnswers: Map<String, String> = emptyMap(),
+    onPgAnswerSelected: (questionId: String, choiceId: String) -> Unit = { _, _ -> },
+    onEssayAnswerChanged: (questionId: String, text: String) -> Unit = { _, _ -> },
 ) {
     val dueInfo = dueDateInfo(assignment.dueAt)
     val isSubmitted = submission != null && submission.status != "pending"
@@ -199,7 +207,20 @@ fun StudentAssignmentDetailContent(
             }
         }
 
-        // ── 5. SUBMISSION PANEL ──────────────────────────────────────────────
+        // ── 5. QUESTIONS SECTION (PG / Essay) ────────────────────────────────
+        val questions = assignment.questions
+        if (questions.isNotEmpty() && !isSubmitted) {
+            QuestionsSection(
+                questions = questions,
+                pgAnswers = pgAnswers,
+                essayAnswers = essayAnswers,
+                onPgAnswerSelected = onPgAnswerSelected,
+                onEssayAnswerChanged = onEssayAnswerChanged,
+                isParent = isParent,
+            )
+        }
+
+        // ── 6. SUBMISSION PANEL ──────────────────────────────────────────────
         if (isSubmitted && submission != null) {
             SubmissionStatusCard(
                 submission = submission,
@@ -207,6 +228,15 @@ fun StudentAssignmentDetailContent(
                 childName = childName,
             )
         } else {
+            // Determine if submit is enabled based on question answers
+            val allAnswered = questions.isEmpty() || questions.all { q ->
+                val qId = q.id ?: return@all true
+                when (q.questionType.uppercase()) {
+                    "MULTIPLE_CHOICE" -> pgAnswers.containsKey(qId)
+                    "ESSAY" -> essayAnswers[qId]?.isNotBlank() == true
+                    else -> true
+                }
+            }
             SubmissionEditor(
                 isParent = isParent,
                 isSubmitting = isSubmitting,
@@ -214,6 +244,8 @@ fun StudentAssignmentDetailContent(
                 content = content,
                 onContentChange = onContentChange,
                 onSubmitClick = onSubmitClick,
+                hasQuestions = questions.isNotEmpty(),
+                allAnswered = allAnswered,
             )
         }
     }
@@ -704,6 +736,8 @@ private fun SubmissionEditor(
     content: String,
     onContentChange: (String) -> Unit,
     onSubmitClick: () -> Unit,
+    hasQuestions: Boolean = false,
+    allAnswered: Boolean = true,
 ) {
     Box(
         modifier = Modifier
@@ -820,7 +854,7 @@ private fun SubmissionEditor(
                 // Submit button
                 Button(
                     onClick = onSubmitClick,
-                    enabled = content.isNotBlank() && !isSubmitting,
+                    enabled = (if (hasQuestions) allAnswered else content.isNotBlank()) && !isSubmitting,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -1058,3 +1092,244 @@ private fun SubmissionStatusCard(
         }
     }
 }
+
+// ── QUESTIONS SECTION ─────────────────────────────────────────────────────────
+@Composable
+private fun QuestionsSection(
+    questions: List<AssignmentQuestion>,
+    pgAnswers: Map<String, String>,
+    essayAnswers: Map<String, String>,
+    onPgAnswerSelected: (String, String) -> Unit,
+    onEssayAnswerChanged: (String, String) -> Unit,
+    isParent: Boolean,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Section header
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(StudentNeon.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    tint = StudentNeon,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Spacer(Modifier.width(10.dp))
+            Column {
+                Text(
+                    "Soal Tugas",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Black,
+                    color = TextPrimary
+                )
+                Text(
+                    "${questions.size} soal · Jawab semua soal sebelum kumpul",
+                    fontSize = 10.sp,
+                    color = TextTertiary
+                )
+            }
+        }
+
+        questions.forEachIndexed { idx, question ->
+            val qId = question.id ?: return@forEachIndexed
+            when (question.questionType.uppercase()) {
+                "MULTIPLE_CHOICE" -> MultipleChoiceCard(
+                    index = idx + 1,
+                    question = question,
+                    selectedChoiceId = pgAnswers[qId],
+                    onChoiceSelected = { choiceId -> onPgAnswerSelected(qId, choiceId) },
+                    isParent = isParent,
+                )
+                else -> EssayQuestionCard(
+                    index = idx + 1,
+                    question = question,
+                    answer = essayAnswers[qId] ?: "",
+                    onAnswerChanged = { text -> onEssayAnswerChanged(qId, text) },
+                    isParent = isParent,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MultipleChoiceCard(
+    index: Int,
+    question: AssignmentQuestion,
+    selectedChoiceId: String?,
+    onChoiceSelected: (String) -> Unit,
+    isParent: Boolean,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CosmicNavy)
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .padding(14.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(StudentNeon.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("$index", fontSize = 11.sp, fontWeight = FontWeight.Black, color = StudentNeon)
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = question.questionText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        lineHeight = 20.sp
+                    )
+                    if (question.points != null) {
+                        Spacer(Modifier.height(3.dp))
+                        Text("${question.points} poin · Pilihan Ganda", fontSize = 10.sp, color = TextTertiary)
+                    }
+                }
+            }
+
+            HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+
+            question.choices.sortedBy { it.orderIndex ?: 0 }.forEach { choice ->
+                val choiceId = choice.id ?: return@forEach
+                val isSelected = selectedChoiceId == choiceId
+                val choiceColor = if (isSelected) StudentNeon else TextTertiary
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(choiceColor.copy(alpha = if (isSelected) 0.12f else 0.0f))
+                        .border(
+                            1.dp,
+                            if (isSelected) StudentNeon.copy(alpha = 0.5f) else GlassBorder,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .then(if (!isParent) Modifier.clickable { onChoiceSelected(choiceId) } else Modifier)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(18.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) StudentNeon else Color.Transparent)
+                                .border(1.5.dp, choiceColor.copy(alpha = 0.6f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (isSelected) {
+                                Box(
+                                    Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(CosmicBlack)
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(
+                            text = choice.choiceText,
+                            fontSize = 13.sp,
+                            color = if (isSelected) TextPrimary else TextSecondary,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EssayQuestionCard(
+    index: Int,
+    question: AssignmentQuestion,
+    answer: String,
+    onAnswerChanged: (String) -> Unit,
+    isParent: Boolean,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CosmicNavy)
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .padding(14.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.Top) {
+                Box(
+                    modifier = Modifier
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(NeonInfo.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("$index", fontSize = 11.sp, fontWeight = FontWeight.Black, color = NeonInfo)
+                }
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = question.questionText,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        lineHeight = 20.sp
+                    )
+                    if (question.points != null) {
+                        Spacer(Modifier.height(3.dp))
+                        Text("${question.points} poin · Uraian", fontSize = 10.sp, color = TextTertiary)
+                    }
+                }
+            }
+
+            HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+
+            if (isParent) {
+                Text(
+                    "Jawaban anak akan terisi di sini",
+                    fontSize = 12.sp,
+                    color = TextTertiary,
+                    modifier = Modifier.padding(4.dp)
+                )
+            } else {
+                OutlinedTextField(
+                    value = answer,
+                    onValueChange = onAnswerChanged,
+                    placeholder = {
+                        Text("Tulis jawabanmu untuk soal ini...", fontSize = 12.sp, color = TextTertiary)
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(110.dp),
+                    maxLines = 5,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = NeonInfo,
+                        unfocusedBorderColor = GlassBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedContainerColor = CosmicBlack,
+                        unfocusedContainerColor = CosmicBlack,
+                    )
+                )
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                    Text("${answer.length} karakter", fontSize = 10.sp, color = TextTertiary)
+                }
+            }
+        }
+    }
+}

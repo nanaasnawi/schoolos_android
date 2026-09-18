@@ -85,10 +85,38 @@ class AssignmentDetailViewModel @Inject constructor(
             }
     }
 
-    fun submit(content: String = "") {
+    /**
+     * Submit assignment with structured answers:
+     * - [pgAnswers]: Map of questionId -> chosenChoiceId for multiple-choice questions
+     * - [essayAnswers]: Map of questionId -> text answer for essay questions
+     * - [content]: optional free-form text (for PR/file-upload type assignments without questions)
+     */
+    fun submit(
+        content: String = "",
+        pgAnswers: Map<String, String> = emptyMap(),        // questionId -> chosenChoiceId
+        essayAnswers: Map<String, String> = emptyMap(),     // questionId -> text answer
+    ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isSubmitting = true, submitError = null)
-            repository.submitAssignment(assignmentId, content.ifBlank { null }, null)
+
+            // Build unified answers list: PG choices + essay (essay has null chosenChoiceId)
+            val questions = _state.value.assignment?.questions ?: emptyList()
+            val answers = questions.map { q ->
+                val qId = q.id ?: return@map null
+                when (q.questionType.uppercase()) {
+                    "MULTIPLE_CHOICE" -> Pair(qId, pgAnswers[qId])
+                    "ESSAY" -> Pair(qId, null) // essay text goes in textAnswers map
+                    else -> Pair(qId, pgAnswers[qId])
+                }
+            }.filterNotNull()
+
+            repository.submitAssignment(
+                assignmentId = assignmentId,
+                content = content.ifBlank { null },
+                fileUrl = null,
+                answers = answers,
+                textAnswers = essayAnswers,
+            )
                 .onSuccess { submission ->
                     _state.value = _state.value.copy(isSubmitting = false, submitSuccess = true, submission = submission)
                 }
@@ -131,5 +159,3 @@ class AssignmentDetailViewModel @Inject constructor(
         _state.value = _state.value.copy(gradeError = null)
     }
 }
-
-

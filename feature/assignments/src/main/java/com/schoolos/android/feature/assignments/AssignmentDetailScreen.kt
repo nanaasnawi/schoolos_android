@@ -39,6 +39,10 @@ fun AssignmentDetailScreen(
     val state by viewModel.state.collectAsState()
     var content by remember { mutableStateOf("") }
     var showConfirm by remember { mutableStateOf(false) }
+    // PG answers: questionId -> chosenChoiceId
+    var pgAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
+    // Essay answers: questionId -> text
+    var essayAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
 
     Scaffold(containerColor = CosmicBlack) { padding ->
         Box(modifier = Modifier.fillMaxSize()) {
@@ -188,7 +192,15 @@ Column(
                                     onOpenMaterial = onOpenMaterial,
                                     onSubmitClick = { showConfirm = true },
                                     childName = state.childName,
-                                    onAskTeacher = { onAskTeacher?.invoke(a.title, a.id, a.subjectName ?: "Tugas", a.teacherName ?: "Guru Pengampu") }
+                                    onAskTeacher = { onAskTeacher?.invoke(a.title, a.id, a.subjectName ?: "Tugas", a.teacherName ?: "Guru Pengampu") },
+                                    pgAnswers = pgAnswers,
+                                    essayAnswers = essayAnswers,
+                                    onPgAnswerSelected = { qId, choiceId ->
+                                        pgAnswers = pgAnswers + (qId to choiceId)
+                                    },
+                                    onEssayAnswerChanged = { qId, text ->
+                                        essayAnswers = essayAnswers + (qId to text)
+                                    },
                                 )
                             }
 
@@ -208,7 +220,11 @@ Column(
             confirmButton = {
                 TextButton(onClick = {
                     showConfirm = false
-                    viewModel.submit(content)
+                    viewModel.submit(
+                        content = content,
+                        pgAnswers = pgAnswers,
+                        essayAnswers = essayAnswers,
+                    )
                 }) { Text("Kumpulkan") }
             },
             dismissButton = {
