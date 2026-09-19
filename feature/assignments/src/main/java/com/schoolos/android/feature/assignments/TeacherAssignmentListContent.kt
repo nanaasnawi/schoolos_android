@@ -6,9 +6,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -16,8 +16,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,17 +30,16 @@ fun LazyListScope.teacherAssignmentListContent(
     onAssignmentClick: (String) -> Unit
 ) {
     if (selectedTab == "Semua" || selectedTab == "Perlu Dinilai") {
-        renderTeacherSection("📝 Perlu Dinilai", dueSoonItems, NeonError, onAssignmentClick)
+        renderTeacherSection("Perlu Dinilai", dueSoonItems, onAssignmentClick)
     }
     if (selectedTab == "Semua" || selectedTab == "Aktif") {
-        renderTeacherSection("📋 Tugas Berjalan", activeItems, StudentNeon, onAssignmentClick)
+        renderTeacherSection("Tugas Berjalan", activeItems, onAssignmentClick)
     }
 }
 
 private fun LazyListScope.renderTeacherSection(
     title: String,
     items: List<Assignment>,
-    color: Color,
     onAssignmentClick: (String) -> Unit,
 ) {
     if (items.isEmpty()) return
@@ -50,24 +47,25 @@ private fun LazyListScope.renderTeacherSection(
     item {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 4.dp, top = 14.dp, bottom = 4.dp)
+            modifier = Modifier.padding(start = 2.dp, top = 12.dp, bottom = 4.dp)
         ) {
             Text(
                 title.uppercase(),
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Black,
-                color = color,
-                letterSpacing = 1.sp
+                fontWeight = FontWeight.SemiBold,
+                color = TextTertiary,
+                letterSpacing = 0.5.sp
             )
-            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.width(6.dp))
             Box(
                 modifier = Modifier
-                    .size(width = 24.dp, height = 18.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(color.copy(alpha = 0.1f)),
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
+                    .padding(horizontal = 6.dp, vertical = 2.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("${items.size}", color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                Text("${items.size}", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -82,48 +80,48 @@ private fun TeacherAssignmentCard(
     assignment: Assignment,
     onClick: () -> Unit,
 ) {
-    val (emoji, accentColor) = when {
-        assignment.title.contains("Matematika", ignoreCase = true) -> Pair("🧮", StudentNeon)
-        assignment.title.contains("IPA", ignoreCase = true) || assignment.title.contains("Sains", ignoreCase = true) -> Pair("🔬", NeonBlue)
-        assignment.title.contains("Bahasa", ignoreCase = true) -> Pair("📚", NeonSuccess)
-        else -> Pair("📝", NeonWarning)
-    }
-
     Box(
         modifier = Modifier
-            .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = GlassOverlay)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
+            .padding(14.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // PREMIUM ICON BLOCK
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(accentColor.copy(alpha = 0.1f))
-                        .border(1.dp, accentColor.copy(alpha = 0.2f), RoundedCornerShape(12.dp)),
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(emoji, fontSize = 20.sp)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
 
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         assignment.title,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
                         color = TextPrimary,
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(2.dp))
                     val subtitle = listOfNotNull(
                         assignment.subjectName,
                         assignment.className?.let { "Kelas $it" }
@@ -134,30 +132,35 @@ private fun TeacherAssignmentCard(
                         subtitle,
                         fontSize = 11.sp,
                         color = TextTertiary,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
-                
-                Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(20.dp))
+
+                Spacer(Modifier.width(8.dp))
+                Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
             }
 
-            Spacer(Modifier.height(16.dp))
-            
-            // REAL METADATA STRIP
+            Spacer(Modifier.height(12.dp))
+
+            // METADATA STRIP
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicDark)
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.DateRange, null, tint = NeonBlue, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(8.dp))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
+                    Icon(Icons.Default.DateRange, null, tint = TextTertiary, modifier = Modifier.size(12.dp))
+                    Spacer(Modifier.width(6.dp))
                     val dueIso = assignment.dueAt
                     val dueLabel = if (!dueIso.isNullOrBlank()) {
                         dueIso.take(16).replace('T', ' ')
@@ -167,22 +170,28 @@ private fun TeacherAssignmentCard(
                     Text(
                         dueLabel,
                         fontSize = 11.sp,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Bold
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Normal,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
+                Spacer(Modifier.width(8.dp))
+
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (assignment.isActive) NeonSuccess.copy(alpha = 0.15f) else TextTertiary.copy(alpha = 0.15f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (assignment.isActive) NeonSuccess.copy(alpha = 0.12f) else com.schoolos.android.core.designsystem.CosmicSurface3)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
                 ) {
                     Text(
                         "Maks. ${assignment.maxScore} Poin",
                         fontSize = 10.sp,
                         color = if (assignment.isActive) NeonSuccess else TextTertiary,
-                        fontWeight = FontWeight.Black
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

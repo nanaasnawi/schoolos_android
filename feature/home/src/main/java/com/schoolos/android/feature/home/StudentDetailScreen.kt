@@ -58,13 +58,7 @@ fun StudentDetailScreen(
     val tabs = listOf("Perkembangan", "Metrik Belajar", "Pencapaian", "Kontak")
 
     val isFemale = student.gender?.trim()?.uppercase() == "P"
-    val genderColor = if (isFemale) StudentNeon else NeonBlue
     val genderLabel = if (isFemale) "Perempuan" else "Laki-laki"
-    val genderIcon = if (isFemale) Icons.Default.Female else Icons.Default.Male
-    val avatarGradient = if (isFemale)
-        Brush.linearGradient(listOf(Color(0xFFEC4899), Color(0xFFA855F7)))
-    else
-        Brush.linearGradient(listOf(Color(0xFF3B82F6), Color(0xFF06B6D4)))
 
     Scaffold(
         modifier = modifier
@@ -72,210 +66,89 @@ fun StudentDetailScreen(
             .background(CosmicBlack),
         containerColor = CosmicBlack,
         topBar = {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CosmicBlack)
-                    .statusBarsPadding()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        CustomBackButton(onClick = onBack)
-                        Column {
-                            Text(
-                                text = "Detail Siswa",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = if (student.className.isNotBlank()) "Rombel ${student.className}" else "Portal Guru",
-                                fontSize = 12.sp,
-                                color = TextSecondary
-                            )
-                        }
-                    }
-
+            ExecutiveTopBar(
+                title = "Detail Siswa",
+                subtitle = if (student.className.isNotBlank()) "Kelas ${student.className}" else "Portal Guru",
+                onBack = onBack,
+                actions = {
                     IconButton(
                         onClick = { viewModel.refresh() },
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(CosmicSurface)
-                            .border(1.dp, GlassBorder, CircleShape)
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(CosmicNavy)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Muat Ulang",
-                            tint = TeacherNeon,
-                            modifier = Modifier.size(18.dp)
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
                         )
                     }
                 }
-                HorizontalDivider(color = GlassBorder, thickness = 1.dp)
-            }
+            )
         }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // ── HERO PROFILE CARD ──────────────────────────────────────────
+            // ── HERO PROFILE CARD (Quiet Apple Minimalist) ─────────────────
             item {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
                 ) {
-                    Column(
+                    Row(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(14.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(48.dp)
+                                .clip(CircleShape)
+                                .background(CosmicSurface2)
+                                .border(0.5.dp, GlassBorder, CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                                    .background(avatarGradient)
-                                    .border(2.dp, Color.White.copy(alpha = 0.3f), CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = student.fullName.firstOrNull()?.toString()?.uppercase() ?: "?",
-                                    fontSize = 26.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = Color.White
-                                )
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = student.fullName,
-                                    fontSize = 17.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary,
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(Modifier.height(3.dp))
-                                Text(
-                                    text = if (student.nisn.isNotBlank()) "NISN: ${student.nisn}" else "NISN: -",
-                                    fontSize = 12.sp,
-                                    color = TextSecondary
-                                )
-                            }
+                            Text(
+                                text = student.fullName.firstOrNull()?.toString()?.uppercase() ?: "?",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
                         }
 
-                        // Badges Row
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Gender Badge
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = genderColor.copy(alpha = 0.12f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, genderColor.copy(alpha = 0.3f))
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = genderIcon,
-                                        contentDescription = null,
-                                        tint = genderColor,
-                                        modifier = Modifier.size(13.dp)
-                                    )
-                                    Text(
-                                        text = genderLabel,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold,
-                                        color = genderColor
-                                    )
-                                }
-                            }
-
-                            // Class Badge
-                            if (student.className.isNotBlank()) {
-                                Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = NeonBlue.copy(alpha = 0.12f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.3f))
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.School,
-                                            contentDescription = null,
-                                            tint = NeonBlue,
-                                            modifier = Modifier.size(13.dp)
-                                        )
-                                        Text(
-                                            text = student.className,
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.SemiBold,
-                                            color = NeonBlue
-                                        )
-                                    }
-                                }
-                            }
-
-                            // Active Status
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = NeonSuccess.copy(alpha = 0.12f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonSuccess.copy(alpha = 0.3f))
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(6.dp)
-                                            .clip(CircleShape)
-                                            .background(NeonSuccess)
-                                    )
-                                    Text(
-                                        text = "Aktif",
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = NeonSuccess
-                                    )
-                                }
-                            }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = student.fullName,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(3.dp))
+                            Text(
+                                text = "NISN: ${student.nisn.ifBlank { "-" }} • $genderLabel",
+                                fontSize = 12.sp,
+                                color = TextTertiary
+                            )
                         }
                     }
                 }
             }
 
-            // ── 4 KEY METRIC CARDS ─────────────────────────────────────────
+            // ── 4 KEY METRIC CARDS (Quiet Flat Style) ──────────────────────
             item {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -290,63 +163,64 @@ fun StudentDetailScreen(
                     } ?: "96%"
 
                     MetricCard(
-                        title = "Nilai Rata2",
+                        title = "Rata-rata",
                         value = avgGrade,
-                        accentColor = TeacherNeon,
                         icon = Icons.Default.Grade,
                         modifier = Modifier.weight(1f)
                     )
                     MetricCard(
-                        title = "Kuis Selesai",
+                        title = "Kuis",
                         value = quizDone,
-                        accentColor = NeonBlue,
                         icon = Icons.Default.Quiz,
                         modifier = Modifier.weight(1f)
                     )
                     MetricCard(
-                        title = "Tugas Masuk",
+                        title = "Tugas",
                         value = assignDone,
-                        accentColor = StudentNeon,
                         icon = Icons.Default.AssignmentTurnedIn,
                         modifier = Modifier.weight(1f)
                     )
                     MetricCard(
                         title = "Kehadiran",
                         value = attendance,
-                        accentColor = NeonWarning,
                         icon = Icons.Default.EventAvailable,
                         modifier = Modifier.weight(1f)
                     )
                 }
             }
 
-            // ── TAB SELECTOR ───────────────────────────────────────────────
+            // ── TAB SELECTOR (Apple Segmented Control) ──────────────────────
             item {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .background(CosmicNavy)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                        .padding(4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     tabs.forEachIndexed { index, tabTitle ->
                         val isSelected = selectedTab == index
                         Box(
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (isSelected) TeacherNeon else Color.Transparent)
+                                .clip(RoundedCornerShape(7.dp))
+                                .background(if (isSelected) CosmicSurface2 else Color.Transparent)
+                                .border(
+                                    if (isSelected) 0.5.dp else 0.dp,
+                                    if (isSelected) GlassBorder else Color.Transparent,
+                                    RoundedCornerShape(7.dp)
+                                )
                                 .clickable { viewModel.selectTab(index) }
-                                .padding(vertical = 9.dp),
+                                .padding(vertical = 7.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = tabTitle,
                                 fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isSelected) Color.White else TextSecondary,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (isSelected) TextPrimary else TextTertiary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -570,13 +444,17 @@ fun StudentDetailScreen(
                                             text = item.title,
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
                                             text = item.description,
                                             fontSize = 12.sp,
                                             color = TextSecondary,
-                                            lineHeight = 16.sp
+                                            lineHeight = 16.sp,
+                                            maxLines = 2,
+                                            overflow = TextOverflow.Ellipsis
                                         )
                                         val earnedAt = item.earnedAt
                                         if (!earnedAt.isNullOrBlank()) {
@@ -585,7 +463,9 @@ fun StudentDetailScreen(
                                                 text = "Diraih: $earnedAt",
                                                 fontSize = 11.sp,
                                                 color = TeacherNeon,
-                                                fontWeight = FontWeight.SemiBold
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
                                             )
                                         }
                                     }
@@ -657,18 +537,22 @@ fun StudentDetailScreen(
                                                     modifier = Modifier.size(20.dp)
                                                 )
                                             }
-                                            Column {
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = "Kirim WhatsApp Wali Murid",
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = TextPrimary
+                                                    color = TextPrimary,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                                 Text(
                                                     text = phoneRaw,
                                                     fontSize = 12.sp,
                                                     color = TeacherNeon,
-                                                    fontWeight = FontWeight.SemiBold
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                             }
                                         }
@@ -718,17 +602,21 @@ fun StudentDetailScreen(
                                                     modifier = Modifier.size(20.dp)
                                                 )
                                             }
-                                            Column {
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = "Panggilan Suara",
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = TextPrimary
+                                                    color = TextPrimary,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                                 Text(
                                                     text = "Langsung via nomor seluler",
                                                     fontSize = 12.sp,
-                                                    color = TextSecondary
+                                                    color = TextSecondary,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                             }
                                         }
@@ -779,17 +667,21 @@ fun StudentDetailScreen(
                                                     modifier = Modifier.size(20.dp)
                                                 )
                                             }
-                                            Column {
+                                            Column(modifier = Modifier.weight(1f)) {
                                                 Text(
                                                     text = "Email Siswa",
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = TextPrimary
+                                                    color = TextPrimary,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                                 Text(
                                                     text = studentEmail,
                                                     fontSize = 12.sp,
-                                                    color = TextSecondary
+                                                    color = TextSecondary,
+                                                    maxLines = 1,
+                                                    overflow = TextOverflow.Ellipsis
                                                 )
                                             }
                                         }
@@ -818,48 +710,46 @@ fun StudentDetailScreen(
 private fun MetricCard(
     title: String,
     value: String,
-    accentColor: Color,
     icon: ImageVector,
     modifier: Modifier = Modifier,
+    accentColor: Color = TextSecondary,
 ) {
     Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        modifier = modifier.height(76.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
     ) {
         Column(
-            modifier = Modifier.padding(10.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(8.dp),
+            verticalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.15f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(15.dp)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(16.dp)
+            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = value,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = title,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
-            Text(
-                text = value,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
-                color = TextPrimary
-            )
-            Text(
-                text = title,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }

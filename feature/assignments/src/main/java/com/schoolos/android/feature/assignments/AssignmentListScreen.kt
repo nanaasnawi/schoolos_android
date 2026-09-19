@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -58,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -100,6 +102,13 @@ fun AssignmentListScreen(
     Scaffold(
         containerColor = CosmicBlack,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
+            ExecutiveTopBar(
+                title = if (isTeacher) "Tugas & Evaluasi" else "Daftar Tugas",
+                subtitle = if (isTeacher) "Kelola penugasan siswa" else "PR & latihan mandiri",
+                onBack = onBack,
+            )
+        },
         floatingActionButton = {
             if (isTeacher) {
                 TeacherSpeedDialFab(
@@ -117,7 +126,7 @@ fun AssignmentListScreen(
             }
         }
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             PullRefreshContainer(
                 isRefreshing = state.isRefreshing,
                 onRefresh = viewModel::refresh,
@@ -131,16 +140,14 @@ fun AssignmentListScreen(
                     EmptyState("Belum ada tugas yang diberikan!", Icons.AutoMirrored.Filled.Assignment)
                 } else {
                     LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .statusBarsPadding(),
+                        modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(
-                            start = 12.dp,
-                            end = 12.dp,
+                            start = 16.dp,
+                            end = 16.dp,
                             top = 8.dp,
                             bottom = 100.dp
                         ),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp),
                     ) {
                         // ── IMMERSIVE HERO HEADER ────────────────────────────
                         item {
@@ -231,7 +238,7 @@ fun AssignmentListScreen(
     }
 }
 
-// ── SPEED DIAL FAB ─────────────────────────────────────────────────────────────
+// ── SPEED DIAL FAB (Apple Minimalist) ──────────────────────────────────────────
 
 @Composable
 private fun TeacherSpeedDialFab(
@@ -242,55 +249,56 @@ private fun TeacherSpeedDialFab(
 ) {
     val rotation by animateFloatAsState(
         targetValue = if (expanded) 45f else 0f,
-        animationSpec = tween(250),
+        animationSpec = tween(200),
         label = "fab_rotation"
     )
 
     Column(
         horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        // Sub-actions — animate in/out
+        // Sub-actions
         AnimatedVisibility(
             visible = expanded,
-            enter = fadeIn(tween(200)) + expandVertically(tween(200), expandFrom = Alignment.Bottom),
-            exit = fadeOut(tween(150)) + shrinkVertically(tween(150), shrinkTowards = Alignment.Bottom)
+            enter = fadeIn(tween(160)) + expandVertically(tween(160), expandFrom = Alignment.Bottom),
+            exit = fadeOut(tween(120)) + shrinkVertically(tween(120), shrinkTowards = Alignment.Bottom)
         ) {
             Column(
                 horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(10.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SpeedDialOption(
                     label = "Buat Kuis",
                     icon = Icons.Default.Quiz,
-                    containerColor = NeonBlue,
+                    accentColor = NeonBlue,
                     onClick = onCreateQuiz
                 )
                 SpeedDialOption(
                     label = "Buat Tugas",
                     icon = Icons.Default.Edit,
-                    containerColor = TeacherNeon,
+                    accentColor = TeacherNeon,
                     onClick = onCreateAssignment
                 )
             }
         }
 
-        // Main FAB
-        FloatingActionButton(
-            onClick = onToggle,
-            containerColor = if (expanded) CosmicNavy else TeacherNeon,
-            contentColor = if (expanded) TeacherNeon else Color.White,
-            shape = RoundedCornerShape(18.dp),
-            modifier = Modifier.shadow(
-                elevation = 12.dp,
-                shape = RoundedCornerShape(18.dp),
-                spotColor = TeacherNeon.copy(alpha = 0.4f)
-            )
+        // Main Minimalist FAB
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(RoundedCornerShape(14.dp))
+                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+                .clickable(onClick = onToggle),
+            contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = Icons.Default.Add,
                 contentDescription = if (expanded) "Tutup" else "Buat",
-                modifier = Modifier.rotate(rotation)
+                tint = TextPrimary,
+                modifier = Modifier
+                    .size(20.dp)
+                    .rotate(rotation)
             )
         }
     }
@@ -300,49 +308,33 @@ private fun TeacherSpeedDialFab(
 private fun SpeedDialOption(
     label: String,
     icon: ImageVector,
-    containerColor: Color,
+    accentColor: Color,
     onClick: () -> Unit,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End
+        horizontalArrangement = Arrangement.End,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 8.dp)
     ) {
-        // Label chip
-        Box(
-            modifier = Modifier
-                .shadow(4.dp, RoundedCornerShape(10.dp), spotColor = containerColor.copy(alpha = 0.3f))
-                .clip(RoundedCornerShape(10.dp))
-                .background(CosmicNavy)
-                .border(1.dp, containerColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
-                .clickable(onClick = onClick)
-                .padding(horizontal = 14.dp, vertical = 8.dp)
-        ) {
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = containerColor
-            )
-        }
-
-        Spacer(Modifier.width(10.dp))
-
-        // Mini FAB
-        SmallFloatingActionButton(
-            onClick = onClick,
-            containerColor = containerColor,
-            contentColor = Color.White,
-            shape = RoundedCornerShape(14.dp),
-            modifier = Modifier.shadow(
-                elevation = 8.dp,
-                shape = RoundedCornerShape(14.dp),
-                spotColor = containerColor.copy(alpha = 0.4f)
-            )
-        ) {
-            Icon(icon, contentDescription = label, modifier = Modifier.size(20.dp))
-        }
+        Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Medium,
+            color = TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
     }
 }
+
+// ── STUDENT HERO HEADER (Apple / Linear Minimalist) ──────────────────────────
 
 @Composable
 private fun StudentAssignmentHeroHeader(
@@ -358,172 +350,142 @@ private fun StudentAssignmentHeroHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(10.dp, RoundedCornerShape(26.dp), spotColor = Color(0x354F46E5), ambientColor = Color(0x204F46E5))
-            .clip(RoundedCornerShape(26.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        Color(0xFF4338CA), // Deep Indigo
-                        Color(0xFF6D28D9), // Rich Violet
-                        Color(0xFF7C3AED), // Vibrant Purple
-                    )
-                )
-            )
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .padding(16.dp),
     ) {
-        // Decorative background geometric accents for depth
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .offset(x = 24.dp, y = (-20).dp)
-                .size(130.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .offset(x = (-16).dp, y = 16.dp)
-                .size(80.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.06f))
-        )
-
-        // Content
-        Column(
-            modifier = Modifier.padding(14.dp)
-        ) {
+        Column {
             // Top Tag Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text("📝", fontSize = 12.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "PORTAL TUGAS & PROYEK",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.2.sp
-                    )
-                }
+                Text(
+                    text = "STATUS PENUGASAN",
+                    color = TextTertiary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                // Progress Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Text(
-                        "$completionPercent% Selesai",
-                        color = Color.White,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
+                Text(
+                    text = "$completionPercent% Selesai",
+                    color = NeonSuccess,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
 
             val child = if (childName.isNotBlank()) childName else "Anak"
             Text(
-                text = if (isParent) "Status Tugas $child" else "Daftar Tugas Kamu",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-                lineHeight = 30.sp
+                text = if (isParent) "Status Tugas $child" else "Daftar Tugas Siswa",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = "Pantau perkembangan tugas dan selesaikan tepat waktu",
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                text = "Pantau tenggat waktu dan kumpulkan tepat waktu",
+                fontSize = 11.sp,
+                color = TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // 3-Metric Stat Cards
+            // Completion Progress Bar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth((completionPercent / 100f).coerceIn(0f, 1f))
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(NeonBlue)
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // 3-Metric Stat Cards (Fixed Height 60.dp, perfectly aligned)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 HeroMetricCard(
-                    label = "BELUM",
+                    label = "TUGAS AKTIF",
                     value = "${activeCount + dueSoonCount}",
-                    subtitle = "Tugas aktif",
-                    accent = Color.White,
+                    subtitle = "Belum Selesai",
+                    accent = TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
-                    label = "SEGERA",
+                    label = "MENDEKATI BATAS",
                     value = "$dueSoonCount",
                     subtitle = "Mendesak",
-                    accent = if (dueSoonCount > 0) Color(0xFFFDE047) else Color.White,
+                    accent = if (dueSoonCount > 0) NeonWarning else TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
-                    label = "SELESAI",
+                    label = "TERKUMPUL",
                     value = "$completedCount",
-                    subtitle = "Terkumpul",
-                    accent = Color(0xFF86EFAC),
+                    subtitle = "Selesai",
+                    accent = NeonSuccess,
                     modifier = Modifier.weight(1f)
                 )
             }
 
-            // High-Contrast Alert Banner if tasks are due soon
+            // Quiet Alert Pill if tasks are due soon
             if (dueSoonCount > 0) {
-                Spacer(Modifier.height(14.dp))
-                Box(
+                Spacer(Modifier.height(10.dp))
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color(0xFFBE123C).copy(alpha = 0.35f))
-                        .border(1.dp, Color(0xFFF43F5E).copy(alpha = 0.6f), RoundedCornerShape(16.dp))
-                        .padding(horizontal = 14.dp, vertical = 10.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                        .border(0.5.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(28.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFF43F5E))
-                                .border(1.dp, Color.White.copy(alpha = 0.5f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("⚡", fontSize = 14.sp)
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                "$dueSoonCount tugas mendekati batas waktu!",
-                                color = Color.White,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            Text(
-                                "Kumpulkan segera agar tidak terlambat",
-                                color = Color.White.copy(alpha = 0.85f),
-                                fontSize = 11.sp
-                            )
-                        }
-                    }
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(NeonWarning)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "$dueSoonCount tugas mendekati batas waktu pengumpulan",
+                        color = TextPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         }
     }
 }
+
+// ── TEACHER HERO HEADER (Apple / Linear Minimalist) ──────────────────────────
 
 @Composable
 private fun TeacherAssignmentHeroHeader(
@@ -534,92 +496,59 @@ private fun TeacherAssignmentHeroHeader(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(10.dp, RoundedCornerShape(26.dp), spotColor = Color(0x35059669), ambientColor = Color(0x20059669))
-            .clip(RoundedCornerShape(26.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        Color(0xFF047857), // Emerald Dark
-                        Color(0xFF059669), // Emerald
-                        Color(0xFF0D9488), // Teal
-                    )
-                )
-            )
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .padding(16.dp),
     ) {
-        // Decorative circle
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .size(120.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.07f))
-        )
-
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .border(1.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
-                ) {
-                    Text("👨‍🏫", fontSize = 13.sp)
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        "PORTAL EVALUASI",
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.2.sp
-                    )
-                }
+                Text(
+                    text = "PORTAL EVALUASI PENGAJAR",
+                    color = TextTertiary,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
 
-                // Speed Dial hint badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.White.copy(alpha = 0.16f))
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("✚", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                        Spacer(Modifier.width(5.dp))
-                        Text(
-                            "Tugas / Kuis",
-                            color = Color.White,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
+                Text(
+                    text = "${activeCount + pendingGradeCount} Berjalan",
+                    color = TeacherNeon,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(10.dp))
+
             Text(
-                "Tugas & Kuis Siswa",
-                color = Color.White,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Black,
-                lineHeight = 30.sp
+                text = "Penugasan & Evaluasi Siswa",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
             Text(
-                "Kelola penugasan, kuis, dan beri penilaian tepat waktu",
-                color = Color.White.copy(alpha = 0.85f),
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium
+                text = "Kelola penugasan, kuis, dan review hasil kerja siswa",
+                fontSize = 11.sp,
+                color = TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // 3 Metric Cards
+            // 3 Metric Cards (Fixed Height 60.dp, perfectly aligned)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -628,27 +557,29 @@ private fun TeacherAssignmentHeroHeader(
                     label = "TUGAS AKTIF",
                     value = "$activeCount",
                     subtitle = "Berjalan",
-                    accent = Color.White,
+                    accent = TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
                     label = "PERLU NILAI",
                     value = "$pendingGradeCount",
                     subtitle = "Menunggu",
-                    accent = if (pendingGradeCount > 0) Color(0xFFFDE047) else Color.White,
+                    accent = if (pendingGradeCount > 0) NeonWarning else TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
                     label = "KUIS AKTIF",
                     value = "$quizActiveCount",
-                    subtitle = "Berlangsung",
-                    accent = if (quizActiveCount > 0) Color(0xFF93C5FD) else Color.White,
+                    subtitle = "Formatif",
+                    accent = NeonBlue,
                     modifier = Modifier.weight(1f)
                 )
             }
         }
     }
 }
+
+// ── HERO METRIC CARD (Fixed Height, Strictly Constrained) ─────────────────────
 
 @Composable
 private fun HeroMetricCard(
@@ -660,100 +591,101 @@ private fun HeroMetricCard(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color.White.copy(alpha = 0.16f))
-            .border(1.dp, Color.White.copy(alpha = 0.28f), RoundedCornerShape(16.dp))
-            .padding(horizontal = 12.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+            .height(60.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+            .padding(vertical = 6.dp, horizontal = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = label,
-            color = Color.White.copy(alpha = 0.8f),
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 1.sp
-        )
-        Spacer(Modifier.height(4.dp))
         Text(
             text = value,
             color = accent,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Black
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(2.dp))
         Text(
             text = subtitle,
-            color = Color.White.copy(alpha = 0.7f),
+            color = TextTertiary,
             fontSize = 10.sp,
-            fontWeight = FontWeight.Medium,
-            maxLines = 1
+            fontWeight = FontWeight.Normal,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
         )
     }
 }
+
+// ── TEACHER EMPTY STATE (Clean Obsidian) ──────────────────────────────────────
 
 @Composable
 private fun TeacherEmptyState(
     onCreateAssignment: () -> Unit,
     onCreateQuiz: () -> Unit,
 ) {
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        // Info card
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(24.dp), spotColor = GlassOverlay)
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-                .padding(16.dp),
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                .padding(20.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
                     modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(TeacherNeon.copy(alpha = 0.1f))
-                        .border(1.dp, TeacherNeon.copy(alpha = 0.2f), RoundedCornerShape(20.dp)),
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("📋", fontSize = 28.sp)
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                        contentDescription = null,
+                        tint = TextSecondary,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(10.dp))
                 Text(
-                    "Belum Ada Penugasan",
+                    text = "Belum Ada Penugasan",
                     color = TextPrimary,
-                    fontSize = 17.sp,
-                    fontWeight = FontWeight.Black
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    "Mulai dengan membuat tugas atau kuis baru\nuntuk siswa di kelas Anda",
-                    color = TextSecondary,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 19.sp
+                    text = "Mulai dengan membuat tugas atau kuis baru untuk kelas Anda",
+                    color = TextTertiary,
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
                 )
             }
         }
 
-        // 2 action cards side by side — no duplicate button inside
+        // 2 action cards side by side (Fixed Height 104.dp)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             TeacherActionCard(
-                emoji = "📝",
+                icon = Icons.Default.Edit,
                 title = "Buat Tugas",
-                subtitle = "Penugasan teks\natau file upload",
+                subtitle = "Tugaskan PR & proyek",
                 accentColor = TeacherNeon,
                 onClick = onCreateAssignment,
                 modifier = Modifier.weight(1f)
             )
             TeacherActionCard(
-                emoji = "🧠",
+                icon = Icons.Default.Quiz,
                 title = "Buat Kuis",
-                subtitle = "Pilihan ganda\ndengan batas waktu",
+                subtitle = "Ujian & evaluasi",
                 accentColor = NeonBlue,
                 onClick = onCreateQuiz,
                 modifier = Modifier.weight(1f)
@@ -764,7 +696,7 @@ private fun TeacherEmptyState(
 
 @Composable
 private fun TeacherActionCard(
-    emoji: String,
+    icon: ImageVector,
     title: String,
     subtitle: String,
     accentColor: Color,
@@ -773,46 +705,55 @@ private fun TeacherActionCard(
 ) {
     Box(
         modifier = modifier
-            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = accentColor.copy(alpha = 0.2f))
-            .clip(RoundedCornerShape(20.dp))
+            .height(104.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
-            .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(14.dp)
+            .padding(12.dp)
     ) {
         Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(accentColor.copy(alpha = 0.12f))
-                    .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                    .size(34.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(emoji, fontSize = 22.sp)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = TextPrimary,
+                    modifier = Modifier.size(17.dp)
+                )
             }
-            Spacer(Modifier.height(10.dp))
-            Text(
-                title,
-                color = accentColor,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Black,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                subtitle,
-                color = TextTertiary,
-                fontSize = 11.sp,
-                textAlign = TextAlign.Center,
-                lineHeight = 15.sp
-            )
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
+
+// ── ASSIGNMENT TAB FILTER (Apple Segmented Style) ─────────────────────────────
 
 @Composable
 private fun AssignmentTabFilter(
@@ -824,41 +765,27 @@ private fun AssignmentTabFilter(
     val tabs = if (isTeacher) listOf("Semua", "Aktif", "Perlu Dinilai")
                else listOf("Semua", "Segera", "Aktif", "Selesai")
 
-    val activeAccent = if (isTeacher) TeacherNeon else StudentNeon
-
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp)
+            .padding(vertical = 2.dp)
     ) {
         items(tabs) { tab ->
             val isSelected = tab == selectedTab
             val count = counts[tab] ?: 0
 
-            val tabColor = when (tab) {
-                "Segera", "Perlu Dinilai" -> NeonError
-                "Aktif"                  -> activeAccent
-                "Selesai"                -> NeonSuccess
-                else                     -> activeAccent
-            }
-
-            val backgroundColor = if (isSelected) tabColor else CosmicNavy
-            val contentColor = if (isSelected) Color.White else TextSecondary
-            val borderColor = if (isSelected) tabColor else GlassBorder
-
             Box(
                 modifier = Modifier
-                    .shadow(
-                        elevation = if (isSelected) 4.dp else 0.dp,
-                        shape = RoundedCornerShape(14.dp),
-                        spotColor = tabColor.copy(alpha = 0.4f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(if (isSelected) com.schoolos.android.core.designsystem.CosmicSurface2 else CosmicNavy)
+                    .border(
+                        0.5.dp,
+                        if (isSelected) com.schoolos.android.core.designsystem.GlassBorder2 else GlassBorder,
+                        RoundedCornerShape(8.dp)
                     )
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(backgroundColor)
-                    .border(1.dp, borderColor, RoundedCornerShape(14.dp))
                     .clickable { onTabSelected(tab) }
-                    .padding(horizontal = 14.dp, vertical = 9.dp),
+                    .padding(horizontal = 12.dp, vertical = 7.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -867,23 +794,23 @@ private fun AssignmentTabFilter(
                     Text(
                         text = tab,
                         fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.SemiBold,
-                        color = contentColor,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                        color = if (isSelected) TextPrimary else TextTertiary,
+                        maxLines = 1,
                     )
-                    // Only show count badge when there's something to show
                     if (count > 0) {
                         Spacer(Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) Color.White.copy(alpha = 0.25f) else CosmicDark)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(if (isSelected) com.schoolos.android.core.designsystem.CosmicSurface3 else com.schoolos.android.core.designsystem.CosmicSurface2)
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = "$count",
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (isSelected) Color.White else TextTertiary
+                                fontWeight = FontWeight.Medium,
+                                color = if (isSelected) TextPrimary else TextTertiary
                             )
                         }
                     }

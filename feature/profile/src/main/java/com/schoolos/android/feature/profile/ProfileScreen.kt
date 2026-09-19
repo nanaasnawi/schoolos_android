@@ -23,6 +23,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.auth.isParentRole
 import com.schoolos.android.core.auth.isTeacherRole
 import com.schoolos.android.core.designsystem.CosmicBlack
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.LocalThemeToggle
 import com.schoolos.android.core.designsystem.ParentNeon
@@ -74,16 +75,24 @@ fun ProfileScreen(
         else -> user?.email?.ifBlank { state.identifier.ifBlank { "Akun Terverifikasi" } } ?: "Akun Terverifikasi"
     }
 
-    Scaffold(containerColor = CosmicBlack) { innerPadding ->
+    Scaffold(
+        containerColor = CosmicBlack,
+        topBar = {
+            ExecutiveTopBar(
+                title = "Pengaturan Akun",
+                subtitle = "Identitas Pengguna & Sekolah",
+            )
+        },
+    ) { innerPadding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(2.dp))
 
             // 1. Hero Profile Card
             ProfileHeaderCard(

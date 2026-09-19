@@ -204,7 +204,7 @@ private fun QuizHeroHeaderRefactored(
                     .background(Color.White.copy(alpha = 0.2f))
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
-                Text("⭐ Potensi 500 XP", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                Text("Potensi 500 XP", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(10.dp))
             Text(quiz.title, fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White, lineHeight = 28.sp)

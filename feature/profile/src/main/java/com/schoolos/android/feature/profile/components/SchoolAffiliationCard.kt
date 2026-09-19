@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.DynamicSchoolLogo
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonSuccess
@@ -46,8 +47,7 @@ fun SchoolAffiliationCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = NeonBlue.copy(alpha = 0.12f))
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
             .background(
                 Brush.verticalGradient(
@@ -55,27 +55,30 @@ fun SchoolAffiliationCard(
                     startY = 0f, endY = 200f,
                 ),
             )
-            .border(1.dp, NeonBlue.copy(alpha = 0.18f), RoundedCornerShape(20.dp))
+            .border(1.dp, NeonBlue.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
             .padding(16.dp),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            // School logo
+            // School logo (Dynamic Tenant School Logo)
             Box(
                 modifier = Modifier
                     .size(56.dp)
-                    .shadow(4.dp, CircleShape, spotColor = NeonBlue.copy(alpha = 0.25f))
-                    .clip(CircleShape)
+                    .clip(RoundedCornerShape(14.dp))
                     .background(CosmicBlack)
-                    .border(1.5.dp, NeonBlue.copy(alpha = 0.35f), CircleShape),
+                    .border(1.5.dp, GlassBorder, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                SchoolOsBrandLogo(
-                    size = 44,
+                DynamicSchoolLogo(
                     logoUrl = schoolLogoUrl,
-                    modifier = Modifier.clip(CircleShape),
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                    fallback = {
+                        SchoolOsBrandLogo(size = 44)
+                    }
                 )
             }
 

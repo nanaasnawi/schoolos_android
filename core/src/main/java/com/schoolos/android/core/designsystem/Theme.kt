@@ -18,38 +18,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
 
-// ─── Modern Vibrant Educational Light Theme — Color System ──────────────────
+// ─── Apple & Linear Ultra-Minimalist Design System — Color Tokens ───────────
 
-// Base Light & Dark Theme Colors
-val NeonBlue       = Color(0xFF2563EB) // Primary accent (Royal Blue)
-val NeonBlueLight  = Color(0xFF3B82F6)
-val NeonBlueDark   = Color(0xFF1D4ED8)
-val NeonBlueBg     = Color(0xFFDBEAFE) // Light blue container
+// Refined Accents (Subtle & Disciplined, Not Neon)
+val NeonBlue       = Color(0xFF3B82F6) // Apple System Blue
+val NeonBlueLight  = Color(0xFF60A5FA)
+val NeonBlueDark   = Color(0xFF2563EB)
+val NeonBlueBg     = Color(0xFF1E293B)
 
-// Student accent — Rich Vibrant Violet
-val StudentPrimary    = Color(0xFF7C3AED)
-val StudentLight      = Color(0xFF8B5CF6)
-val StudentContainer  = Color(0xFFEDE9FE)
-val StudentNeon       = Color(0xFF7C3AED)
+// Role subtle accents
+val StudentPrimary    = Color(0xFF6366F1) // Indigo
+val StudentLight      = Color(0xFF818CF8)
+val StudentContainer  = Color(0xFF1E1B4B)
+val StudentNeon       = Color(0xFF818CF8)
 
-// Teacher accent — Rich Emerald Green
-val TeacherPrimary    = Color(0xFF059669)
-val TeacherLight      = Color(0xFF10B981)
-val TeacherContainer  = Color(0xFFD1FAE5)
-val TeacherNeon       = Color(0xFF059669)
+val TeacherPrimary    = Color(0xFF10B981) // Crisp Emerald
+val TeacherLight      = Color(0xFF34D399)
+val TeacherContainer  = Color(0xFF064E3B)
+val TeacherNeon       = Color(0xFF10B981)
 
-// Parent accent — Warm Rose Coral
-val ParentPrimary     = Color(0xFFE11D48)
-val ParentLight       = Color(0xFFF43F5E)
-val ParentContainer   = Color(0xFFFFE4E6)
-val ParentNeon        = Color(0xFFE11D48)
+val ParentPrimary     = Color(0xFFF43F5E) // Calm Rose
+val ParentLight       = Color(0xFFFB7185)
+val ParentContainer   = Color(0xFF881337)
+val ParentNeon        = Color(0xFFF43F5E)
 
-// Accent palette — Vibrant Educational
-val AccentElectricBlue  = Color(0xFF2563EB)
+// Minimal semantic accents
+val AccentElectricBlue  = Color(0xFF3B82F6)
 val AccentNeonGreen     = Color(0xFF10B981)
 val AccentNeonAmber     = Color(0xFFF59E0B)
 val AccentNeonCoral     = Color(0xFFEF4444)
-val AccentNeonPurple    = Color(0xFF8B5CF6)
+val AccentNeonPurple    = Color(0xFF818CF8)
 val AccentNeonCyan      = Color(0xFF06B6D4)
 val AccentNeonPink      = Color(0xFFEC4899)
 
@@ -57,15 +55,15 @@ val AccentNeonPink      = Color(0xFFEC4899)
 val NeonSuccess  = Color(0xFF10B981)
 val NeonWarning  = Color(0xFFF59E0B)
 val NeonError    = Color(0xFFEF4444)
-val NeonInfo     = Color(0xFF2563EB)
+val NeonInfo     = Color(0xFF3B82F6)
 
-// Semantic backgrounds (solid soft containers)
-val SuccessBg   = Color(0xFFD1FAE5)
-val WarningBg   = Color(0xFFFEF3C7)
-val ErrorBg     = Color(0xFFFFE4E6)
-val InfoBg      = Color(0xFFDBEAFE)
+// Semantic backgrounds
+val SuccessBg   = Color(0xFF064E3B)
+val WarningBg   = Color(0xFF451A03)
+val ErrorBg     = Color(0xFF4C0519)
+val InfoBg      = Color(0xFF1E293B)
 
-// Legacy aliases
+// Aliases
 val PrimaryBlue       = NeonBlue
 val PrimaryBlueLight  = NeonBlueLight
 val SoftBlueBg        = NeonBlueBg
@@ -82,50 +80,50 @@ val WarningAmber = NeonWarning
 val ErrorRed     = NeonError
 val InfoBlue     = NeonInfo
 
-// ─── Reactive Theme Color Tokens (SOLID NON-GLASS FOR MAXIMUM CLARITY) ──────
+// ─── Reactive Theme Color Tokens (Matte Obsidian & Zinc Hierarchy) ──────────
 val TextPrimary: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFFFFFFF) else Color(0xFF0F172A)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFF4F4F5) else Color(0xFF0F172A)
 
 val TextSecondary: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFD1D5DB) else Color(0xFF334155)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFA1A1AA) else Color(0xFF475569)
 
 val TextTertiary: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF9CA3AF) else Color(0xFF64748B)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF71717A) else Color(0xFF64748B)
 
 val TextDisabled: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF6B7280) else Color(0xFF94A3B8)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF52525B) else Color(0xFF94A3B8)
 
 // Solid Page Background — PURE PITCH BLACK (True OLED Black #000000)
 val CosmicBlack: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF000000) else Color(0xFFF1F5F9)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF000000) else Color(0xFFF8FAFC)
 
 // Solid Container Background — Deep Obsidian Container
 val CosmicDark: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF080808) else Color(0xFFE2E8F0)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF0A0A0B) else Color(0xFFF1F5F9)
 
-// SOLID Card Background — Pure Dark Surface (#101010)
+// SOLID Card Background — Refined Matte Obsidian Surface (#111113)
 val CosmicNavy: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF101010) else Color(0xFFFFFFFF)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color(0xFFFFFFFF)
 
 // Solid Surface Background
 val CosmicSurface: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF101010) else Color(0xFFFFFFFF)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color(0xFFFFFFFF)
 
 val CosmicSurface2: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF18181A) else Color(0xFFEEF2FF)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF18181B) else Color(0xFFF1F5F9)
 
 val CosmicSurface3: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF222225) else Color(0xFFCBD5E1)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF27272A) else Color(0xFFE2E8F0)
 
-// Solid Clean Borders for Pitch Black
+// Hairline Clean Borders (Subtle, Non-Distracting)
 val GlassBorder: Color
     @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
 
 val GlassBorder2: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF2E2E33) else Color(0xFFCBD5E1)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF27272A) else Color(0xFFCBD5E1)
 
 val GlassOverlay: Color
-    @Composable get() = if (LocalIsDarkTheme.current) Color(0x60000000) else Color(0x0F000000)
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0x80000000) else Color(0x0A000000)
 
 val Slate950: Color @Composable get() = TextPrimary
 val Slate900: Color @Composable get() = TextPrimary
@@ -138,10 +136,12 @@ val Slate200: Color @Composable get() = GlassBorder2
 val Slate100: Color @Composable get() = GlassBorder
 val Slate50: Color  @Composable get() = CosmicDark
 
-// ─── Standard Layout Spacing Tokens (Full-Width Mobile UX) ─────────────────────
-val ScreenHorizontalPadding = 12.dp
-val ScreenCompactPadding    = 10.dp
-val CardInnerPadding        = 14.dp
+// ─── Standard Layout Spacing Tokens (Consistent Mobile Design System) ──────
+val ScreenHorizontalPadding = 16.dp
+val ScreenCompactPadding    = 12.dp
+val CardInnerPadding        = 16.dp
+val StandardCardRadius      = 16.dp
+val StandardHeaderRadius    = 20.dp
 
 // ─── Typography ─────────────────────────────────────────────────────────────
 val SchoolOsTypography = Typography(

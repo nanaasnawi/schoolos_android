@@ -81,6 +81,8 @@ import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.CosmicSurface2
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
 import com.schoolos.android.domain.model.Progress
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -92,11 +94,22 @@ fun ProgressScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Scaffold(containerColor = CosmicBlack) { padding ->
+    Scaffold(
+        containerColor = CosmicBlack,
+        topBar = {
+            ExecutiveTopBar(
+                title = "Progres Belajar",
+                subtitle = if (state.isParent) "Laporan perkembangan ${state.childName}" else "Statistik & pencapaian belajar",
+                onBack = onBack,
+            )
+        }
+    ) { padding ->
         PullRefreshContainer(
             isRefreshing = state.isRefreshing,
             onRefresh = viewModel::refresh,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
         ) {
             when {
                 state.isLoading -> LoadingState()
@@ -107,7 +120,6 @@ fun ProgressScreen(
                     val isParent = state.isParent
                     ProgressContent(
                         progress = state.progress!!,
-                        onBack = onBack,
                         onNavigateToAssignments = onNavigateToAssignments,
                         isParent = isParent,
                         childName = state.childName
@@ -121,30 +133,15 @@ fun ProgressScreen(
 @Composable
 private fun ProgressContent(
     progress: Progress,
-    onBack: (() -> Unit)?,
     onNavigateToAssignments: (() -> Unit)? = null,
     isParent: Boolean = false,
     childName: String = "",
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 46.dp, bottom = 100.dp),
+        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // ── REFACTORED NON-OVERLAPPING LIST HEADER ─────────────
-        item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 0.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    if (onBack != null) {
-                        CustomBackButton(onClick = onBack)
-                    }
-                }
-            }
-        }
 
         if (isParent) {
             // ── PARENT VIEW: GROWTH REPORT ──
@@ -281,16 +278,16 @@ private fun ProgressContent(
 
 @Composable
 private fun ParentPerformanceBanner(progress: Progress, childName: String = "") {
-    val statusText = progress.academicStatus ?: if (progress.overallProgress >= 80.0) "Sangat Baik ⭐" else if (progress.overallProgress >= 60.0) "Baik 👍" else "Perlu Perhatian ⚠️"
+    val statusText = progress.academicStatus ?: if (progress.overallProgress >= 80.0) "Sangat Baik" else if (progress.overallProgress >= 60.0) "Baik" else "Perlu Perhatian"
     val displayName = if (childName.isNotBlank()) childName else if (progress.subjectName.isNotBlank() && progress.subjectName != "Pelajaran") progress.subjectName else "Anak Anda"
     val className = progress.className.orEmpty()
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(Brush.linearGradient(colors = listOf(Color(0xFFE11D48), Color(0xFF9F1239))))
-            .border(1.dp, GlassBorder2, RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .padding(14.dp)
     ) {
         Column {
@@ -574,8 +571,9 @@ private fun CompactOverallProgressCard(progress: Progress) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Brush.linearGradient(colors = listOf(NeonBlue, StudentNeon)))
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .padding(14.dp),
         contentAlignment = Alignment.Center,
     ) {

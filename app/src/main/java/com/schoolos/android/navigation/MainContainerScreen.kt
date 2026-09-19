@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -192,19 +193,30 @@ private fun PillNavItem(
     onClick: () -> Unit,
 ) {
     val iconSize by animateDpAsState(
-        targetValue = if (selected) 20.dp else 19.dp,
-        animationSpec = tween(200),
+        targetValue = if (selected) 22.dp else 20.dp,
+        animationSpec = tween(180),
         label = "iconSize",
     )
 
-    Column(
+    Box(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+            .height(48.dp)
+            .clip(RoundedCornerShape(24.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
     ) {
+        // Active capsule indicator behind icon
+        if (selected) {
+            Box(
+                modifier = Modifier
+                    .width(48.dp)
+                    .height(36.dp)
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(activeColor.copy(alpha = 0.16f))
+                    .border(1.dp, activeColor.copy(alpha = 0.35f), RoundedCornerShape(18.dp)),
+            )
+        }
+
         if (item.badgeCount > 0) {
             BadgedBox(
                 badge = {
@@ -213,56 +225,18 @@ private fun PillNavItem(
                     }
                 }
             ) {
-                NavIcon(item, selected, activeColor, iconSize)
+                Icon(
+                    item.icon,
+                    contentDescription = item.label,
+                    tint = if (selected) activeColor else TextTertiary,
+                    modifier = Modifier.size(iconSize),
+                )
             }
         } else {
-            NavIcon(item, selected, activeColor, iconSize)
-        }
-
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = item.label,
-            fontSize = 10.sp,
-            fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
-            color = if (selected) activeColor else TextTertiary,
-            maxLines = 1,
-        )
-    }
-}
-
-@Composable
-private fun NavIcon(
-    item: BottomNavItem,
-    selected: Boolean,
-    activeColor: Color,
-    iconSize: androidx.compose.ui.unit.Dp,
-) {
-    val circleSize = 38.dp
-    if (selected) {
-        Box(
-            modifier = Modifier
-                .size(circleSize)
-                .clip(CircleShape)
-                .background(activeColor.copy(alpha = 0.16f))
-                .border(1.dp, activeColor.copy(alpha = 0.3f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
             Icon(
                 item.icon,
                 contentDescription = item.label,
-                tint = activeColor,
-                modifier = Modifier.size(iconSize),
-            )
-        }
-    } else {
-        Box(
-            modifier = Modifier.size(circleSize),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                item.icon,
-                contentDescription = item.label,
-                tint = TextTertiary,
+                tint = if (selected) activeColor else TextTertiary,
                 modifier = Modifier.size(iconSize),
             )
         }

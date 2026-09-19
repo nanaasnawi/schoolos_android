@@ -11,8 +11,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -45,7 +47,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.ui.layout.ContentScale
+import coil.compose.AsyncImage
 import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.LineTrendChart
 import com.schoolos.android.core.designsystem.NeonBlue
@@ -55,6 +63,8 @@ import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.domain.model.BookReadingItem
+import com.schoolos.android.domain.model.LibraryBook
 
 fun LazyListScope.studentContent(
     onNavigateToSessions: () -> Unit,
@@ -79,6 +89,10 @@ fun LazyListScope.studentContent(
     topGradeSubjects: List<com.schoolos.android.domain.model.SubjectGradeSummary> = emptyList(),
     studentProgress: com.schoolos.android.domain.model.Progress? = null,
     progressPercentage: Float = 0f,
+    activeReadingHistory: List<BookReadingItem> = emptyList(),
+    recommendedSibiBook: LibraryBook? = null,
+    onOpenBookReading: (BookReadingItem) -> Unit = {},
+    onStartReadingSibi: (LibraryBook) -> Unit = {},
 ) {
     val currentSubject = todaySessions.firstOrNull { it.status == "active" }?.subjectName
         ?: todaySessions.firstOrNull()?.subjectName
@@ -155,10 +169,9 @@ fun LazyListScope.studentContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = GlassBorder)
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(22.dp)),
+                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp)),
         ) {
             if (todaySessions.isEmpty()) {
                 Column(
@@ -213,6 +226,50 @@ fun LazyListScope.studentContent(
         }
     }
 
+    // ── 2B. READING PROGRESS & SIBI BOOK INTEGRATION ────────────────────────────
+    if (activeReadingHistory.isNotEmpty()) {
+        item {
+            LightSectionHeader(
+                title = "Lanjutkan Membaca",
+                sub = "${activeReadingHistory.size} Buku dalam progres",
+                onSeeAll = onNavigateToLearning,
+            )
+        }
+
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                activeReadingHistory.take(2).forEach { item ->
+                    ReadingHistoryCard(
+                        item = item,
+                        onContinueReading = { onOpenBookReading(item) },
+                    )
+                }
+            }
+        }
+    } else {
+        item {
+            LightSectionHeader(
+                title = "Rekomendasi Buku SIBI",
+                sub = "Buku resmi Kemendikdasmen RI",
+                onSeeAll = onNavigateToLearning,
+            )
+        }
+
+        item {
+            val book = recommendedSibiBook
+            if (book != null) {
+                SibiBookRecommendationCard(
+                    book = book,
+                    onStartReading = { onStartReadingSibi(book) },
+                )
+            } else {
+                SibiCuratedPlaceholderCard(
+                    onExploreLibrary = onNavigateToLearning,
+                )
+            }
+        }
+    }
+
     // ── 3. ACADEMIC PERFORMANCE & LEVEL SNAPSHOT ─────────────────────────────────
     item {
         LightSectionHeader(
@@ -226,10 +283,9 @@ fun LazyListScope.studentContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(6.dp, RoundedCornerShape(22.dp), spotColor = GlassBorder)
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
+                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
                 .clickable(onClick = onNavigateToGrades)
                 .padding(18.dp),
         ) {
@@ -346,3 +402,365 @@ private fun formatSessionTime(rawTime: String?): String {
         "--:--"
     }
 }
+
+@Composable
+private fun ReadingHistoryCard(
+    item: BookReadingItem,
+    onContinueReading: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .clickable(onClick = onContinueReading)
+            .padding(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Cover Image with fallback
+            Box(
+                modifier = Modifier
+                    .size(width = 54.dp, height = 76.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (!item.coverUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = item.coverUrl,
+                        contentDescription = item.title,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop,
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = null,
+                        tint = NeonBlue,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+
+            // Book Metadata & Progress
+            Column(
+                modifier = Modifier.weight(1f),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(NeonBlue.copy(alpha = 0.12f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            text = (item.subjectName ?: "Materi Bacaan").uppercase(),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonBlue,
+                        )
+                    }
+                    val gradeLevel = item.gradeLevelName
+                    if (!gradeLevel.isNullOrBlank()) {
+                        Text(
+                            text = gradeLevel,
+                            fontSize = 10.sp,
+                            color = TextTertiary,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                Text(
+                    text = item.title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                val authorInfo = item.author ?: item.publisher ?: "Pusat Perbukuan"
+                Text(
+                    text = authorInfo,
+                    fontSize = 11.sp,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                // Progress Bar & Info
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val pageText = if (item.startPage != null && item.endPage != null) {
+                        "Hal. ${item.currentPage} (Tugas: ${item.startPage}-${item.endPage})"
+                    } else {
+                        "Halaman ${item.currentPage} / ${item.totalPages}"
+                    }
+                    Text(
+                        text = pageText,
+                        fontSize = 10.sp,
+                        color = TextTertiary,
+                    )
+                    Text(
+                        text = "${(item.progressPercentage * 100).toInt()}%",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonBlue,
+                    )
+                }
+
+                Spacer(Modifier.height(4.dp))
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(CosmicSurface2),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(item.progressPercentage.coerceIn(0.02f, 1f))
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(NeonBlue),
+                    )
+                }
+            }
+
+            // Quick Arrow Icon
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = "Lanjutkan",
+                tint = TextTertiary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun SibiBookRecommendationCard(
+    book: LibraryBook,
+    onStartReading: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .padding(14.dp),
+    ) {
+        Column {
+            // Top SIBI badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(NeonBlue.copy(alpha = 0.12f))
+                        .border(0.5.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        text = "SIBI KEMENDIKDASMEN • RESMI",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonBlue,
+                        letterSpacing = 0.4.sp,
+                    )
+                }
+
+                Text(
+                    text = "Kurikulum Merdeka",
+                    fontSize = 10.sp,
+                    color = TextTertiary,
+                )
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                // Book cover
+                Box(
+                    modifier = Modifier
+                        .size(width = 64.dp, height = 88.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (!book.coverUrl.isNullOrBlank()) {
+                        AsyncImage(
+                            model = book.coverUrl,
+                            contentDescription = book.title,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = null,
+                            tint = NeonBlue,
+                            modifier = Modifier.size(28.dp),
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = book.title,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        lineHeight = 18.sp,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    val authorText = book.author ?: "Pusat Perbukuan"
+                    Text(
+                        text = "Oleh: $authorText",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+
+                    val subjectAndLevel = listOfNotNull(book.subjectName, book.gradeLevelName).joinToString(" • ")
+                    if (subjectAndLevel.isNotBlank()) {
+                        Text(
+                            text = subjectAndLevel,
+                            fontSize = 10.sp,
+                            color = TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    Text(
+                        text = "${book.totalPages} Halaman Tersedia",
+                        fontSize = 10.sp,
+                        color = TextTertiary,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Action button: Mulai Membaca
+            Button(
+                onClick = onStartReading,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(40.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = NeonBlue,
+                    contentColor = Color.White,
+                ),
+                shape = RoundedCornerShape(10.dp),
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                    contentDescription = null,
+                    modifier = Modifier.size(15.dp),
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Mulai Membaca Buku Ini",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SibiCuratedPlaceholderCard(
+    onExploreLibrary: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .clickable(onClick = onExploreLibrary)
+            .padding(14.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(NeonBlue.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                    contentDescription = null,
+                    tint = NeonBlue,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "Perpustakaan Digital SIBI",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                )
+                Text(
+                    text = "Jelajahi 600+ buku teks resmi Kurikulum Merdeka",
+                    fontSize = 11.sp,
+                    color = TextTertiary,
+                )
+            }
+
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = TextTertiary,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+

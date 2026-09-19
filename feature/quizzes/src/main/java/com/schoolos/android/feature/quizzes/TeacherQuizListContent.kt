@@ -17,8 +17,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -69,30 +67,30 @@ private fun TeacherQuizSectionHeader(title: String, count: Int, accentColor: Col
     ) {
         Box(
             modifier = Modifier
-                .size(8.dp)
+                .size(6.dp)
                 .clip(CircleShape)
                 .background(accentColor)
         )
         Spacer(Modifier.width(8.dp))
         Text(
             text = title.uppercase(),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Black,
-            color = TextPrimary,
-            letterSpacing = 0.8.sp
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextSecondary,
+            letterSpacing = 0.6.sp
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
+                .clip(RoundedCornerShape(4.dp))
                 .background(accentColor.copy(alpha = 0.12f))
-                .padding(horizontal = 7.dp, vertical = 2.dp)
+                .padding(horizontal = 6.dp, vertical = 2.dp)
         ) {
             Text(
                 "$count",
                 color = accentColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.ExtraBold
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold
             )
         }
     }
@@ -104,23 +102,21 @@ private fun TeacherQuizCard(
     onClick: () -> Unit,
     isArchived: Boolean = false
 ) {
-    val gradientColors = subjectGradient(quiz.title)
     val icon = subjectIcon(quiz.title)
     val accentColor = if (isArchived) TextTertiary else TeacherNeon
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(3.dp, RoundedCornerShape(20.dp), spotColor = GlassOverlay, ambientColor = GlassOverlay)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
             .border(
-                width = 1.dp,
-                color = if (isArchived) GlassBorder else TeacherNeon.copy(alpha = 0.3f),
-                shape = RoundedCornerShape(20.dp)
+                width = 0.5.dp,
+                color = GlassBorder,
+                shape = RoundedCornerShape(12.dp)
             )
             .clickable(onClick = onClick)
-            .padding(14.dp)
+            .padding(12.dp)
     ) {
         Column {
             // Top Row
@@ -134,23 +130,23 @@ private fun TeacherQuizCard(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .weight(1f, fill = false)
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .background(accentColor.copy(alpha = 0.10f))
-                        .border(1.dp, accentColor.copy(alpha = 0.22f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                        .border(0.5.dp, accentColor.copy(alpha = 0.22f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(6.dp)
+                            .size(5.dp)
                             .clip(CircleShape)
                             .background(accentColor)
                     )
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(5.dp))
                     Text(
                         text = (quiz.subjectName ?: "Evaluasi").uppercase(),
                         color = accentColor,
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
+                        fontWeight = FontWeight.Bold,
                         letterSpacing = 0.4.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -163,60 +159,57 @@ private fun TeacherQuizCard(
                 if (isArchived) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(CosmicDark)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text("ARSIP", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
+                        Text("ARSIP", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
                     }
                 } else {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(6.dp))
                             .background(TeacherNeon.copy(alpha = 0.12f))
-                            .border(1.dp, TeacherNeon.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .border(0.5.dp, TeacherNeon.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text("AKTIF", color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, letterSpacing = 0.5.sp)
+                        Text("AKTIF", color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
                     }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
             // Main row
             Row(verticalAlignment = Alignment.Top) {
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(accentColor.copy(alpha = 0.18f), accentColor.copy(alpha = 0.08f))
-                            )
-                        )
-                        .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, null, tint = accentColor, modifier = Modifier.size(24.dp))
+                    Icon(icon, null, tint = TextPrimary, modifier = Modifier.size(20.dp))
                 }
 
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(10.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = quiz.title,
-                        fontWeight = FontWeight.ExtraBold,
+                        fontWeight = FontWeight.SemiBold,
                         fontSize = 14.sp,
                         color = if (isArchived) TextSecondary else TextPrimary,
-                        lineHeight = 20.sp,
+                        lineHeight = 18.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
 
                     val desc = quiz.description
                     if (!desc.isNullOrBlank()) {
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = desc,
                             color = TextTertiary,
@@ -228,7 +221,7 @@ private fun TeacherQuizCard(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
             // Bottom meta row
             Row(
@@ -244,10 +237,11 @@ private fun TeacherQuizCard(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(CosmicDark)
+                            .background(CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text("📝 ${quiz.questionsCount} Soal", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                        Text("${quiz.questionsCount} Soal", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     }
 
                     Row(
@@ -255,10 +249,10 @@ private fun TeacherQuizCard(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
                             .background(NeonSuccess.copy(alpha = 0.10f))
-                            .border(1.dp, NeonSuccess.copy(alpha = 0.20f), RoundedCornerShape(6.dp))
+                            .border(0.5.dp, NeonSuccess.copy(alpha = 0.20f), RoundedCornerShape(6.dp))
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text("🎯 KKM ${quiz.passingScore}", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text("KKM ${quiz.passingScore}", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     }
 
                     quiz.timeLimitMinutes?.takeIf { it > 0 }?.let { mins ->
@@ -266,30 +260,24 @@ private fun TeacherQuizCard(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(CosmicDark)
+                                .background(CosmicSurface2)
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
                                 .padding(horizontal = 7.dp, vertical = 3.dp)
                         ) {
-                            Icon(Icons.Default.Timer, null, modifier = Modifier.size(11.dp), tint = TextTertiary)
+                            Icon(Icons.Default.Timer, null, modifier = Modifier.size(10.dp), tint = TextTertiary)
                             Spacer(Modifier.width(3.dp))
-                            Text("$mins mnt", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                            Text("$mins mnt", fontSize = 10.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
                         }
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(32.dp)
-                        .clip(CircleShape)
-                        .background(accentColor.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Buka",
-                        tint = accentColor,
-                        modifier = Modifier.size(15.dp)
-                    )
-                }
+                // Forward chevron
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = "Buka",
+                    tint = TextTertiary,
+                    modifier = Modifier.size(14.dp)
+                )
             }
         }
     }

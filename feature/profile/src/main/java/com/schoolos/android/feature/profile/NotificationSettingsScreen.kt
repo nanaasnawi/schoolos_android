@@ -44,35 +44,12 @@ fun NotificationSettingsScreen(
 
     Scaffold(
         containerColor = CosmicBlack,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    CustomBackButton(onClick = onBack)
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            text = "Notifikasi & Pengingat",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Atur frekuensi & jenis pengingat tugas",
-                            fontSize = 12.sp,
-                            color = TextTertiary
-                        )
-                    }
-                }
-            }
+            ExecutiveTopBar(
+                title = "Notifikasi & Pengingat",
+                subtitle = "Atur frekuensi & jenis pengingat tugas",
+                onBack = onBack,
+            )
         }
     ) { padding ->
         Column(

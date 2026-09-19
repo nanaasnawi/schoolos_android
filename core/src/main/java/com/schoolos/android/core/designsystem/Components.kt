@@ -45,6 +45,7 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
@@ -82,6 +83,32 @@ fun SchoolOsBrandLogo(
     modifier: Modifier = Modifier,
     size: Int = 40,
     logoUrl: String? = null,
+) {
+    if (!logoUrl.isNullOrBlank()) {
+        Box(
+            modifier = modifier.size(size.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            DynamicSchoolLogo(
+                logoUrl = logoUrl,
+                modifier = Modifier
+                    .size(size.dp)
+                    .clip(RoundedCornerShape((size * 0.28).dp))
+                    .border(1.dp, GlassBorder, RoundedCornerShape((size * 0.28).dp)),
+                fallback = {
+                    DefaultBrandLogoContent(size)
+                }
+            )
+        }
+    } else {
+        DefaultBrandLogoContent(size, modifier)
+    }
+}
+
+@Composable
+private fun DefaultBrandLogoContent(
+    size: Int,
+    modifier: Modifier = Modifier,
 ) {
     val infiniteTransition = rememberInfiniteTransition(label = "logoGlow")
     val glowPulse by infiniteTransition.animateFloat(
@@ -606,41 +633,45 @@ fun CustomBackButton(
     modifier: Modifier = Modifier,
     onHero: Boolean = false,
     backgroundColor: Color = if (onHero) {
-        Color.White.copy(alpha = 0.2f)
+        Color.White.copy(alpha = 0.18f)
     } else {
-        MaterialTheme.colorScheme.surface
+        Color.Transparent
     },
     contentColor: Color = if (onHero) {
         Color.White
     } else {
-        MaterialTheme.colorScheme.onSurface
+        TextPrimary
     },
     borderColor: Color = if (onHero) {
         Color.White.copy(alpha = 0.25f)
     } else {
-        MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+        Color.Transparent
     },
 ) {
-    Box(
-        modifier = modifier
-            .shadow(
-                elevation = if (onHero) 0.dp else 2.dp,
-                shape = CircleShape,
-                spotColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.08f)
-            )
-            .size(40.dp)
-            .clip(CircleShape)
-            .background(backgroundColor)
-            .border(1.dp, borderColor, CircleShape)
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
+    IconButton(
+        onClick = onClick,
+        modifier = modifier.size(36.dp)
     ) {
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-            contentDescription = "Kembali",
-            tint = contentColor,
-            modifier = Modifier.size(20.dp)
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (onHero) {
+                        Modifier
+                            .clip(CircleShape)
+                            .background(backgroundColor)
+                            .border(0.5.dp, borderColor, CircleShape)
+                    } else Modifier
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Kembali",
+                tint = contentColor,
+                modifier = Modifier.size(20.dp)
+            )
+        }
     }
 }
 

@@ -7,14 +7,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,7 +22,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -78,106 +73,81 @@ fun GradebookListScreen(
         }
     }
 
-    Scaffold(containerColor = CosmicBlack) { padding ->
-        Column(
+    Scaffold(
+        containerColor = CosmicBlack,
+        topBar = {
+            ExecutiveTopBar(
+                title = "Buku Nilai",
+                subtitle = if (isTeacher && state.className.isNotBlank()) "Wali Kelas • Kelas ${state.className}" else "Rekapitulasi Nilai Akademik",
+                onBack = onBack,
+            )
+        }
+    ) { padding ->
+        PullRefreshContainer(
+            isRefreshing = state.isRefreshing,
+            onRefresh = viewModel::refresh,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(padding),
         ) {
-            // ── TOP BAR WITH PERSISTENT BACK BUTTON & IDENTITY ───────────
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 18.dp, end = 18.dp, top = 6.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (onBack != null) {
-                    CustomBackButton(onClick = onBack)
-                    Spacer(Modifier.width(12.dp))
-                }
-                Column {
-                    Text(
-                        text = "Buku Nilai",
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Black,
-                        color = TextPrimary,
-                        letterSpacing = (-0.5).sp
-                    )
-                    if (isTeacher && state.className.isNotBlank()) {
-                        Text(
-                            text = "Wali Kelas • Kelas ${state.className}",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TeacherNeon
-                        )
-                    }
-                }
-            }
-
-            PullRefreshContainer(
-                isRefreshing = state.isRefreshing,
-                onRefresh = viewModel::refresh,
-                modifier = Modifier.weight(1f),
-            ) {
-                if (state.isLoading) {
-                    LoadingState()
-                } else if (state.error != null) {
-                    ErrorState(message = state.error!!)
-                } else if (state.subjects.isEmpty()) {
-                    EmptyState("Belum ada mata pelajaran tercatat.", Icons.Default.EmojiEvents)
-                } else {
-                    LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 100.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        // ── STUDENT VIEW ─────────────────────────────────
-                        if (!isTeacher) {
-                            item {
-                                StudentGradeHeroHeader(state.subjects)
-                            }
-                            item {
-                                val filters = listOf("Semua Mapel", "Wajib", "MIPA", "Muatan Lokal")
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                                ) {
-                                    items(filters) { filter ->
-                                        val isSelected = filter == selectedFilter
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(14.dp))
-                                                .background(if (isSelected) NeonBlue.copy(alpha = 0.12f) else CosmicNavy)
-                                                .border(
-                                                    1.dp,
-                                                    if (isSelected) NeonBlue.copy(alpha = 0.45f) else GlassBorder,
-                                                    RoundedCornerShape(14.dp),
-                                                )
-                                                .clickable { selectedFilter = filter }
-                                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                                        ) {
-                                            Text(
-                                                filter,
-                                                fontSize = 12.sp,
-                                                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-                                                color = if (isSelected) NeonBlue else TextTertiary,
+            if (state.isLoading) {
+                LoadingState()
+            } else if (state.error != null) {
+                ErrorState(message = state.error!!)
+            } else if (state.subjects.isEmpty()) {
+                EmptyState("Belum ada mata pelajaran tercatat.", Icons.Default.Assessment)
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    // ── STUDENT VIEW ─────────────────────────────────
+                    if (!isTeacher) {
+                        item {
+                            StudentGradeHeroHeader(state.subjects)
+                        }
+                        item {
+                            val filters = listOf("Semua Mapel", "Wajib", "MIPA", "Muatan Lokal")
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                            ) {
+                                items(filters) { filter ->
+                                    val isSelected = filter == selectedFilter
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) CosmicSurface2 else CosmicNavy)
+                                            .border(
+                                                0.5.dp,
+                                                if (isSelected) GlassBorder2 else GlassBorder,
+                                                RoundedCornerShape(8.dp),
                                             )
-                                        }
+                                            .clickable { selectedFilter = filter }
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                    ) {
+                                        Text(
+                                            filter,
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                            color = if (isSelected) TextPrimary else TextTertiary,
+                                        )
                                     }
                                 }
                             }
-                            studentGradebookContent(
-                                subjects = filteredSubjects,
-                                onSubjectClick = onSubjectClick
-                            )
-                        } else {
-                            // ── TEACHER VIEW (WALIKELAS LEGER NILAI) ───────────
-                            teacherGradebookContent(
-                                subjects = filteredSubjects,
-                                className = state.className,
-                                onSubjectClick = onSubjectClick
-                            )
                         }
+                        studentGradebookContent(
+                            subjects = filteredSubjects,
+                            onSubjectClick = onSubjectClick
+                        )
+                    } else {
+                        // ── TEACHER VIEW (WALIKELAS LEGER NILAI) ───────────
+                        teacherGradebookContent(
+                            subjects = filteredSubjects,
+                            className = state.className,
+                            onSubjectClick = onSubjectClick
+                        )
                     }
                 }
             }
@@ -201,71 +171,78 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
         else -> Pair("-", "Belum Ada Nilai")
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .background(Brush.linearGradient(listOf(NeonBlue, StudentNeon)))
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .padding(14.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Top
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    "PERFORMA AKADEMIK",
-                    color = Color.White.copy(alpha = 0.7f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    "Semester Aktif",
-                    color = Color.White,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Black,
-                )
-            }
-            Text("🏆", fontSize = 42.sp)
-        }
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        "PERFORMA AKADEMIK",
+                        color = TextSecondary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.6.sp
+                    )
+                }
 
-        Spacer(Modifier.height(24.dp))
-
-        Row(verticalAlignment = Alignment.Bottom) {
-            Text(
-                if (gradedSubjects.isNotEmpty()) "%.1f".format(avgScore) else "-",
-                color = Color.White,
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = (-2).sp,
-            )
-            Spacer(Modifier.width(12.dp))
-            Column(modifier = Modifier.padding(bottom = 6.dp)) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(NeonSuccess.copy(alpha = 0.12f))
+                        .border(0.5.dp, NeonSuccess.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
-                    Text(predicate, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                    Text(predicate, color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
                 }
-                Spacer(Modifier.height(4.dp))
-                Text(predicateDesc, color = Color.White.copy(alpha = 0.8f), fontSize = 11.sp, fontWeight = FontWeight.Bold)
             }
-        }
 
-        Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(10.dp))
 
-        // Executive Summary Strip
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            GradeMetricPill("${subjects.size} Mapel", Modifier.weight(1f))
-            GradeMetricPill("$totalGraded / $totalComponents Done", Modifier.weight(1.5f))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    text = if (gradedSubjects.isNotEmpty()) "%.1f".format(avgScore) else "-",
+                    color = TextPrimary,
+                    fontSize = 32.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = (-1).sp,
+                )
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    text = predicateDesc,
+                    color = TextTertiary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Normal,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Executive Summary Strip
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                GradeMetricPill("${subjects.size} Mapel", Modifier.weight(1f))
+                GradeMetricPill("$totalGraded / $totalComponents Dinilai", Modifier.weight(1.5f))
+            }
         }
     }
 }
@@ -274,11 +251,12 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
 private fun GradeMetricPill(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.15f))
-            .padding(vertical = 8.dp),
+            .clip(RoundedCornerShape(6.dp))
+            .background(CosmicSurface2)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+            .padding(vertical = 6.dp, horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+        Text(text, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
     }
 }

@@ -46,27 +46,10 @@ fun LearningMaterialDetailScreen(
         Scaffold(
             containerColor = CosmicBlack,
             topBar = {
-                Surface(
-                    color = CosmicNavy,
-                    modifier = Modifier.fillMaxWidth().border(1.dp, GlassBorder)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .statusBarsPadding()
-                            .padding(horizontal = 10.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        CustomBackButton(onClick = onBack)
-                        Spacer(Modifier.width(12.dp))
-                        Text(
-                            text = "Memuat Modul...",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
-                }
+                ExecutiveTopBar(
+                    title = "Memuat Modul...",
+                    onBack = onBack,
+                )
             }
         ) { padding ->
             Box(
@@ -98,77 +81,47 @@ fun LearningMaterialDetailScreen(
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
-            Surface(
-                color = CosmicNavy,
-                modifier = Modifier.fillMaxWidth().border(1.dp, GlassBorder)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CustomBackButton(onClick = onBack)
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                text = "Isi Modul Pembelajaran",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = material.subject,
-                                fontSize = 11.sp,
-                                color = TextTertiary
-                            )
+            ExecutiveTopBar(
+                title = "Isi Modul Pembelajaran",
+                subtitle = material.subject,
+                onBack = onBack,
+                actions = {
+                    if (isTeacher) {
+                        IconButton(
+                            onClick = { showEditDialog = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edit Materi", tint = TextSecondary, modifier = Modifier.size(17.dp))
+                        }
+                        IconButton(
+                            onClick = { showDeleteDialog = true },
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(Icons.Default.Delete, contentDescription = "Hapus Materi", tint = NeonError, modifier = Modifier.size(17.dp))
                         }
                     }
-
-                    // Actions (Teacher Management & Font Size Adjuster)
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                            .clickable { if (textSizeMultiplier > 0.85f) textSizeMultiplier -= 0.15f }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
-                        if (isTeacher) {
-                            IconButton(
-                                onClick = { showEditDialog = true },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(Icons.Default.Edit, contentDescription = "Edit Materi", tint = TeacherNeon, modifier = Modifier.size(17.dp))
-                            }
-                            IconButton(
-                                onClick = { showDeleteDialog = true },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(Icons.Default.Delete, contentDescription = "Hapus Materi", tint = NeonError, modifier = Modifier.size(17.dp))
-                            }
-                            Spacer(Modifier.width(4.dp))
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(CosmicDark)
-                                .clickable { if (textSizeMultiplier > 0.85f) textSizeMultiplier -= 0.15f }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text("A-", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(NeonBlue.copy(alpha = 0.15f))
-                                .clickable { if (textSizeMultiplier < 1.4f) textSizeMultiplier += 0.15f }
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text("A+", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                        }
+                        Text("A-", color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                            .clickable { if (textSizeMultiplier < 1.4f) textSizeMultiplier += 0.15f }
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Text("A+", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
-            }
+            )
         },
         bottomBar = {
             Surface(

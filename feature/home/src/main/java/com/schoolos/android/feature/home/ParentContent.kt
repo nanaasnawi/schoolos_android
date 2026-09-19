@@ -86,15 +86,14 @@ fun LazyListScope.parentContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(6.dp, RoundedCornerShape(22.dp), spotColor = ParentNeon.copy(alpha = 0.25f))
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(CosmicNavy)
                 .background(
                     Brush.linearGradient(
                         listOf(ParentNeon.copy(alpha = 0.12f), Color.Transparent)
                     )
                 )
-                .border(1.dp, ParentNeon.copy(alpha = 0.30f), RoundedCornerShape(22.dp))
+                .border(1.dp, ParentNeon.copy(alpha = 0.30f), RoundedCornerShape(16.dp))
                 .clickable(onClick = onNavigateToProgress)
                 .padding(18.dp),
         ) {
@@ -125,7 +124,7 @@ fun LazyListScope.parentContent(
 
                     Spacer(Modifier.width(14.dp))
 
-                    Column {
+                    Column(modifier = Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
@@ -146,6 +145,8 @@ fun LazyListScope.parentContent(
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Black,
                                         color = NeonSuccess,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
                                     )
                                 }
                             }
@@ -155,6 +156,8 @@ fun LazyListScope.parentContent(
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
                             )
                         }
                         Spacer(Modifier.height(3.dp))
@@ -171,6 +174,8 @@ fun LazyListScope.parentContent(
                             text = "Presensi: $attendanceRate • $assignmentsCount Tugas Terdata",
                             fontSize = 11.sp,
                             color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
@@ -250,10 +255,9 @@ fun LazyListScope.parentContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = GlassBorder)
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
+                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
                 .padding(18.dp),
         ) {
             val parsedRate = attendanceRate.removeSuffix("%").toFloatOrNull()?.let { it / 100f } ?: 0.95f

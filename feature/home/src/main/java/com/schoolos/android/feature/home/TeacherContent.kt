@@ -81,19 +81,13 @@ fun LazyListScope.teacherContent(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(6.dp, RoundedCornerShape(22.dp), spotColor = TeacherNeon.copy(alpha = 0.25f))
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(CosmicNavy)
-                .background(
-                    Brush.linearGradient(
-                        listOf(TeacherNeon.copy(alpha = 0.12f), Color.Transparent)
-                    )
-                )
-                .border(1.dp, TeacherNeon.copy(alpha = 0.30f), RoundedCornerShape(22.dp))
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
                 .clickable {
                     if (displayClass.isNotBlank()) onNavigateToRombelStudents(displayClass)
                 }
-                .padding(18.dp),
+                .padding(14.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -106,44 +100,37 @@ fun LazyListScope.teacherContent(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(50.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(TeacherNeon.copy(alpha = 0.18f))
-                            .border(1.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Group,
                             contentDescription = null,
-                            tint = TeacherNeon,
-                            modifier = Modifier.size(28.dp),
+                            tint = TextPrimary,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
 
-                    Spacer(Modifier.width(14.dp))
+                    Spacer(Modifier.width(12.dp))
 
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(TeacherNeon.copy(alpha = 0.18f))
-                                    .padding(horizontal = 7.dp, vertical = 2.dp),
-                            ) {
-                                Text(
-                                    text = if (isHomeroom) "WALI KELAS RESMI" else "KELAS AMPUAN",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = TeacherNeon,
-                                    letterSpacing = 0.5.sp,
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(3.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (isHomeroom) "WALI KELAS" else "KELAS AMPUAN",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextTertiary,
+                            letterSpacing = 0.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = displayClass,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -153,24 +140,18 @@ fun LazyListScope.teacherContent(
                             text = "Ketuk untuk melihat daftar & presensi siswa",
                             fontSize = 11.sp,
                             color = TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(CircleShape)
-                        .background(TeacherNeon.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = TeacherNeon,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = TextTertiary,
+                    modifier = Modifier.size(15.dp),
+                )
             }
         }
     }
@@ -230,31 +211,6 @@ fun LazyListScope.teacherContent(
                     onClick = onNavigateToLearning,
                     modifier = Modifier.weight(1f),
                 )
-            }
-        }
-    }
-
-    // ── 3. QUICK NAVIGATION TILES ────────────────────────────────────────────────
-    item {
-        LightSectionHeader(
-            title = "Akses Cepat",
-            sub = "Menu operasional harian",
-        )
-    }
-
-    item {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            val quickItems = listOf(
-                QuickAction("Jadwal", Icons.Default.School, TeacherNeon, onNavigateToSessions),
-                QuickAction("Tugas", Icons.AutoMirrored.Filled.Assignment, TeacherNeon, onNavigateToAssignments),
-                QuickAction("Kuis", Icons.Default.Quiz, NeonWarning, onNavigateToQuizzes),
-                QuickAction("Nilai", Icons.Default.Assessment, NeonBlue, onNavigateToGrades),
-            )
-            quickItems.forEach { action ->
-                LightQuickActionBtn(action = action)
             }
         }
     }

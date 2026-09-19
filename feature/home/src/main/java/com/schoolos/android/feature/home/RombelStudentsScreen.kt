@@ -28,22 +28,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Badge
-import androidx.compose.material.icons.filled.Female
-import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Male
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -58,9 +50,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -69,15 +59,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.schoolos.android.core.designsystem.CustomBackButton
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface
+import com.schoolos.android.core.designsystem.CosmicSurface2
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.StudentNeon
-import com.schoolos.android.core.designsystem.TeacherNeon
+import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
@@ -116,134 +104,39 @@ fun RombelStudentsScreen(
             .background(CosmicBlack)
             .statusBarsPadding()
     ) {
-        // ── Hero Header ─────────────────────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        listOf(TeacherNeon.copy(alpha = 0.08f), CosmicBlack)
-                    )
-                )
-        ) {
-            Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
-                // Nav row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+        // Quiet Executive TopBar with compact ratio subtitle
+        ExecutiveTopBar(
+            title = "Daftar Siswa",
+            subtitle = if (students.isNotEmpty()) "Kelas $displayClassName • ${students.size} Siswa ($maleCount L • $femaleCount P)" else "Kelas $displayClassName",
+            onBack = onBack,
+            actions = {
+                IconButton(
+                    onClick = { viewModel.loadStudents(displayClassName) },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CosmicNavy)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
                 ) {
-                    CustomBackButton(
-                        onClick = onBack,
-                    )
-                    IconButton(
-                        onClick = { viewModel.loadStudents(displayClassName) },
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.surface)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f), CircleShape)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Refresh,
-                            contentDescription = "Muat Ulang",
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // Title block
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(52.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(TeacherNeon.copy(alpha = 0.25f), NeonBlue.copy(alpha = 0.2f))
-                                )
-                            )
-                            .border(1.5.dp, TeacherNeon.copy(alpha = 0.45f), RoundedCornerShape(16.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Groups,
-                            contentDescription = null,
-                            tint = TeacherNeon,
-                            modifier = Modifier.size(28.dp)
-                        )
-                    }
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            text = "DAFTAR MURID ROMBEL",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = TeacherNeon,
-                            letterSpacing = 1.5.sp
-                        )
-                        Text(
-                            text = "Kelas $displayClassName",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextPrimary,
-                            letterSpacing = (-0.5).sp
-                        )
-                        Text(
-                            text = "${students.size} siswa terdaftar",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(20.dp))
-
-                // KPI row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    RombelKpiCard(
-                        title = "Total",
-                        value = "${students.size}",
-                        subtitle = "Siswa",
-                        accentColor = TeacherNeon,
-                        icon = Icons.Default.School,
-                        modifier = Modifier.weight(1f)
-                    )
-                    RombelKpiCard(
-                        title = "Laki-laki",
-                        value = "$maleCount",
-                        subtitle = "Siswa",
-                        accentColor = NeonBlue,
-                        icon = Icons.Default.Male,
-                        modifier = Modifier.weight(1f)
-                    )
-                    RombelKpiCard(
-                        title = "Perempuan",
-                        value = "$femaleCount",
-                        subtitle = "Siswi",
-                        accentColor = StudentNeon,
-                        icon = Icons.Default.Female,
-                        modifier = Modifier.weight(1f)
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Muat Ulang",
+                        tint = TextSecondary,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
             }
-        }
+        )
 
-        // ── Search Bar ──────────────────────────────────────────────────
-        Box(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
+        // ── Minimalist Search Bar ───────────────────────────────────────
+        Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)) {
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
-                        "Cari nama murid atau NISN...",
+                        "Cari nama atau NISN...",
                         fontSize = 13.sp,
                         color = TextTertiary
                     )
@@ -257,11 +150,11 @@ fun RombelStudentsScreen(
                     )
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedContainerColor = CosmicNavy,
                     unfocusedContainerColor = CosmicNavy,
-                    focusedBorderColor = TeacherNeon.copy(alpha = 0.7f),
+                    focusedBorderColor = NeonBlue.copy(alpha = 0.5f),
                     unfocusedBorderColor = GlassBorder,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
@@ -271,106 +164,32 @@ fun RombelStudentsScreen(
             )
         }
 
-        // Section divider label
-        if (filteredStudents.isNotEmpty()) {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 2.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "${filteredStudents.size} murid",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextTertiary,
-                    letterSpacing = 0.5.sp
-                )
-                Spacer(Modifier.width(8.dp))
-                HorizontalDivider(
-                    modifier = Modifier.weight(1f),
-                    color = GlassBorder,
-                    thickness = 0.5.dp
-                )
-            }
-        }
-
         // ── Content ─────────────────────────────────────────────────────
         when {
             isLoading && students.isEmpty() -> {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         CircularProgressIndicator(
-                            color = TeacherNeon,
-                            strokeWidth = 3.dp,
-                            modifier = Modifier.size(40.dp)
+                            color = TextSecondary,
+                            strokeWidth = 2.5.dp,
+                            modifier = Modifier.size(32.dp)
                         )
                         Text(
-                            text = "Memuat data murid...",
-                            fontSize = 14.sp,
-                            color = TextSecondary
+                            text = "Memuat data siswa...",
+                            fontSize = 13.sp,
+                            color = TextTertiary
                         )
                     }
                 }
             }
             errorMessage != null && students.isEmpty() -> {
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(Color(0xFFEF4444).copy(alpha = 0.1f))
-                                .border(1.5.dp, Color(0xFFEF4444).copy(alpha = 0.3f), CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.WarningAmber,
-                                contentDescription = null,
-                                tint = Color(0xFFEF4444),
-                                modifier = Modifier.size(36.dp)
-                            )
-                        }
-                        Text(
-                            text = "Gagal Memuat Data",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = errorMessage,
-                            fontSize = 13.sp,
-                            color = TextSecondary,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 20.sp
-                        )
-                        Surface(
-                            onClick = { viewModel.loadStudents(displayClassName) },
-                            shape = RoundedCornerShape(14.dp),
-                            color = TeacherNeon.copy(alpha = 0.15f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.5f))
-                        ) {
-                            Text(
-                                text = "Coba Lagi",
-                                modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TeacherNeon
-                            )
-                        }
-                    }
-                }
-            }
-            filteredStudents.isEmpty() -> {
-                Box(
-                    modifier = Modifier.fillMaxSize().padding(32.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(
@@ -379,34 +198,89 @@ fun RombelStudentsScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(76.dp)
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(NeonError.copy(alpha = 0.1f))
+                                .border(0.5.dp, NeonError.copy(alpha = 0.3f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.WarningAmber,
+                                contentDescription = null,
+                                tint = NeonError,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Text(
+                            text = "Gagal Memuat Data",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = errorMessage,
+                            fontSize = 12.sp,
+                            color = TextTertiary,
+                            textAlign = TextAlign.Center,
+                            lineHeight = 18.sp
+                        )
+                        Surface(
+                            onClick = { viewModel.loadStudents(displayClassName) },
+                            shape = RoundedCornerShape(8.dp),
+                            color = CosmicNavy,
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                        ) {
+                            Text(
+                                text = "Coba Lagi",
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextPrimary
+                            )
+                        }
+                    }
+                }
+            }
+            filteredStudents.isEmpty() -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
                                 .clip(CircleShape)
                                 .background(CosmicNavy)
-                                .border(1.5.dp, GlassBorder, CircleShape),
+                                .border(0.5.dp, GlassBorder, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.People,
                                 contentDescription = null,
                                 tint = TextTertiary,
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier.size(28.dp)
                             )
                         }
                         Text(
-                            text = if (searchQuery.isNotBlank()) "Murid Tidak Ditemukan" else "Belum Ada Siswa",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
+                            text = if (searchQuery.isNotBlank()) "Siswa Tidak Ditemukan" else "Belum Ada Siswa",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
                             color = TextPrimary
                         )
                         Text(
                             text = if (searchQuery.isNotBlank())
-                                "Tidak ada siswa dengan nama/NISN \"$searchQuery\"."
+                                "Tidak ada siswa yang cocok dengan \"$searchQuery\"."
                             else
-                                "Belum ada murid terdaftar di rombel $displayClassName.",
-                            fontSize = 13.sp,
-                            color = TextSecondary,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 20.sp
+                                "Belum ada siswa terdaftar di rombel $displayClassName.",
+                            fontSize = 12.sp,
+                            color = TextTertiary,
+                            textAlign = TextAlign.Center
                         )
                     }
                 }
@@ -416,264 +290,101 @@ fun RombelStudentsScreen(
                     modifier = Modifier
                         .fillMaxSize()
                         .navigationBarsPadding(),
-                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     itemsIndexed(filteredStudents, key = { _, s -> s.id }) { index, student ->
                         var visible by remember { mutableStateOf(false) }
                         LaunchedEffect(Unit) { visible = true }
                         AnimatedVisibility(
                             visible = visible,
-                            enter = fadeIn(tween(180 + index * 35)) +
-                                    slideInVertically(tween(180 + index * 35)) { it / 3 }
+                            enter = fadeIn(tween(140 + index * 20)) +
+                                    slideInVertically(tween(140 + index * 20)) { it / 4 }
                         ) {
                             StudentCard(
                                 student = student,
-                                index = index + 1,
                                 onClick = { onNavigateToStudentDetail(student) }
                             )
                         }
                     }
-                    item { Spacer(Modifier.height(24.dp)) }
                 }
             }
         }
     }
 }
 
+/**
+ * Ultra-minimalist student row item (Apple Contacts / Linear style).
+ * Highly readable, noise-free, and sleek.
+ */
 @Composable
 private fun StudentCard(
     student: ClassStudent,
-    index: Int,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val isFemale = student.gender?.trim()?.uppercase() == "P"
-    val genderColor = if (isFemale) StudentNeon else NeonBlue
     val genderLabel = if (isFemale) "Perempuan" else "Laki-laki"
-    val genderIcon = if (isFemale) Icons.Default.Female else Icons.Default.Male
-    val avatarGradient = if (isFemale)
-        Brush.linearGradient(listOf(Color(0xFFEC4899), Color(0xFFA855F7)))
-    else
-        Brush.linearGradient(listOf(Color(0xFF3B82F6), Color(0xFF06B6D4)))
+    val initial = student.fullName.firstOrNull()?.toString()?.uppercase() ?: "?"
 
-    Box(
+    Row(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
-            .border(
-                width = 1.dp,
-                brush = Brush.linearGradient(
-                    listOf(genderColor.copy(alpha = 0.25f), GlassBorder)
-                ),
-                shape = RoundedCornerShape(20.dp)
-            )
-            .clickable { onClick() }
-            .padding(14.dp)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            // Numbered Avatar
-            Box(
-                modifier = Modifier
-                    .size(50.dp)
-                    .clip(CircleShape)
-                    .background(avatarGradient)
-                    .border(2.dp, Color.White.copy(alpha = 0.2f), CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = "$index",
-                        fontSize = 7.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White.copy(alpha = 0.75f),
-                        lineHeight = 8.sp
-                    )
-                    Text(
-                        text = student.fullName.firstOrNull()?.toString()?.uppercase() ?: "?",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White,
-                        lineHeight = 20.sp
-                    )
-                }
-            }
-
-            Spacer(Modifier.width(14.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = student.fullName,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(NeonSuccess.copy(alpha = 0.12f))
-                            .border(1.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "✓ Aktif",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = NeonSuccess
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(5.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        // NISN badge
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(CosmicSurface)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 7.dp, vertical = 3.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Badge,
-                                contentDescription = null,
-                                tint = TextTertiary,
-                                modifier = Modifier.size(10.dp)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = student.nisn ?: "-",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextSecondary
-                            )
-                        }
-                        // Gender badge
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(genderColor.copy(alpha = 0.1f))
-                                .padding(horizontal = 7.dp, vertical = 3.dp)
-                        ) {
-                            Icon(
-                                imageVector = genderIcon,
-                                contentDescription = null,
-                                tint = genderColor,
-                                modifier = Modifier.size(10.dp)
-                            )
-                            Spacer(Modifier.width(3.dp))
-                            Text(
-                                text = genderLabel,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = genderColor
-                            )
-                        }
-                    }
-
-                    // Click Indicator Pill
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(1.dp)
-                    ) {
-                        Text(
-                            text = "Detail",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TeacherNeon
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Detail Murid",
-                            tint = TeacherNeon,
-                            modifier = Modifier.size(13.dp)
-                        )
-                    }
-                }
-            }
+        // Quiet Monochromatic Avatar
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(CircleShape)
+                .background(CosmicSurface2)
+                .border(0.5.dp, GlassBorder, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = initial,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
         }
-    }
-}
 
-@Composable
-private fun RombelKpiCard(
-    title: String,
-    value: String,
-    subtitle: String,
-    accentColor: Color,
-    icon: ImageVector,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.verticalGradient(
-                    listOf(accentColor.copy(alpha = 0.1f), CosmicNavy)
-                )
-            )
-            .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
-            .padding(12.dp)
-    ) {
-        Column {
-            Box(
-                modifier = Modifier
-                    .size(30.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(accentColor.copy(alpha = 0.18f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(17.dp)
-                )
-            }
+        Spacer(Modifier.width(12.dp))
 
-            Spacer(Modifier.height(8.dp))
-
+        // Student Info
+        Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = value,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Black,
-                color = accentColor,
-                letterSpacing = (-0.5).sp
-            )
-            Text(
-                text = title,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
+                text = student.fullName,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                overflow = TextOverflow.Ellipsis,
             )
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = subtitle,
-                fontSize = 9.sp,
+                text = "NISN: ${student.nisn ?: "-"} • $genderLabel",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Normal,
                 color = TextTertiary,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
+
+        Spacer(Modifier.width(8.dp))
+
+        // Subtle Right Arrow
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+            contentDescription = "Detail",
+            tint = TextTertiary,
+            modifier = Modifier.size(15.dp)
+        )
     }
 }
