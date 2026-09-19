@@ -165,13 +165,12 @@ fun HomeScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .weight(1f)
-                                .clickable(onClick = onNavigateToProfile),
+                                .weight(1f)                      
                         ) {
                             com.schoolos.android.core.designsystem.DynamicSchoolLogo(
                                 logoUrl = state.schoolLogoUrl,
                                 modifier = Modifier
-                                    .size(38.dp)
+                                    .size(42.dp)
                                     .clip(RoundedCornerShape(10.dp)),
                             )
                             Spacer(Modifier.width(10.dp))
@@ -216,7 +215,7 @@ fun HomeScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
+                                    .size(42.dp)
                                     .clip(CircleShape)
                                     .background(CosmicNavy)
                                     .border(1.dp, GlassBorder, CircleShape)
@@ -243,14 +242,14 @@ fun HomeScreen(
                                         imageVector = Icons.Default.Notifications,
                                         contentDescription = "Notifikasi",
                                         tint = TextSecondary,
-                                        modifier = Modifier.size(18.dp),
+                                        modifier = Modifier.size(22.dp),
                                     )
                                 }
                             }
 
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
+                                    .size(42.dp)
                                     .clip(CircleShape)
                                     .background(CosmicNavy)
                                     .border(1.dp, roleAccent.copy(alpha = 0.4f), CircleShape)
@@ -261,7 +260,7 @@ fun HomeScreen(
                                     imageVector = avatarIcon,
                                     contentDescription = "Profil",
                                     tint = roleAccent,
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(22.dp),
                                 )
                             }
                         }
