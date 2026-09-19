@@ -5,6 +5,11 @@
 -keepattributes Exceptions
 
 # Kotlinx Serialization
+-keepattributes *Annotation*,InnerClasses
+-dontnote kotlinx.serialization.SerializationKt
+-keepclassmembers class **$$serializer {
+    public static final **$$serializer INSTANCE;
+}
 -keepclassmembers class kotlinx.serialization.json.** { *; }
 -keepclassmembers class com.schoolos.android.data.remote.dto.** { *; }
 -keepclassmembers class * {
@@ -16,6 +21,10 @@
 -keepclasseswithmembers class * {
     @kotlinx.serialization.Serializable class *;
 }
+-keepclasseswithmembers class * {
+    @kotlinx.serialization.Serializable <methods>;
+}
+-keep class * implements kotlinx.serialization.KSerializer { *; }
 -dontwarn kotlinx.serialization.**
 
 # Retrofit & OkHttp

@@ -6,17 +6,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -38,41 +37,39 @@ fun LazyListScope.studentGradebookContent(
 
 @Composable
 private fun StudentSubjectGradeCard(summary: SubjectGradeSummary, onClick: () -> Unit) {
-    val (emoji, color) = when {
-        summary.subjectName.contains("Matematika", ignoreCase = true) -> Pair("🧮", StudentNeon)
-        summary.subjectName.contains("IPA", ignoreCase = true) || summary.subjectName.contains("Sains", ignoreCase = true) -> Pair("🔬", NeonBlue)
-        summary.subjectName.contains("Bahasa", ignoreCase = true) -> Pair("📚", NeonSuccess)
-        summary.subjectName.contains("IPS", ignoreCase = true) -> Pair("🌍", NeonWarning)
-        summary.subjectName.contains("Penjaskes", ignoreCase = true) || summary.subjectName.contains("Olahraga", ignoreCase = true) -> Pair("⚽", NeonError)
-        else -> Pair("📖", TextTertiary)
+    val icon = subjectIcon(summary.subjectName)
+    val scoreColor = when {
+        summary.finalScore >= 85.0 -> NeonSuccess
+        summary.finalScore >= 75.0 -> StudentNeon
+        summary.finalScore >= 65.0 -> NeonWarning
+        summary.finalScore > 0.0 -> NeonError
+        else -> TextTertiary
     }
 
     Box(
         modifier = Modifier
-            .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = GlassOverlay)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
+            .padding(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // PREMIUM ICON BLOCK
             Box(
                 modifier = Modifier
-                    .size(48.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(color.copy(alpha = 0.1f))
-                    .border(1.dp, color.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(emoji, fontSize = 22.sp)
+                Icon(icon, contentDescription = null, tint = TextPrimary, modifier = Modifier.size(20.dp))
             }
 
-            Spacer(Modifier.width(16.dp))
+            Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
@@ -82,8 +79,8 @@ private fun StudentSubjectGradeCard(summary: SubjectGradeSummary, onClick: () ->
                 ) {
                     Text(
                         summary.subjectName,
-                        fontWeight = FontWeight.Black,
-                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -91,35 +88,41 @@ private fun StudentSubjectGradeCard(summary: SubjectGradeSummary, onClick: () ->
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "%.1f".format(summary.finalScore),
-                        fontWeight = FontWeight.Black,
-                        fontSize = 20.sp,
-                        color = color,
-                        letterSpacing = (-1).sp
+                        if (summary.finalScore > 0) "%.1f".format(summary.finalScore) else "-",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = scoreColor,
                     )
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(color.copy(alpha = 0.1f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(summary.letterGrade, fontSize = 10.sp, fontWeight = FontWeight.Black, color = color)
+                    if (summary.letterGrade.isNotBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(scoreColor.copy(alpha = 0.12f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(summary.letterGrade, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = scoreColor)
+                        }
+                        Spacer(Modifier.width(8.dp))
                     }
-                    Spacer(Modifier.width(10.dp))
                     Text(
                         "${summary.gradedComponentCount}/${summary.componentCount} Dinilai",
                         fontSize = 11.sp,
                         color = TextTertiary,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Normal
                     )
                 }
             }
 
             Spacer(Modifier.width(8.dp))
-            Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(20.dp))
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                contentDescription = null,
+                tint = TextTertiary,
+                modifier = Modifier.size(14.dp)
+            )
         }
     }
 }

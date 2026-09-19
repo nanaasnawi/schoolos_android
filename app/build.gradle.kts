@@ -15,6 +15,8 @@ val localProps = Properties().apply {
 }
 val rawDevUrl: String = localProps.getProperty("dev.serverUrl", "https://schoolosbackend-production.up.railway.app/api/v1/") ?: "https://schoolosbackend-production.up.railway.app/api/v1/"
 val devServerUrl: String = if (!rawDevUrl.trimEnd('/').endsWith("/api/v1")) "${rawDevUrl.trimEnd('/')}/api/v1/" else "${rawDevUrl.trimEnd('/')}/"
+val rawProdUrl: String = localProps.getProperty("prod.serverUrl", "https://schoolosbackend-production.up.railway.app/api/v1/") ?: "https://schoolosbackend-production.up.railway.app/api/v1/"
+val prodServerUrl: String = if (!rawProdUrl.trimEnd('/').endsWith("/api/v1")) "${rawProdUrl.trimEnd('/')}/api/v1/" else "${rawProdUrl.trimEnd('/')}/"
 
 android {
     namespace = "com.schoolos.android"
@@ -33,10 +35,11 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"$devServerUrl\"")
         }
         release {
-            buildConfigField("String", "API_BASE_URL", "\"https://api.schoolos.app/api/v1/\"")
+            buildConfigField("String", "API_BASE_URL", "\"$prodServerUrl\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
 

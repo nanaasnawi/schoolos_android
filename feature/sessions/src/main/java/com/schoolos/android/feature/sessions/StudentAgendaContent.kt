@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
@@ -60,6 +61,7 @@ import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.subjectIcon
 import com.schoolos.android.domain.model.LearningSession
 import java.time.Instant
 import java.time.ZoneId
@@ -79,20 +81,34 @@ fun LazyListScope.studentAgendaContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp, bottom = 24.dp)
-                    .clip(RoundedCornerShape(22.dp))
+                    .clip(RoundedCornerShape(12.dp))
                     .background(CosmicNavy)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(22.dp))
-                    .padding(32.dp),
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("🏖️", fontSize = 42.sp)
-                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
                     Text(
                         text = if (selectedDayName.isNotBlank()) "Tidak Ada Jadwal di $selectedDayName" else "Tidak Ada Jadwal Pelajaran",
                         color = TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -101,20 +117,20 @@ fun LazyListScope.studentAgendaContent(
                         fontSize = 12.sp,
                     )
                     if (!isToday) {
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(14.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(accentColor.copy(alpha = 0.15f))
-                                .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
                                 .clickable(onClick = onJumpToToday)
-                                .padding(horizontal = 16.dp, vertical = 9.dp),
+                                .padding(horizontal = 14.dp, vertical = 7.dp),
                         ) {
                             Text(
                                 text = "Lihat Jadwal Hari Ini",
-                                color = accentColor,
+                                color = TextPrimary,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
+                                fontWeight = FontWeight.Medium,
                             )
                         }
                     }
@@ -146,18 +162,6 @@ private fun StudentTimelineItem(
     val isActive = session.status.equals("active", ignoreCase = true)
     val isCompleted = session.status.equals("completed", ignoreCase = true)
 
-    val (emoji, iconBg) = when {
-        subjectName.contains("Matematika", ignoreCase = true) -> Pair("🧮", Color(0xFF6366F1))
-        subjectName.contains("IPA", ignoreCase = true) || subjectName.contains("Fisika", ignoreCase = true) || subjectName.contains("Biologi", ignoreCase = true) || subjectName.contains("Kimia", ignoreCase = true) -> Pair("🔬", Color(0xFF0EA5E9))
-        subjectName.contains("Bahasa", ignoreCase = true) -> Pair("📚", Color(0xFF10B981))
-        subjectName.contains("Penjaskes", ignoreCase = true) || subjectName.contains("Olahraga", ignoreCase = true) -> Pair("⚽", Color(0xFFF97316))
-        subjectName.contains("IPS", ignoreCase = true) || subjectName.contains("Sejarah", ignoreCase = true) || subjectName.contains("Geografi", ignoreCase = true) -> Pair("🌍", Color(0xFFEAB308))
-        subjectName.contains("Agama", ignoreCase = true) || subjectName.contains("PAI", ignoreCase = true) -> Pair("🕌", Color(0xFF14B8A6))
-        subjectName.contains("Seni", ignoreCase = true) || subjectName.contains("Budaya", ignoreCase = true) -> Pair("🎨", Color(0xFFA855F7))
-        subjectName.contains("Komputer", ignoreCase = true) || subjectName.contains("Informatika", ignoreCase = true) -> Pair("💻", Color(0xFF06B6D4))
-        else -> Pair("📖", Color(0xFF64748B))
-    }
-
     val startHour = formatHourMinute(session.scheduledAt) ?: "07.30"
     val endHour = formatHourMinute(session.endedAt) ?: "09.00"
     val room = session.room ?: "Ruang Kelas"
@@ -183,36 +187,36 @@ private fun StudentTimelineItem(
     ) {
         // ── 1. LEFT TIME RAIL ────────────────────────────────────────────────────
         Column(
-            modifier = Modifier.width(52.dp),
+            modifier = Modifier.width(48.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
             Text(
                 text = startHour,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = if (isActive) NeonSuccess else if (isCompleted) TextSecondary else TextPrimary,
             )
 
             Spacer(Modifier.height(4.dp))
 
-            // Dynamic Status Node
+            // Status Node
             Box(
                 modifier = Modifier
-                    .size(20.dp)
+                    .size(16.dp)
                     .clip(CircleShape)
                     .background(
                         when {
                             isActive -> NeonSuccess.copy(alpha = 0.20f)
                             isCompleted -> NeonSuccess.copy(alpha = 0.15f)
-                            else -> accentColor.copy(alpha = 0.12f)
+                            else -> com.schoolos.android.core.designsystem.CosmicSurface2
                         }
                     )
                     .border(
-                        width = 1.5.dp,
+                        width = 1.dp,
                         color = when {
                             isActive -> NeonSuccess.copy(alpha = pulseAlpha)
                             isCompleted -> NeonSuccess
-                            else -> accentColor.copy(alpha = 0.5f)
+                            else -> GlassBorder
                         },
                         shape = CircleShape,
                     ),
@@ -223,14 +227,14 @@ private fun StudentTimelineItem(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
                         tint = NeonSuccess,
-                        modifier = Modifier.size(11.dp),
+                        modifier = Modifier.size(10.dp),
                     )
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(7.dp)
+                            .size(5.dp)
                             .clip(CircleShape)
-                            .background(if (isActive) NeonSuccess else accentColor),
+                            .background(if (isActive) NeonSuccess else TextTertiary),
                     )
                 }
             }
@@ -241,17 +245,17 @@ private fun StudentTimelineItem(
                 text = endHour,
                 fontSize = 10.sp,
                 color = TextTertiary,
-                fontWeight = FontWeight.Medium,
+                fontWeight = FontWeight.Normal,
             )
 
             // Connecting Track Line
             if (!isLast) {
                 Box(
                     modifier = Modifier
-                        .width(2.dp)
+                        .width(1.dp)
                         .weight(1f)
                         .background(
-                            if (isCompleted) NeonSuccess.copy(alpha = 0.35f)
+                            if (isCompleted) NeonSuccess.copy(alpha = 0.3f)
                             else GlassBorder
                         ),
                 )
@@ -260,195 +264,149 @@ private fun StudentTimelineItem(
 
         Spacer(Modifier.width(10.dp))
 
-        // ── 2. RIGHT RICH SESSION CARD ───────────────────────────────────────────
+        // ── 2. RIGHT OBSIDIAN SESSION CARD ───────────────────────────────────────
         Box(
             modifier = Modifier
                 .weight(1f)
-                .padding(bottom = 12.dp)
-                .shadow(
-                    elevation = if (isActive) 8.dp else 3.dp,
-                    shape = RoundedCornerShape(20.dp),
-                    spotColor = if (isActive) accentColor.copy(alpha = 0.35f) else GlassOverlay,
-                )
-                .clip(RoundedCornerShape(20.dp))
+                .padding(bottom = 10.dp)
+                .clip(RoundedCornerShape(12.dp))
                 .background(CosmicNavy)
-                .background(
-                    if (isActive) Brush.linearGradient(listOf(accentColor.copy(alpha = 0.09f), Color.Transparent))
-                    else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
-                )
                 .border(
-                    width = 1.dp,
-                    color = when {
-                        isActive -> accentColor.copy(alpha = 0.65f)
-                        isCompleted -> NeonSuccess.copy(alpha = 0.25f)
-                        else -> GlassBorder
-                    },
-                    shape = RoundedCornerShape(20.dp),
+                    width = 0.5.dp,
+                    color = if (isActive) NeonSuccess.copy(alpha = 0.5f) else GlassBorder,
+                    shape = RoundedCornerShape(12.dp),
                 )
                 .clickable(onClick = onClick)
-                .animateContentSize(),
+                .padding(14.dp)
         ) {
-            Row(modifier = Modifier.fillMaxWidth()) {
-                // Color Accent Stripe on left
-                Box(
-                    modifier = Modifier
-                        .width(5.dp)
-                        .fillMaxHeight()
-                        .background(if (isActive) NeonSuccess else iconBg),
-                )
-
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(14.dp),
+            Column {
+                // Top Row: Subject + Status Pill
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Top Row: Emoji Avatar + Subject + Status Pill
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f),
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.weight(1f),
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(iconBg.copy(alpha = 0.15f))
-                                    .border(1.dp, iconBg.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text(emoji, fontSize = 18.sp)
-                            }
-
-                            Spacer(Modifier.width(10.dp))
-
-                            Column {
-                                Text(
-                                    text = subjectName,
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = TextPrimary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                Spacer(Modifier.height(1.dp))
-                                Text(
-                                    text = teacherName,
-                                    fontSize = 11.sp,
-                                    color = TextTertiary,
-                                    fontWeight = FontWeight.Medium,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
-                        }
-
-                        // Status Badge Pill
-                        when {
-                            isActive -> {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(NeonSuccess.copy(alpha = 0.18f))
-                                        .border(1.dp, NeonSuccess.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp),
-                                ) {
-                                    Text(
-                                        text = "LIVE",
-                                        color = NeonSuccess,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Black,
-                                    )
-                                }
-                            }
-                            isCompleted -> {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(TextTertiary.copy(alpha = 0.12f))
-                                        .padding(horizontal = 7.dp, vertical = 3.dp),
-                                ) {
-                                    Text(
-                                        text = "SELESAI",
-                                        color = TextTertiary,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
-                            }
-                            else -> {
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(accentColor.copy(alpha = 0.12f))
-                                        .padding(horizontal = 7.dp, vertical = 3.dp),
-                                ) {
-                                    Text(
-                                        text = "SEGERA",
-                                        color = accentColor,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(10.dp))
-
-                    // Location & Room Row
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
-                                imageVector = if (isOnline) Icons.Default.Videocam else Icons.Default.LocationOn,
+                                imageVector = if (isOnline) Icons.Default.Videocam else subjectIcon(subjectName),
                                 contentDescription = null,
-                                tint = TextTertiary,
-                                modifier = Modifier.size(13.dp),
+                                tint = TextSecondary,
+                                modifier = Modifier.size(16.dp),
                             )
-                            Spacer(Modifier.width(4.dp))
+                        }
+
+                        Spacer(Modifier.width(10.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = room,
-                                fontSize = 11.sp,
-                                color = TextSecondary,
+                                text = subjectName,
+                                fontSize = 14.sp,
                                 fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.height(1.dp))
+                            Text(
+                                text = teacherName,
+                                fontSize = 11.sp,
+                                color = TextTertiary,
+                                fontWeight = FontWeight.Normal,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
                         }
+                    }
 
-                        // CTA Button
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    if (isActive) accentColor
-                                    else accentColor.copy(alpha = 0.12f)
-                                )
-                                .clickable(onClick = onClick)
-                                .padding(horizontal = 10.dp, vertical = 5.dp),
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    text = if (isActive) "Masuk Kelas" else "Detail",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isActive) Color.White else accentColor,
-                                )
-                                Spacer(Modifier.width(3.dp))
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = null,
-                                    tint = if (isActive) Color.White else accentColor,
-                                    modifier = Modifier.size(11.dp),
-                                )
-                            }
+                    Spacer(Modifier.width(8.dp))
+
+                    // Status Badge Pill
+                    val (statusLabel, statusColor) = when {
+                        isActive -> Pair("LIVE", NeonSuccess)
+                        isCompleted -> Pair("SELESAI", TextTertiary)
+                        else -> Pair("MENDATANG", TextSecondary)
+                    }
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (isActive) NeonSuccess.copy(alpha = 0.12f) else com.schoolos.android.core.designsystem.CosmicSurface2)
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            text = statusLabel,
+                            color = statusColor,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                // Location & Room Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.weight(1f, fill = false),
+                    ) {
+                        Icon(
+                            imageVector = if (isOnline) Icons.Default.Videocam else Icons.Default.LocationOn,
+                            contentDescription = null,
+                            tint = TextTertiary,
+                            modifier = Modifier.size(12.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = room,
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // CTA Button
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                            .clickable(onClick = onClick)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = if (isActive) "Masuk" else "Detail",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isActive) NeonSuccess else TextSecondary,
+                            )
+                            Spacer(Modifier.width(3.dp))
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = if (isActive) NeonSuccess else TextSecondary,
+                                modifier = Modifier.size(10.dp),
+                            )
                         }
                     }
                 }

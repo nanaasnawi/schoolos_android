@@ -124,8 +124,20 @@ class AuthRepositoryImpl @Inject constructor(
             childId = data.childId,
         )
 
-        if (!data.schoolName.isNullOrBlank()) {
-            authManager.saveSchoolProfile(name = data.schoolName, logoUrl = data.schoolLogoUrl)
+        var schoolName = data.schoolName
+        var schoolLogo = data.schoolLogoUrl
+
+        // Also fetch latest school profile from /api/v1/schools/profile to ensure dynamic tenant logo changes from Next.js are instantly captured!
+        try {
+            val schoolProfile = api.getSchoolProfile().data
+            if (schoolProfile != null) {
+                if (!schoolProfile.name.isNullOrBlank()) schoolName = schoolProfile.name
+                if (!schoolProfile.logoUrl.isNullOrBlank()) schoolLogo = schoolProfile.logoUrl
+            }
+        } catch (_: Exception) {}
+
+        if (!schoolName.isNullOrBlank()) {
+            authManager.saveSchoolProfile(name = schoolName, logoUrl = schoolLogo)
         }
 
         User(id = data.id, name = data.fullName, email = data.email, role = data.role)

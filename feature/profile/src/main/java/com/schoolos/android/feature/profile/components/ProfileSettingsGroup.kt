@@ -76,10 +76,9 @@ fun ProfileSettingsGroup(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(6.dp, RoundedCornerShape(22.dp), spotColor = Color.Black.copy(alpha = 0.05f))
-                .clip(RoundedCornerShape(22.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(22.dp)),
+                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp)),
         ) {
             Column {
                 ProfileSettingRow(
@@ -178,8 +177,7 @@ fun ProfileSettingsGroup(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .shadow(8.dp, RoundedCornerShape(18.dp), spotColor = NeonError.copy(alpha = 0.35f))
-                .clip(RoundedCornerShape(18.dp))
+                .clip(RoundedCornerShape(16.dp))
                 .background(Brush.linearGradient(listOf(Color(0xFFDC2626), Color(0xFFEF4444))))
                 .clickable(onClick = onLogoutClick)
                 .padding(vertical = 15.dp),

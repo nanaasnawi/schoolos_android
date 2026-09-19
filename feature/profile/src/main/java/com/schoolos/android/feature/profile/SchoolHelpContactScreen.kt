@@ -64,35 +64,12 @@ fun SchoolHelpContactScreen(
 
     Scaffold(
         containerColor = CosmicBlack,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    CustomBackButton(onClick = onBack)
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            text = "Bantuan & Kontak Sekolah",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Layanan akademik & pusat kendala",
-                            fontSize = 12.sp,
-                            color = TextTertiary
-                        )
-                    }
-                }
-            }
+            ExecutiveTopBar(
+                title = "Bantuan & Kontak Sekolah",
+                subtitle = "Layanan akademik & pusat kendala",
+                onBack = onBack,
+            )
         }
     ) { padding ->
         Column(

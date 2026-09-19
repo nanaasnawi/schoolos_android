@@ -63,10 +63,13 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.CosmicSurface
+import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.core.designsystem.CustomBackButton
 import com.schoolos.android.core.designsystem.EmptyState
 import com.schoolos.android.core.designsystem.ErrorState
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
 import com.schoolos.android.core.designsystem.GlassBorder
+import com.schoolos.android.core.designsystem.GlassBorder2
 import com.schoolos.android.core.designsystem.LoadingState
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonError
@@ -125,11 +128,37 @@ fun NotificationListScreen(
         }
     }
 
-    Scaffold(containerColor = CosmicBlack) { padding ->
+    Scaffold(
+        containerColor = CosmicBlack,
+        topBar = {
+            ExecutiveTopBar(
+                title = "Pusat Notifikasi",
+                subtitle = if (state.unreadCount > 0) "${state.unreadCount} belum dibaca" else "Semua notifikasi dibaca",
+                onBack = onBack,
+                actions = {
+                    if (state.unreadCount > 0) {
+                        IconButton(
+                            onClick = { viewModel.markAllRead() },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                Icons.Default.DoneAll,
+                                contentDescription = "Tandai Semua Dibaca",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            )
+        }
+    ) { padding ->
         PullRefreshContainer(
             isRefreshing = state.isRefreshing,
             onRefresh = viewModel::refresh,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
         ) {
             when {
                 state.isLoading -> LoadingState()
@@ -139,18 +168,9 @@ fun NotificationListScreen(
                 else -> {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 46.dp, bottom = 100.dp),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp),
                     ) {
-                        // ── 1. COSMIC TOP HEADER ─────────────────────────────
-                        item {
-                            CosmicNotificationTopBar(
-                                onBack = onBack,
-                                unreadCount = state.unreadCount,
-                                markingAll = state.markingAll,
-                                onMarkAllRead = { viewModel.markAllRead() }
-                            )
-                        }
 
                         // ── 2. ROLE SUMMARY BANNER ───────────────────────────
                         item {
@@ -198,36 +218,36 @@ fun NotificationListScreen(
 
                                     Box(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(14.dp))
-                                            .background(if (isSelected) NeonBlue.copy(alpha = 0.15f) else CosmicNavy)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(if (isSelected) CosmicSurface2 else CosmicNavy)
                                             .border(
-                                                1.dp,
-                                                if (isSelected) NeonBlue.copy(alpha = 0.5f) else GlassBorder,
-                                                RoundedCornerShape(14.dp),
+                                                0.5.dp,
+                                                if (isSelected) GlassBorder2 else GlassBorder,
+                                                RoundedCornerShape(8.dp),
                                             )
                                             .clickable { selectedFilter = filter }
-                                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                                            .padding(horizontal = 12.dp, vertical = 6.dp),
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 filter,
                                                 fontSize = 12.sp,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                color = if (isSelected) NeonBlue else TextSecondary,
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                color = if (isSelected) TextPrimary else TextTertiary,
                                             )
                                             if (count > 0) {
                                                 Spacer(Modifier.width(6.dp))
                                                 Box(
                                                     modifier = Modifier
-                                                        .clip(CircleShape)
-                                                        .background(if (isSelected) NeonBlue else CosmicSurface)
-                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(if (isSelected) GlassBorder2 else CosmicSurface2)
+                                                        .padding(horizontal = 5.dp, vertical = 1.dp)
                                                 ) {
                                                     Text(
                                                         count.toString(),
                                                         fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Black,
-                                                        color = if (isSelected) Color.White else TextTertiary
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isSelected) TextPrimary else TextTertiary
                                                     )
                                                 }
                                             }
@@ -326,16 +346,9 @@ private fun NotificationHeroCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        if (unreadCount > 0) StudentNeon.copy(alpha = 0.85f) else NeonBlue.copy(alpha = 0.75f),
-                        CosmicNavy
-                    )
-                )
-            )
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .padding(14.dp)
     ) {
         Row(
@@ -347,17 +360,17 @@ private fun NotificationHeroCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
+                            .size(6.dp)
                             .clip(CircleShape)
                             .background(if (unreadCount > 0) NeonWarning else NeonSuccess)
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(
                         if (unreadCount > 0) "$unreadCount BELUM DIBACA" else "SEMUA SUDAH DIBACA",
                         fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White.copy(alpha = 0.9f),
-                        letterSpacing = 1.sp
+                        fontWeight = FontWeight.Bold,
+                        color = if (unreadCount > 0) NeonWarning else NeonSuccess,
+                        letterSpacing = 0.6.sp
                     )
                 }
                 Spacer(Modifier.height(6.dp))
@@ -366,25 +379,25 @@ private fun NotificationHeroCard(
                     else if (isParent) "Pemberitahuan Tugas, Nilai, & Kehadiran $childName"
                     else "Pantau Tugas, Materi, dan Hasil Penilaian Belajarmu",
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
                     lineHeight = 18.sp
                 )
             }
             Spacer(Modifier.width(12.dp))
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(Color.White.copy(alpha = 0.15f))
-                    .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(14.dp)),
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     if (unreadCount > 0) Icons.Default.NotificationsActive else Icons.Default.Notifications,
                     contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(24.dp)
+                    tint = if (unreadCount > 0) NeonWarning else TextSecondary,
+                    modifier = Modifier.size(20.dp)
                 )
             }
         }
@@ -401,29 +414,28 @@ private fun CosmicNotificationCard(notification: Notification, onClick: () -> Un
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(if (isUnread) CosmicNavy else CosmicNavy.copy(alpha = 0.7f))
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
             .border(
-                1.dp,
-                if (isUnread) accentColor.copy(alpha = 0.45f) else GlassBorder,
-                RoundedCornerShape(16.dp),
+                0.5.dp,
+                if (isUnread) NeonBlue.copy(alpha = 0.35f) else GlassBorder,
+                RoundedCornerShape(12.dp),
             )
             .clickable(onClick = onClick)
-            .padding(14.dp),
+            .padding(12.dp),
     ) {
         Row(verticalAlignment = Alignment.Top) {
-            // Neon Icon Container
             Box(
                 modifier = Modifier
-                    .size(42.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(accentColor.copy(alpha = 0.12f))
-                    .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, null, tint = accentColor, modifier = Modifier.size(22.dp))
+                Icon(icon, null, tint = accentColor, modifier = Modifier.size(18.dp))
             }
-            Spacer(Modifier.width(14.dp))
+            Spacer(Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(

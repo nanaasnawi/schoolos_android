@@ -49,16 +49,15 @@ fun ParentStudentCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(6.dp, RoundedCornerShape(20.dp), spotColor = ParentNeon.copy(alpha = 0.15f))
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
             .background(
                 Brush.linearGradient(
                     listOf(ParentNeon.copy(alpha = 0.06f), Color.Transparent),
                 ),
             )
-            .border(1.dp, ParentNeon.copy(alpha = 0.22f), RoundedCornerShape(20.dp))
-            .padding(14.dp),
+            .border(1.dp, ParentNeon.copy(alpha = 0.22f), RoundedCornerShape(16.dp))
+            .padding(16.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             // Card Header

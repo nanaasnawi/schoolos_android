@@ -4,9 +4,13 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.auth.AuthState
+import com.schoolos.android.core.reading.ReadingHistoryManager
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
+import com.schoolos.android.domain.model.BookReadingItem
 import com.schoolos.android.domain.model.LearningSession
+import com.schoolos.android.domain.model.LibraryBook
+import com.schoolos.android.domain.model.MaterialType
 import com.schoolos.android.domain.model.Progress
 import com.schoolos.android.domain.model.SubjectGradeSummary
 import com.schoolos.android.domain.model.toSubjectSummary
@@ -38,6 +42,7 @@ data class HomeUiState(
     val userRole: String = "student",
     val userEmail: String = "",
     val schoolName: String = "",
+    val schoolLogoUrl: String? = null,
     val unreadCount: Int = 0,
     val gradeAverage: String = "-",
     val gradeStatus: String = "Belum ada data nilai",
@@ -69,6 +74,8 @@ data class HomeUiState(
     val parentAssignmentsCount: String = "0",
     val teacherClasses: List<AcademicClass> = emptyList(),
     val teacherSubjects: List<AcademicSubject> = emptyList(),
+    val activeReadingHistory: List<BookReadingItem> = emptyList(),
+    val recommendedSibiBook: LibraryBook? = null,
     val isRefreshing: Boolean = false,
 )
 
@@ -84,6 +91,7 @@ class HomeViewModel @Inject constructor(
     private val achievementRepository: AchievementRepository,
     private val sessionRepository: SessionRepository,
     private val learningMaterialRepository: LearningMaterialRepository,
+    private val readingHistoryManager: ReadingHistoryManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -112,6 +120,7 @@ class HomeViewModel @Inject constructor(
                         userRole = role,
                         userEmail = auth.email ?: "",
                         schoolName = auth.schoolName ?: "",
+                        schoolLogoUrl = auth.schoolLogoUrl,
                         homeroomClass = homeroom,
                         childName = child,
                         childId = cId,
@@ -288,6 +297,55 @@ class HomeViewModel @Inject constructor(
                     )
                 }
             }
+
+            // 4. Reading History & SIBI Book Recommendations (Kemendikdasmen)
+            val studentId = auth.userId ?: ""
+            val localHistory = readingHistoryManager.getReadingHistory(studentId).filter { !it.isCompleted }
+
+            // Check assigned school learning materials for in-progress assigned books
+            val assignedMaterialsResult = learningMaterialRepository.getMaterials()
+            val assignedBookItems = assignedMaterialsResult.getOrNull()?.filter { mat ->
+                (mat.startPage != null || mat.materialType == MaterialType.DOCUMENT) && !mat.isCompleted
+            }?.map { mat ->
+                BookReadingItem(
+                    id = mat.id,
+                    title = mat.title,
+                    author = mat.teacherName ?: "Guru Pengampu",
+                    publisher = "Materi Sekolah",
+                    subjectName = mat.subject,
+                    gradeLevelName = mat.className,
+                    coverUrl = mat.thumbnailUrl,
+                    fileUrl = mat.mediaUrl,
+                    currentPage = mat.startPage ?: 1,
+                    totalPages = mat.endPage ?: 50,
+                    startPage = mat.startPage,
+                    endPage = mat.endPage,
+                    isCompleted = mat.isCompleted,
+                    materialId = mat.id,
+                )
+            } ?: emptyList()
+
+            // Merge local reading history with active assigned reading materials
+            val combinedHistory = (localHistory + assignedBookItems.filter { assigned ->
+                localHistory.none { it.id == assigned.id || (assigned.fileUrl != null && it.fileUrl == assigned.fileUrl) }
+            }).sortedByDescending { it.lastReadAt ?: "" }
+
+            if (combinedHistory.isNotEmpty()) {
+                _state.update { it.copy(activeReadingHistory = combinedHistory, recommendedSibiBook = null) }
+            } else {
+                // If student has NO reading history, fetch integrated SIBI Kemendikdasmen books
+                learningMaterialRepository.getLibraryBooks().onSuccess { books ->
+                    val recommended = books.firstOrNull { book ->
+                        val t = book.title.lowercase()
+                        !t.contains("panduan guru") && !t.contains("buku guru") && (t.contains("koding") || t.contains("informatika") || t.contains("bahasa") || t.contains("matematika") || t.contains("dasar"))
+                    } ?: books.firstOrNull { book ->
+                        val t = book.title.lowercase()
+                        !t.contains("panduan guru") && !t.contains("buku guru")
+                    } ?: books.firstOrNull()
+
+                    _state.update { it.copy(activeReadingHistory = emptyList(), recommendedSibiBook = recommended) }
+                }
+            }
         } else if (isTeacher) {
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
                 _state.update { it.copy(teacherPendingCount = assignments.size.toString()) }
@@ -341,6 +399,37 @@ class HomeViewModel @Inject constructor(
                 } catch (_: Exception) { null }
             }
         }
+    }
+
+    fun recordReadingProgress(item: BookReadingItem) {
+        val studentId = currentAuth.userId ?: ""
+        readingHistoryManager.saveReadingProgress(studentId, item)
+        val updatedHistory = readingHistoryManager.getReadingHistory(studentId).filter { !it.isCompleted }
+        _state.update { it.copy(activeReadingHistory = updatedHistory) }
+    }
+
+    fun startReadingSibiBook(book: LibraryBook): BookReadingItem {
+        val item = BookReadingItem(
+            id = book.id,
+            title = book.title,
+            author = book.author ?: "Pusat Perbukuan",
+            publisher = book.publisher ?: "Kemendikbudristek",
+            subjectName = book.subjectName ?: "Mata Pelajaran",
+            gradeLevelName = book.gradeLevelName,
+            coverUrl = book.coverUrl,
+            fileUrl = book.fileUrl,
+            currentPage = 1,
+            totalPages = book.totalPages,
+        )
+        recordReadingProgress(item)
+        return item
+    }
+
+    fun markBookCompleted(bookId: String) {
+        val studentId = currentAuth.userId ?: ""
+        readingHistoryManager.markBookCompleted(studentId, bookId)
+        val updatedHistory = readingHistoryManager.getReadingHistory(studentId).filter { !it.isCompleted }
+        _state.update { it.copy(activeReadingHistory = updatedHistory) }
     }
 
     fun logout() {

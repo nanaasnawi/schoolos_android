@@ -6,19 +6,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -53,7 +49,7 @@ fun LazyListScope.studentAssignmentListContent(
             renderAssignmentSection(
                 title = "Segera Berakhir",
                 items = dueSoonItems,
-                accentColor = NeonError,
+                accentColor = NeonWarning,
                 onAssignmentClick = onAssignmentClick
             )
         }
@@ -115,36 +111,29 @@ private fun SectionHeader(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 6.dp)
+            .padding(start = 2.dp, top = 12.dp, bottom = 4.dp)
     ) {
-        // Glowing dot indicator
-        Box(
-            modifier = Modifier
-                .size(8.dp)
-                .clip(CircleShape)
-                .background(accentColor)
-        )
-        Spacer(Modifier.width(8.dp))
         Text(
             title.uppercase(),
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Black,
-            color = TextPrimary,
-            letterSpacing = 0.8.sp
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextTertiary,
+            letterSpacing = 0.5.sp
         )
-        Spacer(Modifier.width(8.dp))
+        Spacer(Modifier.width(6.dp))
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(accentColor.copy(alpha = 0.12f))
-                .padding(horizontal = 8.dp, vertical = 2.dp),
+                .clip(RoundedCornerShape(4.dp))
+                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
+                .padding(horizontal = 6.dp, vertical = 2.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 "$count",
-                color = accentColor,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.ExtraBold
+                color = TextSecondary,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium
             )
         }
     }
@@ -161,55 +150,41 @@ private fun StudentAssignmentCard(
     val isCompleted = assignment.status == "submitted" || assignment.status == "graded"
     val title = assignment.title.ifBlank { "Tugas Tanpa Judul" }
 
-    // Dynamic subject color badge
     val subjectLabel = assignment.subjectName ?: assignment.className ?: "Umum"
-    val cardAccent = when {
-        isOverdue -> NeonError
-        isCompleted -> NeonSuccess
-        else -> accentColor
-    }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(4.dp, RoundedCornerShape(20.dp), spotColor = GlassOverlay, ambientColor = GlassOverlay)
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
             .border(
-                width = if (isOverdue) 1.5.dp else 1.dp,
-                color = if (isOverdue) NeonError.copy(alpha = 0.6f) else GlassBorder,
-                shape = RoundedCornerShape(20.dp)
+                width = 0.5.dp,
+                color = if (isOverdue) NeonWarning.copy(alpha = 0.4f) else GlassBorder,
+                shape = RoundedCornerShape(12.dp)
             )
             .clickable(onClick = onClick)
-            .padding(16.dp)
+            .padding(14.dp)
     ) {
         Column {
-            // ── TOP ROW: SUBJECT TAG & SCORE PILL ────────────────
+            // TOP ROW: SUBJECT TAG & SCORE PILL
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Subject / Class pill
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
+                Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(cardAccent.copy(alpha = 0.10f))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(cardAccent)
-                    )
-                    Spacer(Modifier.width(6.dp))
                     Text(
                         text = subjectLabel.uppercase(),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = cardAccent,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary,
                         letterSpacing = 0.5.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -218,76 +193,60 @@ private fun StudentAssignmentCard(
 
                 // Max Score pill
                 if (assignment.maxScore > 0) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(CosmicDark)
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text("🎯", fontSize = 10.sp)
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "${assignment.maxScore} Poin",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                    }
+                    Text(
+                        text = "${assignment.maxScore} Poin",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(10.dp))
 
-            // ── MAIN CONTENT: ICON + TITLE + CLASS ──────────────
+            // MAIN CONTENT: ICON + TITLE + CLASS
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Icon Box
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    cardAccent.copy(alpha = 0.18f),
-                                    cardAccent.copy(alpha = 0.08f)
-                                )
-                            )
-                        )
-                        .border(1.dp, cardAccent.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.AutoMirrored.Filled.Assignment,
                         contentDescription = null,
-                        tint = cardAccent,
-                        modifier = Modifier.size(22.dp)
+                        tint = if (isCompleted) NeonSuccess else TextSecondary,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
 
-                // Title and details
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (isOverdue) NeonError else TextPrimary,
-                        maxLines = 2,
-                        lineHeight = 20.sp,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     if (!assignment.className.isNullOrBlank() && assignment.subjectName != null) {
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = assignment.className!!,
                             fontSize = 11.sp,
                             color = TextTertiary,
-                            fontWeight = FontWeight.SemiBold
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
@@ -297,63 +256,79 @@ private fun StudentAssignmentCard(
                     imageVector = Icons.Default.ChevronRight,
                     contentDescription = null,
                     tint = TextTertiary,
-                    modifier = Modifier.size(20.dp)
+                    modifier = Modifier.size(18.dp)
                 )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // ── BOTTOM ROW: DUE DATE BADGE & STATUS ─────────────
+            // BOTTOM ROW: DUE DATE BADGE & STATUS
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(CosmicDark)
-                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.weight(1f, fill = false)
+                ) {
                     Icon(
                         imageVector = Icons.Default.Schedule,
                         contentDescription = null,
                         tint = when {
-                            isOverdue -> NeonError
+                            isOverdue -> NeonWarning
                             dueInfo != null -> dueInfo.color
                             else -> TextTertiary
                         },
-                        modifier = Modifier.size(13.dp)
+                        modifier = Modifier.size(12.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = dueInfo?.label ?: "Tanpa batas waktu",
                         fontSize = 11.sp,
-                        fontWeight = if (isOverdue || dueInfo != null) FontWeight.Bold else FontWeight.Medium,
+                        fontWeight = FontWeight.Normal,
                         color = when {
-                            isOverdue -> NeonError
+                            isOverdue -> NeonWarning
                             dueInfo != null -> dueInfo.color
-                            else -> TextTertiary
-                        }
+                            else -> TextSecondary
+                        },
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Submission Status text
+                Spacer(Modifier.width(8.dp))
+
                 val statusText = when {
-                    isCompleted -> "Terkumpul"
+                    isCompleted -> "Selesai"
                     isOverdue -> "Terlambat"
                     else -> "Belum Dikumpul"
                 }
                 val statusColor = when {
                     isCompleted -> NeonSuccess
-                    isOverdue -> NeonError
+                    isOverdue -> NeonWarning
                     else -> TextTertiary
                 }
-                Text(
-                    text = statusText,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = statusColor
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(if (isCompleted) NeonSuccess.copy(alpha = 0.12f) else com.schoolos.android.core.designsystem.CosmicSurface3)
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = statusText,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = statusColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         }
     }
@@ -364,27 +339,29 @@ private fun EmptyAssignmentState(selectedTab: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-            .padding(32.dp),
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .padding(28.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(64.dp)
-                    .clip(CircleShape)
-                    .background(StudentNeon.copy(alpha = 0.12f))
-                    .border(1.dp, StudentNeon.copy(alpha = 0.25f), CircleShape),
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = if (selectedTab == "Selesai") "🏆" else "🎉",
-                    fontSize = 28.sp
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Assignment,
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(Modifier.height(4.dp))
@@ -393,22 +370,22 @@ private fun EmptyAssignmentState(selectedTab: String) {
                     "Segera" -> "Tidak Ada Tugas Mendesak"
                     "Aktif" -> "Semua Tugas Aktif Selesai"
                     "Selesai" -> "Belum Ada Tugas Selesai"
-                    else -> "Semua Tugas Beres!"
+                    else -> "Semua Tugas Beres"
                 },
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Black,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = TextPrimary
             )
             Text(
                 text = when (selectedTab) {
                     "Segera" -> "Bagus! Kamu tidak memiliki tugas dengan tenggat dekat."
                     "Selesai" -> "Tugas yang sudah kamu kumpulkan akan muncul di sini."
-                    else -> "Tidak ada penugasan baru. Waktunya istirahat atau pelajari materi berikutnya!"
+                    else -> "Tidak ada penugasan baru. Waktunya istirahat atau pelajari materi berikutnya."
                 },
                 fontSize = 12.sp,
-                color = TextSecondary,
+                color = TextTertiary,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 18.sp
+                lineHeight = 16.sp
             )
         }
     }

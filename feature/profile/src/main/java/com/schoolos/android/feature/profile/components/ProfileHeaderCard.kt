@@ -75,9 +75,9 @@ fun ProfileHeaderCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(28.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
-            .border(1.dp, roleNeon.copy(alpha = 0.22f), RoundedCornerShape(28.dp)),
+            .border(1.dp, roleNeon.copy(alpha = 0.22f), RoundedCornerShape(16.dp)),
     ) {
         Column(
             modifier = Modifier.fillMaxWidth(),

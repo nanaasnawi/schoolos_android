@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -81,99 +82,81 @@ fun BentoActionCard(
 ) {
     Box(
         modifier = modifier
-            .shadow(
-                elevation = 6.dp,
-                shape = RoundedCornerShape(22.dp),
-                spotColor = accentColor.copy(alpha = 0.18f),
-                ambientColor = GlassOverlay,
-            )
-            .clip(RoundedCornerShape(22.dp))
+            .height(108.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        accentColor.copy(alpha = 0.08f),
-                        Color.Transparent,
-                    )
-                )
-            )
-            .border(1.dp, accentColor.copy(alpha = 0.22f), RoundedCornerShape(22.dp))
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(14.dp),
+            .padding(12.dp),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Icon Box with rich gradient tint
+                // Minimalist Icon Container
                 Box(
                     modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    accentColor.copy(alpha = 0.24f),
-                                    accentColor.copy(alpha = 0.10f),
-                                )
-                            )
-                        )
-                        .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(14.dp)),
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = title,
-                        tint = accentColor,
-                        modifier = Modifier.size(24.dp),
+                        tint = TextPrimary,
+                        modifier = Modifier.size(17.dp),
                     )
                 }
 
-                // Dynamic Badge
+                // Dynamic Badge (with ellipsis so it never pushes layout)
                 if (badgeCount > 0) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(6.dp))
                             .background(NeonError)
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
                             text = "$badgeCount",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
                             color = Color.White,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 } else if (badgeText.isNotBlank()) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(accentColor.copy(alpha = 0.15f))
-                            .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 7.dp, vertical = 2.dp),
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
                             text = badgeText,
                             fontSize = 9.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = accentColor,
+                            fontWeight = FontWeight.Medium,
+                            color = TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
-
-            Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -182,7 +165,6 @@ fun BentoActionCard(
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.Normal,
                     color = TextTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -317,6 +299,8 @@ fun ModernTimelineRow(
                     fontSize = 11.sp,
                     color = TextTertiary,
                     fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 if (teacher.isNotBlank()) {
                     Text(
@@ -347,11 +331,10 @@ fun ModernTimelineRow(
 fun LightCard(content: @Composable () -> Unit) {
     Box(
         modifier = Modifier
-            .shadow(6.dp, RoundedCornerShape(22.dp), spotColor = GlassOverlay, ambientColor = GlassOverlay)
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(22.dp)),
+            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp)),
     ) { content() }
 }
 
@@ -453,6 +436,8 @@ fun LightScheduleRow(item: ScheduleItem) {
                 color = TextSecondary,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.End,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
         }
     }
@@ -472,7 +457,7 @@ fun LightMiniStatCard(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
             .background(
                 Brush.verticalGradient(
@@ -480,8 +465,7 @@ fun LightMiniStatCard(
                     startY = 0f, endY = 240f,
                 ),
             )
-            .border(1.dp, accentColor.copy(alpha = 0.20f), RoundedCornerShape(22.dp))
-            .shadow(6.dp, RoundedCornerShape(22.dp), spotColor = accentColor.copy(alpha = 0.12f))
+            .border(1.dp, accentColor.copy(alpha = 0.20f), RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(16.dp),
     ) {
@@ -528,6 +512,8 @@ fun LightMiniStatCard(
                 color = TextSecondary,
                 fontWeight = FontWeight.Bold,
                 letterSpacing = 0.3.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
 
             Row(verticalAlignment = Alignment.Bottom) {
@@ -537,6 +523,8 @@ fun LightMiniStatCard(
                     fontSize = 32.sp,
                     color = accentColor,
                     letterSpacing = (-1).sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
                 Spacer(Modifier.width(6.dp))
                 Text(
@@ -545,6 +533,8 @@ fun LightMiniStatCard(
                     color = TextTertiary,
                     fontWeight = FontWeight.Medium,
                     modifier = Modifier.padding(bottom = 6.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
 

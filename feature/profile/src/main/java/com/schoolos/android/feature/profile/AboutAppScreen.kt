@@ -37,35 +37,12 @@ fun AboutAppScreen(
 
     Scaffold(
         containerColor = CosmicBlack,
-        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    CustomBackButton(onClick = onBack)
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            text = "Tentang Aplikasi",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Informasi sistem & lisensi perangkat lunak",
-                            fontSize = 12.sp,
-                            color = TextTertiary
-                        )
-                    }
-                }
-            }
+            ExecutiveTopBar(
+                title = "Tentang Aplikasi",
+                subtitle = "Informasi sistem & lisensi perangkat lunak",
+                onBack = onBack,
+            )
         }
     ) { padding ->
         Column(
