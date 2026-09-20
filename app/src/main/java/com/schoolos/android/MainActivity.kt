@@ -57,6 +57,11 @@ class MainActivity : ComponentActivity() {
         // Start background notification & maintenance sync listener
         notificationSyncManager.start()
 
+        // Ensure 24/7 background notification service is active
+        try {
+            com.schoolos.android.notification.SchoolOsNotificationService.start(this)
+        } catch (_: Exception) {}
+
         // Subscribe SEMUA topik belajar (bukan cuma pengumuman) agar materi/tugas/
         // kuis/nilai/sesi ikut membangunkan HP saat idle via FCM data-message.
         try {

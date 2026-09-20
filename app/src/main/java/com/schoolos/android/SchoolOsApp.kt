@@ -16,5 +16,15 @@ class SchoolOsApp : Application() {
 
         // Initialize high-priority notification channel early so Google Play Services & FCM can use it even when killed/standby
         SystemNotificationHelper.createNotificationChannel(this)
+
+        // Subscribe to all FCM topics early
+        try {
+            com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
+        } catch (_: Exception) {}
+
+        // Start 24/7 background notification service to keep SSE and alerts alive when app is closed
+        try {
+            com.schoolos.android.notification.SchoolOsNotificationService.start(this)
+        } catch (_: Exception) {}
     }
 }

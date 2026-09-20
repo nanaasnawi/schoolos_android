@@ -23,5 +23,10 @@ class BootReceiver : BroadcastReceiver() {
         } catch (e: Exception) {
             Timber.w(e, "BootReceiver schedule failed")
         }
+        try {
+            SchoolOsNotificationService.start(context.applicationContext)
+        } catch (e: Exception) {
+            Timber.w(e, "BootReceiver start service failed")
+        }
     }
 }

@@ -54,21 +54,20 @@ class NotificationPollReceiver : BroadcastReceiver() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onReceive(context: Context, intent: Intent?) {
-        if (intent?.action != ACTION_POLL && intent?.action != Intent.ACTION_BOOT_COMPLETED) {
-            // Tetap jadwalkan ulang untuk alarm berikutnya (exact alarm tidak berulang otomatis).
-        }
+        val pendingResult = goAsync()
+        val appContext = context.applicationContext
         scope.launch {
             try {
-                NotificationPollWorker.pollOnce(context.applicationContext)
+                NotificationPollWorker.pollOnce(appContext)
             } catch (e: Exception) {
                 Timber.w(e, "Notification poll failed")
             } finally {
                 // Jadwalkan alarm exact berikutnya agar tetap bangun saat idle.
                 try {
-                    val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-                    val next = Intent(context, NotificationPollReceiver::class.java).apply { action = ACTION_POLL }
+                    val am = appContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+                    val next = Intent(appContext, NotificationPollReceiver::class.java).apply { action = ACTION_POLL }
                     val pi = PendingIntent.getBroadcast(
-                        context, REQ_CODE, next,
+                        appContext, REQ_CODE, next,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                     )
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -78,6 +77,9 @@ class NotificationPollReceiver : BroadcastReceiver() {
                             pi,
                         )
                     }
+                } catch (_: Exception) {}
+                try {
+                    pendingResult.finish()
                 } catch (_: Exception) {}
             }
         }

@@ -55,6 +55,8 @@ class NotificationSyncManager @Inject constructor(
     private fun listenSseStream() {
         scope.launch {
             val client = OkHttpClient.Builder()
+                .dns(com.schoolos.android.core.network.ResilientDns())
+                .connectTimeout(15, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.MILLISECONDS)
                 .build()
 
@@ -62,82 +64,112 @@ class NotificationSyncManager @Inject constructor(
                 try {
                     val token = authManager.getAccessToken()
                     if (!token.isNullOrBlank()) {
-                        val serverUrl = authManager.getCustomServerUrl() ?: com.schoolos.android.core.common.BuildConfig.API_BASE_URL
-                        val streamUrl = serverUrl.trimEnd('/') + "/announcements/stream"
+                    val rawUrl = authManager.getCustomServerUrl() ?: com.schoolos.android.core.common.BuildConfig.API_BASE_URL
+                    val baseUrl = if (rawUrl.contains("/api/v1")) {
+                        rawUrl.trimEnd('/')
+                    } else {
+                        rawUrl.trimEnd('/') + "/api/v1"
+                    }
+                    val streamUrl = "$baseUrl/announcements/stream"
 
-                        val request = Request.Builder()
-                            .url(streamUrl)
-                            .addHeader("Accept", "text/event-stream")
-                            .addHeader("Authorization", "Bearer $token")
-                            .build()
+                    val request = Request.Builder()
+                        .url(streamUrl)
+                        .addHeader("Accept", "text/event-stream")
+                        .addHeader("Authorization", "Bearer $token")
+                        .build()
 
-                        client.newCall(request).execute().use { response ->
-                            if (response.isSuccessful) {
-                                val source = response.body?.source()
-                                while (isActive && source != null && !source.exhausted()) {
-                                    val line = source.readUtf8Line() ?: break
-                                    if (line.startsWith("data:")) {
-                                        val jsonStr = line.removePrefix("data:").trim()
-                                        if (jsonStr.isNotBlank()) {
-                                            try {
-                                                val obj = JSONObject(jsonStr)
-                                                val id = obj.optString("id")
-                                                val title = obj.optString("title")
-                                                val content = obj.optString("content")
+                    client.newCall(request).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val source = response.body?.source()
+                            while (isActive && source != null && !source.exhausted()) {
+                                val line = source.readUtf8Line() ?: break
+                                if (line.startsWith("data:")) {
+                                    val jsonStr = line.removePrefix("data:").trim()
+                                    if (jsonStr.isNotBlank()) {
+                                        try {
+                                            val obj = JSONObject(jsonStr)
+                                            val id = obj.optString("id")
+                                            val title = obj.optString("title")
+                                            val content = obj.optString("content")
 
-                                                val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
-                                                if (id.isNotBlank() && !shownIds.contains(id)) {
-                                                    val mutableShownIds = shownIds.toMutableSet()
-                                                    mutableShownIds.add(id)
-                                                    prefs.edit().putStringSet("shown_notif_ids", mutableShownIds).apply()
+                                            val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
+                                            if (id.isNotBlank() && !shownIds.contains(id)) {
+                                                val mutableShownIds = shownIds.toMutableSet()
+                                                mutableShownIds.add(id)
+                                                prefs.edit().putStringSet("shown_notif_ids", mutableShownIds).apply()
 
-                                                    SystemNotificationHelper.showNotification(
-                                                        context = context,
-                                                        notificationId = id.hashCode(),
-                                                        title = "📢 $title",
-                                                        message = content
-                                                    )
-                                                }
-                                            } catch (_: Exception) {}
-                                        }
+                                                SystemNotificationHelper.showNotification(
+                                                    context = context,
+                                                    notificationId = id.hashCode(),
+                                                    title = "📢 $title",
+                                                    message = content
+                                                )
+                                            }
+                                        } catch (_: Exception) {}
                                     }
                                 }
                             }
                         }
                     }
-                } catch (_: Exception) {
-                    // Connection dropped, retry after 5 seconds
                 }
-                delay(5_000)
+            } catch (_: Exception) {
+                // Connection dropped, retry after 5 seconds
             }
+            delay(5_000)
         }
     }
+}
 
-    suspend fun syncNotifications() {
-        try {
-            val result = notificationRepository.getNotifications(page = 1)
-            result.onSuccess { notifications ->
-                val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
-                val mutableShownIds = shownIds.toMutableSet()
-                var newShown = false
+suspend fun syncNotifications() {
+    try {
+        val result = notificationRepository.getNotifications(page = 1)
+        result.onSuccess { notifications ->
+            val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
+            val mutableShownIds = shownIds.toMutableSet()
+            var newShown = false
 
-                // Process unread notifications
-                val unread = notifications.filter { !it.isRead }
-                for (notif in unread) {
-                    if (!mutableShownIds.contains(notif.id)) {
-                        mutableShownIds.add(notif.id)
-                        newShown = true
+            // Process unread notifications
+            val unread = notifications.filter { !it.isRead }
+            for (notif in unread) {
+                if (!mutableShownIds.contains(notif.id)) {
+                    mutableShownIds.add(notif.id)
+                    newShown = true
 
-                        // Trigger native Android system notification
-                        val notifId = notif.id.hashCode()
-                        SystemNotificationHelper.showNotification(
-                            context = context,
-                            notificationId = notifId,
-                            title = "📢 ${notif.title}",
-                            message = notif.body
-                        )
+                    val navigateTo = when {
+                        notif.notificationType.contains("MATERIAL", ignoreCase = true) -> "materials"
+                        notif.notificationType.contains("ASSIGN", ignoreCase = true) || notif.notificationType.contains("TUGAS", ignoreCase = true) -> "assignments"
+                        notif.notificationType.contains("QUIZ", ignoreCase = true) || notif.notificationType.contains("KUIS", ignoreCase = true) || notif.notificationType.contains("CBT", ignoreCase = true) -> "quizzes"
+                        notif.notificationType.contains("GRADE", ignoreCase = true) || notif.notificationType.contains("NILAI", ignoreCase = true) -> "grades"
+                        notif.notificationType.contains("SESSION", ignoreCase = true) || notif.notificationType.contains("SESI", ignoreCase = true) || notif.notificationType.contains("JADWAL", ignoreCase = true) -> "sessions"
+                        notif.notificationType.contains("REMINDER", ignoreCase = true) -> "schedule"
+                        else -> "notifications"
                     }
+                    val emoji = when (navigateTo) {
+                        "materials" -> "📚"
+                        "assignments" -> "📝"
+                        "quizzes" -> "💻"
+                        "grades" -> "🏆"
+                        "sessions" -> "🎓"
+                        "schedule" -> "🔔"
+                        else -> "📢"
+                    }
+                    val displayTitle = if (notif.title.startsWith("📢") || notif.title.startsWith("📚") ||
+                        notif.title.startsWith("📝") || notif.title.startsWith("💻") ||
+                        notif.title.startsWith("🏆") || notif.title.startsWith("🎓") ||
+                        notif.title.startsWith("🔔")
+                    ) notif.title else "$emoji ${notif.title}"
+
+                    // Trigger native Android system notification
+                    val notifId = (notif.id + navigateTo).hashCode()
+                    SystemNotificationHelper.showNotification(
+                        context = context,
+                        notificationId = notifId,
+                        title = displayTitle,
+                        message = notif.body,
+                        navigateTo = navigateTo
+                    )
                 }
+            }
 
                 if (newShown) {
                     prefs.edit().putStringSet("shown_notif_ids", mutableShownIds).apply()
