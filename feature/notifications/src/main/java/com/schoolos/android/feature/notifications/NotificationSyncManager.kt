@@ -89,21 +89,41 @@ class NotificationSyncManager @Inject constructor(
                                         try {
                                             val obj = JSONObject(jsonStr)
                                             val id = obj.optString("id")
-                                            val title = obj.optString("title")
-                                            val content = obj.optString("content")
+                                            val action = obj.optString("action", "")
 
-                                            val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
-                                            if (id.isNotBlank() && !shownIds.contains(id)) {
-                                                val mutableShownIds = shownIds.toMutableSet()
-                                                mutableShownIds.add(id)
-                                                prefs.edit().putStringSet("shown_notif_ids", mutableShownIds).apply()
+                                            if (action.equals("delete", ignoreCase = true)) {
+                                                // Admin menghapus / menarik notifikasi ini secara remote
+                                                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+                                                if (id.isNotBlank()) {
+                                                    nm?.cancel(id.hashCode())
+                                                }
+                                                val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
+                                                if (shownIds.contains(id)) {
+                                                    val mutableShown = shownIds.toMutableSet()
+                                                    mutableShown.remove(id)
+                                                    prefs.edit().putStringSet("shown_notif_ids", mutableShown).apply()
+                                                }
+                                                // Trigger sinkronisasi ulang agar UI app langsung terupdate
+                                                scope.launch {
+                                                    try { syncNotifications() } catch (_: Exception) {}
+                                                }
+                                            } else {
+                                                val title = obj.optString("title")
+                                                val content = obj.optString("content")
 
-                                                SystemNotificationHelper.showNotification(
-                                                    context = context,
-                                                    notificationId = id.hashCode(),
-                                                    title = "📢 $title",
-                                                    message = content
-                                                )
+                                                val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
+                                                if (id.isNotBlank() && !shownIds.contains(id)) {
+                                                    val mutableShownIds = shownIds.toMutableSet()
+                                                    mutableShownIds.add(id)
+                                                    prefs.edit().putStringSet("shown_notif_ids", mutableShownIds).apply()
+
+                                                    SystemNotificationHelper.showNotification(
+                                                        context = context,
+                                                        notificationId = id.hashCode(),
+                                                        title = "📢 $title",
+                                                        message = content
+                                                    )
+                                                }
                                             }
                                         } catch (_: Exception) {}
                                     }
