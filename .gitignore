@@ -44,6 +44,8 @@ captures/
 # Keystore files (Security Critical - Never commit production keys!)
 *.jks
 *.keystore
+*-adminsdk-*.json
+*firebase*.json
 
 # External native build folder
 .externalNativeBuild
