@@ -165,7 +165,8 @@ fun HomeScreen(
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
-                                .weight(1f)                      
+                                .weight(1f)
+                                .padding(end = 8.dp),
                         ) {
                             com.schoolos.android.core.designsystem.DynamicSchoolLogo(
                                 logoUrl = state.schoolLogoUrl,
@@ -174,17 +175,25 @@ fun HomeScreen(
                                     .clip(RoundedCornerShape(10.dp)),
                             )
                             Spacer(Modifier.width(10.dp))
-                            Column {
+                            Column(
+                                modifier = Modifier.weight(1f),
+                                verticalArrangement = Arrangement.Center,
+                            ) {
                                 Text(
-                                    text = if (state.schoolName.isNotBlank()) state.schoolName else "School OS",
+                                    text = if (state.schoolName.isNotBlank()) state.schoolName else "Akselerasi Edu",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextPrimary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                     letterSpacing = (-0.2).sp,
+                                    lineHeight = 16.sp,
                                 )
-                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(Modifier.height(1.dp))
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) {
                                     Text(
                                         text = userName,
                                         fontSize = 11.sp,
@@ -192,6 +201,8 @@ fun HomeScreen(
                                         fontWeight = FontWeight.Normal,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
+                                        lineHeight = 14.sp,
+                                        modifier = Modifier.weight(1f, fill = false),
                                     )
                                     Text(
                                         text = " • ",
@@ -203,6 +214,7 @@ fun HomeScreen(
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = roleAccent,
+                                        maxLines = 1,
                                     )
                                 }
                             }
@@ -269,13 +281,21 @@ fun HomeScreen(
 
                 // ── 2. STREAMLINED LIVE SPOTLIGHT HERO ───────────────────────────
                 item {
-                    val hasLiveSession = state.nextSessionIsLive || (isTeacher && state.activeSessionSubject != "-" && state.activeSessionSubject.isNotBlank())
-                    val spotlightSubject = if (state.nextSessionSubject != "-") state.nextSessionSubject 
-                        else if (state.activeSessionSubject != "-") state.activeSessionSubject 
+                    val hasLiveSession = state.nextSessionIsLive
+                    val spotlightSubject = if (state.nextSessionSubject != "-" && state.nextSessionSubject.isNotBlank() && !isUuid(state.nextSessionSubject)) state.nextSessionSubject 
+                        else if (state.activeSessionSubject != "-" && state.activeSessionSubject.isNotBlank() && !isUuid(state.activeSessionSubject)) state.activeSessionSubject 
+                        else if (hasLiveSession) "Sesi Pembelajaran Aktif"
                         else "Tidak Ada Sesi Aktif"
-                    val spotlightRoom = if (state.nextSessionRoom != "-") state.nextSessionRoom 
-                        else if (state.activeSessionClass != "-") "Kelas ${state.activeSessionClass}" 
-                        else "Sekolah"
+
+                    val spotlightRoom = when {
+                        state.nextSessionRoom != "-" && state.nextSessionRoom.isNotBlank() && !isUuid(state.nextSessionRoom) ->
+                            formatClassOrRoom(state.nextSessionRoom)
+                        state.activeSessionClass != "-" && state.activeSessionClass.isNotBlank() && !isUuid(state.activeSessionClass) ->
+                            formatClassOrRoom(state.activeSessionClass)
+                        state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass) ->
+                            formatClassOrRoom(state.homeroomClass)
+                        else -> "Ruang Kelas"
+                    }
 
                     Box(
                         modifier = Modifier
@@ -405,7 +425,7 @@ fun HomeScreen(
                 // ── 3. ROLE-BASED DYNAMIC CONTENT ────────────────────────────────
                 when {
                     isTeacher -> {
-                        val isHomeroom = state.homeroomClass.isNotBlank()
+                        val isHomeroom = state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass)
                         val teacherClass = if (isHomeroom) state.homeroomClass else state.activeSessionClass
                         teacherContent(
                             onNavigateToSessions     = onNavigateToSessions,
@@ -423,6 +443,13 @@ fun HomeScreen(
                             isHomeroom               = isHomeroom,
                             teacherClasses           = state.teacherClasses,
                             teacherSubjects          = state.teacherSubjects,
+                            todaySessions            = state.todaySessions,
+                            teacherAssignments       = state.teacherAssignments,
+                            teacherAnnouncements     = state.teacherAnnouncements,
+                            pendingAssignmentsCount  = state.teacherPendingCount,
+                            materialsCount           = state.teacherMaterialsCount,
+                            scheduleCount            = state.teacherScheduleCount,
+                            attendanceRate           = state.teacherAttendanceRate,
                         )
                     }
                     isParent -> parentContent(
@@ -528,5 +555,27 @@ private fun formatRealTimeToday(): String {
         formatter.format(java.util.Date())
     } catch (e: Exception) {
         java.time.LocalDate.now().toString()
+    }
+}
+
+private fun isUuid(str: String?): Boolean {
+    if (str.isNullOrBlank()) return false
+    val clean = str.trim()
+    return clean.length >= 32 && clean.contains("-")
+}
+
+private fun formatClassOrRoom(raw: String?): String {
+    if (raw.isNullOrBlank() || raw == "-" || isUuid(raw)) {
+        return "Ruang Kelas"
+    }
+    val clean = raw.trim()
+    return if (clean.startsWith("Kelas", ignoreCase = true) ||
+        clean.startsWith("Ruang", ignoreCase = true) ||
+        clean.startsWith("Lab", ignoreCase = true) ||
+        clean.startsWith("Paket", ignoreCase = true)
+    ) {
+        clean
+    } else {
+        "Kelas $clean"
     }
 }

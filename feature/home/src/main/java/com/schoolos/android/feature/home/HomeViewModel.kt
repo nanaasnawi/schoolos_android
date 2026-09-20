@@ -7,10 +7,12 @@ import com.schoolos.android.core.auth.AuthState
 import com.schoolos.android.core.reading.ReadingHistoryManager
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
+import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.BookReadingItem
 import com.schoolos.android.domain.model.LearningSession
 import com.schoolos.android.domain.model.LibraryBook
 import com.schoolos.android.domain.model.MaterialType
+import com.schoolos.android.domain.model.Notification
 import com.schoolos.android.domain.model.Progress
 import com.schoolos.android.domain.model.SubjectGradeSummary
 import com.schoolos.android.domain.model.toSubjectSummary
@@ -57,6 +59,8 @@ data class HomeUiState(
     val teacherAttendanceRate: String = "-",
     val teacherPendingCount: String = "0",
     val teacherMaterialsCount: String = "0",
+    val teacherAssignments: List<Assignment> = emptyList(),
+    val teacherAnnouncements: List<Notification> = emptyList(),
     val activeSessionSubject: String = "-",
     val activeSessionClass: String = "-",
     val homeroomClass: String = "",
@@ -108,7 +112,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             authManager.authState.collect { auth ->
                 currentAuth = auth
-                val name = if (!auth.name.isNullOrBlank()) auth.name!! else "Pengguna School OS"
+                val name = if (!auth.name.isNullOrBlank()) auth.name!! else "Pengguna Akselerasi Edu"
                 val role = if (!auth.role.isNullOrBlank()) auth.role!! else "student"
                 val homeroom = auth.className ?: ""
                 val child = auth.childName ?: ""
@@ -165,6 +169,22 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun isUuid(str: String?): Boolean {
+        if (str.isNullOrBlank()) return false
+        val clean = str.trim()
+        return clean.length >= 32 && clean.contains("-")
+    }
+
+    private fun parseTime(iso: String): String {
+        return try {
+            val dt = Instant.parse(iso).atZone(ZoneId.systemDefault())
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm", Locale.getDefault())
+            "${dt.format(formatter)} WIB"
+        } catch (_: Exception) {
+            "Hari ini"
+        }
+    }
+
     private suspend fun syncData(silent: Boolean) {
         val auth = currentAuth
         val isParent = auth.isParent
@@ -188,19 +208,78 @@ class HomeViewModel @Inject constructor(
                 }.thenBy { it.scheduledAt ?: it.startedAt ?: "" }
             )
 
-            val activeOrUpcoming = todaySessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
-                ?: todaySessions.firstOrNull { it.status.equals("scheduled", ignoreCase = true) }
+            // Resolve class & subject name maps so UUIDs are NEVER passed to UI
+            val classList = academicRepository.getClasses().getOrNull() ?: emptyList()
+            val classMap = classList.associate { it.id to it.name }
+            val subjectList = academicRepository.getSubjects().getOrNull() ?: emptyList()
+            val subjectMap = subjectList.associate { it.id to it.name }
+
+            fun cleanClassName(cid: String?, cname: String?): String {
+                if (!cname.isNullOrBlank() && !isUuid(cname)) return cname
+                val mapped = cid?.let { classMap[it] }
+                if (!mapped.isNullOrBlank() && !isUuid(mapped)) return mapped
+                if (homeroom.isNotBlank() && !isUuid(homeroom)) return homeroom
+                return ""
+            }
+
+            fun cleanSubjectName(lid: String?, sname: String?, notes: String?): String {
+                if (!sname.isNullOrBlank() && !isUuid(sname)) return sname
+                val mapped = lid?.let { subjectMap[it] }
+                if (!mapped.isNullOrBlank()) return mapped
+                val notePart = notes?.substringBefore(" • ")?.trim()
+                if (!notePart.isNullOrBlank() && !isUuid(notePart)) return notePart
+                return "Pelajaran"
+            }
+
+            // Real-time active session check: must actually have status == "active"
+            val liveSession = todaySessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
+                ?: sessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
+            val isLive = liveSession != null
+
+            val upcomingSession = todaySessions.firstOrNull { it.status.equals("scheduled", ignoreCase = true) }
                 ?: todaySessions.firstOrNull()
 
-            val nextSubj = activeOrUpcoming?.let { it.subjectName ?: it.notes?.substringBefore(" • ") ?: "Pelajaran" } ?: "-"
-            val nextRm = activeOrUpcoming?.room ?: "-"
-            val isLive = activeOrUpcoming?.status.equals("active", ignoreCase = true)
-            val timeText = if (isLive) "Sedang Berlangsung" else if (activeOrUpcoming != null) "Hari ini" else "-"
+            val displaySession = liveSession ?: upcomingSession
 
-            val activeTeacherSession = sessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
-                ?: sessions.firstOrNull()
-            val activeSubj = activeTeacherSession?.let { it.subjectName ?: it.notes?.substringBefore(" • ") ?: "-" } ?: "-"
-            val activeClass = activeTeacherSession?.classId?.ifBlank { null } ?: if (homeroom.isNotBlank()) homeroom else "-"
+            val nextSubj = if (displaySession != null) {
+                cleanSubjectName(displaySession.lessonId, displaySession.subjectName, displaySession.notes)
+            } else {
+                "-"
+            }
+
+            val nextRm = if (displaySession != null) {
+                val cls = cleanClassName(displaySession.classId, displaySession.className)
+                if (cls.isNotBlank()) cls else (displaySession.room ?: "Ruang Kelas")
+            } else {
+                "-"
+            }
+
+            val timeText = if (isLive) {
+                "Sedang Berlangsung"
+            } else if (upcomingSession != null) {
+                upcomingSession.scheduledAt?.let { parseTime(it) } ?: "Hari ini"
+            } else {
+                "-"
+            }
+
+            val activeTeacherSession = liveSession ?: sessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
+            val activeSubj = if (activeTeacherSession != null) {
+                cleanSubjectName(activeTeacherSession.lessonId, activeTeacherSession.subjectName, activeTeacherSession.notes)
+            } else if (subjectList.isNotEmpty()) {
+                subjectList.first().name
+            } else {
+                "-"
+            }
+
+            val activeClass = if (activeTeacherSession != null) {
+                cleanClassName(activeTeacherSession.classId, activeTeacherSession.className)
+            } else if (homeroom.isNotBlank() && !isUuid(homeroom)) {
+                homeroom
+            } else if (classList.isNotEmpty()) {
+                classList.first().name
+            } else {
+                "-"
+            }
 
             val scheduleCount = if (todaySessions.isNotEmpty()) todaySessions.size else sessions.size
             val attendanceRate = if (todaySessions.isNotEmpty()) {
@@ -348,28 +427,36 @@ class HomeViewModel @Inject constructor(
             }
         } else if (isTeacher) {
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
-                _state.update { it.copy(teacherPendingCount = assignments.size.toString()) }
+                _state.update { it.copy(
+                    teacherPendingCount = assignments.size.toString(),
+                    teacherAssignments = assignments.take(4),
+                ) }
+            }
+            notificationRepository.getNotifications(page = 1).onSuccess { notifs ->
+                _state.update { it.copy(
+                    teacherAnnouncements = notifs.take(3),
+                ) }
             }
             learningMaterialRepository.getMaterials().onSuccess { materials ->
                 _state.update { it.copy(teacherMaterialsCount = materials.size.toString()) }
             }
             academicRepository.getClasses().onSuccess { classes ->
-                val myClasses = if (homeroom.isNotBlank()) {
+                val myClasses = if (homeroom.isNotBlank() && !isUuid(homeroom)) {
                     val filtered = classes.filter { it.name.equals(homeroom, ignoreCase = true) }
                     if (filtered.isNotEmpty()) filtered else classes.take(1)
                 } else {
                     classes.take(1)
                 }
                 _state.update { current ->
-                    val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-") {
-                        if (homeroom.isNotBlank()) homeroom else (myClasses.firstOrNull()?.name ?: "PAKET A4")
+                    val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-" || isUuid(current.activeSessionClass)) {
+                        if (homeroom.isNotBlank() && !isUuid(homeroom)) homeroom else (myClasses.firstOrNull()?.name ?: "PAKET A4")
                     } else current.activeSessionClass
                     current.copy(teacherClasses = myClasses, activeSessionClass = activeCls)
                 }
             }
             academicRepository.getSubjects().onSuccess { subjects ->
                 _state.update { current ->
-                    val activeSubj = if (current.activeSessionSubject.isBlank() || current.activeSessionSubject == "-") {
+                    val activeSubj = if (current.activeSessionSubject.isBlank() || current.activeSessionSubject == "-" || isUuid(current.activeSessionSubject)) {
                         subjects.firstOrNull()?.name ?: current.activeSessionSubject
                     } else current.activeSessionSubject
                     current.copy(teacherSubjects = subjects, activeSessionSubject = activeSubj)
