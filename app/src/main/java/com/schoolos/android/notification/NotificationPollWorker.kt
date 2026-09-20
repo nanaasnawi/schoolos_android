@@ -92,10 +92,12 @@ object NotificationPollWorker {
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
                 val id = o.optString("id")
-                if (id.isBlank() || shown.contains(id)) continue
+                val refId = o.optString("reference_id", o.optString("referenceId", ""))
+                if (id.isBlank() || shown.contains(id) || (refId.isNotBlank() && shown.contains(refId))) continue
                 val isRead = o.optBoolean("is_read", o.optBoolean("isRead", false))
                 if (isRead) {
                     shown.add(id)
+                    if (refId.isNotBlank()) shown.add(refId)
                     continue
                 }
                 val title = o.optString("title", "Pemberitahuan Sekolah")
@@ -103,6 +105,7 @@ object NotificationPollWorker {
                 val type = o.optString("notification_type", o.optString("notificationType", "ANNOUNCEMENT"))
                 val navigateTo = navigateFor(type)
                 shown.add(id)
+                if (refId.isNotBlank()) shown.add(refId)
                 try {
                     com.schoolos.android.core.notification.SystemNotificationHelper.showNotification(
                         context = appContext,
