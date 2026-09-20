@@ -50,6 +50,7 @@ object NotificationPollWorker {
         val url = serverUrl.trimEnd('/') + "/notifications?page=1&page_size=20"
 
         val client = OkHttpClient.Builder()
+            .dns(com.schoolos.android.core.network.ResilientDns())
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(20, TimeUnit.SECONDS)
             .build()
