@@ -77,6 +77,18 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             (data["id"]?.hashCode() ?: System.currentTimeMillis().toInt())
         }
 
+        // Record ID into shown_notif_ids so background poll worker never duplicates this notification
+        try {
+            val syncPrefs = applicationContext.getSharedPreferences("schoolos_notif_sync", Context.MODE_PRIVATE)
+            val shownIds = syncPrefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
+            val mutableShown = shownIds.toMutableSet()
+            if (referenceId.isNotBlank()) mutableShown.add(referenceId)
+            val rawId = data["id"]
+            if (!rawId.isNullOrBlank()) mutableShown.add(rawId)
+            mutableShown.add(notifId.toString())
+            syncPrefs.edit().putStringSet("shown_notif_ids", mutableShown).apply()
+        } catch (_: Exception) {}
+
         // Trigger native Android system notification with HIGH priority (wakes up lock screen)
         SystemNotificationHelper.showNotification(
             context = applicationContext,
