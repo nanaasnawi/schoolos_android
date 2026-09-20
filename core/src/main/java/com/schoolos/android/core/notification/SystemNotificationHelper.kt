@@ -17,22 +17,50 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
+import android.content.ContentResolver
+import android.media.AudioManager
+import android.net.Uri
+
 object SystemNotificationHelper {
 
-    const val CHANNEL_ID = "school_os_announcements_v3"
-    const val CHANNEL_LEARNING_ID = "school_os_learning_v1"
+    const val CHANNEL_ID = "school_os_announcements_v4"
+    const val CHANNEL_LEARNING_ID = "school_os_learning_v2"
     private const val CHANNEL_NAME = "Pengumuman & Broadcast Sekolah"
     private const val CHANNEL_DESC = "Pemberitahuan resmi dan pengumuman sekolah"
     private const val CHANNEL_LEARNING_NAME = "Materi, Tugas, Kuis & Nilai"
     private const val CHANNEL_LEARNING_DESC = "Notifikasi pembelajaran: materi, tugas, kuis/CBT, nilai, dan jadwal"
 
+    fun getSoundUri(context: Context): Uri {
+        return try {
+            Uri.parse("${ContentResolver.SCHEME_ANDROID_RESOURCE}://${context.packageName}/raw/notification")
+        } catch (_: Exception) {
+            RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        }
+    }
+
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+
+            // Clean up obsolete/locked channels from earlier versions to reset OEM sound restrictions
+            val obsoleteChannels = listOf(
+                "school_os_announcements_v1",
+                "school_os_announcements_v2",
+                "school_os_announcements_v3",
+                "school_os_learning_v1",
+                "fcm_fallback_notification_channel"
+            )
+            for (oldChannel in obsoleteChannels) {
+                try {
+                    manager?.deleteNotificationChannel(oldChannel)
+                } catch (_: Exception) {}
+            }
+
             val importance = NotificationManager.IMPORTANCE_HIGH
-            val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+            val soundUri = getSoundUri(context)
             val audioAttributes = AudioAttributes.Builder()
                 .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                .setUsage(AudioAttributes.USAGE_NOTIFICATION)
+                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                 .build()
 
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
@@ -40,10 +68,9 @@ object SystemNotificationHelper {
                 enableLights(true)
                 lightColor = Color.BLUE
                 enableVibration(true)
-                vibrationPattern = longArrayOf(0, 300, 150, 300)
+                vibrationPattern = longArrayOf(0, 350, 150, 350)
                 setSound(soundUri, audioAttributes)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                setBypassDnd(true)
                 setShowBadge(true)
             }
             // Channel kedua untuk event belajar agar tidak tenggelam oleh pengumuman.
@@ -52,13 +79,11 @@ object SystemNotificationHelper {
                 enableLights(true)
                 lightColor = Color.CYAN
                 enableVibration(true)
-                vibrationPattern = longArrayOf(0, 250, 120, 250)
+                vibrationPattern = longArrayOf(0, 300, 120, 300)
                 setSound(soundUri, audioAttributes)
                 lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-                setBypassDnd(true)
                 setShowBadge(true)
             }
-            val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             manager?.createNotificationChannel(channel)
             manager?.createNotificationChannel(learning)
         }
@@ -174,7 +199,7 @@ object SystemNotificationHelper {
         val iconRes = context.applicationInfo.icon.takeIf { it != 0 }
             ?: android.R.drawable.ic_dialog_info
 
-        val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+        val soundUri = getSoundUri(context)
 
         val builder = NotificationCompat.Builder(context, effectiveChannel)
             .setSmallIcon(iconRes)
@@ -184,9 +209,9 @@ object SystemNotificationHelper {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setCategory(NotificationCompat.CATEGORY_MESSAGE)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setSound(soundUri)
-            .setVibrate(longArrayOf(0, 300, 150, 300))
+            .setSound(soundUri, AudioManager.STREAM_NOTIFICATION)
+            .setOnlyAlertOnce(false)
+            .setVibrate(longArrayOf(0, 350, 150, 350))
             .setLights(Color.BLUE, 1000, 1000)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
@@ -196,6 +221,13 @@ object SystemNotificationHelper {
         } catch (e: SecurityException) {
             // Permission not granted
         }
+
+        // Active sound player: guarantees loud & clear playback of custom notification.mp3
+        // whether the application is in foreground (where Android OS silences notification sounds)
+        // or during active background alerts.
+        try {
+            NotificationSoundPlayer.playSound(context)
+        } catch (_: Exception) {}
     }
 
     @Suppress("unused")
