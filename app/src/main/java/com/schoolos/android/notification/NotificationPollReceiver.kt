@@ -22,7 +22,7 @@ class NotificationPollReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_POLL = "com.schoolos.android.ACTION_POLL_NOTIFICATIONS"
         private const val REQ_CODE = 9001
-        private const val INTERVAL_MS = 15 * 60 * 1000L
+        private const val INTERVAL_MS = 2 * 60 * 1000L
 
         fun schedule(context: Context) {
             try {
@@ -33,18 +33,18 @@ class NotificationPollReceiver : BroadcastReceiver() {
                     PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
                 )
                 am.cancel(pi)
-                val first = System.currentTimeMillis() + 60_000L
+                val first = System.currentTimeMillis() + 15_000L
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                     am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, first, pi)
                 } else {
                     @Suppress("DEPRECATION")
                     am.setRepeating(AlarmManager.RTC_WAKEUP, first, INTERVAL_MS, pi)
                 }
-                // Inexact repeating sebagai jaring pengaman tambahan (tetap jalan di Doze window).
+                // Inexact repeating sebagai jaring pengaman tambahan
                 try {
                     am.setInexactRepeating(AlarmManager.RTC_WAKEUP, first + INTERVAL_MS, INTERVAL_MS, pi)
                 } catch (_: Exception) {}
-                Timber.d("Notification poll alarm scheduled")
+                Timber.d("Silent notification poll alarm scheduled (every 2 mins)")
             } catch (e: Exception) {
                 Timber.w(e, "Failed to schedule notification poll")
             }

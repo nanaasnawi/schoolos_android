@@ -57,9 +57,13 @@ class MainActivity : ComponentActivity() {
         // Start background notification & maintenance sync listener
         notificationSyncManager.start()
 
-        // Ensure 24/7 background notification service is active
+        // Dismiss any old persistent notification & delete service channel
         try {
-            com.schoolos.android.notification.SchoolOsNotificationService.start(this)
+            val nm = getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+            nm?.cancel(8801)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                nm?.deleteNotificationChannel("school_os_service_channel")
+            }
         } catch (_: Exception) {}
 
         // Subscribe SEMUA topik belajar (bukan cuma pengumuman) agar materi/tugas/
