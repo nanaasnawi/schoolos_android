@@ -14,18 +14,16 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Quiz
-import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,27 +70,6 @@ private fun formatClassName(raw: String?, fallback: String = "Kelas Pengampu"): 
         clean
     } else {
         "Kelas $clean"
-    }
-}
-
-private fun formatSessionTime(session: LearningSession): String {
-    if (session.status.equals("active", ignoreCase = true)) return "Sedang Berlangsung"
-    val scheduled = session.scheduledAt ?: return "Hari Ini"
-    return try {
-        val dt = java.time.Instant.parse(scheduled).atZone(java.time.ZoneId.systemDefault())
-        java.time.format.DateTimeFormatter.ofPattern("HH:mm").format(dt) + " WIB"
-    } catch (_: Exception) {
-        "Hari Ini"
-    }
-}
-
-private fun formatDueDate(iso: String?): String {
-    if (iso.isNullOrBlank()) return "Tanpa batas tenggat"
-    return try {
-        val dt = java.time.Instant.parse(iso).atZone(java.time.ZoneId.systemDefault())
-        "Tenggat: " + java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, HH:mm", java.util.Locale("id", "ID")).format(dt)
-    } catch (_: Exception) {
-        "Tenggat segera"
     }
 }
 
@@ -189,7 +166,7 @@ fun LazyListScope.teacherContent(
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "Ketuk untuk melihat daftar & presensi siswa",
+                            text = "Ketuk untuk melihat daftar siswa & rekap presensi",
                             fontSize = 11.sp,
                             color = TextTertiary,
                             maxLines = 1,
@@ -208,11 +185,11 @@ fun LazyListScope.teacherContent(
         }
     }
 
-    // ── 2. BENTO ACTION GRID GURU ────────────────────────────────────────────────
+    // ── 2. PUSAT AKSI PENGAJAR (PEMBUATAN & PENERBITAN) ─────────────────────────
     item {
         LightSectionHeader(
             title = "Pusat Aksi Pengajar",
-            sub = "Kelola materi, tugas, dan evaluasi",
+            sub = "Kelola materi, tugas, kuis, dan broadcast kelas",
         )
     }
 
@@ -224,7 +201,7 @@ fun LazyListScope.teacherContent(
             ) {
                 BentoActionCard(
                     title = "Buat Tugas",
-                    subtitle = "Tugaskan PR/proyek",
+                    subtitle = "Tugaskan PR & proyek",
                     icon = Icons.AutoMirrored.Filled.Assignment,
                     accentColor = TeacherNeon,
                     badgeText = "Baru",
@@ -247,8 +224,8 @@ fun LazyListScope.teacherContent(
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 BentoActionCard(
-                    title = "Pengumuman",
-                    subtitle = "Broadcast ke siswa/wali",
+                    title = "Broadcast",
+                    subtitle = "Kirim info ke rombel",
                     icon = Icons.Default.Campaign,
                     accentColor = NeonBlue,
                     onClick = onNavigateToBroadcastCenter,
@@ -257,7 +234,7 @@ fun LazyListScope.teacherContent(
 
                 BentoActionCard(
                     title = "Bahan Ajar",
-                    subtitle = "Kelola modul belajar",
+                    subtitle = "Modul & dokumen ajar",
                     icon = Icons.Default.Book,
                     accentColor = TeacherNeon,
                     onClick = onNavigateToLearning,
@@ -267,121 +244,77 @@ fun LazyListScope.teacherContent(
         }
     }
 
-    // ── 3. STATISTIK PENGAJAR CEPAT ──────────────────────────────────────────────
+    // ── 3. EVALUASI & PENILAIAN SISWA ───────────────────────────────────────────
+    item {
+        LightSectionHeader(
+            title = "Evaluasi & Rekap Nilai",
+            sub = "Buku nilai siswa dan koreksi penugasan aktif",
+            onSeeAll = onNavigateToGrades,
+        )
+    }
+
     item {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 4.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            TeacherStatPillCard(
-                title = "Agenda",
-                value = "${todaySessions.size}",
-                unit = "Sesi",
-                icon = Icons.Default.DateRange,
+            TeacherWorkflowCard(
+                title = "Buku Nilai Guru",
+                subtitle = "Capaian & KKM",
+                detail = "Rekap nilai formatif & sumatif",
+                icon = Icons.Default.Assessment,
                 accentColor = NeonBlue,
+                actionLabel = "Buka",
+                onClick = onNavigateToGrades,
                 modifier = Modifier.weight(1f),
-                onClick = onNavigateToSessions,
             )
-            TeacherStatPillCard(
-                title = "Tugas Aktif",
-                value = pendingAssignmentsCount.ifBlank { "0" },
-                unit = "Tugas",
+
+            TeacherWorkflowCard(
+                title = "Koreksi Tugas",
+                subtitle = if (pendingAssignmentsCount != "0" && pendingAssignmentsCount.isNotBlank()) "$pendingAssignmentsCount Tugas Aktif" else "Antrean Tugas",
+                detail = "Tinjau & beri nilai tugas",
                 icon = Icons.AutoMirrored.Filled.Assignment,
                 accentColor = TeacherNeon,
-                modifier = Modifier.weight(1f),
+                actionLabel = "Periksa",
                 onClick = onNavigateToAssignments,
+                modifier = Modifier.weight(1f),
             )
-            TeacherStatPillCard(
-                title = "Modul Ajar",
-                value = materialsCount.ifBlank { "0" },
-                unit = "Bahan",
-                icon = Icons.Default.Book,
+        }
+    }
+
+    // ── 4. PRESENSI & BANK SOAL KELAS ───────────────────────────────────────────
+    item {
+        LightSectionHeader(
+            title = "Presensi & Bank Soal",
+            sub = "Keaktifan kehadiran siswa dan evaluasi kuis",
+        )
+    }
+
+    item {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            TeacherWorkflowCard(
+                title = "Presensi Rombel",
+                subtitle = if (attendanceRate != "-" && attendanceRate.isNotBlank()) "Kehadiran $attendanceRate" else "Rekap Kehadiran",
+                detail = displayClass,
+                icon = Icons.Default.CheckCircle,
+                accentColor = NeonSuccess,
+                actionLabel = "Rekap",
+                onClick = { if (rawClass.isNotBlank()) onNavigateToRombelStudents(rawClass) },
+                modifier = Modifier.weight(1f),
+            )
+
+            TeacherWorkflowCard(
+                title = "Bank Soal & Kuis",
+                subtitle = "Bank Butir Soal",
+                detail = "Riwayat & arsip ujian kelas",
+                icon = Icons.Default.Quiz,
                 accentColor = NeonWarning,
+                actionLabel = "Kelola",
+                onClick = onNavigateToQuizzes,
                 modifier = Modifier.weight(1f),
-                onClick = onNavigateToLearning,
-            )
-        }
-    }
-
-    // ── 4. AGENDA SESI HARI INI ─────────────────────────────────────────────────
-    item {
-        LightSectionHeader(
-            title = "Agenda Mengajar Hari Ini",
-            sub = "Sesi pembelajaran kelas hari ini",
-            onSeeAll = onNavigateToSessions,
-        )
-    }
-
-    if (todaySessions.isNotEmpty()) {
-        items(todaySessions.take(3)) { session ->
-            TeacherSessionRowCard(
-                session = session,
-                onClick = onNavigateToSessions,
-            )
-        }
-    } else {
-        item {
-            EmptyTeachingCard(
-                title = "Tidak Ada Jadwal Mengajar Hari Ini",
-                subtitle = "Belum ada sesi tatap muka terjadwal untuk hari ini. Waktu yang baik untuk menyusun bahan ajar atau menilai tugas siswa.",
-                actionText = "Buka Jadwal Kelas",
-                onClick = onNavigateToSessions,
-            )
-        }
-    }
-
-    // ── 5. EVALUASI & TUGAS SISWA ────────────────────────────────────────────────
-    item {
-        LightSectionHeader(
-            title = "Tugas & Evaluasi Pembelajaran",
-            sub = "Kelola penugasan yang diberikan ke siswa",
-            onSeeAll = onNavigateToAssignments,
-        )
-    }
-
-    if (teacherAssignments.isNotEmpty()) {
-        items(teacherAssignments.take(3)) { asg ->
-            TeacherAssignmentRowCard(
-                assignment = asg,
-                onClick = onNavigateToAssignments,
-            )
-        }
-    } else {
-        item {
-            EmptyTeachingCard(
-                title = "Belum Ada Tugas Aktif",
-                subtitle = "Berikan penugasan latihan atau proyek baru untuk menguji pemahaman materi siswa.",
-                actionText = "Buat Tugas Sekarang",
-                onClick = onNavigateToAssignmentCreator,
-            )
-        }
-    }
-
-    // ── 6. PENGUMUMAN SEKOLAH ───────────────────────────────────────────────────
-    item {
-        LightSectionHeader(
-            title = "Pengumuman Sekolah",
-            sub = "Pemberitahuan resmi & surat edaran terkini",
-            onSeeAll = onNavigateToNotifications,
-        )
-    }
-
-    if (teacherAnnouncements.isNotEmpty()) {
-        items(teacherAnnouncements.take(2)) { notif ->
-            TeacherAnnouncementCard(
-                notification = notif,
-                onClick = onNavigateToNotifications,
-            )
-        }
-    } else {
-        item {
-            EmptyTeachingCard(
-                title = "Tidak Ada Pengumuman Baru",
-                subtitle = "Semua surat edaran dan pengumuman sekolah terkini sudah Anda tinjau.",
-                actionText = "Lihat Notifikasi",
-                onClick = onNavigateToNotifications,
             )
         }
     }
@@ -392,14 +325,15 @@ fun LazyListScope.teacherContent(
 }
 
 @Composable
-private fun TeacherStatPillCard(
+private fun TeacherWorkflowCard(
     title: String,
-    value: String,
-    unit: String,
+    subtitle: String,
+    detail: String,
     icon: ImageVector,
     accentColor: Color,
+    actionLabel: String,
+    onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
 ) {
     Box(
         modifier = modifier
@@ -407,7 +341,7 @@ private fun TeacherStatPillCard(
             .background(CosmicNavy)
             .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp),
+            .padding(14.dp),
     ) {
         Column {
             Row(
@@ -415,356 +349,77 @@ private fun TeacherStatPillCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = title,
-                    fontSize = 10.sp,
-                    color = TextTertiary,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
                 Box(
                     modifier = Modifier
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(accentColor.copy(alpha = 0.12f)),
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(accentColor.copy(alpha = 0.12f))
+                        .border(0.5.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(12.dp),
+                        modifier = Modifier.size(17.dp),
                     )
                 }
-            }
 
-            Spacer(Modifier.height(6.dp))
-
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = value,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    maxLines = 1,
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = unit,
-                    fontSize = 10.sp,
-                    color = TextSecondary,
-                    fontWeight = FontWeight.Normal,
-                    modifier = Modifier.padding(bottom = 2.dp),
-                    maxLines = 1,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TeacherSessionRowCard(
-    session: LearningSession,
-    onClick: () -> Unit,
-) {
-    val isLive = session.status.equals("active", ignoreCase = true)
-    val isCompleted = session.status.equals("completed", ignoreCase = true)
-    val subject = session.subjectName ?: session.notes?.substringBefore(" • ") ?: "Pelajaran"
-    val room = formatClassName(session.className ?: session.room)
-    val timeLabel = formatSessionTime(session)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, if (isLive) NeonSuccess.copy(alpha = 0.5f) else GlassBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f),
-            ) {
-                Box(
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isLive) NeonSuccess.copy(alpha = 0.15f) else CosmicSurface2)
-                        .border(
-                            0.5.dp,
-                            if (isLive) NeonSuccess.copy(alpha = 0.4f) else GlassBorder,
-                            RoundedCornerShape(8.dp)
-                        ),
-                    contentAlignment = Alignment.Center,
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.School,
-                        contentDescription = null,
-                        tint = if (isLive) NeonSuccess else TeacherNeon,
-                        modifier = Modifier.size(18.dp),
-                    )
-                }
-
-                Spacer(Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = subject,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = actionLabel,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium,
                         color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = "$room • $timeLabel",
-                        fontSize = 11.sp,
-                        color = if (isLive) NeonSuccess else TextSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+                    Spacer(Modifier.width(3.dp))
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(10.dp),
                     )
                 }
             }
 
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(
-                        when {
-                            isLive -> NeonSuccess.copy(alpha = 0.15f)
-                            isCompleted -> TextTertiary.copy(alpha = 0.15f)
-                            else -> NeonBlue.copy(alpha = 0.15f)
-                        }
-                    )
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-            ) {
-                Text(
-                    text = when {
-                        isLive -> "AKTIF"
-                        isCompleted -> "SELESAI"
-                        else -> "TERJADWAL"
-                    },
-                    fontSize = 9.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = when {
-                        isLive -> NeonSuccess
-                        isCompleted -> TextTertiary
-                        else -> NeonBlue
-                    },
-                )
-            }
-        }
-    }
-}
+            Spacer(Modifier.height(10.dp))
 
-@Composable
-private fun TeacherAssignmentRowCard(
-    assignment: Assignment,
-    onClick: () -> Unit,
-) {
-    val rawCls = assignment.className ?: assignment.classId
-    val clsName = formatClassName(rawCls, fallback = "Semua Kelas")
-    val dueText = formatDueDate(assignment.dueAt)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(TeacherNeon.copy(alpha = 0.12f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
-                    ) {
-                        Text(
-                            text = clsName,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TeacherNeon,
-                        )
-                    }
-                    if (!assignment.subjectName.isNullOrBlank() && !isUuid(assignment.subjectName)) {
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = assignment.subjectName!!,
-                            fontSize = 10.sp,
-                            color = TextTertiary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-
-                Spacer(Modifier.height(4.dp))
-
-                Text(
-                    text = assignment.title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-
-                Spacer(Modifier.height(2.dp))
-
-                Text(
-                    text = dueText,
-                    fontSize = 11.sp,
-                    color = TextTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
-
-            Spacer(Modifier.width(8.dp))
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-            ) {
-                Text(
-                    text = "Periksa",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextPrimary,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun TeacherAnnouncementCard(
-    notification: Notification,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
-        ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(NeonBlue.copy(alpha = 0.12f))
-                    .border(0.5.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Campaign,
-                    contentDescription = null,
-                    tint = NeonBlue,
-                    modifier = Modifier.size(18.dp),
-                )
-            }
-
-            Spacer(Modifier.width(12.dp))
-
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = notification.title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                Spacer(Modifier.height(3.dp))
-                Text(
-                    text = notification.body,
-                    fontSize = 11.sp,
-                    color = TextSecondary,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 15.sp,
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun EmptyTeachingCard(
-    title: String,
-    subtitle: String,
-    actionText: String,
-    onClick: () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(16.dp),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
             Text(
                 text = title,
                 fontSize = 13.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Bold,
                 color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(4.dp))
+
+            Spacer(Modifier.height(2.dp))
+
             Text(
                 text = subtitle,
                 fontSize = 11.sp,
-                color = TextTertiary,
-                lineHeight = 15.sp,
-                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                color = accentColor,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            Spacer(Modifier.height(12.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-                    .clickable(onClick = onClick)
-                    .padding(horizontal = 14.dp, vertical = 6.dp),
-            ) {
-                Text(
-                    text = actionText,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextPrimary,
-                )
-            }
+
+            Spacer(Modifier.height(2.dp))
+
+            Text(
+                text = detail,
+                fontSize = 10.sp,
+                color = TextTertiary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
         }
     }
 }
