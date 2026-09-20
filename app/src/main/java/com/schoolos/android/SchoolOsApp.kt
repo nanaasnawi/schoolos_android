@@ -22,9 +22,18 @@ class SchoolOsApp : Application() {
             com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
         } catch (_: Exception) {}
 
-        // Start 24/7 background notification service to keep SSE and alerts alive when app is closed
+        // Clean up any old persistent service notification & channel
         try {
-            com.schoolos.android.notification.SchoolOsNotificationService.start(this)
+            val nm = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+            nm?.cancel(8801)
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                nm?.deleteNotificationChannel("school_os_service_channel")
+            }
+        } catch (_: Exception) {}
+
+        // Schedule silent background alarm polling (no sticky notification bar icon!)
+        try {
+            com.schoolos.android.notification.NotificationPollReceiver.schedule(this)
         } catch (_: Exception) {}
     }
 }

@@ -88,12 +88,6 @@
             </intent-filter>
         </activity>
 
-        <!-- Persistent 24/7 background sync service keeping SSE and alerts alive when app is closed -->
-        <service
-            android:name=".notification.SchoolOsNotificationService"
-            android:foregroundServiceType="dataSync"
-            android:stopWithTask="false"
-            android:exported="false" />
 
         <!-- Firebase Cloud Messaging Service for Real-time Background Push -->
         <service
