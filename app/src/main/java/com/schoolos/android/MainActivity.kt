@@ -57,15 +57,10 @@ class MainActivity : ComponentActivity() {
         // Start background notification & maintenance sync listener
         notificationSyncManager.start()
 
-        // Initialize Firebase Cloud Messaging (Topic: school_announcements)
+        // Subscribe SEMUA topik belajar (bukan cuma pengumuman) agar materi/tugas/
+        // kuis/nilai/sesi ikut membangunkan HP saat idle via FCM data-message.
         try {
-            com.google.firebase.messaging.FirebaseMessaging.getInstance()
-                .subscribeToTopic("school_announcements")
-                .addOnCompleteListener { task ->
-                    if (task.isSuccessful) {
-                        timber.log.Timber.d("Subscribed to FCM topic: school_announcements")
-                    }
-                }
+            com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
             com.google.firebase.messaging.FirebaseMessaging.getInstance().token
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
@@ -80,6 +75,24 @@ class MainActivity : ComponentActivity() {
         } catch (e: Exception) {
             timber.log.Timber.e(e, "Firebase initialization error")
         }
+
+        // Fallback polling (AlarmManager allow-while-idle) untuk Doze / HP idle lama.
+        try {
+            com.schoolos.android.notification.NotificationPollReceiver.schedule(this)
+        } catch (_: Exception) {}
+
+        // Minta user mengecualikan battery optimization agar FCM data-message + alarm
+        // tetap membangunkan HP saat standby (ACTION_REQUEST_IGNORE... hanya prompt sekali).
+        try {
+            val pm = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+                val intent = android.content.Intent(
+                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    android.net.Uri.parse("package:$packageName"),
+                )
+                startActivity(intent)
+            }
+        } catch (_: Exception) {}
 
         // Initial check for system maintenance mode
         lifecycleScope.launch {

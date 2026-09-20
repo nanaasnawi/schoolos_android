@@ -8,6 +8,10 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
     <uses-feature
         android:name="android.hardware.camera"
@@ -34,11 +38,20 @@
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
             android:resource="@mipmap/ic_launcher" />
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@android:color/holo_blue_dark" />
+        <meta-data
+            android:name="firebase_messaging_auto_init_enabled"
+            android:value="true" />
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:theme="@style/Theme.SchoolOS">
+            android:theme="@style/Theme.SchoolOS"
+            android:launchMode="singleTop"
+            android:turnScreenOn="true"
+            android:showWhenLocked="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -47,16 +60,61 @@
                 <action android:name="OPEN_NOTIFICATIONS" />
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
+            <intent-filter>
+                <action android:name="OPEN_MATERIALS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="OPEN_ASSIGNMENTS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="OPEN_QUIZZES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="OPEN_GRADES" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="OPEN_SESSIONS" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="OPEN_SCHEDULE" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- Firebase Cloud Messaging Service for Real-time Background Push -->
         <service
             android:name=".notification.SchoolOsFirebaseMessagingService"
-            android:exported="false">
+            android:exported="false"
+            android:directBootAware="true">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+
+        <!-- Fallback polling saat Doze menahan FCM / setelah reboot -->
+        <receiver
+            android:name=".notification.NotificationPollReceiver"
+            android:exported="false"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="com.schoolos.android.ACTION_POLL_NOTIFICATIONS" />
+            </intent-filter>
+        </receiver>
+        <receiver
+            android:name=".notification.BootReceiver"
+            android:exported="false"
+            android:directBootAware="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
     </application>
 
 </manifest>

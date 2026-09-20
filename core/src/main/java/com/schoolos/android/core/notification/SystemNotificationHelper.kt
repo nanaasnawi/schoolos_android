@@ -20,8 +20,11 @@ import androidx.core.content.ContextCompat
 object SystemNotificationHelper {
 
     const val CHANNEL_ID = "school_os_announcements_v3"
+    const val CHANNEL_LEARNING_ID = "school_os_learning_v1"
     private const val CHANNEL_NAME = "Pengumuman & Broadcast Sekolah"
     private const val CHANNEL_DESC = "Pemberitahuan resmi dan pengumuman sekolah"
+    private const val CHANNEL_LEARNING_NAME = "Materi, Tugas, Kuis & Nilai"
+    private const val CHANNEL_LEARNING_DESC = "Notifikasi pembelajaran: materi, tugas, kuis/CBT, nilai, dan jadwal"
 
     fun createNotificationChannel(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -43,17 +46,33 @@ object SystemNotificationHelper {
                 setBypassDnd(true)
                 setShowBadge(true)
             }
+            // Channel kedua untuk event belajar agar tidak tenggelam oleh pengumuman.
+            val learning = NotificationChannel(CHANNEL_LEARNING_ID, CHANNEL_LEARNING_NAME, importance).apply {
+                description = CHANNEL_LEARNING_DESC
+                enableLights(true)
+                lightColor = Color.CYAN
+                enableVibration(true)
+                vibrationPattern = longArrayOf(0, 250, 120, 250)
+                setSound(soundUri, audioAttributes)
+                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+                setBypassDnd(true)
+                setShowBadge(true)
+            }
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             manager?.createNotificationChannel(channel)
+            manager?.createNotificationChannel(learning)
         }
     }
 
-    private fun isDuplicate(context: Context, title: String, message: String): Boolean {
+    private fun isDuplicate(context: Context, title: String, message: String, navigateTo: String = "notifications"): Boolean {
         return try {
             val prefs = context.getSharedPreferences("schoolos_notif_dedup", Context.MODE_PRIVATE)
-            val cleanTitle = title.removePrefix("📢").trim().lowercase()
+            val cleanTitle = title
+                .removePrefix("📢").removePrefix("📚").removePrefix("📝")
+                .removePrefix("💻").removePrefix("🏆").removePrefix("🔔").removePrefix("🎓")
+                .trim().lowercase()
             val cleanMsg = message.trim().lowercase()
-            val key = "dedup_${(cleanTitle + "_" + cleanMsg.take(60)).hashCode()}"
+            val key = "dedup_${(navigateTo + "_" + cleanTitle + "_" + cleanMsg.take(60)).hashCode()}"
             val now = System.currentTimeMillis()
 
             val lastShown = prefs.getLong(key, 0L)
@@ -74,9 +93,14 @@ object SystemNotificationHelper {
         notificationId: Int,
         title: String,
         message: String,
+        navigateTo: String = "notifications",
+        channelId: String? = null,
+        clickAction: String? = null,
+        category: String? = null,
     ) {
         // 1. Drop duplicate notifications from multi-channel triggers (FCM + SSE + Polling)
-        if (isDuplicate(context, title, message)) {
+        //    Dedup key mencakup navigateTo agar materi/tugas/kuis berbeda tidak saling menelan.
+        if (isDuplicate(context, title, message, navigateTo)) {
             return
         }
 
@@ -109,10 +133,9 @@ object SystemNotificationHelper {
             }
         } catch (_: Exception) {}
 
-        // Deterministic notification slot based on title hash so even if any rapid event arrives,
-        // it updates the exact same notification slot instead of creating a second duplicate banner!
-        val cleanTitle = title.removePrefix("📢").trim().lowercase()
-        val stableId = cleanTitle.hashCode()
+        // Deterministic notification slot per pesan — pakai ID dari FCM (bukan hash
+        // judul!) agar tiap materi/tugas/kuis tampil sendiri dan tidak menimpa tray.
+        val notifyId = notificationId
 
         // Sync with shown IDs in NotificationSyncManager
         try {
@@ -120,28 +143,40 @@ object SystemNotificationHelper {
             val shownIds = syncPrefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
             val mutableShown = shownIds.toMutableSet()
             mutableShown.add(notificationId.toString())
-            mutableShown.add(stableId.toString())
             syncPrefs.edit().putStringSet("shown_notif_ids", mutableShown).apply()
         } catch (_: Exception) {}
 
-        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
+        val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            putExtra("navigate_to", "notifications")
+            putExtra("navigate_to", navigateTo)
+            if (!clickAction.isNullOrBlank()) action = clickAction
+        } ?: Intent(Intent.ACTION_MAIN).apply {
+            `package` = context.packageName
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to", navigateTo)
+            if (!clickAction.isNullOrBlank()) action = clickAction
         }
 
         val pendingIntent = PendingIntent.getActivity(
             context,
-            stableId,
-            intent,
+            notifyId,
+            launchIntent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+
+        // Pilih channel sesuai kategori: pengumuman vs event belajar.
+        val effectiveChannel = when {
+            !channelId.isNullOrBlank() -> channelId
+            navigateTo == "notifications" -> CHANNEL_ID
+            else -> CHANNEL_LEARNING_ID
+        }
 
         val iconRes = context.applicationInfo.icon.takeIf { it != 0 }
             ?: android.R.drawable.ic_dialog_info
 
         val soundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, effectiveChannel)
             .setSmallIcon(iconRes)
             .setContentTitle(title)
             .setContentText(message)
@@ -157,9 +192,19 @@ object SystemNotificationHelper {
             .setContentIntent(pendingIntent)
 
         try {
-            NotificationManagerCompat.from(context).notify(stableId, builder.build())
+            NotificationManagerCompat.from(context).notify(notifyId, builder.build())
         } catch (e: SecurityException) {
             // Permission not granted
         }
+    }
+
+    @Suppress("unused")
+    fun activeCount(context: Context): Int {
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                nm?.activeNotifications?.size ?: 0
+            } else 0
+        } catch (_: Exception) { 0 }
     }
 }
