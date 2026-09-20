@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "947323699848",
-    "project_id": "school-os-678a5",
-    "storage_bucket": "school-os-678a5.firebasestorage.app"
+    "project_number": "530547425616",
+    "project_id": "akselerasi-edu",
+    "storage_bucket": "akselerasi-edu.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:947323699848:android:8da3030a8958a1db43d53d",
+        "mobilesdk_app_id": "1:530547425616:android:10b06260cf670008726c55",
         "android_client_info": {
           "package_name": "com.schoolos.android"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBkHzpqHISqb5chCTZ3HSO0f18DpCjWZ3k"
+          "current_key": "AIzaSyAZON6t1fM5y1NK0zAouty6g78rUD3QtxA"
         }
       ],
       "services": {
