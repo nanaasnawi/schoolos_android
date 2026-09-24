@@ -33,18 +33,21 @@ class QuizRepositoryImpl @Inject constructor(
 ) : QuizRepository {
 
     override suspend fun getQuizzes(classId: String): Result<List<Quiz>> = runCatching {
-        val isOnline = try { networkMonitor.isOnline.first() } catch (_: Exception) { true }
-        if (isOnline) {
+        try {
             val response = api.getQuizzes(classId)
             val quizzes = response.data?.map { it.dtoToDomain() }
-                ?: throw Exception(response.error?.message ?: "Gagal memuat kuis dari server API.")
-            quizDao.clearAll()
-            quizDao.insertAll(quizzes.map { it.toEntity() })
-            quizzes
-        } else {
-            val cached = try { with(quizDao.getQuizzes()) { first() } } catch (_: Exception) { emptyList() }
-            cached.map { it.toDomain() }
+            if (quizzes != null) {
+                if (classId.isBlank() && quizzes.isNotEmpty()) {
+                    quizDao.clearAll()
+                }
+                quizDao.insertAll(quizzes.map { it.toEntity() })
+                return@runCatching quizzes
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("QuizRepo", "Remote fetch quizzes failed, falling back to cache: ${e.message}")
         }
+        val cached = try { quizDao.getQuizzes().first() } catch (_: Exception) { emptyList() }
+        cached.map { it.toDomain() }
     }
 
     fun getCachedQuizzes(): Flow<List<Quiz>> {
@@ -52,8 +55,18 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getQuiz(id: String): Result<Quiz> = runCatching {
-        val response = api.getQuiz(id)
-        response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Kuis tidak ditemukan.")
+        try {
+            val response = api.getQuiz(id)
+            val domain = response.data?.dtoToDomain()
+            if (domain != null) {
+                quizDao.insert(domain.toEntity())
+                return@runCatching domain
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("QuizRepo", "Remote getQuiz failed, checking cache: ${e.message}")
+        }
+        val cached = quizDao.getQuizById(id)
+        cached?.toDomain() ?: throw Exception("Kuis tidak ditemukan atau perangkat sedang offline.")
     }
 
     override suspend fun createQuiz(
@@ -109,6 +122,11 @@ class QuizRepositoryImpl @Inject constructor(
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal menambahkan butir soal kuis.")
     }
 
+    override suspend fun publishQuiz(id: String): Result<Quiz> = runCatching {
+        val response = api.publishQuiz(id)
+        response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal menerbitkan kuis.")
+    }
+
     override suspend fun startAttempt(quizId: String): Result<QuizAttempt> = runCatching {
         val studentId = authManager.getStudentId() ?: throw Exception("Sesi pengguna tidak valid.")
         val response = api.startAttempt(quizId, StartAttemptRequest(studentId = studentId))
@@ -129,7 +147,13 @@ class QuizRepositoryImpl @Inject constructor(
                 )
             }
         )
-        val response = api.submitAttempt(quizId, attemptId, request)
+        val idempotencyKey = java.util.UUID.randomUUID().toString()
+        val response = api.submitAttempt(
+            quizId = quizId,
+            attemptId = attemptId,
+            request = request,
+            idempotencyKey = idempotencyKey,
+        )
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal mengumpulkan jawaban kuis.")
     }
 }

@@ -94,6 +94,10 @@ class AuthManager @Inject constructor(
         )
     }
 
+    suspend fun checkIsLoggedIn(): Boolean {
+        return context.dataStore.data.first()[KEY_IS_LOGGED_IN] ?: false
+    }
+
     val isLoggedIn: Boolean
         get() = runBlocking {
             context.dataStore.data.first()[KEY_IS_LOGGED_IN] ?: false

@@ -68,4 +68,26 @@ class SessionRepositoryImpl @Inject constructor(
         response.data?.map { it.toDomain() }
             ?: throw Exception(response.error?.message ?: "Gagal memuat presensi sesi.")
     }
+
+    override suspend fun recordAttendance(
+        sessionId: String,
+        studentId: String,
+        status: String,
+        notes: String?,
+    ): Result<SessionAttendance> = runCatching {
+        val idempotencyKey = java.util.UUID.randomUUID().toString()
+        val request = com.schoolos.android.data.remote.dto.RecordAttendanceRequestDto(
+            studentId = studentId,
+            status = status,
+            checkedInAt = java.time.Instant.now().toString(),
+            notes = notes,
+        )
+        val response = api.recordAttendance(
+            id = sessionId,
+            request = request,
+            idempotencyKey = idempotencyKey,
+        )
+        val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal mencatat presensi kehadiran.")
+        dto.toDomain()
+    }
 }

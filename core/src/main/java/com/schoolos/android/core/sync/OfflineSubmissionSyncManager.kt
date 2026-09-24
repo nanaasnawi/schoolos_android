@@ -35,7 +35,7 @@ class OfflineSubmissionSyncManager @Inject constructor(
     val pendingCount: Flow<Int> = submissionQueueDao.observePendingCount()
 
     // Callback lambda invoked to send item to remote API server (decoupled from direct API DTO)
-    private var submitAction: (suspend (assignmentId: String, studentId: String, content: String?, fileUrl: String?) -> Boolean)? = null
+    private var submitAction: (suspend (assignmentId: String, studentId: String, content: String?, fileUrl: String?, idempotencyKey: String) -> Boolean)? = null
 
     init {
         scope.launch {
@@ -48,7 +48,7 @@ class OfflineSubmissionSyncManager @Inject constructor(
     }
 
     fun registerSubmitAction(
-        action: suspend (assignmentId: String, studentId: String, content: String?, fileUrl: String?) -> Boolean
+        action: suspend (assignmentId: String, studentId: String, content: String?, fileUrl: String?, idempotencyKey: String) -> Boolean
     ) {
         this.submitAction = action
     }
@@ -86,7 +86,7 @@ class OfflineSubmissionSyncManager @Inject constructor(
             _syncState.value = SyncProgressState.Syncing(index + 1, pending.size)
 
             try {
-                val success = action(item.assignmentId, item.studentId, item.content, item.fileUrl)
+                val success = action(item.assignmentId, item.studentId, item.content, item.fileUrl, item.id)
                 if (success) {
                     submissionQueueDao.updateStatus(item.id, "SYNCED")
                     synced++

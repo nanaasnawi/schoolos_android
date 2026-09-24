@@ -22,7 +22,7 @@ class NotificationPollReceiver : BroadcastReceiver() {
     companion object {
         const val ACTION_POLL = "com.schoolos.android.ACTION_POLL_NOTIFICATIONS"
         private const val REQ_CODE = 9001
-        private const val INTERVAL_MS = 2 * 60 * 1000L
+        private const val INTERVAL_MS = 15 * 60 * 1000L
 
         fun schedule(context: Context) {
             try {
@@ -44,7 +44,7 @@ class NotificationPollReceiver : BroadcastReceiver() {
                 try {
                     am.setInexactRepeating(AlarmManager.RTC_WAKEUP, first + INTERVAL_MS, INTERVAL_MS, pi)
                 } catch (_: Exception) {}
-                Timber.d("Silent notification poll alarm scheduled (every 2 mins)")
+                Timber.d("Silent notification poll alarm scheduled (every 15 mins)")
             } catch (e: Exception) {
                 Timber.w(e, "Failed to schedule notification poll")
             }

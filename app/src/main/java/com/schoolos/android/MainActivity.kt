@@ -90,18 +90,6 @@ class MainActivity : ComponentActivity() {
             com.schoolos.android.notification.NotificationPollReceiver.schedule(this)
         } catch (_: Exception) {}
 
-        // Minta user mengecualikan battery optimization agar FCM data-message + alarm
-        // tetap membangunkan HP saat standby (ACTION_REQUEST_IGNORE... hanya prompt sekali).
-        try {
-            val pm = getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
-            if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
-                val intent = android.content.Intent(
-                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    android.net.Uri.parse("package:$packageName"),
-                )
-                startActivity(intent)
-            }
-        } catch (_: Exception) {}
 
         // Initial check for system maintenance mode
         lifecycleScope.launch {

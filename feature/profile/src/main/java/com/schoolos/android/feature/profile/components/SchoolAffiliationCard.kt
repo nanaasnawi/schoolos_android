@@ -11,18 +11,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -30,7 +25,6 @@ import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.DynamicSchoolLogo
 import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.SchoolOsBrandLogo
 import com.schoolos.android.core.designsystem.TextPrimary
@@ -47,15 +41,9 @@ fun SchoolAffiliationCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
-            .background(
-                Brush.verticalGradient(
-                    listOf(NeonBlue.copy(alpha = 0.06f), NeonBlue.copy(alpha = 0f)),
-                    startY = 0f, endY = 200f,
-                ),
-            )
-            .border(1.dp, NeonBlue.copy(alpha = 0.18f), RoundedCornerShape(16.dp))
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .padding(16.dp),
     ) {
         Row(
@@ -64,13 +52,13 @@ fun SchoolAffiliationCard(
         ) {
             // School logo (Dynamic Tenant School Logo)
             Box(
-                modifier = Modifier
-                    .size(56.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(CosmicBlack)
-                    .border(1.5.dp, GlassBorder, RoundedCornerShape(14.dp)),
-                contentAlignment = Alignment.Center,
-            ) {
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CosmicBlack)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
                 DynamicSchoolLogo(
                     logoUrl = schoolLogoUrl,
                     modifier = Modifier
@@ -102,7 +90,7 @@ fun SchoolAffiliationCard(
                             .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
-                            text = "Akreditasi A",
+                            text = "Terverifikasi",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Black,
                             color = NeonSuccess,
@@ -122,7 +110,7 @@ fun SchoolAffiliationCard(
                 Text(
                     text = "Lembaga Pendidikan Terverifikasi",
                     fontSize = 10.sp,
-                    color = NeonBlue.copy(alpha = 0.8f),
+                    color = TextTertiary,
                     fontWeight = FontWeight.SemiBold,
                 )
             }

@@ -54,8 +54,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 )
             } ?: emptyList()
 
-            materialDao.clearAll()
             if (materials.isNotEmpty()) {
+                materialDao.clearAll()
                 val entities = materials.map { m ->
                     LearningMaterialEntity(
                         id = m.id,

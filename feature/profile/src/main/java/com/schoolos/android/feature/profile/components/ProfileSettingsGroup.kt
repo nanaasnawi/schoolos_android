@@ -76,9 +76,9 @@ fun ProfileSettingsGroup(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(12.dp))
                 .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp)),
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp)),
         ) {
             Column {
                 ProfileSettingRow(
@@ -101,14 +101,14 @@ fun ProfileSettingsGroup(
                     Box(
                         modifier = Modifier
                             .size(42.dp)
-                            .clip(RoundedCornerShape(13.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .background(
                                 (if (isDarkTheme) NeonBlue else NeonWarning).copy(alpha = 0.10f),
                             )
                             .border(
-                                1.dp,
+                                0.5.dp,
                                 (if (isDarkTheme) NeonBlue else NeonWarning).copy(alpha = 0.22f),
-                                RoundedCornerShape(13.dp),
+                                RoundedCornerShape(10.dp),
                             ),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -173,12 +173,13 @@ fun ProfileSettingsGroup(
             }
         }
 
-        // Logout CTA Button — solid gradient red
+        // Logout Button — minimal, consistent with other screens
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(Brush.linearGradient(listOf(Color(0xFFDC2626), Color(0xFFEF4444))))
+                .clip(RoundedCornerShape(12.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, NeonError.copy(alpha = 0.40f), RoundedCornerShape(12.dp))
                 .clickable(onClick = onLogoutClick)
                 .padding(vertical = 15.dp),
             contentAlignment = Alignment.Center,
@@ -187,16 +188,15 @@ fun ProfileSettingsGroup(
                 Icon(
                     Icons.AutoMirrored.Filled.ExitToApp,
                     null,
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp),
+                    tint = NeonError,
+                    modifier = Modifier.size(18.dp),
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
                     "Keluar dari Akun",
-                    color = Color.White,
-                    fontWeight = FontWeight.ExtraBold,
+                    color = NeonError,
+                    fontWeight = FontWeight.SemiBold,
                     fontSize = 14.sp,
-                    letterSpacing = 0.2.sp,
                 )
             }
         }
@@ -221,9 +221,9 @@ private fun ProfileSettingRow(
         Box(
             modifier = Modifier
                 .size(42.dp)
-                .clip(RoundedCornerShape(13.dp))
+                .clip(RoundedCornerShape(10.dp))
                 .background(color.copy(alpha = 0.10f))
-                .border(1.dp, color.copy(alpha = 0.22f), RoundedCornerShape(13.dp)),
+                .border(0.5.dp, color.copy(alpha = 0.22f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))

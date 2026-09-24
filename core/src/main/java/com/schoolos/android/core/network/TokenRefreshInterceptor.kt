@@ -56,11 +56,14 @@ class TokenRefreshInterceptor @Inject constructor(
                     RefreshBody(refreshToken),
                 )
                 val originalUrl = response.request.url
-                val refreshUrl = "${originalUrl.scheme}://${originalUrl.host}:${originalUrl.port}/api/v1/auth/refresh"
+                val refreshHttpUrl = originalUrl.newBuilder()
+                    .encodedPath("/api/v1/auth/refresh")
+                    .query(null)
+                    .build()
 
                 val refreshResponse = refreshClient.newCall(
                     Request.Builder()
-                        .url(refreshUrl)
+                        .url(refreshHttpUrl)
                         .post(body.toRequestBody("application/json".toMediaType()))
                         .build()
                 ).execute()

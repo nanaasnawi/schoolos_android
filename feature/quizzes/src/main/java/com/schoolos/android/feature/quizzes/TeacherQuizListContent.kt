@@ -156,6 +156,8 @@ private fun TeacherQuizCard(
                 Spacer(Modifier.width(8.dp))
 
                 // Status chip
+                val statusLower = quiz.status.lowercase()
+                val isDraft = statusLower == "draft"
                 if (isArchived) {
                     Box(
                         modifier = Modifier
@@ -165,6 +167,16 @@ private fun TeacherQuizCard(
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
                         Text("ARSIP", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
+                    }
+                } else if (isDraft) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(NeonWarning.copy(alpha = 0.12f))
+                            .border(0.5.dp, NeonWarning.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                    ) {
+                        Text("DRAF", color = NeonWarning, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
                     }
                 } else {
                     Box(

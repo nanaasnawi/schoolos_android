@@ -75,6 +75,7 @@ interface SchoolOsApi {
     suspend fun submitAssignment(
         @Path("id") id: String,
         @Body request: SubmitAssignmentRequest,
+        @Header("X-Idempotency-Key") idempotencyKey: String? = null,
     ): ApiResponse<SubmissionDto>
 
     @GET("learning/assignments/{id}/submissions")
@@ -85,6 +86,7 @@ interface SchoolOsApi {
         @Path("id") assignmentId: String,
         @Path("subId") submissionId: String,
         @Body request: GradeSubmissionRequest,
+        @Header("X-Idempotency-Key") idempotencyKey: String? = null,
     ): ApiResponse<SubmissionDto>
 
     // Quizzes
@@ -114,6 +116,7 @@ interface SchoolOsApi {
         @Path("id") quizId: String,
         @Path("attempt_id") attemptId: String,
         @Body request: SubmitAttemptRequest,
+        @Header("X-Idempotency-Key") idempotencyKey: String? = null,
     ): ApiResponse<QuizAttemptDto>
 
     // Sessions
@@ -126,9 +129,13 @@ interface SchoolOsApi {
     @GET("learning/sessions/{id}/attendance")
     suspend fun getSessionAttendance(@Path("id") id: String): ApiResponse<List<SessionAttendanceDto>>
 
-    // Materials
-    @GET("learning/materials")
-    suspend fun getMaterials(): ApiResponse<List<com.schoolos.android.data.remote.dto.MaterialDto>>
+    @POST("learning/sessions/{id}/attendance")
+    suspend fun recordAttendance(
+        @Path("id") id: String,
+        @Body request: RecordAttendanceRequestDto,
+        @Header("X-Idempotency-Key") idempotencyKey: String? = null,
+    ): ApiResponse<SessionAttendanceDto>
+
 
     @GET("learning/materials/{id}")
     suspend fun getMaterial(@Path("id") id: String): ApiResponse<com.schoolos.android.data.remote.dto.MaterialDto>
@@ -208,6 +215,9 @@ interface SchoolOsApi {
     @DELETE("learning/materials/{id}")
     suspend fun deleteMaterial(@Path("id") id: String): ApiResponse<Unit>
 
+    @POST("learning/quizzes/{id}/publish")
+    suspend fun publishQuiz(@Path("id") id: String): ApiResponse<QuizDto>
+
     @PATCH("notifications/{id}/read")
     suspend fun markNotificationRead(@Path("id") id: String): ApiResponse<Unit>
 
@@ -239,6 +249,7 @@ data class CreateAssignmentRequestDto(
     @kotlinx.serialization.SerialName("due_at") val dueAt: String? = null,
     @kotlinx.serialization.SerialName("assignment_type") val assignmentType: String = "individual",
     @kotlinx.serialization.SerialName("class_id") val classId: String? = null,
+    val questions: List<com.schoolos.android.data.remote.dto.AssignmentQuestionDto>? = null,
 )
 
 @kotlinx.serialization.Serializable

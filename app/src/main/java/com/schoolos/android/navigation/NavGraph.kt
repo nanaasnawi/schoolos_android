@@ -68,7 +68,7 @@ fun NavGraph(
     val isMaintenance by maintenanceManager.isMaintenance.collectAsState()
 
     LaunchedEffect(Unit) {
-        isLoggedIn = authManager.isLoggedIn
+        isLoggedIn = authManager.checkIsLoggedIn()
         startCheck = true
     }
 
@@ -309,6 +309,7 @@ fun NavGraph(
                 QuizListScreen(
                     onBack = { navController.popBackStack() },
                     onQuizClick = { id -> navController.navigate(Screen.QuizDetail.createRoute(id)) },
+                    onCreateQuiz = { navController.navigate(Screen.QuizBuilder.route) },
                 )
             }
             composable(
@@ -320,6 +321,7 @@ fun NavGraph(
                     subjectId = subjectId,
                     onBack = { navController.popBackStack() },
                     onQuizClick = { id -> navController.navigate(Screen.QuizDetail.createRoute(id)) },
+                    onCreateQuiz = { navController.navigate(Screen.QuizBuilder.route) },
                 )
             }
             composable(

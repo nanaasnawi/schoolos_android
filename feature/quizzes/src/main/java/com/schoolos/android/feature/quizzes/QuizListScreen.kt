@@ -39,8 +39,8 @@ fun QuizListScreen(
     val role = state.userRole.lowercase()
     val isTeacher = role == "teacher" || role == "guru"
 
-    val activeQuizzes = state.quizzes.filter { it.status.lowercase() in listOf("active", "open", "published") }
-    val doneQuizzes = state.quizzes.filter { it.status.lowercase() in listOf("graded", "submitted", "completed") }
+    val doneQuizzes = state.quizzes.filter { it.status.lowercase() in listOf("closed", "archived", "graded", "submitted", "completed") }
+    val activeQuizzes = state.quizzes.filter { it !in doneQuizzes }
 
     Scaffold(
         containerColor = CosmicBlack,

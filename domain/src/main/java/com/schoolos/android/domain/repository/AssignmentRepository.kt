@@ -13,7 +13,8 @@ interface AssignmentRepository {
         maxScore: Int,
         dueAt: String?,
         classId: String,
-        assignmentType: String
+        assignmentType: String,
+        questions: List<com.schoolos.android.domain.model.AssignmentQuestion> = emptyList(),
     ): Result<Assignment>
     // answers: list of Pair(questionId, chosenChoiceId or textAnswer)
     suspend fun submitAssignment(

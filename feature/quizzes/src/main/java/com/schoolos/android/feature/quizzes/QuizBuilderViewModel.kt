@@ -143,4 +143,26 @@ class QuizBuilderViewModel @Inject constructor(
             }
         }
     }
+
+    fun publishCreatedQuiz(onComplete: () -> Unit = {}) {
+        val quizId = _state.value.createdQuizId
+        if (quizId.isNullOrBlank()) {
+            onComplete()
+            return
+        }
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
+            repository.publishQuiz(quizId)
+                .onSuccess {
+                    _state.value = _state.value.copy(isLoading = false)
+                    onComplete()
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.message ?: "Gagal menerbitkan kuis"
+                    )
+                }
+        }
+    }
 }

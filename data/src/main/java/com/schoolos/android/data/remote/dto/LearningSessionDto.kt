@@ -29,3 +29,11 @@ data class SessionAttendanceDto(
     @SerialName("checked_in_at") val checkedInAt: String? = null,
     val notes: String? = null,
 )
+
+@Serializable
+data class RecordAttendanceRequestDto(
+    @SerialName("student_id") val studentId: String,
+    val status: String,
+    @SerialName("checked_in_at") val checkedInAt: String? = null,
+    val notes: String? = null,
+)

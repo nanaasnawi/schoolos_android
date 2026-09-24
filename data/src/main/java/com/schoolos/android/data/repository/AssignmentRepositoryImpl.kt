@@ -29,11 +29,12 @@ class AssignmentRepositoryImpl @Inject constructor(
 ) : AssignmentRepository {
 
     init {
-        syncManager.registerSubmitAction { aId, sId, cnt, fUrl ->
+        syncManager.registerSubmitAction { aId, sId, cnt, fUrl, idempKey ->
             try {
                 val res = api.submitAssignment(
-                    aId,
-                    SubmitAssignmentRequest(studentId = sId, content = cnt, fileUrl = fUrl),
+                    id = aId,
+                    request = SubmitAssignmentRequest(studentId = sId, content = cnt, fileUrl = fUrl),
+                    idempotencyKey = idempKey,
                 )
                 res.data != null
             } catch (_: Exception) {
@@ -48,7 +49,9 @@ class AssignmentRepositoryImpl @Inject constructor(
             val response = api.getAssignments(queryClassId)
             val assignments = response.data?.map { it.dtoToDomain() }
             if (assignments != null) {
-                assignmentDao.clearAll()
+                if (classId.isBlank() && assignments.isNotEmpty()) {
+                    assignmentDao.clearAll()
+                }
                 assignmentDao.insertAll(assignments.map { it.toEntity() })
                 return@runCatching assignments
             }
@@ -85,9 +88,30 @@ class AssignmentRepositoryImpl @Inject constructor(
         maxScore: Int,
         dueAt: String?,
         classId: String,
-        assignmentType: String
+        assignmentType: String,
+        questions: List<com.schoolos.android.domain.model.AssignmentQuestion>,
     ): Result<Assignment> = runCatching {
         val targetClassId = classId.ifBlank { null }
+        val questionDtos = if (questions.isNotEmpty()) {
+            questions.mapIndexed { qIdx, q ->
+                com.schoolos.android.data.remote.dto.AssignmentQuestionDto(
+                    id = q.id,
+                    questionText = q.questionText,
+                    questionType = q.questionType,
+                    points = q.points ?: 10,
+                    orderIndex = q.orderIndex ?: (qIdx + 1),
+                    choices = q.choices.mapIndexed { cIdx, c ->
+                        com.schoolos.android.data.remote.dto.AssignmentChoiceDto(
+                            id = c.id,
+                            choiceText = c.choiceText,
+                            isCorrect = c.isCorrect ?: false,
+                            orderIndex = c.orderIndex ?: (cIdx + 1),
+                        )
+                    }
+                )
+            }
+        } else null
+
         val request = com.schoolos.android.data.remote.CreateAssignmentRequestDto(
             lessonId = null,
             title = title,
@@ -96,7 +120,8 @@ class AssignmentRepositoryImpl @Inject constructor(
             maxScore = maxScore,
             dueAt = dueAt,
             assignmentType = assignmentType,
-            classId = targetClassId
+            classId = targetClassId,
+            questions = questionDtos,
         )
         val response = api.createAssignment(request)
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal membuat tugas.")
@@ -119,14 +144,16 @@ class AssignmentRepositoryImpl @Inject constructor(
             )
         }
         try {
+            val idempotencyKey = java.util.UUID.randomUUID().toString()
             val response = api.submitAssignment(
-                assignmentId,
-                SubmitAssignmentRequest(
+                id = assignmentId,
+                request = SubmitAssignmentRequest(
                     studentId = studentId,
                     content = content,
                     fileUrl = fileUrl,
                     answers = answerDtos,
                 ),
+                idempotencyKey = idempotencyKey,
             )
             val domain = response.data?.dtoToDomain()
             if (domain != null) return@runCatching domain
@@ -166,10 +193,12 @@ class AssignmentRepositoryImpl @Inject constructor(
         score: Int,
         feedback: String?,
     ): Result<AssignmentSubmission> = runCatching {
+        val idempotencyKey = java.util.UUID.randomUUID().toString()
         val response = api.gradeSubmission(
-            assignmentId,
-            submissionId,
-            com.schoolos.android.data.remote.GradeSubmissionRequest(score = score, feedback = feedback),
+            assignmentId = assignmentId,
+            submissionId = submissionId,
+            request = com.schoolos.android.data.remote.GradeSubmissionRequest(score = score, feedback = feedback),
+            idempotencyKey = idempotencyKey,
         )
         response.data?.dtoToDomain() ?: throw Exception("Gagal menyimpan nilai: respons kosong dari server.")
     }
