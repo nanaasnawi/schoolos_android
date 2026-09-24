@@ -70,7 +70,7 @@ fun ProfileScreen(
             val phone = state.identifier.ifBlank { "" }
             if (phone.isNotBlank()) formatPhoneNumber(phone)
             else if (user?.email?.contains("@wali.schoolos.id") == false) user?.email ?: ""
-            else "Nomor Akun Wali Ibu"
+            else user?.name?.ifBlank { "Akun Wali Murid" } ?: "Akun Wali Murid"
         }
         else -> user?.email?.ifBlank { state.identifier.ifBlank { "Akun Terverifikasi" } } ?: "Akun Terverifikasi"
     }
@@ -101,6 +101,7 @@ fun ProfileScreen(
                 isTeacher = isTeacher,
                 isParent = isParent,
                 displayContact = displayContact,
+                className = state.className,
             )
 
             // 2. Parent-specific Connected Child Card

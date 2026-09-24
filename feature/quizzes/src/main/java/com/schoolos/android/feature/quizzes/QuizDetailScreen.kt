@@ -87,7 +87,7 @@ fun QuizDetailScreen(
                 state.quiz != null -> {
                     val q = state.quiz!!
                     val accentColor = subjectGradient(q.title).first()
-                    val isAvailable = q.status.lowercase() in listOf("active", "open", "published")
+                    val isAvailable = q.status.lowercase() in listOf("active", "open", "published", "draft")
 
                     Column(
                         modifier = Modifier

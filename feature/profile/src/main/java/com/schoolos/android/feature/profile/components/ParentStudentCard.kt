@@ -23,9 +23,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -49,14 +46,9 @@ fun ParentStudentCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
-            .background(
-                Brush.linearGradient(
-                    listOf(ParentNeon.copy(alpha = 0.06f), Color.Transparent),
-                ),
-            )
-            .border(1.dp, ParentNeon.copy(alpha = 0.22f), RoundedCornerShape(16.dp))
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
             .padding(16.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -70,9 +62,9 @@ fun ParentStudentCard(
                     Box(
                         modifier = Modifier
                             .size(38.dp)
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(10.dp))
                             .background(ParentNeon.copy(alpha = 0.12f))
-                            .border(1.dp, ParentNeon.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
+                            .border(0.5.dp, ParentNeon.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
@@ -132,9 +124,9 @@ fun ParentStudentCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(10.dp))
                     .background(CosmicBlack)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
                     .padding(12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

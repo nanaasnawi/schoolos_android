@@ -9,8 +9,11 @@ import com.schoolos.android.data.mapper.toDomain as dtoToDomain
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.domain.model.Notification
 import com.schoolos.android.domain.repository.NotificationRepository
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import java.time.Instant
 import javax.inject.Inject
@@ -24,9 +27,8 @@ class NotificationRepositoryImpl @Inject constructor(
     private val networkMonitor: NetworkMonitor,
 ) : NotificationRepository {
 
-    private val userId by lazy { kotlinx.coroutines.runBlocking { authManager.getStudentId() ?: "" } }
-
     override suspend fun getNotifications(page: Int): Result<List<Notification>> = runCatching {
+        val userId = authManager.getStudentId() ?: ""
         val isOnline = try { networkMonitor.isOnline.first() } catch (_: Exception) { true }
         if (isOnline) {
             val response = api.getNotifications(page)
@@ -41,13 +43,24 @@ class NotificationRepositoryImpl @Inject constructor(
             }
             notifications
         } else {
-            val cached = try { with(notificationDao.getNotifications(userId)) { first() } } catch (_: Exception) { emptyList() }
+            val cached = try {
+                if (userId.isNotEmpty()) {
+                    notificationDao.getNotifications(userId).first()
+                } else {
+                    emptyList()
+                }
+            } catch (_: Exception) { emptyList() }
             cached.map { it.entityToDomain() }
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun getCachedNotifications(): Flow<List<Notification>> {
-        return notificationDao.getNotifications(userId).map { list -> list.map { it.entityToDomain() } }
+        return authManager.authState.flatMapLatest { auth ->
+            val uid = auth.userId ?: ""
+            if (uid.isEmpty()) flowOf(emptyList())
+            else notificationDao.getNotifications(uid)
+        }.map { list -> list.map { it.entityToDomain() } }
     }
 
     override suspend fun getUnreadCount(): Result<Int> = runCatching {
@@ -55,7 +68,14 @@ class NotificationRepositoryImpl @Inject constructor(
         if (isOnline) {
             api.getUnreadCount().data?.count ?: 0
         } else {
-            try { with(notificationDao.getUnreadCount(userId)) { first() } } catch (_: Exception) { 0 }
+            val userId = authManager.getStudentId() ?: ""
+            try {
+                if (userId.isNotEmpty()) {
+                    notificationDao.getUnreadCount(userId).first()
+                } else {
+                    0
+                }
+            } catch (_: Exception) { 0 }
         }
     }
 

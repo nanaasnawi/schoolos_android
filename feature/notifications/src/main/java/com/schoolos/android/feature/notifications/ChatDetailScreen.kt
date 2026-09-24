@@ -2,8 +2,8 @@ package com.schoolos.android.feature.notifications
 
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -27,21 +26,16 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Attachment
-import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Forum
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.schoolos.android.core.designsystem.CustomBackButton
 import androidx.compose.runtime.Composable
@@ -59,8 +53,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -68,11 +64,18 @@ import com.schoolos.android.core.chat.ChatManager
 import com.schoolos.android.core.chat.ChatMessage
 import com.schoolos.android.core.chat.ChatThread
 import com.schoolos.android.core.chat.InquiryType
+import com.schoolos.android.core.designsystem.CosmicBlack
+import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.CosmicSurface2
+import com.schoolos.android.core.designsystem.GlassBorder
+import com.schoolos.android.core.designsystem.GlassBorder2
+import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.StudentContainer
-import com.schoolos.android.core.designsystem.StudentPrimary
-import com.schoolos.android.core.designsystem.TeacherContainer
-import com.schoolos.android.core.designsystem.TeacherPrimary
+import com.schoolos.android.core.designsystem.StudentNeon
+import com.schoolos.android.core.designsystem.TeacherNeon
+import com.schoolos.android.core.designsystem.TextPrimary
+import com.schoolos.android.core.designsystem.TextSecondary
+import com.schoolos.android.core.designsystem.TextTertiary
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -94,17 +97,16 @@ fun ChatDetailScreen(
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
 
-    // Load full message history from database
-    LaunchedEffect(threadId) {
-        chatManager.loadThreadDetail(threadId)
+    LaunchedEffect(threadId) { chatManager.loadThreadDetail(threadId) }
+    androidx.compose.runtime.DisposableEffect(chatManager) {
+        chatManager.startPolling()
+        onDispose {
+            chatManager.stopPolling()
+        }
     }
-
-    // Scroll smoothly to bottom when messages change
     LaunchedEffect(thread?.messages?.size) {
         val size = thread?.messages?.size ?: 0
-        if (size > 0) {
-            listState.animateScrollToItem(size - 1)
-        }
+        if (size > 0) listState.animateScrollToItem(size - 1)
     }
 
     val contactName = if (isTeacherMode) (thread?.studentName ?: "Siswa")
@@ -112,105 +114,103 @@ fun ChatDetailScreen(
     val contactInitial = contactName.take(1).uppercase()
     val contactSubtitle = if (isTeacherMode) "Siswa • ${thread?.studentClass ?: "Rombel"}"
                           else "Guru Pengampu • Aktif"
-
-    val avatarContainerColor = if (isTeacherMode) StudentContainer else TeacherContainer
-    val avatarContentColor = if (isTeacherMode) StudentPrimary else TeacherPrimary
+    val roleNeon = if (isTeacherMode) StudentNeon else TeacherNeon
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-            .statusBarsPadding()
+            .background(CosmicBlack)
             .navigationBarsPadding()
-            .imePadding()
+            .imePadding(),
     ) {
-        // ── 1. MODERN THEMED TOP BAR ──
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 2.dp,
-            modifier = Modifier.fillMaxWidth()
+        // ── 1. TOP BAR ────────────────────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CosmicNavy)
+                .border(width = 0.5.dp, color = GlassBorder, shape = RoundedCornerShape(0.dp)),
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Row(
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 10.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                CustomBackButton(onClick = onBack)
+                Spacer(Modifier.width(8.dp))
+
+                // Avatar
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(roleNeon.copy(alpha = 0.14f))
+                        .border(1.dp, roleNeon.copy(alpha = 0.30f), CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = contactInitial,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = roleNeon,
+                    )
+                }
+
+                Spacer(Modifier.width(10.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = contactName,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(NeonSuccess),
+                        )
+                        Spacer(Modifier.width(5.dp))
+                        Text(
+                            text = contactSubtitle,
+                            fontSize = 10.sp,
+                            color = TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+
+            // Topic Context Banner
+            if (thread != null && thread.referenceTitle.isNotBlank()) {
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CustomBackButton(
-                        onClick = onBack,
-                    )
-
-                    Spacer(Modifier.width(8.dp))
-
-                    // Contact Avatar with Role Container
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(CircleShape)
-                            .background(avatarContainerColor),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = contactInitial,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = avatarContentColor
-                        )
-                    }
-
-                    Spacer(Modifier.width(12.dp))
-
-                    // Contact Name & Online Status
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = contactName,
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(
-                                modifier = Modifier
-                                    .size(7.dp)
-                                    .clip(CircleShape)
-                                    .background(NeonSuccess)
-                            )
-                            Spacer(Modifier.width(5.dp))
-                            Text(
-                                text = contactSubtitle,
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-
-                // Context Discussion Topic Header (Reference Card)
-                if (thread != null && thread.referenceTitle.isNotBlank()) {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                        thickness = 1.dp
-                    )
-                    TopicContextBanner(
-                        thread = thread,
-                        onOpenReference = onOpenReference
-                    )
-                }
-
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f),
-                    thickness = 1.dp
+                        .height(0.5.dp)
+                        .background(GlassBorder2),
+                )
+                TopicContextBanner(
+                    thread = thread,
+                    onOpenReference = onOpenReference,
+                    roleNeon = roleNeon,
                 )
             }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(GlassBorder),
+            )
         }
 
-        // ── 2. CHAT CANVAS ──
+        // ── 2. CHAT CANVAS ────────────────────────────────────────────────
         val messages = thread?.messages ?: emptyList()
 
         if (messages.isEmpty()) {
@@ -218,40 +218,39 @@ fun ChatDetailScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentAlignment = Alignment.Center
+                contentAlignment = Alignment.Center,
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(32.dp)
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(32.dp),
                 ) {
                     Box(
                         modifier = Modifier
                             .size(64.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)),
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(CosmicNavy)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp)),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Forum,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(32.dp)
+                            tint = TextTertiary,
+                            modifier = Modifier.size(28.dp),
                         )
                     }
-                    Spacer(Modifier.height(16.dp))
                     Text(
-                        text = "Mulai Diskusi Tanya Jawab",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "Mulai Diskusi",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
                     )
-                    Spacer(Modifier.height(6.dp))
                     Text(
                         text = "Pertanyaan seputar materi & tugas langsung terhubung antara guru dan siswa.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        fontSize = 12.sp,
+                        color = TextTertiary,
+                        textAlign = TextAlign.Center,
                     )
                 }
             }
@@ -261,273 +260,252 @@ fun ChatDetailScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
-                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 itemsIndexed(messages, key = { _, msg -> msg.id }) { index, msg ->
                     val isMe = if (isTeacherMode) msg.isFromTeacher else !msg.isFromTeacher
-
                     val prevMsg = if (index > 0) messages[index - 1] else null
                     val isNewDay = prevMsg == null || !isSameDay(prevMsg.timestamp, msg.timestamp)
-                    if (isNewDay) {
-                        DatePill(dateText = formatDateGroup(msg.timestamp))
-                    }
-
-                    ModernMessageBubble(
+                    if (isNewDay) DatePill(dateText = formatDateGroup(msg.timestamp))
+                    MessageBubble(
                         message = msg,
-                        isMe = isMe
+                        isMe = isMe,
+                        isTeacherMode = isTeacherMode,
+                        roleNeon = roleNeon,
                     )
                 }
             }
         }
 
-        // ── 3. MODERN THEMED INPUT BAR ──
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            shadowElevation = 8.dp,
-            modifier = Modifier.fillMaxWidth()
+        // ── 3. INPUT BAR ──────────────────────────────────────────────────
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(CosmicNavy),
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
-                    thickness = 1.dp
-                )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(GlassBorder),
+            )
 
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Input pill
                 Row(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .weight(1f)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CosmicSurface2)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                        .padding(horizontal = 10.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    // Modern Themed Input Pill Container
-                    Surface(
-                        modifier = Modifier.weight(1f),
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)
-                        )
+                    IconButton(
+                        onClick = {
+                            Toast.makeText(context, "Fitur lampiran berkas sedang disiapkan...", Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(26.dp),
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            // Attachment Icon
-                            IconButton(
-                                onClick = {
-                                    Toast.makeText(context, "Fitur lampiran berkas sedang disiapkan...", Toast.LENGTH_SHORT).show()
-                                },
-                                modifier = Modifier.size(28.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Attachment,
-                                    contentDescription = "Lampiran",
-                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.size(19.dp)
+                        Icon(
+                            imageVector = Icons.Default.Attachment,
+                            contentDescription = "Lampiran",
+                            tint = TextTertiary,
+                            modifier = Modifier.size(17.dp),
+                        )
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    BasicTextField(
+                        value = inputText,
+                        onValueChange = { inputText = it },
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(vertical = 2.dp),
+                        textStyle = TextStyle(
+                            color = TextPrimary,
+                            fontSize = 14.sp,
+                        ),
+                        cursorBrush = SolidColor(roleNeon),
+                        maxLines = 4,
+                        singleLine = false,
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
+                        decorationBox = { innerTextField ->
+                            if (inputText.isEmpty()) {
+                                Text(
+                                    text = "Ketik pesan...",
+                                    fontSize = 14.sp,
+                                    color = TextTertiary,
                                 )
                             }
-
-                            Spacer(Modifier.width(8.dp))
-
-                            // Text Input Field (Enter adds new line, send button submits)
-                            BasicTextField(
-                                value = inputText,
-                                onValueChange = { inputText = it },
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(vertical = 2.dp),
-                                textStyle = MaterialTheme.typography.bodyMedium.copy(
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    fontSize = 14.5.sp
-                                ),
-                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
-                                maxLines = 4,
-                                singleLine = false,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Default),
-                                decorationBox = { innerTextField ->
-                                    if (inputText.isEmpty()) {
-                                        Text(
-                                            text = "Ketik pesan balasan...",
-                                            style = MaterialTheme.typography.bodyMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                                            fontSize = 14.5.sp
-                                        )
-                                    }
-                                    innerTextField()
-                                }
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    // Themed Circular Send FAB
-                    val hasText = inputText.isNotBlank()
-                    val sendScale by animateFloatAsState(
-                        targetValue = if (hasText) 1f else 0.95f,
-                        label = "sendScale"
+                            innerTextField()
+                        },
                     )
+                }
 
-                    Surface(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .scale(sendScale)
-                            .clip(CircleShape)
-                            .clickable(enabled = hasText) {
-                                sendMessage(inputText, thread, isTeacherMode, chatManager) {
-                                    inputText = ""
-                                    focusManager.clearFocus()
-                                }
-                            },
-                        shape = CircleShape,
-                        color = if (hasText) MaterialTheme.colorScheme.primary
-                                else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                        shadowElevation = if (hasText) 3.dp else 0.dp
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Send,
-                                contentDescription = "Kirim",
-                                tint = if (hasText) MaterialTheme.colorScheme.onPrimary
-                                       else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f),
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
-                    }
+                Spacer(Modifier.width(8.dp))
+
+                // Send button
+                val hasText = inputText.isNotBlank()
+                val sendScale by animateFloatAsState(
+                    targetValue = if (hasText) 1f else 0.9f,
+                    label = "sendScale",
+                )
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .scale(sendScale)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (hasText) roleNeon.copy(alpha = 0.18f) else CosmicSurface2)
+                        .border(
+                            0.5.dp,
+                            if (hasText) roleNeon.copy(alpha = 0.50f) else GlassBorder,
+                            RoundedCornerShape(10.dp),
+                        )
+                        .clickable(enabled = hasText) {
+                            sendMessage(inputText, thread, isTeacherMode, chatManager) {
+                                inputText = ""
+                                focusManager.clearFocus()
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        contentDescription = "Kirim",
+                        tint = if (hasText) roleNeon else TextTertiary,
+                        modifier = Modifier.size(18.dp),
+                    )
                 }
             }
         }
     }
 }
 
-/**
- * Clean contextual banner showing the academic topic, module, or assignment
- */
+// ── TOPIC CONTEXT BANNER ──────────────────────────────────────────────────────
+
 @Composable
 private fun TopicContextBanner(
     thread: ChatThread,
-    onOpenReference: (type: InquiryType, refId: String?) -> Unit
+    onOpenReference: (type: InquiryType, refId: String?) -> Unit,
+    roleNeon: Color,
 ) {
-    Surface(
-        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f),
-        modifier = Modifier.fillMaxWidth()
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(CosmicNavy)
+            .padding(horizontal = 14.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+            modifier = Modifier.weight(1f),
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(roleNeon.copy(alpha = 0.12f))
+                    .border(0.5.dp, roleNeon.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
+                contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (thread.inquiryType == InquiryType.ASSIGNMENT) Icons.AutoMirrored.Filled.Assignment
-                                      else Icons.AutoMirrored.Filled.MenuBook,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-
-                Spacer(Modifier.width(10.dp))
-
-                Column {
-                    val badgeLabel = when (thread.inquiryType) {
-                        InquiryType.ASSIGNMENT -> "Tugas"
-                        InquiryType.MATERIAL -> "Materi"
-                        InquiryType.GENERAL -> "Umum"
-                    }
-                    Text(
-                        text = "$badgeLabel: ${thread.referenceTitle}",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = "${thread.subjectName} • ${thread.studentClass}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+                Icon(
+                    imageVector = if (thread.inquiryType == InquiryType.ASSIGNMENT)
+                        Icons.AutoMirrored.Filled.Assignment
+                    else Icons.AutoMirrored.Filled.MenuBook,
+                    contentDescription = null,
+                    tint = roleNeon,
+                    modifier = Modifier.size(14.dp),
+                )
             }
-
-            if (!thread.referenceId.isNullOrBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .clickable { onOpenReference(thread.inquiryType, thread.referenceId) }
-                ) {
-                    Text(
-                        text = "Lihat",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
-                    )
+            Spacer(Modifier.width(10.dp))
+            Column {
+                val badgeLabel = when (thread.inquiryType) {
+                    InquiryType.ASSIGNMENT -> "Tugas"
+                    InquiryType.MATERIAL -> "Materi"
+                    InquiryType.GENERAL -> "Umum"
                 }
+                Text(
+                    text = "$badgeLabel: ${thread.referenceTitle}",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "${thread.subjectName} • ${thread.studentClass}",
+                    fontSize = 10.sp,
+                    color = TextTertiary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+
+        if (!thread.referenceId.isNullOrBlank()) {
+            Spacer(Modifier.width(8.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(roleNeon.copy(alpha = 0.12f))
+                    .border(0.5.dp, roleNeon.copy(alpha = 0.30f), RoundedCornerShape(8.dp))
+                    .clickable { onOpenReference(thread.inquiryType, thread.referenceId) }
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+            ) {
+                Text(
+                    text = "Lihat",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = roleNeon,
+                )
             }
         }
     }
 }
 
-/**
- * Themed Floating Date Pill
- */
+// ── DATE PILL ─────────────────────────────────────────────────────────────────
+
 @Composable
 private fun DatePill(dateText: String) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp),
-        contentAlignment = Alignment.Center
+            .padding(vertical = 6.dp),
+        contentAlignment = Alignment.Center,
     ) {
-        Surface(
-            shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.7f),
-            border = BorderStroke(
-                width = 1.dp,
-                color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-            ),
-            shadowElevation = 1.dp
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                .padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
             Text(
                 text = dateText,
-                style = MaterialTheme.typography.labelSmall,
+                fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                fontSize = 11.sp
+                color = TextTertiary,
+                letterSpacing = 0.4.sp,
             )
         }
     }
 }
 
-/**
- * Modern Educational Chat Bubble with Clean Theme Adaptability
- */
+// ── MESSAGE BUBBLE ────────────────────────────────────────────────────────────
+
 @Composable
-private fun ModernMessageBubble(
+private fun MessageBubble(
     message: ChatMessage,
-    isMe: Boolean
+    isMe: Boolean,
+    isTeacherMode: Boolean,
+    roleNeon: Color,
 ) {
     val align = if (isMe) Alignment.End else Alignment.Start
     val timeStr = remember(message.timestamp) {
@@ -535,92 +513,77 @@ private fun ModernMessageBubble(
     }
 
     val bubbleShape = if (isMe) {
-        RoundedCornerShape(
-            topStart = 16.dp,
-            topEnd = 16.dp,
-            bottomStart = 16.dp,
-            bottomEnd = 4.dp
-        )
+        RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 14.dp, bottomEnd = 4.dp)
     } else {
-        RoundedCornerShape(
-            topStart = 16.dp,
-            topEnd = 16.dp,
-            bottomEnd = 16.dp,
-            bottomStart = 4.dp
-        )
+        RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 4.dp)
     }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalAlignment = align
+        horizontalAlignment = align,
     ) {
-        Surface(
-            shape = bubbleShape,
-            color = if (isMe) MaterialTheme.colorScheme.primary
-                    else MaterialTheme.colorScheme.surface,
-            border = if (isMe) null
-                     else BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.6f)),
-            shadowElevation = if (isMe) 2.dp else 1.dp,
-            modifier = Modifier.widthIn(min = 72.dp, max = 310.dp)
+        Box(
+            modifier = Modifier
+                .widthIn(min = 60.dp, max = 300.dp)
+                .clip(bubbleShape)
+                .background(
+                    if (isMe) roleNeon.copy(alpha = 0.14f) else CosmicNavy,
+                )
+                .border(
+                    0.5.dp,
+                    if (isMe) roleNeon.copy(alpha = 0.35f) else GlassBorder,
+                    bubbleShape,
+                )
+                .padding(horizontal = 12.dp, vertical = 8.dp),
         ) {
-            Column(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
-            ) {
-                // Incoming message sender header
+            Column {
+                // Incoming sender label
                 if (!isMe) {
-                    val roleLabel = if (message.isFromTeacher) "Guru Pengampu" else "Siswa"
-                    val headerColor = if (message.isFromTeacher) TeacherPrimary else StudentPrimary
-
+                    val senderColor = if (message.isFromTeacher) TeacherNeon else StudentNeon
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 3.dp)
+                        modifier = Modifier.padding(bottom = 3.dp),
                     ) {
                         Text(
                             text = message.senderName,
-                            style = MaterialTheme.typography.labelMedium,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = headerColor
+                            color = senderColor,
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(5.dp))
                         Text(
-                            text = "• $roleLabel",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
-                            fontSize = 10.sp
+                            text = "• ${if (message.isFromTeacher) "Guru" else "Siswa"}",
+                            fontSize = 9.sp,
+                            color = TextTertiary,
                         )
                     }
                 }
 
-                // Message Text Content
                 Text(
                     text = message.content,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = if (isMe) MaterialTheme.colorScheme.onPrimary
-                            else MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 20.sp
+                    fontSize = 13.5.sp,
+                    color = TextPrimary,
+                    lineHeight = 20.sp,
                 )
 
                 Spacer(Modifier.height(4.dp))
 
-                // Time & Status Row (aligned to bottom-right)
                 Row(
                     modifier = Modifier.align(Alignment.End),
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
                         text = timeStr,
-                        style = MaterialTheme.typography.labelSmall,
-                        fontSize = 10.5.sp,
-                        color = if (isMe) MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.75f)
-                                else MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.75f)
+                        fontSize = 10.sp,
+                        color = TextTertiary,
                     )
                     if (isMe) {
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(3.dp))
                         Icon(
-                            imageVector = Icons.Default.DoneAll,
+                            imageVector = Icons.Default.CheckCircle,
                             contentDescription = "Terkirim",
-                            tint = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.9f),
-                            modifier = Modifier.size(14.dp)
+                            tint = NeonSuccess.copy(alpha = 0.7f),
+                            modifier = Modifier.size(11.dp),
                         )
                     }
                 }
@@ -629,24 +592,25 @@ private fun ModernMessageBubble(
     }
 }
 
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+
 private fun sendMessage(
     text: String,
     thread: ChatThread?,
     isTeacherMode: Boolean,
     chatManager: ChatManager,
-    onSuccess: () -> Unit
+    onSuccess: () -> Unit,
 ) {
     if (text.isNotBlank() && thread != null) {
         val senderRole = if (isTeacherMode) "TEACHER" else "STUDENT"
         val senderName = if (isTeacherMode) thread.teacherName else thread.studentName
         val senderId = if (isTeacherMode) thread.teacherId else thread.studentId
-
         chatManager.sendMessage(
             threadId = thread.id,
             senderId = senderId,
             senderName = senderName,
             senderRole = senderRole,
-            content = text
+            content = text,
         )
         onSuccess()
     }
@@ -662,7 +626,6 @@ private fun formatDateGroup(timestamp: Long): String {
     val f = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
     val today = f.format(Date(now))
     val msgDay = f.format(Date(timestamp))
-
     return when {
         today == msgDay -> "HARI INI"
         now - timestamp < 86400000L * 2 -> "KEMARIN"

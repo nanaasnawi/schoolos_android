@@ -17,7 +17,7 @@ class ProgressRepositoryImpl @Inject constructor(
     override suspend fun getProgress(classId: String): Result<Progress> = runCatching {
         val childId = authManager.getChildId()
         val studentId = if (!childId.isNullOrBlank()) childId else (authManager.getStudentId() ?: "default-student")
-        val childName = authManager.getChildName() ?: "Denis Kusuma"
+        val childName = authManager.getChildName() ?: "Siswa"
 
         try {
             val response = api.getMyProgress()

@@ -32,14 +32,30 @@ import com.schoolos.android.domain.model.SessionAttendance
 fun TeacherSessionDetailContent(
     session: LearningSession,
     attendance: List<SessionAttendance> = emptyList(),
+    students: List<StudentAttendanceUiItem> = emptyList(),
+    onUpdateAttendance: (studentId: String, status: String) -> Unit = { _, _ -> },
     onOpenAssignments: (String) -> Unit,
     onOpenQuizzes: (String) -> Unit,
     onOpenMaterials: (String) -> Unit,
     accentColor: Color,
 ) {
-    val presentCount = attendance.count { it.status?.lowercase() == "present" }
-    val absentCount = attendance.count { it.status?.lowercase() == "absent" }
-    val totalCount = attendance.size
+    val effectiveStudents = if (students.isNotEmpty()) {
+        students
+    } else {
+        attendance.mapIndexed { idx, it ->
+            StudentAttendanceUiItem(
+                studentId = it.studentId,
+                studentName = "Siswa ${idx + 1}",
+                nisn = null,
+                status = it.status,
+                checkedInAt = it.checkedInAt,
+                notes = it.notes,
+            )
+        }
+    }
+    val presentCount = effectiveStudents.count { it.status.lowercase() == "present" }
+    val absentCount = effectiveStudents.count { it.status.lowercase() == "absent" }
+    val totalCount = effectiveStudents.size
     val attendanceRate = if (totalCount > 0) (presentCount * 100 / totalCount) else 0
     val sessionPeriod = formatSessionPeriod(session.scheduledAt)
 
@@ -203,13 +219,13 @@ fun TeacherSessionDetailContent(
 
         GlassCard(cornerRadius = 16.dp) {
             Column(modifier = Modifier.padding(12.dp)) {
-                if (attendance.isEmpty()) {
+                if (effectiveStudents.isEmpty()) {
                     EmptyStateContent(
                         message = "Data presensi belum tersedia",
                         subtitle = "Presensi akan muncul setelah sesi dimulai",
                     )
                 } else {
-                    attendance.forEachIndexed { idx, student ->
+                    effectiveStudents.forEachIndexed { idx, student ->
                         if (idx > 0) {
                             HorizontalDivider(
                                 color = GlassBorder,
@@ -217,62 +233,73 @@ fun TeacherSessionDetailContent(
                                 modifier = Modifier.padding(vertical = 4.dp),
                             )
                         }
-                        val isPresent = student.status?.lowercase() == "present"
+                        val currentStatus = student.status.lowercase()
+                        val statusColor = when (currentStatus) {
+                            "present" -> NeonSuccess
+                            "excused" -> NeonWarning
+                            "late" -> NeonBlue
+                            else -> NeonError
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            // Avatar with student number
+                            val initial = student.studentName.firstOrNull()?.uppercase() ?: "${idx + 1}"
                             Box(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        if (isPresent) NeonSuccess.copy(alpha = 0.12f)
-                                        else NeonError.copy(alpha = 0.12f),
-                                    )
-                                    .border(
-                                        1.dp,
-                                        if (isPresent) NeonSuccess.copy(alpha = 0.3f) else NeonError.copy(alpha = 0.3f),
-                                        CircleShape
-                                    ),
+                                    .background(statusColor.copy(alpha = 0.12f))
+                                    .border(1.dp, statusColor.copy(alpha = 0.3f), CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    "${idx + 1}",
+                                    initial,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.ExtraBold,
-                                    color = if (isPresent) NeonSuccess else NeonError,
+                                    color = statusColor,
                                 )
                             }
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    "Siswa ${idx + 1}",
+                                    student.studentName,
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary,
                                 )
+                                val subText = student.nisn?.let { "NISN: $it" } ?: "ID: ${student.studentId.take(8)}"
                                 Text(
-                                    "ID: ${student.studentId?.take(8) ?: "N/A"}",
+                                    subText,
                                     fontSize = 10.sp,
                                     color = TextTertiary,
                                 )
                             }
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(
-                                        if (isPresent) NeonSuccess.copy(alpha = 0.1f)
-                                        else NeonError.copy(alpha = 0.1f),
-                                    )
-                                    .padding(horizontal = 10.dp, vertical = 4.dp),
-                            ) {
-                                Text(
-                                    if (isPresent) "HADIR" else (student.status?.uppercase() ?: "TIDAK HADIR"),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    color = if (isPresent) NeonSuccess else NeonError,
+                            // Interactive status selector buttons (H: Hadir, I: Izin, S: Sakit/Terlambat, A: Alpa)
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                AttendanceStatusButton(
+                                    label = "H",
+                                    selected = currentStatus == "present",
+                                    color = NeonSuccess,
+                                    onClick = { onUpdateAttendance(student.studentId, "present") }
+                                )
+                                AttendanceStatusButton(
+                                    label = "I",
+                                    selected = currentStatus == "excused",
+                                    color = NeonWarning,
+                                    onClick = { onUpdateAttendance(student.studentId, "excused") }
+                                )
+                                AttendanceStatusButton(
+                                    label = "S",
+                                    selected = currentStatus == "late",
+                                    color = NeonBlue,
+                                    onClick = { onUpdateAttendance(student.studentId, "late") }
+                                )
+                                AttendanceStatusButton(
+                                    label = "A",
+                                    selected = currentStatus == "absent",
+                                    color = NeonError,
+                                    onClick = { onUpdateAttendance(student.studentId, "absent") }
                                 )
                             }
                         }
@@ -280,6 +307,31 @@ fun TeacherSessionDetailContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun AttendanceStatusButton(
+    label: String,
+    selected: Boolean,
+    color: Color,
+    onClick: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .size(28.dp)
+            .clip(RoundedCornerShape(6.dp))
+            .background(if (selected) color else color.copy(alpha = 0.08f))
+            .border(1.dp, if (selected) color else color.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Black,
+            color = if (selected) Color.Black else color,
+        )
     }
 }
 

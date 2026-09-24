@@ -85,6 +85,8 @@ fun SessionDetailScreen(
                                 TeacherSessionDetailContent(
                                     session = s,
                                     attendance = state.attendance,
+                                    students = state.studentItems,
+                                    onUpdateAttendance = viewModel::updateAttendance,
                                     onOpenAssignments = openAssignments,
                                     onOpenQuizzes = openQuizzes,
                                     onOpenMaterials = openMaterials,

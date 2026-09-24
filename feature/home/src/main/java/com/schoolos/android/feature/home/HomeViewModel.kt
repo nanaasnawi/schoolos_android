@@ -101,16 +101,18 @@ class HomeViewModel @Inject constructor(
     private val _state = MutableStateFlow(HomeUiState())
     val state = _state.asStateFlow()
 
-    private var currentAuth: AuthState = AuthState()
+    private var lastSyncTimestamp: Long = 0L
+    private var isSyncInProgress: Boolean = false
+    private var currentAuth = AuthState()
 
     init {
         observeAuthState()
-        startPeriodicSync()
     }
 
     private fun observeAuthState() {
         viewModelScope.launch {
             authManager.authState.collect { auth ->
+                val authChanged = currentAuth.userId != auth.userId || currentAuth.role != auth.role || currentAuth.tenantId != auth.tenantId
                 currentAuth = auth
                 val name = if (!auth.name.isNullOrBlank()) auth.name!! else "Pengguna Akselerasi Edu"
                 val role = if (!auth.role.isNullOrBlank()) auth.role!! else "student"
@@ -131,25 +133,14 @@ class HomeViewModel @Inject constructor(
                     )
                 }
 
-                syncData(silent = true)
+                if (auth.isLoggedIn && (authChanged || System.currentTimeMillis() - lastSyncTimestamp > 60_000L)) {
+                    syncData(silent = true)
+                }
             }
         }
         viewModelScope.launch {
             if (authManager.isLoggedIn) {
                 authRepository.getCurrentUser()
-            }
-        }
-    }
-
-    /**
-     * Real-time periodic background sync every 15 seconds to ensure sessions,
-     * live agenda, and indicators always match the backend PostgreSQL state.
-     */
-    private fun startPeriodicSync() {
-        viewModelScope.launch {
-            while (isActive) {
-                delay(15_000)
-                syncData(silent = true)
             }
         }
     }
@@ -162,7 +153,7 @@ class HomeViewModel @Inject constructor(
             _state.update { it.copy(isRefreshing = true) }
         }
         viewModelScope.launch {
-            syncData(silent = !isPullRefresh)
+            syncData(silent = !isPullRefresh, force = isPullRefresh)
             if (isPullRefresh) {
                 _state.update { it.copy(isRefreshing = false) }
             }
@@ -185,14 +176,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    private suspend fun syncData(silent: Boolean) {
-        val auth = currentAuth
-        val isParent = auth.isParent
-        val isTeacher = auth.isTeacher
-        val isStudent = auth.isStudent
-        val homeroom = auth.className ?: ""
+    private suspend fun syncData(silent: Boolean, force: Boolean = false) {
+        if (isSyncInProgress) return
+        if (!force && System.currentTimeMillis() - lastSyncTimestamp < 15_000L) return
+        isSyncInProgress = true
+        try {
+            lastSyncTimestamp = System.currentTimeMillis()
+            val auth = currentAuth
+            val isParent = auth.isParent
+            val isTeacher = auth.isTeacher
+            val isStudent = auth.isStudent
+            val homeroom = auth.className ?: ""
 
-        // 1. Real-time Learning Sessions Sync (Filtered to Today's Agenda)
+            // 1. Real-time Learning Sessions Sync (Filtered to Today's Agenda)
         sessionRepository.getSessions("").onSuccess { sessions ->
             val today = LocalDate.now()
             val todaySessions = sessions.filter { s ->
@@ -472,7 +468,10 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
+    } finally {
+        isSyncInProgress = false
     }
+}
 
     private fun parseDate(iso: String): LocalDate? {
         return try {

@@ -2,14 +2,28 @@ package com.schoolos.android.feature.assignments
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Schedule
-import androidx.compose.material3.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -19,14 +33,25 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.schoolos.android.core.designsystem.*
+import com.schoolos.android.core.designsystem.CosmicBlack
+import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.CosmicSurface2
+import com.schoolos.android.core.designsystem.ErrorState
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
+import com.schoolos.android.core.designsystem.GlassBorder
+import com.schoolos.android.core.designsystem.LoadingState
+import com.schoolos.android.core.designsystem.NeonSuccess
+import com.schoolos.android.core.designsystem.NeonWarning
+import com.schoolos.android.core.designsystem.NeonError
+import com.schoolos.android.core.designsystem.StatusChip
+import com.schoolos.android.core.designsystem.TextPrimary
+import com.schoolos.android.core.designsystem.TextSecondary
+import com.schoolos.android.core.designsystem.TextTertiary
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,135 +64,67 @@ fun AssignmentDetailScreen(
     val state by viewModel.state.collectAsState()
     var content by remember { mutableStateOf("") }
     var showConfirm by remember { mutableStateOf(false) }
-    // PG answers: questionId -> chosenChoiceId
     var pgAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
-    // Essay answers: questionId -> text
     var essayAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
 
-    Scaffold(containerColor = CosmicBlack) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        containerColor = CosmicBlack,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
+        topBar = {
             when {
-                state.isLoading -> LoadingState()
-                state.error != null -> {
-                    ErrorState(message = state.error!!, onRetry = viewModel::load)
-                }
                 state.assignment != null -> {
                     val a = state.assignment!!
-                    val subject = a.title
-                    val gradient = subjectGradient(subject)
-                    val icon = subjectIcon(subject)
                     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
-                    val isParent  = com.schoolos.android.core.auth.isParentRole(state.userRole)
+                    ExecutiveTopBar(
+                        title = a.title,
+                        subtitle = when {
+                            isTeacher -> "Tugas & Penilaian • ${a.subjectName ?: "Mata Pelajaran"}"
+                            else -> "Detail Tugas • ${a.subjectName ?: "Mata Pelajaran"}"
+                        },
+                        onBack = onBack,
+                        actions = {
+                            // Status chip in top bar actions area
+                            StatusChip(label = a.status)
+                        },
+                    )
+                }
+                else -> ExecutiveTopBar(
+                    title = "Detail Tugas",
+                    onBack = onBack,
+                )
+            }
+        },
+    ) { padding ->
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            when {
+                state.isLoading -> LoadingState()
+                state.error != null -> ErrorState(message = state.error!!, onRetry = viewModel::load)
+                state.assignment != null -> {
+                    val a = state.assignment!!
+                    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
+                    val isParent = com.schoolos.android.core.auth.isParentRole(state.userRole)
 
-                    Column(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(
+                            start = 16.dp,
+                            end = 16.dp,
+                            top = 12.dp,
+                            bottom = 80.dp,
+                        ),
                     ) {
-// ── PREMIUM HERO BANNER (status-bar safe) ─────────────
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .background(Brush.linearGradient(gradient))
-                        ) {
-                            // Decorative translucent circles
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 52.dp, end = 8.dp)
-                                    .size(116.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.08f))
+                        // ── INFO STRIP ────────────────────────────────────
+                        item {
+                            AssignmentInfoStrip(
+                                dueAt = a.dueAt,
+                                subjectName = a.subjectName,
+                                teacherName = a.teacherName,
                             )
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(start = 20.dp)
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.06f))
-                            )
-
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    // Edge-to-edge safe: keep controls clear of the device status bar
-                                    .statusBarsPadding()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                            ) {
-                                // TOP NAVIGATION ROW
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    CustomBackButton(
-                                        onClick = { onBack?.invoke() },
-                                        onHero = true,
-                                    )
-                                    StatusChip(label = a.status)
-                                }
-
-                                Spacer(Modifier.height(22.dp))
-
-// TITLE ROW: icon badge + identity
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(60.dp)
-                                            .clip(RoundedCornerShape(18.dp))
-                                            .background(Color.White.copy(alpha = 0.18f))
-                                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(18.dp))
-                                            .shadow(3.dp, RoundedCornerShape(18.dp), spotColor = Color.White.copy(alpha = 0.2f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(icon, null, tint = Color.White, modifier = Modifier.size(30.dp))
-                                    }
-                                    Spacer(Modifier.width(16.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            if (isTeacher) "TUGAS & PENILAIAN" else "DETAIL TUGAS",
-                                            color = Color.White.copy(alpha = 0.8f),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Black,
-                                            letterSpacing = 1.2.sp
-                                        )
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            a.title,
-                                            fontSize = 21.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = Color.White,
-                                            lineHeight = 27.sp,
-                                            maxLines = 2,
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.Schedule,
-                                                null,
-                                                tint = Color.White.copy(alpha = 0.85f),
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(
-                                                formatDateShort(a.dueAt ?: ""),
-                                                fontSize = 12.sp,
-                                                color = Color.White.copy(alpha = 0.85f),
-                                                fontWeight = FontWeight.Medium,
-                                                maxLines = 1,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                            Spacer(Modifier.height(14.dp))
                         }
 
-Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 12.dp),
-                        ) {
+                        // ── ROLE-SPECIFIC CONTENT ─────────────────────────
+                        item {
                             if (isTeacher) {
                                 TeacherAssignmentDetailContent(
                                     assignment = a,
@@ -192,7 +149,14 @@ Column(
                                     onOpenMaterial = onOpenMaterial,
                                     onSubmitClick = { showConfirm = true },
                                     childName = state.childName,
-                                    onAskTeacher = { onAskTeacher?.invoke(a.title, a.id, a.subjectName ?: "Tugas", a.teacherName ?: "Guru Pengampu") },
+                                    onAskTeacher = {
+                                        onAskTeacher?.invoke(
+                                            a.title,
+                                            a.id,
+                                            a.subjectName ?: "Tugas",
+                                            a.teacherName ?: "Guru Pengampu",
+                                        )
+                                    },
                                     pgAnswers = pgAnswers,
                                     essayAnswers = essayAnswers,
                                     onPgAnswerSelected = { qId, choiceId ->
@@ -203,8 +167,6 @@ Column(
                                     },
                                 )
                             }
-
-                            Spacer(Modifier.height(60.dp))
                         }
                     }
                 }
@@ -229,7 +191,82 @@ Column(
             },
             dismissButton = {
                 TextButton(onClick = { showConfirm = false }) { Text("Batal") }
-            }
+            },
         )
+    }
+}
+
+// ── ASSIGNMENT INFO STRIP ─────────────────────────────────────────────────────
+
+@Composable
+private fun AssignmentInfoStrip(
+    dueAt: String?,
+    subjectName: String?,
+    teacherName: String?,
+) {
+    val dueInfo = dueDateInfo(dueAt)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .padding(14.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Subject + teacher column
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!teacherName.isNullOrBlank()) {
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = teacherName,
+                        fontSize = 11.sp,
+                        color = TextTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            // Due date pill
+            if (dueInfo != null) {
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(dueInfo.color.copy(alpha = 0.12f))
+                        .border(0.5.dp, dueInfo.color.copy(alpha = 0.30f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = dueInfo.color,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        text = dueInfo.label,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = dueInfo.color,
+                    )
+                }
+            }
+        }
     }
 }

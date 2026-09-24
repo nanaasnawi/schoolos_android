@@ -797,13 +797,17 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                             correctIndex = correctOptionIndex,
                             points = points.toIntOrNull() ?: 10,
                             onSuccessCallback = {
-                                Toast.makeText(context, "✓ Kuis CBT berhasil diterbitkan!", Toast.LENGTH_SHORT).show()
-                                onFinish()
+                                viewModel.publishCreatedQuiz {
+                                    Toast.makeText(context, "✓ Kuis CBT berhasil diterbitkan!", Toast.LENGTH_SHORT).show()
+                                    onFinish()
+                                }
                             }
                         )
                     } else {
-                        Toast.makeText(context, "✓ Kuis CBT selesai dibuat!", Toast.LENGTH_SHORT).show()
-                        onFinish()
+                        viewModel.publishCreatedQuiz {
+                            Toast.makeText(context, "✓ Kuis CBT berhasil diterbitkan!", Toast.LENGTH_SHORT).show()
+                            onFinish()
+                        }
                     }
                 },
                 enabled = !state.isLoading,

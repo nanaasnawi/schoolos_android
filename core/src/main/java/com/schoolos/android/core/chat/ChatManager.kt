@@ -87,6 +87,9 @@ class ChatManager @Inject constructor(
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
+    private var pollingJob: kotlinx.coroutines.Job? = null
+    private var activeSubscribers = 0
+
     init {
         // Initial fetch
         refresh()
@@ -103,19 +106,36 @@ class ChatManager @Inject constructor(
                 }
             }
         }
+    }
 
-        // Background polling every 8 seconds when device is online
-        scope.launch {
+    /**
+     * Start live polling when Chat UI is active and visible on screen.
+     */
+    fun startPolling() {
+        activeSubscribers++
+        if (pollingJob?.isActive == true) return
+        pollingJob = scope.launch {
             while (isActive) {
                 delay(8000)
                 if (isOnline.value) {
                     try {
                         syncFromDatabase()
                     } catch (e: Exception) {
-                        Timber.w(e, "Periodic sync tick failed")
+                        Timber.w(e, "Chat sync tick failed")
                     }
                 }
             }
+        }
+    }
+
+    /**
+     * Stop live polling when user leaves Chat UI to save battery & cellular bandwidth.
+     */
+    fun stopPolling() {
+        activeSubscribers = (activeSubscribers - 1).coerceAtLeast(0)
+        if (activeSubscribers == 0) {
+            pollingJob?.cancel()
+            pollingJob = null
         }
     }
 

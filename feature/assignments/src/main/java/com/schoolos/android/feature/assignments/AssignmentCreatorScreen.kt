@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -23,11 +24,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.*
+import com.schoolos.android.domain.model.AssignmentChoice
+import com.schoolos.android.domain.model.AssignmentQuestion
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
@@ -36,6 +40,7 @@ private val IndigoGradient = Brush.linearGradient(
 )
 private val IndigoPrimary  = Color(0xFF4338CA)
 private val IndigoAccent   = Color(0xFF2563EB)
+private val CyanAccent     = Color(0xFF0891B2)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,10 +81,21 @@ fun AssignmentCreatorScreen(
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var instructions by remember { mutableStateOf("") }
-    var maxScore by remember { mutableStateOf("100") }
-    var submissionType by remember { mutableStateOf("ONLINE_TEXT") }
+    var customMaxScore by remember { mutableStateOf("100") }
     var selectedDueDays by remember { mutableStateOf(7) }
     var showPreview by remember { mutableStateOf(false) }
+
+    val totalQuestionPoints = remember(state.questions) {
+        state.questions.sumOf { it.points ?: 10 }
+    }
+
+    val displayMaxScore = remember(state.assignmentFormat, totalQuestionPoints, customMaxScore) {
+        if (state.assignmentFormat != "HOMEWORK_PR" && totalQuestionPoints > 0) {
+            totalQuestionPoints.toString()
+        } else {
+            customMaxScore
+        }
+    }
 
     LaunchedEffect(state.success) {
         if (state.success) {
@@ -92,14 +108,13 @@ fun AssignmentCreatorScreen(
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
-            // Hero Header — flat bottom, indigo-blue gradient
+            // Hero Header
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(IndigoGradient)
                     .statusBarsPadding()
             ) {
-                // Decorative circles
                 Box(
                     modifier = Modifier
                         .size(160.dp)
@@ -135,7 +150,7 @@ fun AssignmentCreatorScreen(
                             letterSpacing = (-0.3).sp
                         )
                         Text(
-                            "Rancang & Terbitkan Tugas Siswa",
+                            "Rancang & Terbitkan Tugas (PG & Esai)",
                             fontSize = 12.sp,
                             color = Color.White.copy(alpha = 0.8f),
                             fontWeight = FontWeight.Medium
@@ -204,11 +219,12 @@ fun AssignmentCreatorScreen(
                             val fullDesc = "$selectedSubject • $selectedClass • $description"
                             val calculatedDueDate = Instant.now().plus(selectedDueDays.toLong(), ChronoUnit.DAYS).toString()
                             val targetClassId = state.availableClasses.find { it.name == selectedClass }?.id ?: selectedClass
+                            val parsedScore = customMaxScore.toIntOrNull() ?: 100
                             viewModel.createAssignment(
                                 title = title.trim(),
                                 description = fullDesc.trim(),
                                 instructions = instructions.ifBlank { "Kerjakan tugas secara teliti dan kumpulkan sebelum batas waktu berakhir." },
-                                maxScore = maxScore.toIntOrNull() ?: 100,
+                                customMaxScore = parsedScore,
                                 dueAt = calculatedDueDate,
                                 classId = targetClassId
                             )
@@ -277,10 +293,14 @@ fun AssignmentCreatorScreen(
                                 text = description.ifBlank { "Deskripsi dan panduan ringkas pengerjaan tugas oleh guru..." },
                                 color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp
                             )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                AssignmentChip(selectedSubject, IndigoPrimary)
-                                AssignmentChip(selectedClass, IndigoAccent)
-                                AssignmentChip("Maks $maxScore Poin", NeonSuccess)
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                                AssignmentChip(selectedSubject.ifBlank { "Mata Pelajaran" }, IndigoPrimary)
+                                AssignmentChip(selectedClass.ifBlank { "Rombel" }, IndigoAccent)
+                                if (state.assignmentFormat != "HOMEWORK_PR") {
+                                    val count = state.questions.size
+                                    AssignmentChip("$count Soal Terstruktur", CyanAccent)
+                                }
+                                AssignmentChip("Maks $displayMaxScore Poin", NeonSuccess)
                             }
                         }
                     }
@@ -300,13 +320,13 @@ fun AssignmentCreatorScreen(
                     AssignmentSectionHeader(
                         number = 1,
                         title = "Sasaran & Rombel Belajar",
-                        subtitle = "Tentukan kelas dan mata pelajaran",
+                        subtitle = "Tentukan rombel kelas dan mata pelajaran target",
                         numberColor = IndigoPrimary
                     )
 
                     AssignmentDropdown(
                         value = selectedClass,
-                        label = "Rombel Target",
+                        label = "Rombel Target *",
                         icon = Icons.Default.Group,
                         expanded = isClassMenuExpanded,
                         accentColor = IndigoPrimary,
@@ -318,7 +338,7 @@ fun AssignmentCreatorScreen(
 
                     AssignmentDropdown(
                         value = selectedSubject,
-                        label = "Mata Pelajaran",
+                        label = "Mata Pelajaran *",
                         icon = Icons.Default.School,
                         expanded = isSubjectMenuExpanded,
                         accentColor = IndigoPrimary,
@@ -332,7 +352,78 @@ fun AssignmentCreatorScreen(
 
             Spacer(Modifier.height(4.dp))
 
-            // ── SECTION 2: KONTEN & PANDUAN ──
+            // ── SECTION 2: FORMAT / METODE PENGISIAN TUGAS ──
+            Card(
+                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
+                shape = RoundedCornerShape(0.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    AssignmentSectionHeader(
+                        number = 2,
+                        title = "Format / Metode Pengisian Tugas",
+                        subtitle = "Pilih cara siswa mengumpulkan jawaban tugas",
+                        numberColor = IndigoAccent
+                    )
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            Triple("STRUCTURED_QUESTIONS", "📝 Soal PG & Essay", "Dikerjakan online di App"),
+                            Triple("HOMEWORK_PR", "📄 Tugas PR / Berkas", "Upload Foto/PDF Jawaban"),
+                            Triple("HYBRID", "🔄 Kombinasi", "Soal + Upload Berkas")
+                        ).forEach { (formatKey, label, sublabel) ->
+                            val isSelected = state.assignmentFormat == formatKey
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (isSelected)
+                                            Brush.linearGradient(listOf(IndigoPrimary.copy(alpha = 0.35f), IndigoAccent.copy(alpha = 0.25f)))
+                                        else
+                                            Brush.linearGradient(listOf(CosmicBlack, CosmicBlack))
+                                    )
+                                    .border(
+                                        width = if (isSelected) 1.8.dp else 1.dp,
+                                        color = if (isSelected) IndigoAccent else GlassBorder,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable { viewModel.setAssignmentFormat(formatKey) }
+                                    .padding(vertical = 10.dp, horizontal = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Text(
+                                        label,
+                                        color = if (isSelected) Color.White else TextPrimary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        textAlign = TextAlign.Center
+                                    )
+                                    Spacer(Modifier.height(3.dp))
+                                    Text(
+                                        sublabel,
+                                        color = if (isSelected) IndigoAccent else TextTertiary,
+                                        fontSize = 9.sp,
+                                        textAlign = TextAlign.Center,
+                                        lineHeight = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // ── SECTION 3: KONTEN & PANDUAN TUGAS ──
             Card(
                 colors = CardDefaults.cardColors(containerColor = CosmicNavy),
                 shape = RoundedCornerShape(0.dp),
@@ -343,17 +434,17 @@ fun AssignmentCreatorScreen(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     AssignmentSectionHeader(
-                        number = 2,
+                        number = 3,
                         title = "Konten & Panduan Tugas",
-                        subtitle = "Tulis judul, deskripsi, dan instruksi detail",
-                        numberColor = IndigoAccent
+                        subtitle = "Tulis judul, deskripsi, dan instruksi pengerjaan",
+                        numberColor = CyanAccent
                     )
 
                     AssignmentTextField(
                         value = title,
                         onValueChange = { title = it },
                         label = "Judul Tugas *",
-                        placeholder = "Contoh: Praktik Uji Kandungan Nutrisi Makanan",
+                        placeholder = "Contoh: Latihan Bab 3 Fisika: Hukum Gerak Newton",
                         icon = Icons.Default.Title,
                         accentColor = IndigoPrimary
                     )
@@ -362,27 +453,92 @@ fun AssignmentCreatorScreen(
                         value = description,
                         onValueChange = { description = it },
                         label = "Deskripsi / Latar Belakang Tugas",
-                        placeholder = "Uraian singkat tujuan dan cakupan tugas...",
+                        placeholder = "Uraian singkat tujuan dan cakupan materi tugas...",
                         icon = Icons.Default.Notes,
                         accentColor = IndigoPrimary,
-                        minHeight = 90.dp
+                        minHeight = 80.dp
                     )
 
                     AssignmentTextField(
                         value = instructions,
                         onValueChange = { instructions = it },
                         label = "Instruksi Langkah Pengerjaan",
-                        placeholder = "1. Amati benda di sekitar...\n2. Catat dalam tabel...\n3. Buat kesimpulan.",
+                        placeholder = "Contoh: Kerjakan soal pilihan ganda berikut atau tulis penyelesaian pada buku tugas...",
                         icon = Icons.Default.FormatListNumbered,
                         accentColor = IndigoPrimary,
-                        minHeight = 110.dp
+                        minHeight = 90.dp
                     )
                 }
             }
 
             Spacer(Modifier.height(4.dp))
 
-            // ── SECTION 3: PENGUMPULAN & BATAS WAKTU ──
+            // ── SECTION 4: DAFTAR BUTIR SOAL (Pilihan Ganda & Esai) ──
+            val isStructuredMode = state.assignmentFormat == "STRUCTURED_QUESTIONS" || state.assignmentFormat == "HYBRID"
+            if (isStructuredMode) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = CosmicNavy),
+                    shape = RoundedCornerShape(0.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        // Section header with action buttons
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            AssignmentSectionHeader(
+                                number = 4,
+                                title = "Daftar Butir Soal (${state.questions.size} Butir)",
+                                subtitle = "Total Poin: $totalQuestionPoints Poin",
+                                numberColor = NeonSuccess
+                            )
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Button(
+                                    onClick = { viewModel.addMultipleChoiceQuestion() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    Text("+ PG", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+
+                                Button(
+                                    onClick = { viewModel.addEssayQuestion() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
+                                ) {
+                                    Text("+ Esai", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        // List of questions
+                        state.questions.forEachIndexed { qIdx, question ->
+                            QuestionBuilderCard(
+                                questionIndex = qIdx,
+                                question = question,
+                                canDelete = state.questions.size > 1,
+                                onDelete = { viewModel.removeQuestion(qIdx) },
+                                onTextChange = { viewModel.updateQuestionText(qIdx, it) },
+                                onPointsChange = { viewModel.updateQuestionPoints(qIdx, it) },
+                                onChoiceTextChange = { cIdx, text -> viewModel.updateChoiceText(qIdx, cIdx, text) },
+                                onCorrectChoiceSelect = { cIdx -> viewModel.setCorrectChoice(qIdx, cIdx) }
+                            )
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(4.dp))
+            }
+
+            // ── SECTION 5: PENGUMPULAN & BATAS WAKTU ──
             Card(
                 colors = CardDefaults.cardColors(containerColor = CosmicNavy),
                 shape = RoundedCornerShape(0.dp),
@@ -393,7 +549,7 @@ fun AssignmentCreatorScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     AssignmentSectionHeader(
-                        number = 3,
+                        number = if (isStructuredMode) 5 else 4,
                         title = "Pengumpulan & Batas Waktu",
                         subtitle = "Atur deadline dan nilai maksimal",
                         numberColor = NeonWarning
@@ -449,62 +605,88 @@ fun AssignmentCreatorScreen(
                         }
                     }
 
-                    // Score presets
+                    // Score presets & display
                     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text(
-                            "Nilai Maksimal:",
-                            color = TextSecondary,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            listOf("100", "80", "50").forEach { score ->
-                                val isSelected = maxScore == score
+                            Text(
+                                "Nilai Maksimal Tugas:",
+                                color = TextSecondary,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                            if (isStructuredMode && totalQuestionPoints > 0) {
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(10.dp))
-                                        .background(
-                                            if (isSelected) NeonSuccess.copy(alpha = 0.15f)
-                                            else CosmicBlack
-                                        )
-                                        .border(
-                                            1.5.dp,
-                                            if (isSelected) NeonSuccess else GlassBorder,
-                                            RoundedCornerShape(10.dp)
-                                        )
-                                        .clickable { maxScore = score }
-                                        .padding(horizontal = 16.dp, vertical = 10.dp),
-                                    contentAlignment = Alignment.Center
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(NeonSuccess.copy(alpha = 0.12f))
+                                        .border(0.5.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                        .padding(horizontal = 8.dp, vertical = 2.dp)
                                 ) {
                                     Text(
-                                        score,
-                                        color = if (isSelected) NeonSuccess else TextSecondary,
-                                        fontSize = 13.sp,
-                                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
+                                        "Otomatis dari Butir Soal ($totalQuestionPoints Poin)",
+                                        color = NeonSuccess,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
+                        }
 
-                            Spacer(Modifier.weight(1f))
+                        if (!isStructuredMode || totalQuestionPoints == 0) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                listOf("100", "80", "50").forEach { score ->
+                                    val isSelected = customMaxScore == score
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(
+                                                if (isSelected) NeonSuccess.copy(alpha = 0.15f)
+                                                else CosmicBlack
+                                            )
+                                            .border(
+                                                1.5.dp,
+                                                if (isSelected) NeonSuccess else GlassBorder,
+                                                RoundedCornerShape(10.dp)
+                                            )
+                                            .clickable { customMaxScore = score }
+                                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            score,
+                                            color = if (isSelected) NeonSuccess else TextSecondary,
+                                            fontSize = 13.sp,
+                                            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
+                                        )
+                                    }
+                                }
 
-                            OutlinedTextField(
-                                value = maxScore,
-                                onValueChange = { maxScore = it },
-                                label = { Text("Custom", fontSize = 11.sp) },
-                                modifier = Modifier.width(90.dp).height(54.dp),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = NeonSuccess,
-                                    unfocusedBorderColor = GlassBorder,
-                                    focusedLabelColor = NeonSuccess,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
+                                Spacer(Modifier.weight(1f))
+
+                                OutlinedTextField(
+                                    value = customMaxScore,
+                                    onValueChange = { customMaxScore = it },
+                                    label = { Text("Custom", fontSize = 11.sp) },
+                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                    modifier = Modifier.width(90.dp).height(54.dp),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = NeonSuccess,
+                                        unfocusedBorderColor = GlassBorder,
+                                        focusedLabelColor = NeonSuccess,
+                                        focusedTextColor = TextPrimary,
+                                        unfocusedTextColor = TextPrimary
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
 
@@ -548,7 +730,218 @@ fun AssignmentCreatorScreen(
     }
 }
 
-// ─── Assignment-Screen-local components ─────────────────────────────────────
+// ─── Question Builder Card Component ──────────────────────────────────────────
+
+@Composable
+private fun QuestionBuilderCard(
+    questionIndex: Int,
+    question: AssignmentQuestion,
+    canDelete: Boolean,
+    onDelete: () -> Unit,
+    onTextChange: (String) -> Unit,
+    onPointsChange: (Int) -> Unit,
+    onChoiceTextChange: (Int, String) -> Unit,
+    onCorrectChoiceSelect: (Int) -> Unit,
+) {
+    val isMultipleChoice = question.questionType == "MULTIPLE_CHOICE"
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicSurface2)
+            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .padding(12.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Header row: Question number, type badge, points, and delete
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text(
+                        "Soal #${questionIndex + 1}",
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (isMultipleChoice) IndigoAccent.copy(alpha = 0.15f) else CyanAccent.copy(alpha = 0.15f))
+                            .border(0.5.dp, if (isMultipleChoice) IndigoAccent.copy(alpha = 0.3f) else CyanAccent.copy(alpha = 0.3f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            if (isMultipleChoice) "🔘 Pilihan Ganda (PG)" else "📝 Uraian / Esai",
+                            color = if (isMultipleChoice) IndigoAccent else CyanAccent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Text("Poin:", color = TextTertiary, fontSize = 11.sp)
+                    OutlinedTextField(
+                        value = (question.points ?: 10).toString(),
+                        onValueChange = { newVal ->
+                            val p = newVal.filter { it.isDigit() }.toIntOrNull() ?: 10
+                            onPointsChange(p)
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.width(60.dp).height(44.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NeonSuccess,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        singleLine = true
+                    )
+
+                    if (canDelete) {
+                        IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                            Icon(
+                                Icons.Default.DeleteOutline,
+                                contentDescription = "Hapus Soal",
+                                tint = NeonError,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Question text field
+            OutlinedTextField(
+                value = question.questionText,
+                onValueChange = onTextChange,
+                label = { Text("Teks Pertanyaan Soal #${questionIndex + 1} *", fontSize = 11.sp) },
+                placeholder = {
+                    Text(
+                        if (isMultipleChoice) "Tuliskan pertanyaan pilihan ganda..." else "Tuliskan narasi pertanyaan atau instruksi soal esai...",
+                        fontSize = 12.sp,
+                        color = TextTertiary
+                    )
+                },
+                modifier = Modifier.fillMaxWidth().heightIn(min = 70.dp),
+                shape = RoundedCornerShape(10.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = if (isMultipleChoice) IndigoAccent else CyanAccent,
+                    unfocusedBorderColor = GlassBorder,
+                    focusedLabelColor = if (isMultipleChoice) IndigoAccent else CyanAccent,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    unfocusedLabelColor = TextTertiary
+                )
+            )
+
+            // Multiple Choice Options Builder
+            if (isMultipleChoice) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Opsi Jawaban (Klik radio untuk menandai Kunci Jawaban):",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+
+                    question.choices.forEachIndexed { cIdx, choice ->
+                        val isCorrect = choice.isCorrect == true
+                        val letter = ('A' + cIdx).toString()
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (isCorrect) NeonSuccess.copy(alpha = 0.08f) else CosmicBlack)
+                                .border(
+                                    width = if (isCorrect) 1.2.dp else 0.8.dp,
+                                    color = if (isCorrect) NeonSuccess else GlassBorder,
+                                    shape = RoundedCornerShape(8.dp)
+                                )
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            RadioButton(
+                                selected = isCorrect,
+                                onClick = { onCorrectChoiceSelect(cIdx) },
+                                colors = RadioButtonDefaults.colors(
+                                    selectedColor = NeonSuccess,
+                                    unselectedColor = TextTertiary
+                                )
+                            )
+
+                            Text(
+                                text = "$letter.",
+                                color = if (isCorrect) NeonSuccess else TextPrimary,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+
+                            OutlinedTextField(
+                                value = choice.choiceText,
+                                onValueChange = { onChoiceTextChange(cIdx, it) },
+                                placeholder = { Text("Pilihan $letter", fontSize = 11.sp, color = TextTertiary) },
+                                modifier = Modifier.weight(1f).heightIn(min = 44.dp),
+                                shape = RoundedCornerShape(8.dp),
+                                singleLine = true,
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = if (isCorrect) NeonSuccess else IndigoAccent,
+                                    unfocusedBorderColor = Color.Transparent,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                )
+                            )
+
+                            if (isCorrect) {
+                                Text(
+                                    "✓ Kunci",
+                                    color = NeonSuccess,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Essay Note
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CyanAccent.copy(alpha = 0.08f))
+                        .border(0.5.dp, CyanAccent.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                        .padding(10.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Icon(Icons.Default.Info, null, tint = CyanAccent, modifier = Modifier.size(16.dp))
+                        Text(
+                            "Siswa akan mengetikkan teks jawaban esai langsung pada aplikasi Android dan dapat dikoreksi nilainya oleh guru.",
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            lineHeight = 15.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Local UI Helpers ─────────────────────────────────────────────────────────
 
 @Composable
 private fun AssignmentChip(text: String, color: Color) {
@@ -556,6 +949,7 @@ private fun AssignmentChip(text: String, color: Color) {
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
             .background(color.copy(alpha = 0.14f))
+            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
             .padding(horizontal = 8.dp, vertical = 3.dp)
     ) {
         Text(text, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)

@@ -119,6 +119,13 @@ fun TeacherChatScreen(
     var searchQuery by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
 
+    androidx.compose.runtime.DisposableEffect(chatManager) {
+        chatManager.startPolling()
+        onDispose {
+            chatManager.stopPolling()
+        }
+    }
+
     val waitingCount = threads.count { it.status == InquiryStatus.WAITING_REPLY }
     val answeredCount = threads.count { it.status == InquiryStatus.ANSWERED }
     val materialCount = threads.count { it.inquiryType == InquiryType.MATERIAL }
