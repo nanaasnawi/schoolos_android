@@ -56,7 +56,7 @@ data class ChatThread(
     val studentName: String,
     val studentClass: String,
     val teacherId: String = "teacher-default",
-    val teacherName: String = "Guru Pengampu",
+    val teacherName: String = "Guru Mata Pelajaran",
     val subjectName: String = "Umum",
     val inquiryType: InquiryType = InquiryType.MATERIAL,
     val referenceTitle: String,
@@ -242,7 +242,7 @@ class ChatManager @Inject constructor(
                 } else if (existing != null && existing.teacherName.isNotBlank() && !existing.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
                     existing.teacherName
                 } else {
-                    dto.teacherName
+                    "Guru Mata Pelajaran"
                 }
 
                 ChatThread(
@@ -380,7 +380,7 @@ class ChatManager @Inject constructor(
         val effectiveSenderName = when {
             !auth?.name.isNullOrBlank() -> auth!!.name!!
             senderName.isNotBlank() && !senderName.equals("Guru Pengampu", ignoreCase = true) -> senderName
-            isTeacher -> "Guru Pengampu"
+            isTeacher -> "Guru Pengajar"
             else -> "Siswa"
         }
         val effectiveSenderId = when {
@@ -457,7 +457,7 @@ class ChatManager @Inject constructor(
         studentId: String,
         studentName: String,
         studentClass: String,
-        teacherName: String = "Guru Pengampu",
+        teacherName: String = "Guru Mata Pelajaran",
         subjectName: String = "Umum",
         inquiryType: InquiryType,
         referenceTitle: String,
@@ -470,6 +470,11 @@ class ChatManager @Inject constructor(
 
         val effectiveStudentName = if (!auth?.name.isNullOrBlank()) auth!!.name!! else studentName
         val effectiveStudentId = if (!auth?.userId.isNullOrBlank()) auth!!.userId!! else studentId
+        val effectiveTeacherName = if (teacherName.isNotBlank() && !teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+            teacherName
+        } else {
+            "Guru Mata Pelajaran"
+        }
 
         val initialMsg = ChatMessage(
             id = UUID.randomUUID().toString(),
@@ -487,7 +492,7 @@ class ChatManager @Inject constructor(
             studentId = effectiveStudentId,
             studentName = effectiveStudentName,
             studentClass = studentClass,
-            teacherName = teacherName,
+            teacherName = effectiveTeacherName,
             subjectName = subjectName,
             inquiryType = inquiryType,
             referenceTitle = referenceTitle,
@@ -508,7 +513,7 @@ class ChatManager @Inject constructor(
                     studentId = if (effectiveStudentId.contains("-") && effectiveStudentId.length == 36) effectiveStudentId else null,
                     studentName = effectiveStudentName,
                     studentClass = studentClass,
-                    teacherName = teacherName,
+                    teacherName = effectiveTeacherName,
                     subjectName = subjectName,
                     inquiryType = inquiryType.name,
                     referenceTitle = referenceTitle,
@@ -638,6 +643,12 @@ class ChatManager @Inject constructor(
                 } catch (_: Exception) {
                     InquiryStatus.WAITING_REPLY
                 }
+                val rawTeacherName = tObj.optString("teacherName", "")
+                val effectiveTeacherName = if (rawTeacherName.isNotBlank() && !rawTeacherName.equals("Guru Pengampu", ignoreCase = true)) {
+                    rawTeacherName
+                } else {
+                    "Guru Mata Pelajaran"
+                }
                 result.add(
                     ChatThread(
                         id = tObj.optString("id"),
@@ -645,7 +656,7 @@ class ChatManager @Inject constructor(
                         studentName = tObj.optString("studentName"),
                         studentClass = tObj.optString("studentClass", "Siswa"),
                         teacherId = tObj.optString("teacherId", "teacher-default"),
-                        teacherName = tObj.optString("teacherName", "Guru Pengampu"),
+                        teacherName = effectiveTeacherName,
                         subjectName = tObj.optString("subjectName", "Umum"),
                         inquiryType = inqType,
                         referenceTitle = tObj.optString("referenceTitle", ""),

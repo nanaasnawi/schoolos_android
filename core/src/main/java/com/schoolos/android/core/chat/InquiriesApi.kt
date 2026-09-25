@@ -28,7 +28,7 @@ data class InquiryThreadDto(
     @SerialName("student_name") val studentName: String,
     @SerialName("student_class") val studentClass: String = "",
     @SerialName("teacher_id") val teacherId: String? = null,
-    @SerialName("teacher_name") val teacherName: String = "Guru Pengampu",
+    @SerialName("teacher_name") val teacherName: String = "Guru Mata Pelajaran",
     @SerialName("subject_name") val subjectName: String = "Umum",
     @SerialName("inquiry_type") val inquiryType: String = "MATERIAL",
     @SerialName("reference_title") val referenceTitle: String,

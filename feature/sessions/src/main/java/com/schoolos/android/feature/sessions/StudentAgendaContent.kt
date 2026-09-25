@@ -165,7 +165,7 @@ private fun StudentTimelineItem(
     val startHour = formatHourMinute(session.scheduledAt) ?: "07.30"
     val endHour = formatHourMinute(session.endedAt) ?: "09.00"
     val room = session.room ?: "Ruang Kelas"
-    val teacherName = session.teacherName ?: "Guru Pengampu"
+    val teacherName = session.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) } ?: "Guru Pengajar"
     val isOnline = room.contains("Online", ignoreCase = true) || room.contains("Meet", ignoreCase = true)
 
     // Pulse animation for active node

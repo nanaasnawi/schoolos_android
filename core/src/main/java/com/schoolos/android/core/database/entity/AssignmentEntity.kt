@@ -16,4 +16,8 @@ data class AssignmentEntity(
     val isActive: Boolean,
     val createdAt: String,
     val updatedAt: String,
+    val classId: String? = null,
+    val className: String? = null,
+    val subjectName: String? = null,
+    val teacherName: String? = null,
 )

@@ -435,10 +435,16 @@ fun TeacherChatScreen(
                                         thread = thread,
                                         isTeacherMode = isTeacherMode,
                                         onClick = {
-                                            onOpenThread(
-                                                thread.id,
-                                                if (isTeacherMode) thread.studentName else thread.teacherName
-                                            )
+                                            val recipient = if (isTeacherMode) {
+                                                thread.studentName.ifBlank { "Siswa" }
+                                            } else {
+                                                if (thread.teacherName.isNotBlank() && !thread.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+                                                    thread.teacherName
+                                                } else {
+                                                    "Guru Mata Pelajaran"
+                                                }
+                                            }
+                                            onOpenThread(thread.id, recipient)
                                         },
                                     )
                                 }
@@ -726,7 +732,11 @@ private fun ThreadCard(
     val contactName = if (isTeacherMode) {
         thread.studentName.ifBlank { "Siswa" }
     } else {
-        thread.teacherName.ifBlank { "Guru Pengampu" }
+        if (thread.teacherName.isNotBlank() && !thread.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+            thread.teacherName
+        } else {
+            "Guru Mata Pelajaran"
+        }
     }
 
     val contactInitial = contactName.trim().take(1).uppercase().ifBlank { "?" }

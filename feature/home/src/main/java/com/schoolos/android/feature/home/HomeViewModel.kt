@@ -385,7 +385,7 @@ class HomeViewModel @Inject constructor(
                 BookReadingItem(
                     id = mat.id,
                     title = mat.title,
-                    author = mat.teacherName ?: "Guru Pengampu",
+                    author = mat.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) } ?: "Guru Mata Pelajaran",
                     publisher = "Materi Sekolah",
                     subjectName = mat.subject,
                     gradeLevelName = mat.className,

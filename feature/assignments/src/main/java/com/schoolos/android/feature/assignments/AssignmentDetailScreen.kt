@@ -185,11 +185,12 @@ fun AssignmentDetailScreen(
                                     onSubmitClick = { showConfirm = true },
                                     childName = state.childName,
                                     onAskTeacher = {
+                                        val teacher: String = a.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) } ?: "Guru Mata Pelajaran"
                                         onAskTeacher?.invoke(
                                             a.title,
                                             a.id,
                                             a.subjectName ?: "Tugas",
-                                            a.teacherName ?: "Guru Pengampu",
+                                            teacher,
                                         )
                                     },
                                     pgAnswers = pgAnswers,
@@ -263,7 +264,7 @@ private fun AssignmentInfoStrip(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val displayTeacher = if (!teacherName.isNullOrBlank()) teacherName else "Guru Pengampu"
+                val displayTeacher = teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) } ?: "Guru Mata Pelajaran"
                 Spacer(Modifier.height(3.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
