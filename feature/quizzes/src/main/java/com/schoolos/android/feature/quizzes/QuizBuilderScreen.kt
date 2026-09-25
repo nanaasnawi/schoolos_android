@@ -49,101 +49,44 @@ fun QuizBuilderScreen(
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
-            // Hero Header — flat bottom, royal violet gradient
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(VioletGradient)
-                    .statusBarsPadding()
-            ) {
-                // Decorative circles
-                Box(
-                    modifier = Modifier
-                        .size(150.dp)
-                        .offset(x = 250.dp, y = (-35).dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.07f))
+            Column(modifier = Modifier.fillMaxWidth().background(CosmicNavy)) {
+                ExecutiveTopBar(
+                    title = if (state.currentStep == 1) "Konfigurasi Kuis CBT" else "Bank Soal & Kunci Jawaban",
+                    subtitle = if (state.currentStep == 1)
+                        "Langkah 1/2 • Pengaturan Evaluasi"
+                    else
+                        "Langkah 2/2 • Penyusunan Butir Soal",
+                    onBack = onBack,
                 )
-                Box(
-                    modifier = Modifier
-                        .size(85.dp)
-                        .offset(x = 285.dp, y = 22.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.05f))
-                )
-
-                Column(
+                // Sleek Step Progress Indicator
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 12.dp)
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        CustomBackButton(
-                            onClick = onBack,
-                            onHero = true,
-                        )
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (state.currentStep == 1) "Konfigurasi Kuis CBT" else "Bank Soal & Kunci Jawaban",
-                                fontSize = 19.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White,
-                                letterSpacing = (-0.3).sp
+                    // Step 1 Segment
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(TeacherNeon)
+                    )
+                    // Step 2 Segment
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(
+                                if (state.currentStep == 2) TeacherNeon
+                                else CosmicSurface3
                             )
-                            Text(
-                                text = if (state.currentStep == 1)
-                                    "Langkah 1/2 — Pengaturan Evaluasi"
-                                else
-                                    "Langkah 2/2 — Penyusunan Butir Soal",
-                                fontSize = 12.sp,
-                                color = Color.White.copy(alpha = 0.8f),
-                                fontWeight = FontWeight.Medium
-                            )
-                        }
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(CircleShape)
-                                .background(Color.White.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                if (state.currentStep == 1) Icons.Default.Quiz else Icons.Default.QuestionAnswer,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    }
-                    // Step progress bar
-                    Spacer(Modifier.height(12.dp))
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Step 1 pill
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(Color.White)
-                        )
-                        // Step 2 pill
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(4.dp)
-                                .clip(RoundedCornerShape(2.dp))
-                                .background(
-                                    if (state.currentStep == 2) Color.White
-                                    else Color.White.copy(alpha = 0.3f)
-                                )
-                        )
-                    }
+                    )
                 }
+                androidx.compose.material3.HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
             }
         }
     ) { padding ->
@@ -189,26 +132,25 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Spacer(Modifier.height(16.dp))
-
         // ── SASARAN ROMBEL & MAPEL ──
-        Card(
-            colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-            shape = RoundedCornerShape(0.dp),
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 QuizSectionHeader(
                     icon = Icons.Default.Group,
                     title = "Sasaran Evaluasi & Rombel",
                     subtitle = "Pilih kelas dan mata pelajaran yang diuji",
-                    accentColor = VioletPrimary
+                    accentColor = TeacherNeon
                 )
 
                 QuizDropdown(
@@ -216,7 +158,7 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                     label = "Rombel Target",
                     icon = Icons.Default.Group,
                     expanded = isClassMenuExpanded,
-                    accentColor = VioletPrimary,
+                    accentColor = TeacherNeon,
                     onExpand = { isClassMenuExpanded = true },
                     onDismiss = { isClassMenuExpanded = false },
                     options = classOptions,
@@ -228,7 +170,7 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                     label = "Mata Pelajaran",
                     icon = Icons.Default.School,
                     expanded = isSubjectMenuExpanded,
-                    accentColor = VioletPrimary,
+                    accentColor = TeacherNeon,
                     onExpand = { isSubjectMenuExpanded = true },
                     onDismiss = { isSubjectMenuExpanded = false },
                     options = subjectOptions,
@@ -237,23 +179,21 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
             }
         }
 
-        Spacer(Modifier.height(4.dp))
-
         // ── IDENTITAS & INSTRUKSI CBT ──
-        Card(
-            colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-            shape = RoundedCornerShape(0.dp),
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 QuizSectionHeader(
                     icon = Icons.Default.Quiz,
                     title = "Identitas & Instruksi CBT",
                     subtitle = "Isi judul dan petunjuk pengerjaan",
-                    accentColor = VioletSoft
+                    accentColor = NeonBlue
                 )
 
                 QuizTextField(
@@ -262,7 +202,7 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                     label = "Judul Kuis CBT *",
                     placeholder = "Contoh: Kuis CBT: Pengukuran Besaran Pokok",
                     icon = Icons.Default.Title,
-                    accentColor = VioletPrimary
+                    accentColor = TeacherNeon
                 )
 
                 QuizTextField(
@@ -271,8 +211,8 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                     label = "Petunjuk Pengerjaan Peserta",
                     placeholder = "Pilih jawaban yang paling tepat. KKM = 70.",
                     icon = Icons.Default.Info,
-                    accentColor = VioletPrimary,
-                    minHeight = 90.dp
+                    accentColor = TeacherNeon,
+                    minHeight = 80.dp
                 )
 
                 // Duration chips
@@ -292,17 +232,14 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
-                                    .clip(RoundedCornerShape(12.dp))
+                                    .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (isSelected)
-                                            Brush.linearGradient(listOf(VioletAccent, VioletPrimary))
-                                        else
-                                            Brush.linearGradient(listOf(CosmicBlack, CosmicBlack))
+                                        if (isSelected) TeacherNeon.copy(alpha = 0.15f) else CosmicSurface2
                                     )
                                     .border(
-                                        width = if (isSelected) 0.dp else 1.5.dp,
-                                        color = if (isSelected) Color.Transparent else GlassBorder,
-                                        shape = RoundedCornerShape(12.dp)
+                                        width = if (isSelected) 1.5.dp else 0.5.dp,
+                                        color = if (isSelected) TeacherNeon else GlassBorder,
+                                        shape = RoundedCornerShape(10.dp)
                                     )
                                     .clickable { selectedDuration = mins }
                                     .padding(vertical = 10.dp),
@@ -310,7 +247,7 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                             ) {
                                 Text(
                                     "${mins}m",
-                                    color = if (isSelected) Color.White else TextSecondary,
+                                    color = if (isSelected) TeacherNeon else TextSecondary,
                                     fontSize = 12.sp,
                                     fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
                                 )
@@ -322,11 +259,9 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
         }
 
         if (!state.error.isNullOrBlank()) {
-            Spacer(Modifier.height(12.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(NeonError.copy(alpha = 0.12f))
                     .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
@@ -340,7 +275,6 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
         }
 
         // ── LANJUT BUTTON ──
-        Spacer(Modifier.height(16.dp))
         Button(
             onClick = {
                 if (title.isBlank()) {
@@ -362,15 +296,17 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
             enabled = title.isNotBlank() && !state.isLoading,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .height(54.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = VioletPrimary)
+                .height(50.dp),
+            shape = RoundedCornerShape(14.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = TeacherNeon,
+                contentColor = Color.White
+            )
         ) {
             if (state.isLoading) {
                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
             } else {
-                Text("LANJUT KE BANK SOAL", fontWeight = FontWeight.Black, fontSize = 14.sp, letterSpacing = 0.5.sp)
+                Text("Lanjut ke Bank Soal", fontWeight = FontWeight.Black, fontSize = 14.sp)
                 Spacer(Modifier.width(8.dp))
                 Icon(Icons.Default.ChevronRight, null, modifier = Modifier.size(20.dp))
             }
@@ -395,22 +331,21 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(0.dp)
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        Spacer(Modifier.height(16.dp))
-
         // ── QUESTION CHIPS TRACKER ──
         if (state.questionsList.isNotEmpty()) {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -423,12 +358,12 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(VioletPrimary.copy(alpha = 0.15f))
+                                .background(TeacherNeon.copy(alpha = 0.12f))
                                 .padding(horizontal = 10.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 "Total: ${state.totalPoints} Poin",
-                                color = VioletSoft, fontSize = 11.sp, fontWeight = FontWeight.Black
+                                color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Black
                             )
                         }
                     }
@@ -440,19 +375,19 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (isPg) VioletPrimary.copy(alpha = 0.15f)
-                                        else NeonSuccess.copy(alpha = 0.15f)
+                                        if (isPg) NeonBlue.copy(alpha = 0.12f)
+                                        else TeacherNeon.copy(alpha = 0.12f)
                                     )
                                     .border(
                                         1.dp,
-                                        if (isPg) VioletPrimary.copy(alpha = 0.5f) else NeonSuccess.copy(alpha = 0.5f),
+                                        if (isPg) NeonBlue.copy(alpha = 0.35f) else TeacherNeon.copy(alpha = 0.35f),
                                         RoundedCornerShape(10.dp)
                                     )
                                     .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Text(
                                     "#${q.number} ${if (isPg) "PG" else "Esai"} (${q.points}p)",
-                                    color = if (isPg) VioletSoft else NeonSuccess,
+                                    color = if (isPg) NeonBlue else TeacherNeon,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -461,27 +396,23 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                     }
                 }
             }
-
-            Spacer(Modifier.height(4.dp))
         }
 
         // ── CURRENT QUESTION INFO ──
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .background(VioletPrimary.copy(alpha = 0.15f))
+                    .background(TeacherNeon.copy(alpha = 0.12f))
                     .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Text(
                     "Butir Soal Ke-${state.questionsList.size + 1}",
-                    color = VioletSoft,
+                    color = TeacherNeon,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Black
                 )
@@ -494,25 +425,27 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isP) VioletPrimary.copy(alpha = 0.2f) else CosmicNavy)
-                            .border(1.dp, if (isP) VioletPrimary else GlassBorder, RoundedCornerShape(8.dp))
+                            .background(if (isP) TeacherNeon.copy(alpha = 0.15f) else CosmicSurface2)
+                            .border(1.dp, if (isP) TeacherNeon else GlassBorder, RoundedCornerShape(8.dp))
                             .clickable { points = p }
-                            .padding(horizontal = 8.dp, vertical = 5.dp)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        Text("${p}p", color = if (isP) VioletSoft else TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text("${p}p", color = if (isP) TeacherNeon else TextTertiary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
-        Spacer(Modifier.height(12.dp))
 
-        // ── FORMAT SOAL TOGGLE ──
-        Card(
-            colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-            shape = RoundedCornerShape(0.dp),
-            modifier = Modifier.fillMaxWidth()
+        // ── FORMAT SOAL TOGGLE & QUESTION TEXT ──
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text("Format Butir Soal:", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     listOf(
@@ -520,20 +453,16 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                         "ESSAY" to "📝  Soal Esai / Uraian"
                     ).forEach { (type, label) ->
                         val isSelected = questionType == type
-                        val color = if (type == "MULTIPLE_CHOICE") VioletPrimary else NeonSuccess
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(
-                                    if (isSelected)
-                                        Brush.linearGradient(listOf(color, color.copy(alpha = 0.7f)))
-                                    else
-                                        Brush.linearGradient(listOf(CosmicBlack, CosmicBlack))
+                                    if (isSelected) TeacherNeon.copy(alpha = 0.12f) else CosmicSurface2
                                 )
                                 .border(
-                                    width = if (isSelected) 0.dp else 1.5.dp,
-                                    color = if (isSelected) Color.Transparent else GlassBorder,
+                                    width = if (isSelected) 1.5.dp else 0.5.dp,
+                                    color = if (isSelected) TeacherNeon else GlassBorder,
                                     shape = RoundedCornerShape(12.dp)
                                 )
                                 .clickable { questionType = type }
@@ -542,7 +471,7 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                         ) {
                             Text(
                                 label,
-                                color = if (isSelected) Color.White else TextSecondary,
+                                color = if (isSelected) TeacherNeon else TextSecondary,
                                 fontSize = 12.sp,
                                 fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
                             )
@@ -556,12 +485,12 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                     onValueChange = { qText = it },
                     label = { Text(if (questionType == "MULTIPLE_CHOICE") "Teks Soal Pilihan Ganda *" else "Teks Soal Esai *") },
                     placeholder = { Text("Tuliskan narasi pertanyaan atau soal kuis di sini...", fontSize = 12.sp, color = TextTertiary) },
-                    modifier = Modifier.fillMaxWidth().heightIn(min = 120.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = if (questionType == "MULTIPLE_CHOICE") VioletPrimary else NeonSuccess,
+                        focusedBorderColor = TeacherNeon,
                         unfocusedBorderColor = GlassBorder,
-                        focusedLabelColor = if (questionType == "MULTIPLE_CHOICE") VioletPrimary else NeonSuccess,
+                        focusedLabelColor = TeacherNeon,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
                         unfocusedLabelColor = TextTertiary
@@ -570,21 +499,22 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
             }
         }
 
-        Spacer(Modifier.height(4.dp))
-
         // ── OPTIONS / RUBRIC ──
         if (questionType == "MULTIPLE_CHOICE") {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Default.RadioButtonChecked, null, tint = VioletPrimary, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.RadioButtonChecked, null, tint = TeacherNeon, modifier = Modifier.size(16.dp))
                         Text(
-                            "Pilihan Jawaban — klik radio untuk Kunci Benar:",
-                            color = VioletSoft,
+                            "Pilihan Jawaban (Klik radio untuk Kunci Benar):",
+                            color = TeacherNeon,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -594,30 +524,27 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                         val isCorrect = correctOptionIndex == index
                         val letter = ('A' + index).toString()
 
-                        Card(
-                            colors = CardDefaults.cardColors(
-                                containerColor = if (isCorrect) NeonSuccess.copy(alpha = 0.1f) else CosmicBlack
-                            ),
-                            shape = RoundedCornerShape(12.dp),
-                            border = CardDefaults.outlinedCardBorder().copy(
-                                brush = Brush.linearGradient(
-                                    if (isCorrect) listOf(NeonSuccess, NeonSuccess.copy(alpha = 0.5f))
-                                    else listOf(GlassBorder, GlassBorder)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isCorrect) TeacherNeon.copy(alpha = 0.08f) else CosmicSurface2)
+                                .border(
+                                    width = if (isCorrect) 1.2.dp else 0.5.dp,
+                                    color = if (isCorrect) TeacherNeon else GlassBorder,
+                                    shape = RoundedCornerShape(12.dp)
                                 )
-                            ),
-                            modifier = Modifier.fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(start = 4.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                                modifier = Modifier.fillMaxWidth(),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 RadioButton(
                                     selected = isCorrect,
                                     onClick = { correctOptionIndex = index },
                                     colors = RadioButtonDefaults.colors(
-                                        selectedColor = NeonSuccess,
+                                        selectedColor = TeacherNeon,
                                         unselectedColor = TextTertiary
                                     )
                                 )
@@ -627,14 +554,14 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                                         .size(26.dp)
                                         .clip(CircleShape)
                                         .background(
-                                            if (isCorrect) NeonSuccess
-                                            else VioletPrimary.copy(alpha = 0.2f)
+                                            if (isCorrect) TeacherNeon
+                                            else CosmicSurface3
                                         ),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         letter,
-                                        color = if (isCorrect) Color.White else VioletSoft,
+                                        color = if (isCorrect) Color.White else TextPrimary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Black
                                     )
@@ -647,7 +574,7 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(10.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = if (isCorrect) NeonSuccess else VioletPrimary,
+                                        focusedBorderColor = if (isCorrect) TeacherNeon else GlassBorder,
                                         unfocusedBorderColor = Color.Transparent,
                                         focusedTextColor = TextPrimary,
                                         unfocusedTextColor = TextPrimary
@@ -671,7 +598,7 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                     if (options.size < 5) {
                         TextButton(
                             onClick = { options.add("Pilihan " + ('A' + options.size)) },
-                            colors = ButtonDefaults.textButtonColors(contentColor = VioletPrimary)
+                            colors = ButtonDefaults.textButtonColors(contentColor = TeacherNeon)
                         ) {
                             Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
@@ -681,22 +608,25 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                 }
             }
         } else {
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(NeonSuccess.copy(alpha = 0.08f))
+                            .background(TeacherNeon.copy(alpha = 0.08f))
                             .padding(10.dp)
                     ) {
-                        Icon(Icons.Default.Info, null, tint = NeonSuccess, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Info, null, tint = TeacherNeon, modifier = Modifier.size(16.dp))
                         Text(
                             "Siswa akan mengetik jawaban uraian secara langsung di app.",
                             color = TextSecondary, fontSize = 11.sp
@@ -708,12 +638,12 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                         onValueChange = { rubricText = it },
                         label = { Text("Kunci / Pedoman Penilaian (Opsional)") },
                         placeholder = { Text("Contoh: Poin penuh jika siswa menyebutkan 3 prinsip utama...") },
-                        modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                        modifier = Modifier.fillMaxWidth().heightIn(min = 90.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NeonSuccess,
+                            focusedBorderColor = TeacherNeon,
                             unfocusedBorderColor = GlassBorder,
-                            focusedLabelColor = NeonSuccess,
+                            focusedLabelColor = TeacherNeon,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
                         )
@@ -723,11 +653,9 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
         }
 
         if (!state.error.isNullOrBlank()) {
-            Spacer(Modifier.height(12.dp))
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
                     .clip(RoundedCornerShape(12.dp))
                     .background(NeonError.copy(alpha = 0.12f))
                     .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
@@ -738,11 +666,8 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
         }
 
         // ── ACTION BUTTONS ──
-        Spacer(Modifier.height(16.dp))
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             OutlinedButton(
@@ -772,12 +697,10 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                     )
                 },
                 enabled = qText.isNotBlank() && !state.isLoading,
-                modifier = Modifier.weight(1f).height(52.dp),
+                modifier = Modifier.weight(1f).height(48.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = VioletPrimary),
-                border = ButtonDefaults.outlinedButtonBorder().copy(
-                    brush = Brush.linearGradient(listOf(VioletAccent, VioletSoft))
-                )
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
+                border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.6f))
             ) {
                 Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
@@ -811,9 +734,9 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                     }
                 },
                 enabled = !state.isLoading,
-                modifier = Modifier.weight(1.3f).height(52.dp),
+                modifier = Modifier.weight(1.3f).height(48.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = NeonSuccess)
+                colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White)
             ) {
                 if (state.isLoading) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
