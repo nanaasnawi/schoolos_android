@@ -108,99 +108,39 @@ fun AssignmentCreatorScreen(
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
-            // Hero Header
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(IndigoGradient)
-                    .statusBarsPadding()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(160.dp)
-                        .offset(x = 250.dp, y = (-40).dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.07f))
-                )
-                Box(
-                    modifier = Modifier
-                        .size(90.dp)
-                        .offset(x = 280.dp, y = 20.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.05f))
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CustomBackButton(
-                        onClick = onBack,
-                        onHero = true,
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            "Studio Penugasan Guru",
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White,
-                            letterSpacing = (-0.3).sp
-                        )
-                        Text(
-                            "Rancang & Terbitkan Tugas (PG & Esai)",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Assignment,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
-            }
+            ExecutiveTopBar(
+                title = "Studio Penugasan Guru",
+                subtitle = "Rancang & Terbitkan Tugas (PG & Esai)",
+                onBack = onBack,
+            )
         },
         bottomBar = {
             Surface(
                 color = CosmicNavy,
+                tonalElevation = 8.dp,
                 shadowElevation = 12.dp,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .navigationBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
                         onClick = { showPreview = !showPreview },
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f).height(50.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = IndigoPrimary),
-                        border = ButtonDefaults.outlinedButtonBorder().copy(
-                            brush = Brush.linearGradient(listOf(IndigoPrimary, IndigoAccent))
-                        )
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.6f))
                     ) {
                         Icon(
                             if (showPreview) Icons.Default.Edit else Icons.Default.Visibility,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(17.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
@@ -231,9 +171,10 @@ fun AssignmentCreatorScreen(
                         },
                         enabled = title.isNotBlank() && !state.isLoading,
                         shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1.4f).height(50.dp),
+                        modifier = Modifier.weight(1.4f).height(48.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = IndigoPrimary
+                            containerColor = TeacherNeon,
+                            contentColor = Color.White
                         )
                     ) {
                         if (state.isLoading) {
@@ -252,76 +193,68 @@ fun AssignmentCreatorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Spacer(Modifier.height(16.dp))
-
             // ── LIVE STUDENT PREVIEW CARD ──
             AnimatedVisibility(visible = showPreview) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                    shape = RoundedCornerShape(0.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(TeacherNeon.copy(alpha = 0.05f))
+                        .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+                        .padding(16.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(IndigoPrimary.copy(alpha = 0.08f), IndigoAccent.copy(alpha = 0.04f))
-                                )
-                            )
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(IndigoAccent))
-                                    Text("Tampilan di HP Siswa", color = IndigoAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                AssignmentChip("Tenggat: $selectedDueDays Hari", NeonWarning)
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(TeacherNeon))
+                                Text("Preview Tampilan Siswa", color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
-                            Text(
-                                text = title.ifBlank { "Judul Tugas Anda Akan Muncul Di Sini" },
-                                color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black
-                            )
-                            Text(
-                                text = description.ifBlank { "Deskripsi dan panduan ringkas pengerjaan tugas oleh guru..." },
-                                color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                                AssignmentChip(selectedSubject.ifBlank { "Mata Pelajaran" }, IndigoPrimary)
-                                AssignmentChip(selectedClass.ifBlank { "Rombel" }, IndigoAccent)
-                                if (state.assignmentFormat != "HOMEWORK_PR") {
-                                    val count = state.questions.size
-                                    AssignmentChip("$count Soal Terstruktur", CyanAccent)
-                                }
-                                AssignmentChip("Maks $displayMaxScore Poin", NeonSuccess)
+                            AssignmentChip("Tenggat: $selectedDueDays Hari", NeonWarning)
+                        }
+                        Text(
+                            text = title.ifBlank { "Judul Tugas Anda Akan Muncul Di Sini" },
+                            color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            text = description.ifBlank { "Deskripsi dan panduan ringkas pengerjaan tugas oleh guru..." },
+                            color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                            AssignmentChip(selectedSubject.ifBlank { "Mata Pelajaran" }, NeonBlue)
+                            AssignmentChip(selectedClass.ifBlank { "Rombel" }, TeacherNeon)
+                            if (state.assignmentFormat != "HOMEWORK_PR") {
+                                val count = state.questions.size
+                                AssignmentChip("$count Soal Terstruktur", CyanAccent)
                             }
+                            AssignmentChip("Maks $displayMaxScore Poin", NeonSuccess)
                         }
                     }
                 }
             }
 
             // ── SECTION 1: SASARAN & ROMBEL ──
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     AssignmentSectionHeader(
                         number = 1,
                         title = "Sasaran & Rombel Belajar",
                         subtitle = "Tentukan rombel kelas dan mata pelajaran target",
-                        numberColor = IndigoPrimary
+                        numberColor = TeacherNeon
                     )
 
                     AssignmentDropdown(
@@ -329,7 +262,7 @@ fun AssignmentCreatorScreen(
                         label = "Rombel Target *",
                         icon = Icons.Default.Group,
                         expanded = isClassMenuExpanded,
-                        accentColor = IndigoPrimary,
+                        accentColor = TeacherNeon,
                         onExpand = { isClassMenuExpanded = true },
                         onDismiss = { isClassMenuExpanded = false },
                         options = classOptions,
@@ -341,7 +274,7 @@ fun AssignmentCreatorScreen(
                         label = "Mata Pelajaran *",
                         icon = Icons.Default.School,
                         expanded = isSubjectMenuExpanded,
-                        accentColor = IndigoPrimary,
+                        accentColor = TeacherNeon,
                         onExpand = { isSubjectMenuExpanded = true },
                         onDismiss = { isSubjectMenuExpanded = false },
                         options = subjectOptions,
@@ -350,23 +283,21 @@ fun AssignmentCreatorScreen(
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
-
             // ── SECTION 2: FORMAT / METODE PENGISIAN TUGAS ──
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     AssignmentSectionHeader(
                         number = 2,
                         title = "Format / Metode Pengisian Tugas",
                         subtitle = "Pilih cara siswa mengumpulkan jawaban tugas",
-                        numberColor = IndigoAccent
+                        numberColor = NeonBlue
                     )
 
                     Row(
@@ -374,9 +305,9 @@ fun AssignmentCreatorScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            Triple("STRUCTURED_QUESTIONS", "📝 Soal PG & Essay", "Dikerjakan online di App"),
-                            Triple("HOMEWORK_PR", "📄 Tugas PR / Berkas", "Upload Foto/PDF Jawaban"),
-                            Triple("HYBRID", "🔄 Kombinasi", "Soal + Upload Berkas")
+                            Triple("STRUCTURED_QUESTIONS", "📝 Soal PG & Essay", "Dikerjakan online"),
+                            Triple("HOMEWORK_PR", "📄 PR / Berkas", "Upload Foto/PDF"),
+                            Triple("HYBRID", "🔄 Kombinasi", "Soal + Upload")
                         ).forEach { (formatKey, label, sublabel) ->
                             val isSelected = state.assignmentFormat == formatKey
                             Box(
@@ -384,24 +315,21 @@ fun AssignmentCreatorScreen(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(
-                                        if (isSelected)
-                                            Brush.linearGradient(listOf(IndigoPrimary.copy(alpha = 0.35f), IndigoAccent.copy(alpha = 0.25f)))
-                                        else
-                                            Brush.linearGradient(listOf(CosmicBlack, CosmicBlack))
+                                        if (isSelected) TeacherNeon.copy(alpha = 0.12f) else CosmicSurface2
                                     )
                                     .border(
-                                        width = if (isSelected) 1.8.dp else 1.dp,
-                                        color = if (isSelected) IndigoAccent else GlassBorder,
+                                        width = if (isSelected) 1.5.dp else 0.5.dp,
+                                        color = if (isSelected) TeacherNeon else GlassBorder,
                                         shape = RoundedCornerShape(12.dp)
                                     )
                                     .clickable { viewModel.setAssignmentFormat(formatKey) }
-                                    .padding(vertical = 10.dp, horizontal = 6.dp),
+                                    .padding(vertical = 12.dp, horizontal = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                     Text(
                                         label,
-                                        color = if (isSelected) Color.White else TextPrimary,
+                                        color = if (isSelected) TeacherNeon else TextPrimary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.Center
@@ -409,7 +337,7 @@ fun AssignmentCreatorScreen(
                                     Spacer(Modifier.height(3.dp))
                                     Text(
                                         sublabel,
-                                        color = if (isSelected) IndigoAccent else TextTertiary,
+                                        color = if (isSelected) TeacherNeon.copy(alpha = 0.8f) else TextTertiary,
                                         fontSize = 9.sp,
                                         textAlign = TextAlign.Center,
                                         lineHeight = 11.sp
@@ -421,18 +349,16 @@ fun AssignmentCreatorScreen(
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
-
             // ── SECTION 3: KONTEN & PANDUAN TUGAS ──
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     AssignmentSectionHeader(
                         number = 3,
                         title = "Konten & Panduan Tugas",
@@ -446,7 +372,7 @@ fun AssignmentCreatorScreen(
                         label = "Judul Tugas *",
                         placeholder = "Contoh: Latihan Bab 3 Fisika: Hukum Gerak Newton",
                         icon = Icons.Default.Title,
-                        accentColor = IndigoPrimary
+                        accentColor = TeacherNeon
                     )
 
                     AssignmentTextField(
@@ -455,7 +381,7 @@ fun AssignmentCreatorScreen(
                         label = "Deskripsi / Latar Belakang Tugas",
                         placeholder = "Uraian singkat tujuan dan cakupan materi tugas...",
                         icon = Icons.Default.Notes,
-                        accentColor = IndigoPrimary,
+                        accentColor = TeacherNeon,
                         minHeight = 80.dp
                     )
 
@@ -465,26 +391,24 @@ fun AssignmentCreatorScreen(
                         label = "Instruksi Langkah Pengerjaan",
                         placeholder = "Contoh: Kerjakan soal pilihan ganda berikut atau tulis penyelesaian pada buku tugas...",
                         icon = Icons.Default.FormatListNumbered,
-                        accentColor = IndigoPrimary,
+                        accentColor = TeacherNeon,
                         minHeight = 90.dp
                     )
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
-
             // ── SECTION 4: DAFTAR BUTIR SOAL (Pilihan Ganda & Esai) ──
             val isStructuredMode = state.assignmentFormat == "STRUCTURED_QUESTIONS" || state.assignmentFormat == "HYBRID"
             if (isStructuredMode) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                    shape = RoundedCornerShape(0.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CosmicNavy)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                        .padding(16.dp)
                 ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                         // Section header with action buttons
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -501,11 +425,11 @@ fun AssignmentCreatorScreen(
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Button(
                                     onClick = { viewModel.addMultipleChoiceQuestion() },
-                                    colors = ButtonDefaults.buttonColors(containerColor = IndigoPrimary),
+                                    colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon),
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                                 ) {
-                                    Text("+ PG", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("+ PG", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
 
                                 Button(
@@ -514,7 +438,7 @@ fun AssignmentCreatorScreen(
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = PaddingValues(horizontal = 8.dp, vertical = 6.dp)
                                 ) {
-                                    Text("+ Esai", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("+ Esai", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
                             }
                         }
@@ -534,20 +458,18 @@ fun AssignmentCreatorScreen(
                         }
                     }
                 }
-
-                Spacer(Modifier.height(4.dp))
             }
 
             // ── SECTION 5: PENGUMPULAN & BATAS WAKTU ──
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                     AssignmentSectionHeader(
                         number = if (isStructuredMode) 5 else 4,
                         title = "Pengumpulan & Batas Waktu",
@@ -565,7 +487,7 @@ fun AssignmentCreatorScreen(
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             listOf(
                                 1 to "+1 Hari",
@@ -577,25 +499,22 @@ fun AssignmentCreatorScreen(
                                 Box(
                                     modifier = Modifier
                                         .weight(1f)
-                                        .clip(RoundedCornerShape(12.dp))
+                                        .clip(RoundedCornerShape(10.dp))
                                         .background(
-                                            if (isSelected)
-                                                Brush.linearGradient(listOf(IndigoPrimary, IndigoAccent))
-                                            else
-                                                Brush.linearGradient(listOf(CosmicBlack, CosmicBlack))
+                                            if (isSelected) TeacherNeon.copy(alpha = 0.15f) else CosmicSurface2
                                         )
                                         .border(
-                                            width = if (isSelected) 0.dp else 1.5.dp,
-                                            color = if (isSelected) Color.Transparent else GlassBorder,
-                                            shape = RoundedCornerShape(12.dp)
+                                            width = if (isSelected) 1.5.dp else 0.5.dp,
+                                            color = if (isSelected) TeacherNeon else GlassBorder,
+                                            shape = RoundedCornerShape(10.dp)
                                         )
                                         .clickable { selectedDueDays = days }
-                                        .padding(vertical = 12.dp),
+                                        .padding(vertical = 10.dp),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         label,
-                                        color = if (isSelected) Color.White else TextSecondary,
+                                        color = if (isSelected) TeacherNeon else TextSecondary,
                                         fontSize = 11.sp,
                                         fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium,
                                         textAlign = TextAlign.Center
@@ -649,7 +568,7 @@ fun AssignmentCreatorScreen(
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(
                                                 if (isSelected) NeonSuccess.copy(alpha = 0.15f)
-                                                else CosmicBlack
+                                                else CosmicSurface2
                                             )
                                             .border(
                                                 1.5.dp,
@@ -708,11 +627,9 @@ fun AssignmentCreatorScreen(
 
             // Error Display
             if (!state.error.isNullOrBlank()) {
-                Spacer(Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 10.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(NeonError.copy(alpha = 0.12f))
                         .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
@@ -961,12 +878,13 @@ private fun AssignmentSectionHeader(number: Int, title: String, subtitle: String
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(
             modifier = Modifier
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(numberColor),
+                .size(32.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(numberColor.copy(alpha = 0.12f))
+                .border(1.dp, numberColor.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(number.toString(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(number.toString(), color = numberColor, fontSize = 13.sp, fontWeight = FontWeight.Black)
         }
         Column {
             Text(title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)

@@ -86,20 +86,6 @@ fun LearningMaterialDetailScreen(
                 subtitle = material.subject,
                 onBack = onBack,
                 actions = {
-                    if (isTeacher) {
-                        IconButton(
-                            onClick = { showEditDialog = true },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit Materi", tint = TextSecondary, modifier = Modifier.size(17.dp))
-                        }
-                        IconButton(
-                            onClick = { showDeleteDialog = true },
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = "Hapus Materi", tint = NeonError, modifier = Modifier.size(17.dp))
-                        }
-                    }
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -433,25 +419,14 @@ fun LearningMaterialDetailScreen(
                             }
 
                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                if (material.completedCount > 0) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(NeonBlue.copy(alpha = 0.15f))
-                                            .border(1.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Text("👥 ${material.completedCount} Siswa Belajar", color = NeonBlue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(8.dp))
                                         .background(NeonSuccess.copy(alpha = 0.1f))
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Text("Modul Aktif", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
+                                    ) {
+                                        Text("Modul Aktif", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
                             }
                         }
                     }

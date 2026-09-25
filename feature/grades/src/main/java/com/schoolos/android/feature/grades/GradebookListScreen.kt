@@ -146,6 +146,9 @@ fun GradebookListScreen(
                         teacherGradebookContent(
                             subjects = filteredSubjects,
                             className = state.className,
+                            totalSubjectCount = state.subjects.size,
+                            selectedFilter = selectedFilter,
+                            onSelectFilter = { selectedFilter = it },
                             onSubjectClick = onSubjectClick
                         )
                     }
