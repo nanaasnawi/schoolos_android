@@ -2,6 +2,7 @@ package com.schoolos.android.core.chat
 
 import android.content.Context
 import com.schoolos.android.core.auth.AuthManager
+import com.schoolos.android.core.auth.AuthState
 import com.schoolos.android.core.network.ApiClient
 import com.schoolos.android.core.network.NetworkMonitor
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -18,7 +19,10 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import org.json.JSONArray
+import org.json.JSONObject
 import timber.log.Timber
+import java.io.File
 import java.time.Instant
 import java.util.UUID
 import javax.inject.Inject
@@ -81,7 +85,10 @@ class ChatManager @Inject constructor(
 
     val isRealtimeConnected: StateFlow<Boolean> get() = isOnline
 
-    private val _threads = MutableStateFlow<List<ChatThread>>(emptyList())
+    private var cachedAuth: AuthState? = null
+
+    // Load initial state synchronously from persistent disk cache so history is restored immediately on app launch
+    private val _threads = MutableStateFlow<List<ChatThread>>(loadFromDisk())
     val threads: StateFlow<List<ChatThread>> = _threads.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
@@ -91,7 +98,19 @@ class ChatManager @Inject constructor(
     private var activeSubscribers = 0
 
     init {
-        // Initial fetch
+        // Observe auth state continuously
+        scope.launch {
+            authManager.authState.collectLatest { auth ->
+                cachedAuth = auth
+                // Reload disk cache if current threads are empty
+                val currentThreads = loadFromDisk()
+                if (currentThreads.isNotEmpty() && _threads.value.isEmpty()) {
+                    _threads.value = currentThreads
+                }
+            }
+        }
+
+        // Initial fetch from database
         refresh()
 
         // Automatically sync whenever internet connection is restored
@@ -153,7 +172,7 @@ class ChatManager @Inject constructor(
     }
 
     private suspend fun syncFromDatabase() {
-        val auth = authManager.authState.firstOrNull()
+        val auth = cachedAuth ?: authManager.authState.firstOrNull()
         val teacherName = if (auth?.isTeacher == true) auth.name else null
         val studentId = if (auth?.isStudent == true && !auth.userId.isNullOrBlank() && auth.userId.length == 36) auth.userId else null
 
@@ -166,6 +185,8 @@ class ChatManager @Inject constructor(
             val currentMap = _threads.value.associateBy { it.id }
             val dbIds = dbThreads.map { it.id }.toSet()
 
+            val threadsNeedingDetails = mutableListOf<String>()
+
             val updatedThreads = dbThreads.map { dto ->
                 val type = when (dto.inquiryType.uppercase()) {
                     "ASSIGNMENT" -> InquiryType.ASSIGNMENT
@@ -175,10 +196,25 @@ class ChatManager @Inject constructor(
                 val st = if (dto.status.uppercase() == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
                 val timestamp = parseIsoTimestamp(dto.lastMessageAt ?: dto.createdAt)
 
-                // Preserve or update messages
+                // Preserve or update messages: NEVER wipe existing full message history!
                 val existing = currentMap[dto.id]
                 val messages = if (existing != null && existing.messages.isNotEmpty()) {
-                    existing.messages
+                    val hasLastMsg = !dto.lastMessageContent.isNullOrBlank() &&
+                        existing.messages.any { it.content == dto.lastMessageContent }
+                    if (!hasLastMsg && !dto.lastMessageContent.isNullOrBlank()) {
+                        existing.messages + ChatMessage(
+                            id = UUID.randomUUID().toString(),
+                            threadId = dto.id,
+                            senderId = if (st == InquiryStatus.ANSWERED) (dto.teacherId ?: "teacher") else dto.studentId,
+                            senderName = if (st == InquiryStatus.ANSWERED) dto.teacherName else dto.studentName,
+                            senderRole = if (st == InquiryStatus.ANSWERED) "TEACHER" else "STUDENT",
+                            content = dto.lastMessageContent,
+                            timestamp = timestamp,
+                            isFromTeacher = (st == InquiryStatus.ANSWERED),
+                        )
+                    } else {
+                        existing.messages
+                    }
                 } else if (!dto.lastMessageContent.isNullOrBlank()) {
                     listOf(
                         ChatMessage(
@@ -196,13 +232,26 @@ class ChatManager @Inject constructor(
                     emptyList()
                 }
 
+                // If messages on device are fewer than server count or empty, automatically queue detail fetch
+                if (messages.size < dto.messageCount) {
+                    threadsNeedingDetails.add(dto.id)
+                }
+
+                val resolvedTeacherName = if (dto.teacherName.isNotBlank() && !dto.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+                    dto.teacherName
+                } else if (existing != null && existing.teacherName.isNotBlank() && !existing.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+                    existing.teacherName
+                } else {
+                    dto.teacherName
+                }
+
                 ChatThread(
                     id = dto.id,
                     studentId = dto.studentId,
                     studentName = dto.studentName,
                     studentClass = dto.studentClass.ifBlank { "Siswa" },
-                    teacherId = dto.teacherId ?: "teacher-default",
-                    teacherName = dto.teacherName,
+                    teacherId = dto.teacherId ?: existing?.teacherId ?: "teacher-default",
+                    teacherName = resolvedTeacherName,
                     subjectName = dto.subjectName,
                     inquiryType = type,
                     referenceTitle = dto.referenceTitle,
@@ -215,7 +264,14 @@ class ChatManager @Inject constructor(
 
             // Keep any local threads currently pending server persistence
             val pendingLocal = _threads.value.filter { it.id !in dbIds }
-            _threads.value = pendingLocal + updatedThreads
+            val merged = pendingLocal + updatedThreads
+            _threads.value = merged
+            saveToDisk(merged)
+
+            // Trigger detail loads in background for threads with missing messages
+            for (tid in threadsNeedingDetails) {
+                loadThreadDetail(tid)
+            }
         }
     }
 
@@ -238,15 +294,58 @@ class ChatManager @Inject constructor(
                         )
                     }
 
-                    _threads.value = _threads.value.map { th ->
-                        if (th.id == threadId) {
-                            th.copy(
-                                messages = msgs,
+                    _threads.value = _threads.value.let { currentList ->
+                        val index = currentList.indexOfFirst { it.id == threadId }
+                        if (index >= 0) {
+                            val existing = currentList[index]
+                            // Keep any unconfirmed local temporary messages
+                            val serverMsgIds = msgs.map { it.id }.toSet()
+                            val localPending = existing.messages.filter { it.id !in serverMsgIds && it.id.startsWith("temp-") }
+                            val combinedMsgs = (msgs + localPending).sortedBy { it.timestamp }
+
+                            val updatedTeacherName = if (detail.thread.teacherName.isNotBlank() && !detail.thread.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+                                detail.thread.teacherName
+                            } else {
+                                existing.teacherName
+                            }
+
+                            val updated = existing.copy(
+                                messages = combinedMsgs,
                                 status = if (detail.thread.status == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
-                                lastUpdated = parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt)
+                                lastUpdated = parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt),
+                                teacherName = updatedTeacherName,
+                                teacherId = detail.thread.teacherId ?: existing.teacherId,
                             )
-                        } else th
+                            currentList.toMutableList().apply { set(index, updated) }
+                        } else {
+                            // Thread was opened directly (e.g. push notification or deep link)
+                            val type = when (detail.thread.inquiryType.uppercase()) {
+                                "ASSIGNMENT" -> InquiryType.ASSIGNMENT
+                                "GENERAL" -> InquiryType.GENERAL
+                                else -> InquiryType.MATERIAL
+                            }
+                            val st = if (detail.thread.status.uppercase() == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
+                            val timestamp = parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt)
+                            listOf(
+                                ChatThread(
+                                    id = detail.thread.id,
+                                    studentId = detail.thread.studentId,
+                                    studentName = detail.thread.studentName,
+                                    studentClass = detail.thread.studentClass.ifBlank { "Siswa" },
+                                    teacherId = detail.thread.teacherId ?: "teacher-default",
+                                    teacherName = detail.thread.teacherName,
+                                    subjectName = detail.thread.subjectName,
+                                    inquiryType = type,
+                                    referenceTitle = detail.thread.referenceTitle,
+                                    referenceId = detail.thread.referenceId,
+                                    messages = msgs,
+                                    status = st,
+                                    lastUpdated = timestamp,
+                                )
+                            ) + currentList
+                        }
                     }
+                    saveToDisk(_threads.value)
 
                     // Mark as read in server persistence
                     launch {
@@ -275,38 +374,59 @@ class ChatManager @Inject constructor(
     ): ChatMessage {
         val isTeacher = senderRole.equals("TEACHER", ignoreCase = true)
         val now = System.currentTimeMillis()
-        val tempId = UUID.randomUUID().toString()
+        val tempId = "temp-" + UUID.randomUUID().toString()
+
+        val auth = cachedAuth
+        val effectiveSenderName = when {
+            !auth?.name.isNullOrBlank() -> auth!!.name!!
+            senderName.isNotBlank() && !senderName.equals("Guru Pengampu", ignoreCase = true) -> senderName
+            isTeacher -> "Guru Pengampu"
+            else -> "Siswa"
+        }
+        val effectiveSenderId = when {
+            !auth?.userId.isNullOrBlank() -> auth!!.userId!!
+            senderId.isNotBlank() -> senderId
+            else -> UUID.randomUUID().toString()
+        }
+
         val localMsg = ChatMessage(
             id = tempId,
             threadId = threadId,
-            senderId = senderId,
-            senderName = senderName,
+            senderId = effectiveSenderId,
+            senderName = effectiveSenderName,
             senderRole = senderRole,
             content = content.trim(),
             timestamp = now,
             isFromTeacher = isTeacher,
         )
 
-        // Optimistic local state update
+        // Optimistic local state update & immediate disk persistence!
         _threads.value = _threads.value.map { thread ->
             if (thread.id == threadId) {
+                val updatedTeacherName = if (isTeacher && effectiveSenderName.isNotBlank() && !effectiveSenderName.equals("Guru Pengampu", ignoreCase = true)) {
+                    effectiveSenderName
+                } else {
+                    thread.teacherName
+                }
                 thread.copy(
                     messages = thread.messages + localMsg,
                     status = if (isTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
                     lastUpdated = now,
+                    teacherName = updatedTeacherName,
                 )
             } else {
                 thread
             }
         }
+        saveToDisk(_threads.value)
 
         // Persist to real database via backend API with idempotent client_message_id
         scope.launch {
             try {
                 val req = SendInquiryMessageRequestDto(
                     clientMessageId = tempId,
-                    senderId = senderId,
-                    senderName = senderName,
+                    senderId = effectiveSenderId,
+                    senderName = effectiveSenderName,
                     senderRole = senderRole,
                     content = content.trim()
                 )
@@ -321,6 +441,7 @@ class ChatManager @Inject constructor(
                             th.copy(messages = updatedMsgs)
                         } else th
                     }
+                    saveToDisk(_threads.value)
                     // Refresh detail to ensure canonical sync
                     loadThreadDetail(threadId)
                 }
@@ -345,11 +466,16 @@ class ChatManager @Inject constructor(
     ): ChatThread {
         val newThreadId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
+        val auth = cachedAuth
+
+        val effectiveStudentName = if (!auth?.name.isNullOrBlank()) auth!!.name!! else studentName
+        val effectiveStudentId = if (!auth?.userId.isNullOrBlank()) auth!!.userId!! else studentId
+
         val initialMsg = ChatMessage(
             id = UUID.randomUUID().toString(),
             threadId = newThreadId,
-            senderId = studentId,
-            senderName = studentName,
+            senderId = effectiveStudentId,
+            senderName = effectiveStudentName,
             senderRole = "STUDENT",
             content = initialQuestion.trim(),
             timestamp = now,
@@ -358,8 +484,8 @@ class ChatManager @Inject constructor(
 
         val newThread = ChatThread(
             id = newThreadId,
-            studentId = studentId,
-            studentName = studentName,
+            studentId = effectiveStudentId,
+            studentName = effectiveStudentName,
             studentClass = studentClass,
             teacherName = teacherName,
             subjectName = subjectName,
@@ -372,14 +498,15 @@ class ChatManager @Inject constructor(
         )
 
         _threads.value = listOf(newThread) + _threads.value
+        saveToDisk(_threads.value)
 
         // Persist to database
         scope.launch {
             try {
                 val req = CreateInquiryRequestDto(
                     id = newThreadId,
-                    studentId = if (studentId.contains("-") && studentId.length == 36) studentId else null,
-                    studentName = studentName,
+                    studentId = if (effectiveStudentId.contains("-") && effectiveStudentId.length == 36) effectiveStudentId else null,
+                    studentName = effectiveStudentName,
                     studentClass = studentClass,
                     teacherName = teacherName,
                     subjectName = subjectName,
@@ -398,6 +525,142 @@ class ChatManager @Inject constructor(
         }
 
         return newThread
+    }
+
+    private fun getCacheFile(): File {
+        val uid = cachedAuth?.userId
+        return if (!uid.isNullOrBlank()) {
+            File(context.filesDir, "chat_threads_cache_${uid}.json")
+        } else {
+            File(context.filesDir, "chat_threads_cache.json")
+        }
+    }
+
+    private fun saveToDisk(threadsList: List<ChatThread>) {
+        try {
+            val jsonArray = JSONArray()
+            for (thread in threadsList) {
+                val tObj = JSONObject().apply {
+                    put("id", thread.id)
+                    put("studentId", thread.studentId)
+                    put("studentName", thread.studentName)
+                    put("studentClass", thread.studentClass)
+                    put("teacherId", thread.teacherId)
+                    put("teacherName", thread.teacherName)
+                    put("subjectName", thread.subjectName)
+                    put("inquiryType", thread.inquiryType.name)
+                    put("referenceTitle", thread.referenceTitle)
+                    put("referenceId", thread.referenceId ?: JSONObject.NULL)
+                    put("status", thread.status.name)
+                    put("lastUpdated", thread.lastUpdated)
+
+                    val mArray = JSONArray()
+                    for (msg in thread.messages) {
+                        val mObj = JSONObject().apply {
+                            put("id", msg.id)
+                            put("threadId", msg.threadId)
+                            put("senderId", msg.senderId)
+                            put("senderName", msg.senderName)
+                            put("senderRole", msg.senderRole)
+                            put("content", msg.content)
+                            put("timestamp", msg.timestamp)
+                            put("isFromTeacher", msg.isFromTeacher)
+                        }
+                        mArray.put(mObj)
+                    }
+                    put("messages", mArray)
+                }
+                jsonArray.put(tObj)
+            }
+
+            val file = getCacheFile()
+            val tempFile = File(context.filesDir, file.name + ".tmp")
+            tempFile.writeText(jsonArray.toString(), Charsets.UTF_8)
+            if (!tempFile.renameTo(file)) {
+                file.delete()
+                if (!tempFile.renameTo(file)) {
+                    file.writeText(jsonArray.toString(), Charsets.UTF_8)
+                }
+            }
+            val generalFile = File(context.filesDir, "chat_threads_cache.json")
+            if (file != generalFile) {
+                generalFile.writeText(jsonArray.toString(), Charsets.UTF_8)
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to persist chat cache to disk")
+        }
+    }
+
+    private fun loadFromDisk(): List<ChatThread> {
+        return try {
+            var file = getCacheFile()
+            if (!file.exists()) {
+                val generalFile = File(context.filesDir, "chat_threads_cache.json")
+                if (generalFile.exists()) {
+                    file = generalFile
+                } else {
+                    return emptyList()
+                }
+            }
+            val text = file.readText(Charsets.UTF_8)
+            if (text.isBlank()) return emptyList()
+
+            val jsonArray = JSONArray(text)
+            val result = ArrayList<ChatThread>(jsonArray.length())
+            for (i in 0 until jsonArray.length()) {
+                val tObj = jsonArray.getJSONObject(i)
+                val msgs = ArrayList<ChatMessage>()
+                if (tObj.has("messages")) {
+                    val mArray = tObj.getJSONArray("messages")
+                    for (j in 0 until mArray.length()) {
+                        val mObj = mArray.getJSONObject(j)
+                        msgs.add(
+                            ChatMessage(
+                                id = mObj.optString("id", UUID.randomUUID().toString()),
+                                threadId = mObj.optString("threadId", tObj.optString("id")),
+                                senderId = mObj.optString("senderId", ""),
+                                senderName = mObj.optString("senderName", ""),
+                                senderRole = mObj.optString("senderRole", "STUDENT"),
+                                content = mObj.optString("content", ""),
+                                timestamp = mObj.optLong("timestamp", System.currentTimeMillis()),
+                                isFromTeacher = mObj.optBoolean("isFromTeacher", false),
+                            )
+                        )
+                    }
+                }
+                val inqType = try {
+                    InquiryType.valueOf(tObj.optString("inquiryType", "MATERIAL"))
+                } catch (_: Exception) {
+                    InquiryType.MATERIAL
+                }
+                val inqStatus = try {
+                    InquiryStatus.valueOf(tObj.optString("status", "WAITING_REPLY"))
+                } catch (_: Exception) {
+                    InquiryStatus.WAITING_REPLY
+                }
+                result.add(
+                    ChatThread(
+                        id = tObj.optString("id"),
+                        studentId = tObj.optString("studentId"),
+                        studentName = tObj.optString("studentName"),
+                        studentClass = tObj.optString("studentClass", "Siswa"),
+                        teacherId = tObj.optString("teacherId", "teacher-default"),
+                        teacherName = tObj.optString("teacherName", "Guru Pengampu"),
+                        subjectName = tObj.optString("subjectName", "Umum"),
+                        inquiryType = inqType,
+                        referenceTitle = tObj.optString("referenceTitle", ""),
+                        referenceId = if (tObj.isNull("referenceId")) null else tObj.optString("referenceId"),
+                        messages = msgs,
+                        status = inqStatus,
+                        lastUpdated = tObj.optLong("lastUpdated", System.currentTimeMillis()),
+                    )
+                )
+            }
+            result
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to load chat cache from disk")
+            emptyList()
+        }
     }
 
     private fun parseIsoTimestamp(isoString: String?): Long {

@@ -418,8 +418,10 @@ fun NavGraph(
                 ),
             ) { backStackEntry ->
                 val threadId = backStackEntry.arguments?.getString("recipientId") ?: ""
+                val recipientName = backStackEntry.arguments?.getString("recipientName") ?: ""
                 ChatDetailScreen(
                     threadId = threadId,
+                    initialRecipientName = recipientName,
                     chatManager = chatManager,
                     onBack = { navController.popBackStack() },
                     onOpenReference = { type, refId ->

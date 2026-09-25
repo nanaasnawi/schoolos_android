@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -104,8 +105,21 @@ fun AssignmentDetailScreen(
                         },
                         onBack = onBack,
                         actions = {
-                            // Status chip in top bar actions area
-                            StatusChip(label = a.status)
+                            val isSubmitted = state.submission != null && state.submission?.status != "pending"
+                            val isGraded = state.submission?.status == "graded"
+                            val topStatus = when {
+                                isTeacher -> when (a.status.lowercase()) {
+                                    "published" -> "Aktif"
+                                    "draft" -> "Draft"
+                                    "closed" -> "Ditutup"
+                                    else -> a.status.replaceFirstChar { it.uppercase() }
+                                }
+                                isGraded -> "Dinilai"
+                                isSubmitted -> "Dikumpulkan"
+                                !a.isActive || a.status.lowercase() in listOf("closed", "archived") -> "Ditutup"
+                                else -> "Aktif"
+                            }
+                            StatusChip(label = topStatus)
                         },
                     )
                 }
@@ -249,12 +263,21 @@ private fun AssignmentInfoStrip(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (!teacherName.isNullOrBlank()) {
-                    Spacer(Modifier.height(2.dp))
+                val displayTeacher = if (!teacherName.isNullOrBlank()) teacherName else "Guru Pengampu"
+                Spacer(Modifier.height(3.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Person,
+                        contentDescription = null,
+                        tint = com.schoolos.android.core.designsystem.TeacherNeon,
+                        modifier = Modifier.size(13.dp),
+                    )
+                    Spacer(Modifier.width(4.dp))
                     Text(
-                        text = teacherName,
+                        text = "Guru: $displayTeacher",
                         fontSize = 11.sp,
-                        color = TextTertiary,
+                        fontWeight = FontWeight.Medium,
+                        color = TextSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )

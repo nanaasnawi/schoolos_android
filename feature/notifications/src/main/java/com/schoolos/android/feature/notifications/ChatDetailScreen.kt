@@ -12,8 +12,11 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
@@ -42,6 +45,7 @@ import com.schoolos.android.core.designsystem.CustomBackButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,6 +57,7 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -82,6 +87,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 fun ChatDetailScreen(
     threadId: String,
@@ -89,6 +95,7 @@ fun ChatDetailScreen(
     onBack: () -> Unit,
     onOpenReference: (type: InquiryType, refId: String?) -> Unit = { _, _ -> },
     isTeacherMode: Boolean = true,
+    initialRecipientName: String = "",
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -110,20 +117,41 @@ fun ChatDetailScreen(
         val size = thread?.messages?.size ?: 0
         if (size > 0) listState.animateScrollToItem(size - 1)
     }
+    val imeInsets = WindowInsets.ime
+    val density = LocalDensity.current
+    val isKeyboardOpen = remember {
+        derivedStateOf { imeInsets.getBottom(density) > 0 }
+    }
+    LaunchedEffect(isKeyboardOpen.value) {
+        if (isKeyboardOpen.value) {
+            val size = thread?.messages?.size ?: 0
+            if (size > 0) {
+                listState.animateScrollToItem(size - 1)
+            }
+        }
+    }
 
-    val contactName = if (isTeacherMode) (thread?.studentName ?: "Siswa")
-                      else (thread?.teacherName ?: "Guru Pengampu")
-    val contactInitial = contactName.take(1).uppercase()
-    val contactSubtitle = if (isTeacherMode) "Siswa • ${thread?.studentClass ?: "Rombel"}"
-                          else "Guru Pengampu • Aktif"
+    val contactName = if (isTeacherMode) {
+        thread?.studentName?.ifBlank { null } ?: initialRecipientName.ifBlank { null } ?: "Siswa"
+    } else {
+        val tName = thread?.teacherName
+        if (!tName.isNullOrBlank() && !tName.equals("Guru Pengampu", ignoreCase = true)) {
+            tName
+        } else if (initialRecipientName.isNotBlank() && !initialRecipientName.equals("Guru Pengampu", ignoreCase = true)) {
+            initialRecipientName
+        } else {
+            "Guru Mata Pelajaran"
+        }
+    }
+    val contactInitial = contactName.trim().take(1).uppercase().ifBlank { "?" }
+    val contactSubtitle = if (isTeacherMode) "Siswa • ${thread?.studentClass?.ifBlank { "Rombel" } ?: "Rombel"}"
+                          else "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • Aktif"
     val roleNeon = if (isTeacherMode) StudentNeon else TeacherNeon
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(CosmicBlack)
-            .navigationBarsPadding()
-            .imePadding(),
+            .background(CosmicBlack),
     ) {
         // ── 1. TOP BAR ────────────────────────────────────────────────────
         Column(
@@ -262,7 +290,8 @@ fun ChatDetailScreen(
                 state = listState,
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .imeNestedScroll(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -285,7 +314,9 @@ fun ChatDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CosmicNavy),
+                .background(CosmicNavy)
+                .navigationBarsPadding()
+                .imePadding(),
         ) {
             Box(
                 modifier = Modifier

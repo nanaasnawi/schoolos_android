@@ -183,7 +183,7 @@ fun StudentAssignmentDetailContent(
                                 color = TextPrimary
                             )
                             Text(
-                                text = "Tanya guru pengampu langsung tanpa keluar app",
+                                text = if (!assignment.teacherName.isNullOrBlank()) "Tanya ${assignment.teacherName} langsung tanpa keluar app" else "Tanya guru pengampu langsung tanpa keluar app",
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -240,7 +240,7 @@ fun StudentAssignmentDetailContent(
             SubmissionEditor(
                 isParent = isParent,
                 isSubmitting = isSubmitting,
-                isActive = assignment.isActive && assignment.status.lowercase() !in listOf("closed", "archived", "draft"),
+                isActive = assignment.isActive && assignment.status.lowercase() !in listOf("closed", "archived"),
                 content = content,
                 onContentChange = onContentChange,
                 onSubmitClick = onSubmitClick,
@@ -261,9 +261,11 @@ private fun AssignmentStatusCard(
     isParent: Boolean,
     childName: String,
 ) {
+    val isClosed = !assignment.isActive || assignment.status.lowercase() in listOf("closed", "archived")
     val (accentColor, statusLabel) = when {
         isGraded -> Pair(NeonSuccess, "Dinilai ✓")
         isSubmitted -> Pair(NeonBlue, "Dikumpulkan ✓")
+        isClosed -> Pair(TextTertiary, "Ditutup")
         dueInfo?.label?.contains("Terlambat") == true -> Pair(NeonError, "Terlambat!")
         dueInfo?.label?.contains("Hari ini") == true -> Pair(NeonWarning, "Hari Terakhir!")
         else -> Pair(StudentNeon, "Aktif")
@@ -369,37 +371,58 @@ private fun AssignmentStatusCard(
             }
 
             // Teacher row
-            if (assignment.teacherName != null) {
-                HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Person,
-                        contentDescription = null,
-                        tint = TextTertiary,
-                        modifier = Modifier.size(13.dp)
-                    )
-                    Spacer(Modifier.width(5.dp))
+            val displayTeacher = if (!assignment.teacherName.isNullOrBlank()) assignment.teacherName!! else "Guru Mata Pelajaran"
+            HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(CircleShape)
+                        .background(TeacherNeon.copy(alpha = 0.15f))
+                        .border(0.5.dp, TeacherNeon.copy(alpha = 0.35f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = "Dari: ${assignment.teacherName}",
+                        text = displayTeacher.take(1).uppercase(),
                         fontSize = 11.sp,
-                        color = TextTertiary,
-                        fontWeight = FontWeight.Medium
+                        fontWeight = FontWeight.Bold,
+                        color = TeacherNeon
                     )
-                    Spacer(Modifier.weight(1f))
-                    // Max score chip
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(StudentNeon.copy(alpha = 0.10f))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "Skor Max: ${assignment.maxScore}",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
-                            color = StudentNeon
-                        )
-                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Guru Pengampu",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextTertiary
+                    )
+                    Text(
+                        text = displayTeacher,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                // Max score chip
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(StudentNeon.copy(alpha = 0.10f))
+                        .border(0.5.dp, StudentNeon.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "Skor Max: ${assignment.maxScore}",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        color = StudentNeon
+                    )
                 }
             }
         }
