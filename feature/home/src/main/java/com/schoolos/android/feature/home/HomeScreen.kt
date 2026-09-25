@@ -502,6 +502,8 @@ fun HomeScreen(
                             val item = viewModel.startReadingSibiBook(book)
                             activeReadingBook = item
                         },
+                        xpCount                  = state.xpCount,
+                        assignmentsCount         = state.assignmentsCount,
                     )
                 }
             }

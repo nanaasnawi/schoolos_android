@@ -93,6 +93,8 @@ fun LazyListScope.studentContent(
     recommendedSibiBook: LibraryBook? = null,
     onOpenBookReading: (BookReadingItem) -> Unit = {},
     onStartReadingSibi: (LibraryBook) -> Unit = {},
+    xpCount: String = "0",
+    assignmentsCount: String = "0",
 ) {
     val currentSubject = todaySessions.firstOrNull { it.status == "active" }?.subjectName
         ?: todaySessions.firstOrNull()?.subjectName
@@ -330,7 +332,7 @@ fun LazyListScope.studentContent(
                         }
                     }
 
-                    // Level & Badge Button
+                    // Level & XP Button
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(14.dp))
@@ -341,22 +343,26 @@ fun LazyListScope.studentContent(
                             )
                             .border(1.dp, StudentNeon.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
                             .clickable(onClick = onNavigateToAchievements)
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                            .padding(horizontal = 12.dp, vertical = 8.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Default.EmojiEvents,
-                                contentDescription = null,
-                                tint = StudentNeon,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(6.dp))
+                        val xpNum = xpCount.toIntOrNull() ?: 0
+                        val level = (xpNum / 100) + 1
+                        Column(horizontalAlignment = Alignment.End) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "⭐ $xpCount XP",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = StudentNeon,
+                                )
+                            }
+                            Spacer(Modifier.height(2.dp))
                             Text(
-                                text = "Prestasi Siswa",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = StudentNeon,
+                                text = "Level $level • Prestasi",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextSecondary,
                             )
                         }
                     }
@@ -383,6 +389,73 @@ fun LazyListScope.studentContent(
                     fontWeight = FontWeight.Medium,
                     color = TextSecondary,
                 )
+
+                // ── Progress Belajar & Ringkasan Tugas ────────────────────────
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f), thickness = 0.7.dp)
+                Spacer(Modifier.height(12.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "PROGRESS BELAJAR",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextTertiary,
+                        letterSpacing = 0.5.sp,
+                    )
+                    Text(
+                        text = "${(progressPercentage * 100).toInt()}%",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = NeonBlue,
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
+
+                // Progress Bar
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(7.dp)
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(CosmicSurface2),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(fraction = progressPercentage.coerceIn(0.05f, 1f))
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Brush.horizontalGradient(listOf(NeonBlue, StudentNeon))),
+                    )
+                }
+
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val completed = studentProgress?.assignmentCompleted ?: 0
+                    val total = studentProgress?.assignmentTotal ?: assignmentsCount.toIntOrNull() ?: 0
+                    val pending = if (total > completed) total - completed else 0
+                    Text(
+                        text = "📋 Tugas: $completed selesai / $pending belum",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                        fontWeight = FontWeight.Medium,
+                    )
+                    Text(
+                        text = "Detail Progres →",
+                        fontSize = 11.sp,
+                        color = StudentNeon,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable(onClick = onNavigateToProgress),
+                    )
+                }
             }
         }
     }

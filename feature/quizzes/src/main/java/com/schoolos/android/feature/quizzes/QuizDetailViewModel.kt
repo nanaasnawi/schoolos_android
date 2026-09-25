@@ -36,7 +36,7 @@ class QuizDetailViewModel @Inject constructor(
         load()
     }
 
-    private fun load() {
+    fun load() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             repository.getQuiz(quizId)

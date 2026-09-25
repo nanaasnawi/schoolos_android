@@ -6,32 +6,28 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,31 +36,37 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.AccentNeonAmber
 import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CustomBackButton
+import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.CosmicSurface
+import com.schoolos.android.core.designsystem.CosmicSurface2
+import com.schoolos.android.core.designsystem.ErrorState
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
+import com.schoolos.android.core.designsystem.GlassBorder
+import com.schoolos.android.core.designsystem.GlassBorder2
 import com.schoolos.android.core.designsystem.GlassCard
 import com.schoolos.android.core.designsystem.LoadingState
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.NeonWarning
+import com.schoolos.android.core.designsystem.StatusChip
+import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
-import com.schoolos.android.core.designsystem.subjectGradient
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun QuizDetailScreen(
     onBack: (() -> Unit) = {},
@@ -77,92 +79,187 @@ fun QuizDetailScreen(
         state.attempt?.let { onAttemptStarted(it.id) }
     }
 
-    Scaffold(containerColor = CosmicBlack) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+    Scaffold(
+        containerColor = CosmicBlack,
+        topBar = {
+            ExecutiveTopBar(
+                title = state.quiz?.title ?: "Detail Kuis CBT",
+                subtitle = state.quiz?.let { "Kuis CBT • ${it.subjectName ?: "Evaluasi Mandiri"}" } ?: "Evaluasi Siswa",
+                onBack = onBack,
+                actions = {
+                    state.quiz?.let { q ->
+                        StatusChip(label = q.status)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
             when {
                 state.isLoading -> LoadingState()
                 state.error != null -> {
-                    com.schoolos.android.core.designsystem.ErrorState(message = state.error!!)
+                    ErrorState(message = state.error!!, onRetry = viewModel::load)
                 }
                 state.quiz != null -> {
                     val q = state.quiz!!
-                    val accentColor = subjectGradient(q.title).first()
                     val isAvailable = q.status.lowercase() in listOf("active", "open", "published", "draft")
+                    val timeLimit = q.timeLimitMinutes
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // ── REFACTORED NON-OVERLAPPING HERO HEADER ─────────────
-                        QuizHeroHeaderRefactored(quiz = q, onBack = onBack)
+                        // ── 1. COSMIC HERO BANNER CARD ────────────────────────
+                        CosmicQuizHeroCard(
+                            title = q.title,
+                            subjectName = q.subjectName ?: "CBT Evaluasi",
+                            maxScore = q.maxScore
+                        )
 
-                        Column(
-                            modifier = Modifier
-                                .padding(horizontal = 12.dp)
-                                .offset(y = (-14).dp)
+                        // ── 2. METRICS ROW (Soal, Waktu, Poin) ────────────────
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            // COMPACT METRICS ROW
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                CompactQuizMetricPill("Soal", "${q.questionsCount}", Icons.AutoMirrored.Filled.List, NeonBlue, Modifier.weight(1f))
-                                CompactQuizMetricPill("Waktu", if (q.timeLimitMinutes != null) "${q.timeLimitMinutes}'" else "—", Icons.Default.Timer, NeonWarning, Modifier.weight(1f))
-                                CompactQuizMetricPill("Poin", "${q.maxScore}", Icons.Default.EmojiEvents, NeonSuccess, Modifier.weight(1f))
-                            }
+                            CosmicMetricCard(
+                                label = "Total Soal",
+                                value = "${q.questionsCount}",
+                                unit = "Soal",
+                                icon = Icons.AutoMirrored.Filled.List,
+                                accentColor = NeonBlue,
+                                modifier = Modifier.weight(1f)
+                            )
+                            CosmicMetricCard(
+                                label = "Batas Waktu",
+                                value = if (timeLimit != null && timeLimit > 0) "$timeLimit" else "∞",
+                                unit = if (timeLimit != null && timeLimit > 0) "Menit" else "Bebas",
+                                icon = Icons.Default.Timer,
+                                accentColor = NeonWarning,
+                                modifier = Modifier.weight(1f)
+                            )
+                            CosmicMetricCard(
+                                label = "Poin Maksimal",
+                                value = "${q.maxScore}",
+                                unit = "Poin",
+                                icon = Icons.Default.EmojiEvents,
+                                accentColor = NeonSuccess,
+                                modifier = Modifier.weight(1f)
+                            )
+                        }
 
-                            Spacer(Modifier.height(20.dp))
-
-                            Text("Deskripsi Kuis", fontWeight = FontWeight.Black, fontSize = 15.sp, color = TextPrimary)
-                            Spacer(Modifier.height(8.dp))
-                            GlassCard(cornerRadius = 16.dp) {
+                        // ── 3. DESKRIPSI KUIS ─────────────────────────────────
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text(
+                                text = "Deskripsi & Instruksi",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = TextPrimary
+                            )
+                            GlassCard(cornerRadius = 14.dp) {
                                 Text(
-                                    text = q.description ?: "Tunjukkan kemampuan terbaikmu!",
-                                    fontSize = 13.sp, color = TextSecondary, lineHeight = 20.sp,
+                                    text = q.description?.takeIf { it.isNotBlank() }
+                                        ?: "Kuis evaluasi pemahaman materi. Kerjakan dengan teliti dan jujur untuk mengukur kompetensi pembelajaran Anda.",
+                                    fontSize = 13.sp,
+                                    color = TextSecondary,
+                                    lineHeight = 20.sp,
                                     modifier = Modifier.padding(14.dp)
                                 )
                             }
+                        }
 
-                            Spacer(Modifier.height(20.dp))
-                            QuizTipsSectionCompact()
+                        // ── 4. TATA TERTIB & PANDUAN PENGERJAAN ────────────────
+                        CbtRulesCard()
 
-                            Spacer(Modifier.height(32.dp))
-
-                            // COMPACT PRIMARY ACTION
-                            Button(
-                                onClick = viewModel::startAttempt,
-                                enabled = !state.isStarting && isAvailable,
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent, disabledContainerColor = Color.Transparent),
+                        // ── 5. ERROR ALERT (Stylized if start fails) ───────────
+                        if (state.startError != null) {
+                            Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(50.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            if (isAvailable) listOf(accentColor, accentColor.copy(alpha = 0.8f))
-                                            else listOf(TextTertiary, TextTertiary.copy(alpha = 0.8f))
-                                        )
-                                    ),
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(NeonError.copy(alpha = 0.12f))
+                                    .border(1.dp, NeonError.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                if (state.isStarting) {
-                                    CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(20.dp))
-                                } else {
-                                    Text(
-                                        if (isAvailable) "MULAI KERJAKAN" else "BELUM TERSEDIA",
-                                        fontSize = 14.sp, fontWeight = FontWeight.Black, color = Color.White, letterSpacing = 0.5.sp
-                                    )
-                                }
+                                Icon(
+                                    imageVector = Icons.Default.ErrorOutline,
+                                    contentDescription = null,
+                                    tint = NeonError,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = state.startError ?: "Terjadi kesalahan saat memulai kuis.",
+                                    color = NeonError,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
-
-                            state.startError?.let {
-                                Spacer(Modifier.height(10.dp))
-                                Text(it, color = NeonError, fontSize = 11.sp, fontWeight = FontWeight.Bold, textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.fillMaxWidth())
-                            }
-                            
-                            Spacer(Modifier.height(40.dp))
                         }
+
+                        // ── 6. PRIMARY ACTION BUTTON ──────────────────────────
+                        Button(
+                            onClick = viewModel::startAttempt,
+                            enabled = !state.isStarting && isAvailable,
+                            shape = RoundedCornerShape(14.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = Color.Transparent,
+                                disabledContainerColor = Color.Transparent
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(52.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(
+                                    if (isAvailable && !state.isStarting) {
+                                        Brush.horizontalGradient(
+                                            listOf(StudentNeon, Color(0xFF00B4D8))
+                                        )
+                                    } else {
+                                        Brush.horizontalGradient(
+                                            listOf(CosmicSurface2, CosmicSurface)
+                                        )
+                                    }
+                                )
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isAvailable && !state.isStarting) GlassBorder2 else GlassBorder,
+                                    shape = RoundedCornerShape(14.dp)
+                                )
+                        ) {
+                            if (state.isStarting) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    strokeWidth = 2.dp,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    "Menyiapkan Soal...",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            } else {
+                                Text(
+                                    if (isAvailable) "MULAI KERJAKAN" else "KUIS BELUM TERSEDIA",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (isAvailable) Color.White else TextTertiary,
+                                    letterSpacing = 0.5.sp
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(24.dp))
                     }
                 }
             }
@@ -171,76 +268,184 @@ fun QuizDetailScreen(
 }
 
 @Composable
-private fun QuizHeroHeaderRefactored(
-    quiz: com.schoolos.android.domain.model.Quiz,
-    onBack: () -> Unit
+private fun CosmicQuizHeroCard(
+    title: String,
+    subjectName: String,
+    maxScore: Int,
 ) {
-    val gradient = subjectGradient(quiz.title)
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(220.dp)
-            .background(Brush.verticalGradient(listOf(gradient.first(), gradient.last().copy(alpha = 0.6f))))
-            .padding(horizontal = 14.dp, vertical = 12.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(
+                Brush.linearGradient(
+                    colors = listOf(CosmicNavy, CosmicSurface)
+                )
+            )
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp)
     ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            // TOP NAVIGATION ROW
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                CustomBackButton(
-                    onClick = onBack,
-                    onHero = true,
+                // Potensi XP Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(AccentNeonAmber.copy(alpha = 0.15f))
+                        .border(0.5.dp, AccentNeonAmber.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text(
+                        text = "⭐ Potensi ${maxScore * 5} XP",
+                        color = AccentNeonAmber,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                // Mapel Pill
+                Text(
+                    text = subjectName,
+                    color = TextTertiary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium
                 )
             }
 
-            Spacer(Modifier.weight(1f))
+            Text(
+                text = title,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary,
+                lineHeight = 24.sp
+            )
 
-            // CONTENT SECTION
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(NeonSuccess)
+                )
+                Text(
+                    text = "CBT Online Terstandarisasi",
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CosmicMetricCard(
+    label: String,
+    value: String,
+    unit: String,
+    icon: ImageVector,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
             Box(
                 modifier = Modifier
+                    .size(32.dp)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.2f))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                    .background(accentColor.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
             ) {
-                Text("Potensi 500 XP", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(16.dp)
+                )
             }
-            Spacer(Modifier.height(10.dp))
-            Text(quiz.title, fontSize = 22.sp, fontWeight = FontWeight.Black, color = Color.White, lineHeight = 28.sp)
-            Spacer(Modifier.height(12.dp))
+            Text(
+                text = value,
+                fontWeight = FontWeight.Black,
+                fontSize = 16.sp,
+                color = TextPrimary
+            )
+            Text(
+                text = "$unit • $label",
+                fontSize = 9.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextTertiary,
+                textAlign = TextAlign.Center,
+                maxLines = 1
+            )
         }
     }
 }
 
 @Composable
-private fun CompactQuizMetricPill(label: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector, color: Color, modifier: Modifier = Modifier) {
-    GlassCard(modifier = modifier, cornerRadius = 14.dp) {
-        Column(modifier = Modifier.padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(modifier = Modifier.size(32.dp).clip(CircleShape).background(color.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(16.dp))
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(value, fontWeight = FontWeight.Black, fontSize = 16.sp, color = TextPrimary)
-            Text(label, fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextTertiary)
-        }
-    }
-}
-
-@Composable
-private fun QuizTipsSectionCompact() {
-    com.schoolos.android.core.designsystem.NeonCard(
-        gradientColors = listOf(NeonWarning, AccentNeonAmber),
-        modifier = Modifier.fillMaxWidth(),
-        cornerRadius = 14.dp
+private fun CbtRulesCard() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy.copy(alpha = 0.7f))
+            .border(0.5.dp, NeonWarning.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+            .padding(14.dp)
     ) {
-        Row(modifier = Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("💡", fontSize = 20.sp)
-            Spacer(Modifier.width(12.dp))
-            Column {
-                Text("Tips Pengerjaan", fontWeight = FontWeight.Black, fontSize = 12.sp, color = TextPrimary)
-                Text("Cari tempat tenang agar fokus maksimal!", fontSize = 11.sp, color = TextSecondary)
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = NeonWarning,
+                    modifier = Modifier.size(16.dp)
+                )
+                Text(
+                    text = "Panduan Pengerjaan CBT",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = NeonWarning
+                )
             }
+
+            RuleBulletItem(text = "Pastikan koneksi internet stabil sebelum menekan tombol Mulai.")
+            RuleBulletItem(text = "Jawaban otomatis tersimpan setiap kali Anda berpindah butir soal.")
+            RuleBulletItem(text = "Pengatur waktu (timer) berjalan otomatis dan kuis akan dikumpulkan saat waktu habis.")
         }
+    }
+}
+
+@Composable
+private fun RuleBulletItem(text: String) {
+    Row(
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = Modifier.padding(start = 2.dp)
+    ) {
+        Text("•", fontSize = 12.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+        Text(
+            text = text,
+            fontSize = 11.sp,
+            color = TextSecondary,
+            lineHeight = 16.sp
+        )
     }
 }

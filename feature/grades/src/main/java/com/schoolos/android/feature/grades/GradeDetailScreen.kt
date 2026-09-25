@@ -2,13 +2,23 @@ package com.schoolos.android.feature.grades
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -19,7 +29,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -27,7 +36,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.common.DapodikPeriod
-import com.schoolos.android.core.designsystem.*
+import com.schoolos.android.core.designsystem.CosmicBlack
+import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.CosmicSurface
+import com.schoolos.android.core.designsystem.ErrorState
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
+import com.schoolos.android.core.designsystem.GlassBorder
+import com.schoolos.android.core.designsystem.LoadingState
+import com.schoolos.android.core.designsystem.NeonSuccess
+import com.schoolos.android.core.designsystem.StatusChip
+import com.schoolos.android.core.designsystem.TeacherNeon
+import com.schoolos.android.core.designsystem.TextPrimary
+import com.schoolos.android.core.designsystem.TextSecondary
+import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.subjectGradient
+import com.schoolos.android.core.designsystem.subjectIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -37,154 +60,136 @@ fun GradeDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Scaffold(containerColor = CosmicBlack) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+    val detail = state.detail
+    val role = state.userRole.lowercase()
+    val isTeacher = role == "teacher" || role == "guru"
+    val subjectName = detail?.summary?.subjectName ?: "Detail Akademik"
+
+    Scaffold(
+        containerColor = CosmicBlack,
+        topBar = {
+            ExecutiveTopBar(
+                title = subjectName,
+                subtitle = if (isTeacher) "Laporan Nilai • ${DapodikPeriod.getFullPeriodLabel()}" else "Detail Nilai • ${DapodikPeriod.getFullPeriodLabel()}",
+                onBack = onBack,
+                actions = {
+                    if (isTeacher) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(TeacherNeon.copy(alpha = 0.12f))
+                                .border(0.5.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("GURU", color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else {
+                        StatusChip(label = "Aktif")
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
             when {
                 state.isLoading -> LoadingState()
                 state.error != null -> {
                     ErrorState(message = state.error!!, onRetry = viewModel::load)
                 }
-                state.detail != null -> {
-                    val d = state.detail!!
-                    val role = state.userRole.lowercase()
-                    val isTeacher = role == "teacher" || role == "guru"
-
-                    val subject = d.summary.subjectName
-                    val gradient = subjectGradient(subject)
-                    val icon = subjectIcon(subject)
+                detail != null -> {
+                    val d = detail
+                    val gradient = subjectGradient(d.summary.subjectName)
+                    val icon = subjectIcon(d.summary.subjectName)
 
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-// ── PREMIUM HERO BANNER (status-bar safe) ─────────────
+                        // ── 1. COMPACT EXECUTIVE SUBJECT HERO CARD ────────────
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Brush.linearGradient(gradient))
-                        ) {
-                            // Decorative translucent circles
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.TopEnd)
-                                    .padding(top = 52.dp, end = 8.dp)
-                                    .size(116.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.08f))
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(start = 20.dp)
-                                    .size(64.dp)
-                                    .clip(CircleShape)
-                                    .background(Color.White.copy(alpha = 0.06f))
-                            )
-
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    // Edge-to-edge safe: keep controls clear of the device status bar
-                                    .statusBarsPadding()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                            ) {
-                                // TOP NAVIGATION ROW
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    CustomBackButton(
-                                        onClick = onBack,
-                                        onHero = true,
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(CosmicNavy, CosmicSurface)
                                     )
-
-                                    if (isTeacher) {
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(20.dp))
-                                                .background(Color.White.copy(alpha = 0.18f))
-                                                .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                                                .padding(horizontal = 12.dp, vertical = 6.dp)
-                                        ) {
-                                            Text("28 SISWA", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                                        }
-                                    } else {
-                                        StatusChip(label = "AKTIF")
-                                    }
-                                }
-
-                                Spacer(Modifier.height(22.dp))
-
-// TITLE ROW: icon badge + identity
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(64.dp)
-                                            .clip(RoundedCornerShape(20.dp))
-                                            .background(Color.White.copy(alpha = 0.18f))
-                                            .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                                            .shadow(3.dp, RoundedCornerShape(20.dp), spotColor = Color.White.copy(alpha = 0.25f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(icon, null, tint = Color.White, modifier = Modifier.size(32.dp))
-                                    }
-                                    Spacer(Modifier.width(16.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            if (isTeacher) "LAPORAN NILAI KELAS" else "DETAIL AKADEMIK",
-                                            color = Color.White.copy(alpha = 0.8f),
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Black,
-                                            letterSpacing = 1.2.sp
-                                        )
-                                        Spacer(Modifier.height(4.dp))
-                                        Text(
-                                            if (isTeacher) d.summary.subjectName else subject,
-                                            fontSize = 24.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = Color.White,
-                                            lineHeight = 30.sp,
-                                            letterSpacing = (-0.5).sp,
-                                            maxLines = 1,
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(
-                                                Icons.Default.Person,
-                                                null,
-                                                tint = Color.White.copy(alpha = 0.85f),
-                                                modifier = Modifier.size(14.dp)
-                                            )
-                                            Spacer(Modifier.width(6.dp))
-                                            Text(
-                                                DapodikPeriod.getFullPeriodLabel(),
-                                                fontSize = 12.sp,
-                                                color = Color.White.copy(alpha = 0.85f),
-                                                fontWeight = FontWeight.Medium,
-                                                maxLines = 1,
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // ── CONTENT AREA ─────────────────────────────────────
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 12.dp, vertical = 12.dp),
+                                )
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                                .padding(16.dp)
                         ) {
-                            if (isTeacher) {
-                                TeacherGradeDetailContent(detail = d)
-                            } else {
-                                StudentGradeDetailContent(detail = d)
-                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(Brush.linearGradient(gradient))
+                                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                }
 
-                            Spacer(Modifier.height(60.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = if (isTeacher) "LAPORAN NILAI KELAS" else "DETAIL AKADEMIK MAPEL",
+                                        color = TextTertiary,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        letterSpacing = 1.sp
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = d.summary.subjectName,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CalendarMonth,
+                                            contentDescription = null,
+                                            tint = TextTertiary,
+                                            modifier = Modifier.size(12.dp)
+                                        )
+                                        Text(
+                                            text = DapodikPeriod.getFullPeriodLabel(),
+                                            fontSize = 11.sp,
+                                            color = TextSecondary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
                         }
+
+                        // ── 2. MAIN GRADE DETAIL CONTENT ─────────────────────
+                        if (isTeacher) {
+                            TeacherGradeDetailContent(detail = d)
+                        } else {
+                            StudentGradeDetailContent(detail = d)
+                        }
+
+                        Spacer(Modifier.height(40.dp))
                     }
                 }
             }

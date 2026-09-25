@@ -37,7 +37,18 @@ class AcademicRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getClassStudents(className: String): Result<List<ClassStudent>> = runCatching {
-        val response = api.getClassStudents(className = className.trim())
+        val trimmed = className.trim()
+        val isUuid = try {
+            java.util.UUID.fromString(trimmed)
+            true
+        } catch (_: Exception) {
+            false
+        }
+        val response = if (isUuid) {
+            api.getClassStudents(classId = trimmed)
+        } else {
+            api.getClassStudents(className = trimmed.ifBlank { null })
+        }
         if (!response.success) {
             throw Exception(response.error?.message ?: "Gagal memuat daftar murid")
         }

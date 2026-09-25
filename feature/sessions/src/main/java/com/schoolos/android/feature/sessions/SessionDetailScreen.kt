@@ -2,7 +2,17 @@ package com.schoolos.android.feature.sessions
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,10 +32,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.schoolos.android.core.designsystem.*
-import com.schoolos.android.domain.model.LearningSession
+import com.schoolos.android.core.designsystem.CosmicBlack
+import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.CosmicSurface
+import com.schoolos.android.core.designsystem.ErrorState
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
+import com.schoolos.android.core.designsystem.GlassBorder
+import com.schoolos.android.core.designsystem.LoadingState
+import com.schoolos.android.core.designsystem.NeonSuccess
+import com.schoolos.android.core.designsystem.StatusChip
+import com.schoolos.android.core.designsystem.StudentNeon
+import com.schoolos.android.core.designsystem.TeacherNeon
+import com.schoolos.android.core.designsystem.TextPrimary
+import com.schoolos.android.core.designsystem.TextSecondary
+import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.subjectGradient
+import com.schoolos.android.core.designsystem.subjectIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,17 +61,38 @@ fun SessionDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    Scaffold(containerColor = CosmicBlack) { padding ->
-        Box(modifier = Modifier.fillMaxSize()) {
+    val session = state.session
+    val rawSubject = session?.subjectName ?: session?.notes ?: "Pelajaran"
+    val subject = rawSubject.substringBefore(" • ").substringBefore(" (Ruang").trim()
+    val roomText = session?.let { listOfNotNull(it.room ?: "Ruang Kelas", it.className).joinToString(" • ") } ?: "Ruang Belajar"
+
+    Scaffold(
+        containerColor = CosmicBlack,
+        topBar = {
+            ExecutiveTopBar(
+                title = subject,
+                subtitle = "Jadwal Pembelajaran • $roomText",
+                onBack = onBack,
+                actions = {
+                    session?.let {
+                        StatusChip(label = it.status)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+        ) {
             when {
                 state.isLoading -> LoadingState()
                 state.error != null -> {
                     ErrorState(message = state.error!!, onRetry = viewModel::load)
                 }
-                state.session != null -> {
-                    val s = state.session!!
-                    val rawSubject = s.subjectName ?: s.notes ?: "Pelajaran"
-                    val subject = rawSubject.substringBefore(" • ").substringBefore(" (Ruang").trim()
+                session != null -> {
+                    val s = session
                     val gradient = subjectGradient(subject)
                     val icon = subjectIcon(subject)
                     val role = state.userRole.lowercase()
@@ -63,144 +107,105 @@ fun SessionDetailScreen(
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .verticalScroll(rememberScrollState()),
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = 14.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // ── HERO HEADER ──────────────────────────────────────
-                        DetailHeroHeader(
-                            session = s,
-                            gradient = gradient,
-                            icon = icon,
-                            accentColor = accentColor,
-                            isTeacher = isTeacher,
-                            onBack = onBack,
-                        )
-
-                        // ── CONTENT ──────────────────────────────────────────
-                        Column(
+                        // ── 1. COMPACT EXECUTIVE SESSION HERO CARD ────────────
+                        Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(start = 12.dp, end = 12.dp, top = 8.dp),
+                                .clip(RoundedCornerShape(16.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(CosmicNavy, CosmicSurface)
+                                    )
+                                )
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                                .padding(16.dp)
                         ) {
-                            if (isTeacher) {
-                                TeacherSessionDetailContent(
-                                    session = s,
-                                    attendance = state.attendance,
-                                    students = state.studentItems,
-                                    onUpdateAttendance = viewModel::updateAttendance,
-                                    onOpenAssignments = openAssignments,
-                                    onOpenQuizzes = openQuizzes,
-                                    onOpenMaterials = openMaterials,
-                                    accentColor = accentColor,
-                                )
-                            } else {
-                                StudentSessionDetailContent(
-                                    session = s,
-                                    attendance = state.attendance,
-                                    onOpenAssignments = openAssignments,
-                                    onOpenQuizzes = openQuizzes,
-                                    onOpenMaterials = openMaterials,
-                                    accentColor = accentColor,
-                                )
-                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(52.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(Brush.linearGradient(gradient))
+                                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = icon,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                }
 
-                            Spacer(Modifier.height(60.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = subject,
+                                        fontSize = 18.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = TextPrimary
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = roomText,
+                                        fontSize = 12.sp,
+                                        color = TextSecondary,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                    Spacer(Modifier.height(4.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(6.dp)
+                                                .clip(CircleShape)
+                                                .background(NeonSuccess)
+                                        )
+                                        Text(
+                                            text = "Sesi Terjadwal Resmi",
+                                            fontSize = 11.sp,
+                                            color = TextTertiary
+                                        )
+                                    }
+                                }
+                            }
                         }
+
+                        // ── 2. ROLE-BASED SESSION CONTENT ─────────────────────
+                        if (isTeacher) {
+                            TeacherSessionDetailContent(
+                                session = s,
+                                attendance = state.attendance,
+                                students = state.studentItems,
+                                onUpdateAttendance = viewModel::updateAttendance,
+                                onOpenAssignments = openAssignments,
+                                onOpenQuizzes = openQuizzes,
+                                onOpenMaterials = openMaterials,
+                                accentColor = accentColor,
+                            )
+                        } else {
+                            StudentSessionDetailContent(
+                                session = s,
+                                attendance = state.attendance,
+                                onOpenAssignments = openAssignments,
+                                onOpenQuizzes = openQuizzes,
+                                onOpenMaterials = openMaterials,
+                                accentColor = accentColor,
+                            )
+                        }
+
+                        Spacer(Modifier.height(40.dp))
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun DetailHeroHeader(
-    session: LearningSession,
-    gradient: List<Color>,
-    icon: ImageVector,
-    accentColor: Color,
-    isTeacher: Boolean,
-    onBack: () -> Unit,
-) {
-    val subjectTitle = session.subjectName ?: session.notes ?: "Pelajaran"
-    val roomText = listOfNotNull(session.room ?: "Ruang Kelas", session.className).joinToString(" • ")
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(250.dp)
-            .background(Brush.linearGradient(gradient)),
-    ) {
-        // Decorative translucent circles
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 34.dp, end = 4.dp)
-                .size(140.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.10f))
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 24.dp)
-                .size(72.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = 0.08f))
-        )
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                // Immersive hero: content stays clear of the status bar
-                .statusBarsPadding()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-        ) {
-            // Top Navigation Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                CustomBackButton(
-                    onClick = onBack,
-                    onHero = true,
-                )
-                StatusChip(label = session.status)
-            }
-
-            Spacer(Modifier.weight(1f))
-
-            // Main Content
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(64.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(18.dp)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(icon, null, tint = Color.White, modifier = Modifier.size(34.dp))
-                }
-                Spacer(Modifier.width(16.dp))
-                Column {
-                    Text(
-                        subjectTitle.substringBefore(" • ").substringBefore(" (Ruang").trim(),
-                        fontSize = 24.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White,
-                        lineHeight = 32.sp,
-                    )
-                    Spacer(Modifier.height(6.dp))
-                    Text(
-                        roomText,
-                        fontSize = 13.sp,
-                        color = Color.White.copy(alpha = 0.85f),
-                        fontWeight = FontWeight.Medium,
-                    )
-                }
-            }
-            Spacer(Modifier.height(16.dp))
         }
     }
 }

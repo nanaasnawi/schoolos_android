@@ -22,9 +22,11 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import android.widget.Toast
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +35,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -62,10 +65,28 @@ fun AssignmentDetailScreen(
     viewModel: AssignmentDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
     var content by remember { mutableStateOf("") }
     var showConfirm by remember { mutableStateOf(false) }
     var pgAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
     var essayAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
+
+    LaunchedEffect(state.submitSuccess) {
+        if (state.submitSuccess) {
+            Toast.makeText(context, "✓ Tugas berhasil dikumpulkan!", Toast.LENGTH_SHORT).show()
+            content = ""
+            pgAnswers = emptyMap()
+            essayAnswers = emptyMap()
+            viewModel.dismissSubmitSuccess()
+        }
+    }
+
+    LaunchedEffect(state.submitError) {
+        state.submitError?.let { err ->
+            Toast.makeText(context, "Gagal mengumpulkan tugas: $err", Toast.LENGTH_LONG).show()
+            viewModel.dismissSubmitError()
+        }
+    }
 
     Scaffold(
         containerColor = CosmicBlack,

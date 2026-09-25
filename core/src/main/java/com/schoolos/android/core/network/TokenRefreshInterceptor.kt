@@ -36,8 +36,23 @@ class TokenRefreshInterceptor @Inject constructor(
             .build()
     }
 
+    private fun responseCount(response: Response): Int {
+        var result = 1
+        var prior = response.priorResponse
+        while (prior != null) {
+            result++
+            prior = prior.priorResponse
+        }
+        return result
+    }
+
     override fun authenticate(route: Route?, response: Response): Request? {
         if (response.code != 401) return null
+
+        // Prevent infinite retry loops when authorization is denied
+        if (responseCount(response) >= 2) {
+            return null
+        }
 
         // Prevent infinite retry loops if the failing request is the refresh endpoint itself
         if (response.request.url.encodedPath.contains("/auth/refresh")) {
