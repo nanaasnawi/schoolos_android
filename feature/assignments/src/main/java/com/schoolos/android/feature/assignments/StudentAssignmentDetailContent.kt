@@ -183,7 +183,11 @@ fun StudentAssignmentDetailContent(
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (!assignment.teacherName.isNullOrBlank()) "Tanya ${assignment.teacherName} langsung tanpa keluar app" else "Tanya guru pengampu langsung tanpa keluar app",
+                                text = if (!assignment.teacherName.isNullOrBlank() && !assignment.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+                                    "Tanya ${assignment.teacherName} langsung tanpa keluar app"
+                                } else {
+                                    "Tanya guru mata pelajaran langsung tanpa keluar app"
+                                },
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -371,7 +375,7 @@ private fun AssignmentStatusCard(
             }
 
             // Teacher row
-            val displayTeacher = if (!assignment.teacherName.isNullOrBlank()) assignment.teacherName!! else "Guru Mata Pelajaran"
+            val displayTeacher = if (!assignment.teacherName.isNullOrBlank() && !assignment.teacherName.equals("Guru Pengampu", ignoreCase = true)) assignment.teacherName!! else "Guru Mata Pelajaran"
             HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
             Row(
                 modifier = Modifier.fillMaxWidth(),

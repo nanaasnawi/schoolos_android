@@ -406,8 +406,8 @@ fun LearningMaterialDetailScreen(
                             horizontalArrangement = Arrangement.SpaceBetween
                         ) {
                             val descParts = (material.description ?: "").split(" • ")
-                            val teacherName = material.teacherName?.ifBlank { null }
-                                ?: if (descParts.size >= 3 && descParts[2].isNotBlank()) descParts[2] else "Guru Pengampu"
+                            val teacherName = material.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
+                                ?: if (descParts.size >= 3 && descParts[2].isNotBlank() && !descParts[2].equals("Guru Pengampu", ignoreCase = true)) descParts[2] else "Guru Mata Pelajaran"
                             val className = material.className?.ifBlank { null }
                                 ?: if (descParts.size >= 2 && descParts[1].isNotBlank()) descParts[1] else "Semua Rombel"
 
@@ -469,8 +469,8 @@ fun LearningMaterialDetailScreen(
 
                 // ── TANYA GURU / KONSULTASI MATERI (In-App Q&A) ──────────────
                 val descPartsForQ = (material.description ?: "").split(" • ")
-                val resolvedTeacherName = material.teacherName?.ifBlank { null }
-                    ?: if (descPartsForQ.size >= 3 && descPartsForQ[2].isNotBlank()) descPartsForQ[2] else "Guru Pengampu"
+                val resolvedTeacherName = material.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
+                    ?: if (descPartsForQ.size >= 3 && descPartsForQ[2].isNotBlank() && !descPartsForQ[2].equals("Guru Pengampu", ignoreCase = true)) descPartsForQ[2] else "Guru Mata Pelajaran"
 
                 if (!isTeacher && onAskTeacher != null) {
                     Box(

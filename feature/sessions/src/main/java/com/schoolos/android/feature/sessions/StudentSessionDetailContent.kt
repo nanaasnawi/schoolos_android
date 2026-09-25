@@ -68,7 +68,7 @@ fun StudentSessionDetailContent(
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text("Guru Pengampu", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
-                        val teacher = session.teacherName ?: "Guru Pengampu"
+                        val teacher = session.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) } ?: "Guru Pengajar"
                         Text(teacher, fontSize = 15.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
                     }
                 }

@@ -19,6 +19,10 @@ fun Assignment.toEntity() = AssignmentEntity(
     isActive = isActive,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    classId = classId,
+    className = className,
+    subjectName = subjectName,
+    teacherName = teacherName,
 )
 
 fun AssignmentEntity.toDomain() = Assignment(
@@ -33,6 +37,10 @@ fun AssignmentEntity.toDomain() = Assignment(
     isActive = isActive,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    classId = classId,
+    className = className,
+    subjectName = subjectName,
+    teacherName = teacherName,
 )
 
 fun Quiz.toEntity() = QuizEntity(

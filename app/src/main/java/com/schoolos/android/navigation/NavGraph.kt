@@ -217,18 +217,20 @@ fun NavGraph(
                     onBack = { navController.popBackStack() },
                     onCreateMaterial = { navController.navigate(Screen.MaterialCreator.route) },
                     onAskTeacher = { title, id, subject, teacherName ->
-                        val greeting = if (teacherName.isNotBlank() && teacherName != "Guru Pengampu") "Halo $teacherName," else "Halo Bapak/Ibu guru,"
+                        val effectiveTeacher = if (teacherName.isNotBlank() && !teacherName.equals("Guru Pengampu", ignoreCase = true)) teacherName else "Guru Mata Pelajaran"
+                        val greeting = if (effectiveTeacher != "Guru Mata Pelajaran") "Halo $effectiveTeacher," else "Halo Bapak/Ibu guru,"
                         val thread = chatManager.createInquiry(
                             studentId = authState?.userId ?: "std-current",
                             studentName = authState?.name ?: "Siswa",
                             studentClass = authState?.className ?: "Kelas",
+                            teacherName = effectiveTeacher,
                             subjectName = subject.ifBlank { "Materi Ajar" },
                             inquiryType = InquiryType.MATERIAL,
                             referenceTitle = title,
                             referenceId = id,
                             initialQuestion = "$greeting saya ingin bertanya mengenai materi '$title' ini karena ada bagian yang belum saya pahami."
                         )
-                        navController.navigate(Screen.ChatDetail.createRoute(thread.id, teacherName.ifBlank { thread.studentName }))
+                        navController.navigate(Screen.ChatDetail.createRoute(thread.id, effectiveTeacher))
                     }
                 )
             }
@@ -288,18 +290,20 @@ fun NavGraph(
                     onBack = { navController.popBackStack() },
                     onOpenMaterial = { id -> navController.navigate(Screen.LearningDetail.createRoute(id)) },
                     onAskTeacher = { title, id, subject, teacher ->
+                        val effectiveTeacher = if (teacher.isNotBlank() && !teacher.equals("Guru Pengampu", ignoreCase = true)) teacher else "Guru Mata Pelajaran"
+                        val greeting = if (effectiveTeacher != "Guru Mata Pelajaran") "Halo $effectiveTeacher," else "Halo Bapak/Ibu guru,"
                         val thread = chatManager.createInquiry(
                             studentId = authState?.userId ?: "std-current",
                             studentName = authState?.name ?: "Siswa",
                             studentClass = authState?.className ?: "Kelas",
-                            teacherName = teacher.ifBlank { "Guru Pengampu" },
+                            teacherName = effectiveTeacher,
                             subjectName = subject.ifBlank { "Tugas" },
                             inquiryType = InquiryType.ASSIGNMENT,
                             referenceTitle = title,
                             referenceId = id,
-                            initialQuestion = "Halo Bapak/Ibu guru, saya ingin berkonsultasi mengenai tugas '$title' ini karena ada hal yang ingin saya tanyakan."
+                            initialQuestion = "$greeting saya ingin berkonsultasi mengenai tugas '$title' ini karena ada hal yang ingin saya tanyakan."
                         )
-                        navController.navigate(Screen.ChatDetail.createRoute(thread.id, thread.studentName))
+                        navController.navigate(Screen.ChatDetail.createRoute(thread.id, effectiveTeacher))
                     }
                 )
             }
@@ -407,7 +411,7 @@ fun NavGraph(
                     onOpenThread = { threadId, recipientName ->
                         navController.navigate(Screen.ChatDetail.createRoute(threadId, recipientName))
                     },
-                    isTeacherMode = authState?.isTeacher ?: true
+                    isTeacherMode = authState?.isTeacher == true
                 )
             }
             composable(
@@ -433,7 +437,7 @@ fun NavGraph(
                             }
                         }
                     },
-                    isTeacherMode = authState?.isTeacher ?: true
+                    isTeacherMode = authState?.isTeacher == true
                 )
             }
 
