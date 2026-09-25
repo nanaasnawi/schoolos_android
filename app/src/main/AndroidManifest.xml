@@ -49,6 +49,7 @@
             android:exported="true"
             android:theme="@style/Theme.SchoolOS"
             android:launchMode="singleTop"
+            android:windowSoftInputMode="adjustResize"
             android:turnScreenOn="true"
             android:showWhenLocked="true">
             <intent-filter>

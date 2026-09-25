@@ -285,6 +285,8 @@ fun HomeScreen(
                     val spotlightSubject = if (state.nextSessionSubject != "-" && state.nextSessionSubject.isNotBlank() && !isUuid(state.nextSessionSubject)) state.nextSessionSubject 
                         else if (state.activeSessionSubject != "-" && state.activeSessionSubject.isNotBlank() && !isUuid(state.activeSessionSubject)) state.activeSessionSubject 
                         else if (hasLiveSession) "Sesi Pembelajaran Aktif"
+                        else if (isTeacher && state.todaySessions.isNotEmpty()) "Jadwal: ${state.todaySessions.first().subjectName ?: "Sesi Mengajar"}"
+                        else if (isTeacher) "Portal Akademik Guru"
                         else "Tidak Ada Sesi Aktif"
 
                     val spotlightRoom = when {
@@ -294,6 +296,7 @@ fun HomeScreen(
                             formatClassOrRoom(state.activeSessionClass)
                         state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass) ->
                             formatClassOrRoom(state.homeroomClass)
+                        isTeacher -> "Ruang Pengajar"
                         else -> "Ruang Kelas"
                     }
 
@@ -429,6 +432,7 @@ fun HomeScreen(
                         val teacherClass = if (isHomeroom) state.homeroomClass else state.activeSessionClass
                         teacherContent(
                             onNavigateToSessions     = onNavigateToSessions,
+                            onNavigateToSessionDetail = onNavigateToSessionDetail,
                             onNavigateToAssignments  = onNavigateToAssignments,
                             onNavigateToQuizzes      = onNavigateToQuizzes,
                             onNavigateToGrades       = onNavigateToGrades,
