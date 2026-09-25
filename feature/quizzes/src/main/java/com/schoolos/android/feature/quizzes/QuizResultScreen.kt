@@ -124,6 +124,8 @@ fun QuizResultScreen(
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
                         .verticalScroll(rememberScrollState())
                         .padding(horizontal = 14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,

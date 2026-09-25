@@ -72,7 +72,9 @@ class SessionDetailViewModel @Inject constructor(
         val attendanceList = repository.getAttendance(sessionId).getOrDefault(emptyList())
         val attendanceMap = attendanceList.associateBy { it.studentId }
 
-        val targetClass = session.className?.takeIf { it.isNotBlank() } ?: session.classId
+        val targetClass = session.classId.takeIf { it.isNotBlank() }
+            ?: session.className?.takeIf { it.isNotBlank() }
+            ?: ""
         val classStudents = if (targetClass.isNotBlank()) {
             academicRepository.getClassStudents(targetClass).getOrDefault(emptyList())
         } else {

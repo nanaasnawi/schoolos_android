@@ -240,7 +240,7 @@ fun StudentAssignmentDetailContent(
             SubmissionEditor(
                 isParent = isParent,
                 isSubmitting = isSubmitting,
-                isActive = assignment.isActive && assignment.status == "active",
+                isActive = assignment.isActive && assignment.status.lowercase() !in listOf("closed", "archived", "draft"),
                 content = content,
                 onContentChange = onContentChange,
                 onSubmitClick = onSubmitClick,

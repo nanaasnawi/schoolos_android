@@ -26,7 +26,12 @@ fun isParentRole(role: String?): Boolean {
 fun isTeacherRole(role: String?): Boolean {
     if (role.isNullOrBlank()) return false
     val l = role.lowercase()
-    return !isParentRole(role) && (l.contains("teacher") || l.contains("guru"))
+    return !isParentRole(role) && (
+        l.contains("teacher") || l.contains("guru") ||
+        l.contains("kepala") || l.contains("principal") ||
+        l.contains("admin") || l.contains("operator") ||
+        l.contains("staff") || l.contains("bendahara")
+    )
 }
 
 data class AuthState(

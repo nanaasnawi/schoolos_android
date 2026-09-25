@@ -29,8 +29,9 @@ sealed class Screen(val route: String) {
     data object QuizAttempt : Screen("quizzes/{quizId}/attempt/{attemptId}") {
         fun createRoute(quizId: String, attemptId: String) = "quizzes/$quizId/attempt/$attemptId"
     }
-    data object QuizResult : Screen("quizzes/{quizId}/result/{attemptId}") {
-        fun createRoute(quizId: String, attemptId: String) = "quizzes/$quizId/result/$attemptId"
+    data object QuizResult : Screen("quizzes/{quizId}/result/{attemptId}?score={score}&totalPoints={totalPoints}") {
+        fun createRoute(quizId: String, attemptId: String, score: Int = 0, totalPoints: Int = 100) =
+            "quizzes/$quizId/result/$attemptId?score=$score&totalPoints=$totalPoints"
     }
     data object Sessions : Screen("sessions")
     data object SessionDetail : Screen("sessions/{id}") {

@@ -95,7 +95,7 @@ private val ChoiceColors = listOf(
 @Composable
 fun QuizAttemptScreen(
     onBack: () -> Unit = {},
-    onSubmitted: (String) -> Unit = {},
+    onSubmitted: (attemptId: String, score: Int, totalPoints: Int) -> Unit = { _, _, _ -> },
     viewModel: QuizAttemptViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -103,7 +103,8 @@ fun QuizAttemptScreen(
 
     LaunchedEffect(state.submitSuccess) {
         if (state.submitSuccess && state.resultAttempt != null) {
-            onSubmitted(state.resultAttempt!!.id)
+            val attempt = state.resultAttempt!!
+            onSubmitted(attempt.id, attempt.score ?: 0, attempt.totalPoints)
         }
     }
 
@@ -285,7 +286,7 @@ fun QuizAttemptScreen(
                                 Spacer(Modifier.height(20.dp))
 
                                 // Answer options
-                                when (question.questionType) {
+                                when (question.questionType.lowercase()) {
                                     "multiple_choice", "true_false" -> {
                                         question.choices.forEachIndexed { idx, choice ->
                                             val choiceKey = "choice_${choice.id}"
@@ -316,6 +317,38 @@ fun QuizAttemptScreen(
                                                 focusedBorderColor = Color(0xFF7C3AED),
                                             ),
                                         )
+                                    }
+                                    else -> {
+                                        if (question.choices.isNotEmpty()) {
+                                            question.choices.forEachIndexed { idx, choice ->
+                                                val choiceKey = "choice_${choice.id}"
+                                                val isSelected = state.answers[question.id] == choiceKey
+                                                val accentColor = ChoiceColors.getOrElse(idx) { Color(0xFF7C3AED) }
+                                                val label = ChoiceLabels.getOrElse(idx) { "${idx + 1}" }
+
+                                                AnswerBubble(
+                                                    label = label,
+                                                    text = choice.choiceText,
+                                                    isSelected = isSelected,
+                                                    accentColor = accentColor,
+                                                    onClick = { viewModel.selectAnswer(question.id, choiceKey) },
+                                                )
+                                                Spacer(Modifier.height(10.dp))
+                                            }
+                                        } else {
+                                            val text = state.answers[question.id] ?: ""
+                                            OutlinedTextField(
+                                                value = text,
+                                                onValueChange = { viewModel.setEssayAnswer(question.id, it) },
+                                                label = { Text("Tulis jawaban kamu di sini...") },
+                                                modifier = Modifier.fillMaxWidth().height(200.dp),
+                                                maxLines = 10,
+                                                shape = RoundedCornerShape(16.dp),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedBorderColor = Color(0xFF7C3AED),
+                                                ),
+                                            )
+                                        }
                                     }
                                 }
 
@@ -394,6 +427,7 @@ private fun QuizTopBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .statusBarsPadding()
             .padding(horizontal = 14.dp, vertical = 8.dp),
     ) {
         Row(
@@ -527,6 +561,7 @@ private fun QuizBottomBar(
     Column(
         modifier = Modifier
             .fillMaxWidth()
+            .navigationBarsPadding()
             .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 18.dp, vertical = 12.dp),
     ) {

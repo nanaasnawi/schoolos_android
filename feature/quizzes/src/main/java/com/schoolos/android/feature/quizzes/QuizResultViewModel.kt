@@ -24,10 +24,26 @@ class QuizResultViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val attemptId: String = savedStateHandle["attemptId"] ?: ""
-    // For now we store the quizId as a nav arg too
     private val quizId: String = savedStateHandle["quizId"] ?: ""
+    private val score: Int = savedStateHandle["score"] ?: 0
+    private val totalPoints: Int = savedStateHandle["totalPoints"] ?: 100
 
-    private val _state = MutableStateFlow(QuizResultUiState())
+    private val _state = MutableStateFlow(
+        QuizResultUiState(
+            attempt = QuizAttempt(
+                id = attemptId,
+                quizId = quizId,
+                studentId = "",
+                startedAt = "",
+                completedAt = null,
+                score = score,
+                totalPoints = if (totalPoints > 0) totalPoints else 100,
+                status = "completed",
+                createdAt = "",
+                updatedAt = "",
+            )
+        )
+    )
     val state = _state.asStateFlow()
 
     init {
@@ -37,15 +53,13 @@ class QuizResultViewModel @Inject constructor(
     private fun loadResult() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            // Sprint B+: get attempt detail from dedicated endpoint
-            // For now we refetch the quiz and display what we know
             repository.getQuiz(quizId)
-                .onSuccess { quiz ->
-                    // Attempt data was passed through navigation; in production fetch from API
+                .onSuccess {
                     _state.value = _state.value.copy(isLoading = false)
                 }
-                .onFailure { e ->
-                    _state.value = _state.value.copy(isLoading = false, error = e.message)
+                .onFailure {
+                    // Keep the attempt from arguments even if getQuiz fails
+                    _state.value = _state.value.copy(isLoading = false)
                 }
         }
     }

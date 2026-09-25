@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
@@ -71,6 +72,7 @@ import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.GlassBorder2
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonSuccess
+import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
@@ -128,6 +130,7 @@ fun ChatDetailScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(CosmicNavy)
+                .statusBarsPadding()
                 .border(width = 0.5.dp, color = GlassBorder, shape = RoundedCornerShape(0.dp)),
         ) {
             Row(
@@ -539,7 +542,18 @@ private fun MessageBubble(
             Column {
                 // Incoming sender label
                 if (!isMe) {
-                    val senderColor = if (message.isFromTeacher) TeacherNeon else StudentNeon
+                    val isAi = message.senderRole.contains("AI", ignoreCase = true) ||
+                               message.senderName.contains("AI", ignoreCase = true)
+                    val senderColor = when {
+                        isAi -> NeonWarning
+                        message.isFromTeacher -> TeacherNeon
+                        else -> StudentNeon
+                    }
+                    val roleLabel = when {
+                        isAi -> "Asisten AI"
+                        message.isFromTeacher -> "Guru"
+                        else -> "Siswa"
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(bottom = 3.dp),
@@ -552,9 +566,9 @@ private fun MessageBubble(
                         )
                         Spacer(Modifier.width(5.dp))
                         Text(
-                            text = "• ${if (message.isFromTeacher) "Guru" else "Siswa"}",
+                            text = "• $roleLabel",
                             fontSize = 9.sp,
-                            color = TextTertiary,
+                            color = if (isAi) NeonWarning.copy(alpha = 0.85f) else TextTertiary,
                         )
                     }
                 }

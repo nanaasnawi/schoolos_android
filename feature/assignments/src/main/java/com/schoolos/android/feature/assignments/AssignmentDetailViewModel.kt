@@ -44,10 +44,15 @@ class AssignmentDetailViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             authManager.authState.collect { auth ->
+                val prevRole = _state.value.userRole
+                val newRole = auth.role ?: "student"
                 _state.value = _state.value.copy(
-                    userRole = auth.role ?: "student",
+                    userRole = newRole,
                     childName = auth.childName ?: ""
                 )
+                if (prevRole != newRole && _state.value.assignment != null) {
+                    loadSubmissions()
+                }
             }
         }
         load()
@@ -68,20 +73,16 @@ class AssignmentDetailViewModel @Inject constructor(
     }
 
     private suspend fun loadSubmissions() {
-        val isTeacher = com.schoolos.android.core.auth.isTeacherRole(_state.value.userRole)
         val studentId = authManager.getStudentId()
 
         repository.getSubmissions(assignmentId)
             .onSuccess { submissions ->
-                if (isTeacher) {
-                    // Teachers see all submissions for grading
-                    _state.value = _state.value.copy(allSubmissions = submissions)
-                } else {
-                    // Students only see their own submission - filter by student ID
-                    val ownSubmission = submissions.firstOrNull { it.studentId == studentId }
-                        ?: submissions.firstOrNull() // Fallback for backward compatibility
-                    _state.value = _state.value.copy(submission = ownSubmission)
-                }
+                val ownSubmission = submissions.firstOrNull { it.studentId == studentId }
+                    ?: submissions.firstOrNull() // Fallback for backward compatibility
+                _state.value = _state.value.copy(
+                    allSubmissions = submissions,
+                    submission = ownSubmission,
+                )
             }
     }
 
@@ -119,6 +120,7 @@ class AssignmentDetailViewModel @Inject constructor(
             )
                 .onSuccess { submission ->
                     _state.value = _state.value.copy(isSubmitting = false, submitSuccess = true, submission = submission)
+                    loadSubmissions()
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(isSubmitting = false, submitError = e.message ?: "Failed to submit")
@@ -140,6 +142,7 @@ class AssignmentDetailViewModel @Inject constructor(
                         gradeSuccess = true,
                         allSubmissions = updatedList,
                     )
+                    loadSubmissions()
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(isGrading = false, gradeError = e.message ?: "Gagal menyimpan nilai")
@@ -149,6 +152,10 @@ class AssignmentDetailViewModel @Inject constructor(
 
     fun dismissSubmitSuccess() {
         _state.value = _state.value.copy(submitSuccess = false)
+    }
+
+    fun dismissSubmitError() {
+        _state.value = _state.value.copy(submitError = null)
     }
 
     fun dismissGradeSuccess() {

@@ -45,13 +45,11 @@ fun BroadcastCenterScreen(
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
-            Box(modifier = Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    CustomBackButton(onClick = onBack)
-                    Spacer(Modifier.width(16.dp))
-                    Text("Pusat Siaran", fontSize = 20.sp, fontWeight = FontWeight.Black, color = TextPrimary)
-                }
-            }
+            ExecutiveTopBar(
+                title = "Pusat Siaran",
+                subtitle = "Kirim pengumuman ke kelas managed",
+                onBack = onBack,
+            )
         }
     ) { padding ->
         Column(

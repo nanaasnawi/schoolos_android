@@ -102,7 +102,6 @@ fun RombelStudentsScreen(
         modifier = modifier
             .fillMaxSize()
             .background(CosmicBlack)
-            .statusBarsPadding()
     ) {
         // Quiet Executive TopBar with compact ratio subtitle
         ExecutiveTopBar(

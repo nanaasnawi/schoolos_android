@@ -346,8 +346,8 @@ fun NavGraph(
                 val quizId = backStackEntry.arguments?.getString("quizId") ?: ""
                 QuizAttemptScreen(
                     onBack = { navController.popBackStack() },
-                    onSubmitted = { attemptId ->
-                        navController.navigate(Screen.QuizResult.createRoute(quizId, attemptId)) {
+                    onSubmitted = { attemptId, score, totalPoints ->
+                        navController.navigate(Screen.QuizResult.createRoute(quizId, attemptId, score, totalPoints)) {
                             popUpTo(Screen.Quizzes.route)
                         }
                     },
@@ -358,6 +358,14 @@ fun NavGraph(
                 arguments = listOf(
                     navArgument("quizId") { type = NavType.StringType },
                     navArgument("attemptId") { type = NavType.StringType },
+                    navArgument("score") {
+                        type = NavType.IntType
+                        defaultValue = 0
+                    },
+                    navArgument("totalPoints") {
+                        type = NavType.IntType
+                        defaultValue = 100
+                    },
                 ),
             ) {
                 QuizResultScreen(onBack = { navController.popBackStack(Screen.Home.route, false) })
