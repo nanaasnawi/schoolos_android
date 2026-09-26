@@ -109,14 +109,65 @@ fun LearningMaterialDetailScreen(
                 }
             )
         },
+        floatingActionButton = {
+            if (isTeacher) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Floating Icon Button: Hapus Materi
+                    SmallFloatingActionButton(
+                        onClick = { showDeleteDialog = true },
+                        containerColor = CosmicSurface2,
+                        contentColor = NeonError,
+                        shape = CircleShape,
+                        modifier = Modifier
+                            .size(44.dp)
+                            .border(1.dp, NeonError.copy(alpha = 0.45f), CircleShape),
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 4.dp,
+                            pressedElevation = 8.dp
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.DeleteOutline,
+                            contentDescription = "Hapus Materi",
+                            modifier = Modifier.size(20.dp),
+                            tint = NeonError
+                        )
+                    }
+
+                    // Floating Icon Button: Edit Materi
+                    FloatingActionButton(
+                        onClick = { showEditDialog = true },
+                        containerColor = TeacherNeon,
+                        contentColor = Color.White,
+                        shape = CircleShape,
+                        modifier = Modifier.size(52.dp),
+                        elevation = FloatingActionButtonDefaults.elevation(
+                            defaultElevation = 6.dp,
+                            pressedElevation = 10.dp
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Edit Materi",
+                            modifier = Modifier.size(22.dp),
+                            tint = Color.White
+                        )
+                    }
+                }
+            }
+        },
         bottomBar = {
             Surface(
                 color = CosmicNavy,
                 tonalElevation = 10.dp,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .border(1.dp, GlassBorder, RoundedCornerShape(topStart = 50.dp, topEnd = 20.dp))
+                    .border(1.dp, GlassBorder, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             ) {
                 Row(
                     modifier = Modifier
@@ -126,79 +177,76 @@ fun LearningMaterialDetailScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     if (isTeacher) {
-                        // ── TEACHER: completion count + edit & delete management ──
-                        Column(
+                        // ── TEACHER: Class utilization overview (clean, spacious, zero collision) ──
+                        Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
                                 .clickable { showCompletionsSheet = true }
-                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                                .padding(horizontal = 4.dp, vertical = 4.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Pemanfaatan Kelas", color = TextTertiary, fontSize = 11.sp)
-                                Spacer(Modifier.width(3.dp))
-                                Icon(Icons.Default.ChevronRight, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(12.dp))
-                            }
-                            Spacer(Modifier.height(2.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(TeacherNeon)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                val completedCount = materialCompletions.count { it.isCompleted }
-                                val totalCount = materialCompletions.size
+                            val completedCount = materialCompletions.count { it.isCompleted }
+                            val totalCount = materialCompletions.size
+                            val hasData = totalCount > 0
+
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(TeacherNeon)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "Pemanfaatan Kelas",
+                                        color = TextTertiary,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                Spacer(Modifier.height(3.dp))
                                 Text(
-                                    if (totalCount > 0) "$completedCount / $totalCount siswa selesai" else "${material.completedCount} siswa menyelesaikan",
+                                    if (hasData) "$completedCount / $totalCount siswa selesai"
+                                    else if (material.completedCount > 0) "${material.completedCount} siswa menyelesaikan"
+                                    else "Belum ada siswa yang menyelesaikan",
                                     color = TeacherNeon,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.ExtraBold
-                                )
-                            }
-                        }
-
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
-                                onClick = { showDeleteDialog = true },
-                                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonError),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonError.copy(alpha = 0.4f)),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.height(44.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Delete,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = "Hapus",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1
                                 )
                             }
 
-                            Button(
-                                onClick = { showEditDialog = true },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = TeacherNeon,
-                                    contentColor = Color.White
-                                ),
-                                shape = RoundedCornerShape(14.dp),
-                                modifier = Modifier.height(44.dp)
+                            // Interactive pill button to open student completion breakdown
+                            Surface(
+                                color = TeacherNeon.copy(alpha = 0.15f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.4f))
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Edit,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = "Edit Materi",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 12.sp
-                                )
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "Detail Siswa",
+                                        color = TeacherNeon,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(
+                                        imageVector = Icons.Default.ChevronRight,
+                                        contentDescription = null,
+                                        tint = TeacherNeon,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
                             }
                         }
                     } else {
@@ -634,7 +682,7 @@ fun LearningMaterialDetailScreen(
                     )
                 }
 
-                Spacer(Modifier.height(30.dp))
+                Spacer(Modifier.height(84.dp))
             }
         }
 
