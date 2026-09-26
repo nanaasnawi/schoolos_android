@@ -28,6 +28,13 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             topics.forEach { topic ->
                 try {
                     FirebaseMessaging.getInstance().subscribeToTopic(topic)
+                        .addOnCompleteListener { task ->
+                            if (task.isSuccessful) {
+                                Timber.d("FCM successfully subscribed to topic: %s", topic)
+                            } else {
+                                Timber.w(task.exception, "FCM failed to subscribe to topic: %s", topic)
+                            }
+                        }
                 } catch (e: Exception) {
                     Timber.w(e, "FCM subscribe error: %s", topic)
                 }

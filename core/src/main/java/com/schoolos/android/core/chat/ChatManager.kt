@@ -86,9 +86,48 @@ class ChatManager @Inject constructor(
     val isRealtimeConnected: StateFlow<Boolean> get() = isOnline
 
     private var cachedAuth: AuthState? = null
+    val currentAuth: AuthState? get() = cachedAuth
 
-    // Load initial state synchronously from persistent disk cache so history is restored immediately on app launch
-    private val _threads = MutableStateFlow<List<ChatThread>>(loadFromDisk())
+    fun filterThreadsForUser(threadList: List<ChatThread>, auth: AuthState? = cachedAuth): List<ChatThread> {
+        if (auth == null || !auth.isLoggedIn) return emptyList()
+        if (auth.isTeacher) {
+            return threadList
+        }
+        val myUid = auth.userId ?: ""
+        val myName = auth.name?.trim() ?: ""
+        return threadList.filter { t ->
+            val matchesId = myUid.isNotBlank() && (
+                t.studentId.equals(myUid, ignoreCase = true) ||
+                t.studentId.replace("-", "").equals(myUid.replace("-", ""), ignoreCase = true)
+            )
+            val matchesName = myName.isNotBlank() && (
+                t.studentName.equals(myName, ignoreCase = true) ||
+                t.studentName.contains(myName, ignoreCase = true) ||
+                myName.contains(t.studentName, ignoreCase = true)
+            )
+            matchesId || matchesName
+        }
+    }
+
+    fun isThreadOwnedByCurrentStudent(thread: ChatThread): Boolean {
+        val auth = cachedAuth ?: return true
+        if (auth.isTeacher) return true
+        val myUid = auth.userId ?: ""
+        val myName = auth.name?.trim() ?: ""
+        val matchesId = myUid.isNotBlank() && (
+            thread.studentId.equals(myUid, ignoreCase = true) ||
+            thread.studentId.replace("-", "").equals(myUid.replace("-", ""), ignoreCase = true)
+        )
+        val matchesName = myName.isNotBlank() && (
+            thread.studentName.equals(myName, ignoreCase = true) ||
+            thread.studentName.contains(myName, ignoreCase = true) ||
+            myName.contains(thread.studentName, ignoreCase = true)
+        )
+        return matchesId || matchesName
+    }
+
+    // Clean initial state to avoid cross-user bleed before auth resolution
+    private val _threads = MutableStateFlow<List<ChatThread>>(emptyList())
     val threads: StateFlow<List<ChatThread>> = _threads.asStateFlow()
 
     private val _isLoading = MutableStateFlow(false)
@@ -98,14 +137,34 @@ class ChatManager @Inject constructor(
     private var activeSubscribers = 0
 
     init {
+        // Purge any legacy unnamespaced global cache file to prevent cross-account leak
+        try {
+            val legacyCache = File(context.filesDir, "chat_threads_cache.json")
+            if (legacyCache.exists()) {
+                legacyCache.delete()
+            }
+        } catch (_: Exception) {}
+
         // Observe auth state continuously
         scope.launch {
             authManager.authState.collectLatest { auth ->
+                val oldUid = cachedAuth?.userId
+                val newUid = auth?.userId
+                val wasLoggedIn = cachedAuth?.isLoggedIn == true
+                val isLoggedIn = auth?.isLoggedIn == true
                 cachedAuth = auth
-                // Reload disk cache if current threads are empty
-                val currentThreads = loadFromDisk()
-                if (currentThreads.isNotEmpty() && _threads.value.isEmpty()) {
-                    _threads.value = currentThreads
+
+                if (newUid != oldUid || wasLoggedIn != isLoggedIn) {
+                    // Identity changed: immediately wipe threads from memory to prevent leak!
+                    _threads.value = emptyList()
+                    if (isLoggedIn && !newUid.isNullOrBlank()) {
+                        val userCached = loadFromDisk(newUid)
+                        _threads.value = filterThreadsForUser(userCached, auth)
+                        refresh()
+                    }
+                } else if (_threads.value.isEmpty() && isLoggedIn && !newUid.isNullOrBlank()) {
+                    val userCached = loadFromDisk(newUid)
+                    _threads.value = filterThreadsForUser(userCached, auth)
                 }
             }
         }
@@ -173,15 +232,40 @@ class ChatManager @Inject constructor(
 
     private suspend fun syncFromDatabase() {
         val auth = cachedAuth ?: authManager.authState.firstOrNull()
-        val teacherName = if (auth?.isTeacher == true) auth.name else null
-        val studentId = if (auth?.isStudent == true && !auth.userId.isNullOrBlank() && auth.userId.length == 36) auth.userId else null
+        if (auth == null || !auth.isLoggedIn) {
+            _threads.value = emptyList()
+            return
+        }
+
+        val teacherName = if (auth.isTeacher) auth.name else null
+        val studentId = if (auth.isStudent && !auth.userId.isNullOrBlank() && auth.userId.length == 36) auth.userId else null
 
         val response = api.listInquiries(
             teacherName = teacherName,
             studentId = studentId,
         )
         if (response.success && response.data != null) {
-            val dbThreads = response.data
+            val rawDbThreads = response.data
+            // Strictly filter server response if student to guarantee isolation
+            val dbThreads = if (auth.isStudent) {
+                val myUid = auth.userId ?: ""
+                val myName = auth.name?.trim() ?: ""
+                rawDbThreads.filter { dto ->
+                    val matchesId = myUid.isNotBlank() && (
+                        dto.studentId.equals(myUid, ignoreCase = true) ||
+                        dto.studentId.replace("-", "").equals(myUid.replace("-", ""), ignoreCase = true)
+                    )
+                    val matchesName = myName.isNotBlank() && (
+                        dto.studentName.equals(myName, ignoreCase = true) ||
+                        dto.studentName.contains(myName, ignoreCase = true) ||
+                        myName.contains(dto.studentName, ignoreCase = true)
+                    )
+                    matchesId || matchesName
+                }
+            } else {
+                rawDbThreads
+            }
+
             val currentMap = _threads.value.associateBy { it.id }
             val dbIds = dbThreads.map { it.id }.toSet()
 
@@ -262,11 +346,13 @@ class ChatManager @Inject constructor(
                 )
             }
 
-            // Keep any local threads currently pending server persistence
-            val pendingLocal = _threads.value.filter { it.id !in dbIds }
+            // Keep any local threads currently pending server persistence, strictly isolated
+            val pendingLocal = _threads.value.filter { it.id !in dbIds }.let { list ->
+                if (auth.isStudent) filterThreadsForUser(list, auth) else list
+            }
             val merged = pendingLocal + updatedThreads
             _threads.value = merged
-            saveToDisk(merged)
+            saveToDisk(merged, auth.userId)
 
             // Trigger detail loads in background for threads with missing messages
             for (tid in threadsNeedingDetails) {
@@ -281,6 +367,27 @@ class ChatManager @Inject constructor(
                 val detailResp = api.getInquiryDetail(threadId)
                 if (detailResp.success && detailResp.data != null) {
                     val detail = detailResp.data
+                    val auth = cachedAuth
+
+                    // Student security: ignore thread if it does not belong to the current student
+                    if (auth != null && auth.isStudent) {
+                        val myUid = auth.userId ?: ""
+                        val myName = auth.name?.trim() ?: ""
+                        val matchesId = myUid.isNotBlank() && (
+                            detail.thread.studentId.equals(myUid, ignoreCase = true) ||
+                            detail.thread.studentId.replace("-", "").equals(myUid.replace("-", ""), ignoreCase = true)
+                        )
+                        val matchesName = myName.isNotBlank() && (
+                            detail.thread.studentName.equals(myName, ignoreCase = true) ||
+                            detail.thread.studentName.contains(myName, ignoreCase = true) ||
+                            myName.contains(detail.thread.studentName, ignoreCase = true)
+                        )
+                        if (!matchesId && !matchesName) {
+                            Timber.w("Refusing to display unowned thread ${detail.thread.id} to student ${auth.name}")
+                            return@launch
+                        }
+                    }
+
                     val msgs = detail.messages.map { m ->
                         ChatMessage(
                             id = m.id,
@@ -345,7 +452,7 @@ class ChatManager @Inject constructor(
                             ) + currentList
                         }
                     }
-                    saveToDisk(_threads.value)
+                    saveToDisk(_threads.value, auth?.userId)
 
                     // Mark as read in server persistence
                     launch {
@@ -372,29 +479,31 @@ class ChatManager @Inject constructor(
         senderRole: String,
         content: String,
     ): ChatMessage {
-        val isTeacher = senderRole.equals("TEACHER", ignoreCase = true)
+        val auth = cachedAuth
+        val isTeacher = if (auth?.isStudent == true) false else senderRole.equals("TEACHER", ignoreCase = true)
         val now = System.currentTimeMillis()
         val tempId = "temp-" + UUID.randomUUID().toString()
 
-        val auth = cachedAuth
         val effectiveSenderName = when {
-            !auth?.name.isNullOrBlank() -> auth!!.name!!
+            auth?.isStudent == true -> auth.name ?: "Siswa"
+            !auth?.name.isNullOrBlank() -> auth.name!!
             senderName.isNotBlank() && !senderName.equals("Guru Pengampu", ignoreCase = true) -> senderName
             isTeacher -> "Guru Pengajar"
             else -> "Siswa"
         }
         val effectiveSenderId = when {
-            !auth?.userId.isNullOrBlank() -> auth!!.userId!!
+            !auth?.userId.isNullOrBlank() -> auth.userId!!
             senderId.isNotBlank() -> senderId
             else -> UUID.randomUUID().toString()
         }
+        val effectiveRole = if (isTeacher) "TEACHER" else "STUDENT"
 
         val localMsg = ChatMessage(
             id = tempId,
             threadId = threadId,
             senderId = effectiveSenderId,
             senderName = effectiveSenderName,
-            senderRole = senderRole,
+            senderRole = effectiveRole,
             content = content.trim(),
             timestamp = now,
             isFromTeacher = isTeacher,
@@ -418,7 +527,7 @@ class ChatManager @Inject constructor(
                 thread
             }
         }
-        saveToDisk(_threads.value)
+        saveToDisk(_threads.value, auth?.userId)
 
         // Persist to real database via backend API with idempotent client_message_id
         scope.launch {
@@ -427,7 +536,7 @@ class ChatManager @Inject constructor(
                     clientMessageId = tempId,
                     senderId = effectiveSenderId,
                     senderName = effectiveSenderName,
-                    senderRole = senderRole,
+                    senderRole = effectiveRole,
                     content = content.trim()
                 )
                 val resp = api.sendMessage(threadId, req)
@@ -441,7 +550,7 @@ class ChatManager @Inject constructor(
                             th.copy(messages = updatedMsgs)
                         } else th
                     }
-                    saveToDisk(_threads.value)
+                    saveToDisk(_threads.value, auth?.userId)
                     // Refresh detail to ensure canonical sync
                     loadThreadDetail(threadId)
                 }
@@ -468,8 +577,8 @@ class ChatManager @Inject constructor(
         val now = System.currentTimeMillis()
         val auth = cachedAuth
 
-        val effectiveStudentName = if (!auth?.name.isNullOrBlank()) auth!!.name!! else studentName
-        val effectiveStudentId = if (!auth?.userId.isNullOrBlank()) auth!!.userId!! else studentId
+        val effectiveStudentName = if (!auth?.name.isNullOrBlank()) auth.name!! else studentName
+        val effectiveStudentId = if (!auth?.userId.isNullOrBlank()) auth.userId!! else studentId
         val effectiveTeacherName = if (teacherName.isNotBlank() && !teacherName.equals("Guru Pengampu", ignoreCase = true)) {
             teacherName
         } else {
@@ -503,7 +612,7 @@ class ChatManager @Inject constructor(
         )
 
         _threads.value = listOf(newThread) + _threads.value
-        saveToDisk(_threads.value)
+        saveToDisk(_threads.value, auth?.userId)
 
         // Persist to database
         scope.launch {
@@ -532,16 +641,14 @@ class ChatManager @Inject constructor(
         return newThread
     }
 
-    private fun getCacheFile(): File {
-        val uid = cachedAuth?.userId
-        return if (!uid.isNullOrBlank()) {
-            File(context.filesDir, "chat_threads_cache_${uid}.json")
-        } else {
-            File(context.filesDir, "chat_threads_cache.json")
-        }
+    private fun getCacheFile(userId: String? = cachedAuth?.userId): File? {
+        if (userId.isNullOrBlank()) return null
+        val sanitized = userId.replace(Regex("[^a-zA-Z0-9_-]"), "_")
+        return File(context.filesDir, "chat_threads_cache_${sanitized}.json")
     }
 
-    private fun saveToDisk(threadsList: List<ChatThread>) {
+    private fun saveToDisk(threadsList: List<ChatThread>, targetUid: String? = cachedAuth?.userId) {
+        val file = getCacheFile(targetUid) ?: return
         try {
             val jsonArray = JSONArray()
             for (thread in threadsList) {
@@ -578,7 +685,6 @@ class ChatManager @Inject constructor(
                 jsonArray.put(tObj)
             }
 
-            val file = getCacheFile()
             val tempFile = File(context.filesDir, file.name + ".tmp")
             tempFile.writeText(jsonArray.toString(), Charsets.UTF_8)
             if (!tempFile.renameTo(file)) {
@@ -587,26 +693,15 @@ class ChatManager @Inject constructor(
                     file.writeText(jsonArray.toString(), Charsets.UTF_8)
                 }
             }
-            val generalFile = File(context.filesDir, "chat_threads_cache.json")
-            if (file != generalFile) {
-                generalFile.writeText(jsonArray.toString(), Charsets.UTF_8)
-            }
         } catch (e: Exception) {
             Timber.w(e, "Failed to persist chat cache to disk")
         }
     }
 
-    private fun loadFromDisk(): List<ChatThread> {
+    private fun loadFromDisk(targetUid: String? = cachedAuth?.userId): List<ChatThread> {
+        val file = getCacheFile(targetUid) ?: return emptyList()
         return try {
-            var file = getCacheFile()
-            if (!file.exists()) {
-                val generalFile = File(context.filesDir, "chat_threads_cache.json")
-                if (generalFile.exists()) {
-                    file = generalFile
-                } else {
-                    return emptyList()
-                }
-            }
+            if (!file.exists()) return emptyList()
             val text = file.readText(Charsets.UTF_8)
             if (text.isBlank()) return emptyList()
 

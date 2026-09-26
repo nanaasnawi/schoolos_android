@@ -272,79 +272,143 @@ fun LazyListScope.studentContent(
         }
     }
 
-    // ── 3. ACADEMIC PERFORMANCE & LEVEL SNAPSHOT ─────────────────────────────────
+    // ── 3. ACADEMIC PERFORMANCE & GRADE SNAPSHOT ─────────────────────────────────
     item {
         LightSectionHeader(
-            title = "Performa & Capaian Belajar",
-            sub = "Ringkasan nilai semester berjalan",
+            title = "Performa Akademik & Nilai",
+            sub = "Indeks capaian belajar semester berjalan",
             onSeeAll = onNavigateToGrades,
         )
     }
 
     item {
+        val avgNum = gradeAverage.toDoubleOrNull() ?: 0.0
+        val hasGrade = gradeAverage != "-" && avgNum > 0.0
+        val predicateLabel = when {
+            !hasGrade -> "Semester Berjalan"
+            avgNum >= 85.0 -> "Predikat A • Sangat Baik"
+            avgNum >= 75.0 -> "Predikat B • Tuntas KKM"
+            else -> "Predikat C • Perlu Penguatan"
+        }
+        val predicateColor = when {
+            !hasGrade -> TextTertiary
+            avgNum >= 85.0 -> NeonSuccess
+            avgNum >= 75.0 -> NeonBlue
+            else -> NeonWarning
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(18.dp))
+                .background(
+                    Brush.linearGradient(
+                        listOf(
+                            CosmicNavy,
+                            CosmicSurface2.copy(alpha = 0.85f),
+                        )
+                    )
+                )
+                .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
                 .clickable(onClick = onNavigateToGrades)
                 .padding(18.dp),
         ) {
             Column {
+                // Top Tag & Predicate Badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(24.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(predicateColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Assessment,
+                                contentDescription = null,
+                                tint = predicateColor,
+                                modifier = Modifier.size(14.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "RATA-RATA NILAI",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TextTertiary,
+                            letterSpacing = 0.8.sp,
+                        )
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(predicateColor.copy(alpha = 0.12f))
+                            .border(1.dp, predicateColor.copy(alpha = 0.28f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                    ) {
+                        Text(
+                            text = predicateLabel,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = predicateColor,
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // Core Metric Row: Large Score + Level/XP Pill
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column {
-                        Text(
-                            text = "RATA-RATA NILAI",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = TextTertiary,
-                            letterSpacing = 0.6.sp,
-                        )
-                        Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.Bottom) {
                             Text(
                                 text = gradeAverage,
-                                fontSize = 34.sp,
+                                fontSize = 40.sp,
                                 fontWeight = FontWeight.Black,
-                                color = StudentNeon,
-                                letterSpacing = (-1).sp,
+                                color = if (hasGrade) StudentNeon else TextTertiary,
+                                letterSpacing = (-1.5).sp,
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Box(
-                                modifier = Modifier
-                                    .padding(bottom = 6.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(NeonSuccess.copy(alpha = 0.15f))
-                                    .padding(horizontal = 7.dp, vertical = 3.dp),
-                            ) {
+                            if (hasGrade) {
                                 Text(
-                                    text = "Stabil",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = NeonSuccess,
+                                    text = " / 100",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextTertiary,
+                                    modifier = Modifier.padding(bottom = 7.dp, start = 4.dp),
                                 )
                             }
                         }
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = gradeStatus,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextSecondary,
+                        )
                     }
 
-                    // Level & XP Button
+                    // Level & Gamification Pill (Clickable to Achievements)
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(14.dp))
                             .background(
                                 Brush.linearGradient(
-                                    listOf(StudentNeon.copy(alpha = 0.18f), StudentNeon.copy(alpha = 0.06f))
+                                    listOf(StudentNeon.copy(alpha = 0.15f), StudentNeon.copy(alpha = 0.05f))
                                 )
                             )
-                            .border(1.dp, StudentNeon.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                            .border(1.dp, StudentNeon.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
                             .clickable(onClick = onNavigateToAchievements)
                             .padding(horizontal = 12.dp, vertical = 8.dp),
-                        contentAlignment = Alignment.Center,
                     ) {
                         val xpNum = xpCount.toIntOrNull() ?: 0
                         val level = (xpNum / 100) + 1
@@ -368,92 +432,103 @@ fun LazyListScope.studentContent(
                     }
                 }
 
-                Spacer(Modifier.height(14.dp))
-
-                // Trend chart or visual meter
-                if (gradeTrendPoints.isNotEmpty() && gradeTrendPoints.size > 1) {
-                    LineTrendChart(
-                        dataPoints = gradeTrendPoints,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(65.dp),
-                        lineColor = StudentNeon,
-                    )
-                    Spacer(Modifier.height(12.dp))
-                }
-
-                // Status message
-                Text(
-                    text = gradeStatus,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextSecondary,
-                )
-
-                // ── Progress Belajar & Ringkasan Tugas ────────────────────────
-                Spacer(Modifier.height(14.dp))
-                HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f), thickness = 0.7.dp)
-                Spacer(Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
+                // Trend Graph or Top Subject Highlights
+                if (topGradeSubjects.isNotEmpty()) {
+                    Spacer(Modifier.height(14.dp))
                     Text(
-                        text = "PROGRESS BELAJAR",
+                        text = "MATA PELAJARAN UNGGULAN",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextTertiary,
                         letterSpacing = 0.5.sp,
                     )
-                    Text(
-                        text = "${(progressPercentage * 100).toInt()}%",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = NeonBlue,
-                    )
-                }
-                Spacer(Modifier.height(6.dp))
-
-                // Progress Bar
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(7.dp)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(CosmicSurface2),
-                ) {
-                    Box(
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        topGradeSubjects.take(3).forEach { subj ->
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(CosmicNavy.copy(alpha = 0.8f))
+                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 8.dp, vertical = 7.dp),
+                            ) {
+                                Column {
+                                    Text(
+                                        text = subj.subjectName,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        modifier = Modifier.fillMaxWidth(),
+                                    ) {
+                                        Text(
+                                            text = String.format(java.util.Locale.US, "%.1f", subj.finalScore),
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = StudentNeon,
+                                        )
+                                        Text(
+                                            text = subj.letterGrade,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = NeonSuccess,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (gradeTrendPoints.size > 1) {
+                    Spacer(Modifier.height(12.dp))
+                    LineTrendChart(
+                        dataPoints = gradeTrendPoints,
                         modifier = Modifier
-                            .fillMaxWidth(fraction = progressPercentage.coerceIn(0.05f, 1f))
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(Brush.horizontalGradient(listOf(NeonBlue, StudentNeon))),
+                            .fillMaxWidth()
+                            .height(55.dp),
+                        lineColor = StudentNeon,
                     )
                 }
 
+                // Footer CTA to Transkrip Lengkap
+                Spacer(Modifier.height(14.dp))
+                HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f), thickness = 0.7.dp)
                 Spacer(Modifier.height(10.dp))
+
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val completed = studentProgress?.assignmentCompleted ?: 0
-                    val total = studentProgress?.assignmentTotal ?: assignmentsCount.toIntOrNull() ?: 0
-                    val pending = if (total > completed) total - completed else 0
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Default.School,
+                            contentDescription = null,
+                            tint = StudentNeon,
+                            modifier = Modifier.size(13.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Rapor & evaluasi akademik semester",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                     Text(
-                        text = "📋 Tugas: $completed selesai / $pending belum",
-                        fontSize = 11.sp,
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Medium,
-                    )
-                    Text(
-                        text = "Detail Progres →",
+                        text = "Transkrip Lengkap →",
                         fontSize = 11.sp,
                         color = StudentNeon,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.clickable(onClick = onNavigateToProgress),
                     )
                 }
             }
