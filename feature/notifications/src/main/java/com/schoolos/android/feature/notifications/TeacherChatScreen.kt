@@ -106,7 +106,14 @@ fun TeacherChatScreen(
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
-    val threads by chatManager.threads.collectAsState()
+    val rawThreads by chatManager.threads.collectAsState()
+    val threads = remember(rawThreads, isTeacherMode, chatManager.currentAuth) {
+        if (!isTeacherMode) {
+            chatManager.filterThreadsForUser(rawThreads, chatManager.currentAuth)
+        } else {
+            rawThreads
+        }
+    }
     val isLoading by chatManager.isLoading.collectAsState()
     val isOnline by chatManager.isOnline.collectAsState()
 

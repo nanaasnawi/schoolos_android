@@ -79,6 +79,7 @@ class MainActivity : ComponentActivity() {
                             .edit()
                             .putString("fcm_token", token)
                             .apply()
+                        com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
                     }
                 }
         } catch (e: Exception) {

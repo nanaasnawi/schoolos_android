@@ -446,6 +446,8 @@ fun NavGraph(
                 ProgressScreen(
                     onBack = { navController.popBackStack() },
                     onNavigateToAssignments = { navController.navigate(Screen.Assignments.route) },
+                    onNavigateToMaterials = { navController.navigate(Screen.Learning.route) },
+                    onNavigateToQuizzes = { navController.navigate(Screen.Quizzes.route) },
                 )
             }
 

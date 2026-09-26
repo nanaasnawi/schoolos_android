@@ -143,20 +143,13 @@ object SystemNotificationHelper {
         // Ensure channel exists
         createNotificationChannel(context)
 
-        // Wake screen up if currently turned off / in standby
-        try {
+        // Acquire brief partial wake lock so CPU stays awake while constructing and posting notification
+        val wakeLock = try {
             val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-            if (pm != null && !pm.isInteractive) {
-                @Suppress("DEPRECATION")
-                val wakeLock = pm.newWakeLock(
-                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK or
-                            PowerManager.ACQUIRE_CAUSES_WAKEUP or
-                            PowerManager.ON_AFTER_RELEASE,
-                    "schoolos:notification_wake"
-                )
-                wakeLock.acquire(5000L)
+            pm?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "schoolos:notification_wake")?.apply {
+                acquire(3000L)
             }
-        } catch (_: Exception) {}
+        } catch (_: Exception) { null }
 
         // Deterministic notification slot per pesan — pakai ID dari FCM (bukan hash
         // judul!) agar tiap materi/tugas/kuis tampil sendiri dan tidak menimpa tray.
@@ -196,8 +189,12 @@ object SystemNotificationHelper {
             else -> CHANNEL_LEARNING_ID
         }
 
-        val iconRes = context.applicationInfo.icon.takeIf { it != 0 }
-            ?: android.R.drawable.ic_dialog_info
+        val iconRes = try {
+            val resId = context.resources.getIdentifier("ic_notification", "drawable", context.packageName)
+            if (resId != 0) resId else com.schoolos.android.core.R.drawable.ic_notification
+        } catch (_: Exception) {
+            context.applicationInfo.icon.takeIf { it != 0 } ?: android.R.drawable.ic_dialog_info
+        }
 
         val soundUri = getSoundUri(context)
 

@@ -148,6 +148,44 @@ fun ChatDetailScreen(
                           else "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • Aktif"
     val roleNeon = if (isTeacherMode) StudentNeon else TeacherNeon
 
+    val isPermitted = isTeacherMode || thread == null || chatManager.isThreadOwnedByCurrentStudent(thread)
+    if (!isPermitted) {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .background(CosmicBlack)
+                .statusBarsPadding()
+                .padding(24.dp),
+            verticalArrangement = Arrangement.Center,
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "Percakapan Terisolasi",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "Percakapan tanya jawab ini bersifat privat dan terisolasi khusus untuk siswa yang bersangkutan.",
+                fontSize = 13.sp,
+                color = TextSecondary,
+                textAlign = TextAlign.Center,
+            )
+            Spacer(Modifier.height(20.dp))
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(StudentNeon)
+                    .clickable { onBack() }
+                    .padding(horizontal = 24.dp, vertical = 12.dp),
+            ) {
+                Text("Kembali", color = CosmicBlack, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            }
+        }
+        return
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
