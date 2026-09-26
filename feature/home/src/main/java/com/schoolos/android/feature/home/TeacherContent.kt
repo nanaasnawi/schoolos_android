@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.home
 
+import com.schoolos.android.core.R as CoreR
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -361,7 +362,7 @@ fun LazyListScope.teacherContent(
                 BentoActionCard(
                     title = "Buat Tugas",
                     subtitle = "PR & proyek mandiri",
-                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    iconRes = CoreR.drawable.ic_modern_tasks,
                     accentColor = TeacherNeon,
                     badgeText = "Tugas",
                     onClick = onNavigateToAssignmentCreator,
@@ -371,7 +372,7 @@ fun LazyListScope.teacherContent(
                 BentoActionCard(
                     title = "Buat Kuis",
                     subtitle = "Bank soal & ujian online",
-                    icon = Icons.Default.Quiz,
+                    iconRes = CoreR.drawable.ic_modern_quiz,
                     accentColor = NeonWarning,
                     badgeText = "Kuis",
                     onClick = onNavigateToQuizBuilder,
@@ -386,7 +387,7 @@ fun LazyListScope.teacherContent(
                 BentoActionCard(
                     title = "Buku Nilai",
                     subtitle = "Rekap capaian & KKM",
-                    icon = Icons.Default.Assessment,
+                    iconRes = CoreR.drawable.ic_modern_grades,
                     accentColor = NeonBlue,
                     badgeText = "Nilai",
                     onClick = onNavigateToGrades,
@@ -396,7 +397,7 @@ fun LazyListScope.teacherContent(
                 BentoActionCard(
                     title = "Bahan Ajar",
                     subtitle = "Upload modul dokumen",
-                    icon = Icons.Default.Book,
+                    iconRes = CoreR.drawable.ic_modern_book,
                     accentColor = NeonSuccess,
                     badgeText = "Modul",
                     onClick = onNavigateToLearning,

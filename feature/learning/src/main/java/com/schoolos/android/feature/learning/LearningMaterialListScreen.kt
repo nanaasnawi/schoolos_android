@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.learning
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -585,17 +587,21 @@ private fun ModernMaterialCard(
                         .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(
-                        imageVector = when {
-                            item.type == "VIDEO" -> Icons.Default.PlayCircleFilled
-                            isLibraryBook -> Icons.AutoMirrored.Filled.MenuBook
-                            item.type == "PDF" -> Icons.Default.Description
-                            else -> Icons.Default.Article
-                        },
-                        contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(18.dp),
-                    )
+                    if (isLibraryBook || item.type != "VIDEO") {
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_book),
+                            contentDescription = null,
+                            tint = NeonBlue,
+                            modifier = Modifier.size(19.dp),
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.PlayCircleFilled,
+                            contentDescription = null,
+                            tint = NeonSuccess,
+                            modifier = Modifier.size(19.dp),
+                        )
+                    }
                 }
 
                 Spacer(Modifier.width(12.dp))
@@ -718,10 +724,10 @@ private fun ModernMaterialCard(
                 }
 
                 Icon(
-                    imageVector = Icons.Default.ChevronRight,
+                    painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                     contentDescription = "Buka",
                     tint = TextTertiary,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(14.dp)
                 )
             }
 

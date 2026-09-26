@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.home
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -252,10 +254,10 @@ fun HomeScreen(
                                     },
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.Notifications,
+                                        painter = painterResource(id = CoreR.drawable.ic_modern_bell),
                                         contentDescription = "Notifikasi",
                                         tint = TextSecondary,
-                                        modifier = Modifier.size(22.dp),
+                                        modifier = Modifier.size(20.dp),
                                     )
                                 }
                             }
@@ -270,10 +272,10 @@ fun HomeScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    imageVector = avatarIcon,
+                                    painter = painterResource(id = CoreR.drawable.ic_modern_profile),
                                     contentDescription = "Profil",
                                     tint = roleAccent,
-                                    modifier = Modifier.size(22.dp),
+                                    modifier = Modifier.size(20.dp),
                                 )
                             }
                         }
@@ -415,10 +417,10 @@ fun HomeScreen(
                                     )
                                     Spacer(Modifier.width(4.dp))
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                        painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                                         contentDescription = null,
                                         tint = TextTertiary,
-                                        modifier = Modifier.size(11.dp),
+                                        modifier = Modifier.size(10.dp),
                                     )
                                 }
                             }

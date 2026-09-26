@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.home
 
+import com.schoolos.android.core.R as CoreR
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -200,7 +201,7 @@ fun LazyListScope.parentContent(
                 BentoActionCard(
                     title = "Perkembangan",
                     subtitle = "Kehadiran & profil",
-                    icon = Icons.Default.Assessment,
+                    iconRes = CoreR.drawable.ic_modern_attendance,
                     accentColor = ParentNeon,
                     badgeText = attendanceRate,
                     onClick = onNavigateToProgress,
@@ -210,7 +211,7 @@ fun LazyListScope.parentContent(
                 BentoActionCard(
                     title = "Tugas Rumah",
                     subtitle = "Pantau PR anak",
-                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    iconRes = CoreR.drawable.ic_modern_tasks,
                     accentColor = NeonBlue,
                     badgeText = "$assignmentsCount Tugas",
                     onClick = onNavigateToAssignments,
@@ -225,7 +226,7 @@ fun LazyListScope.parentContent(
                 BentoActionCard(
                     title = "Rapor & Nilai",
                     subtitle = "Hasil ujian berkala",
-                    icon = Icons.Default.Assessment,
+                    iconRes = CoreR.drawable.ic_modern_grades,
                     accentColor = NeonSuccess,
                     onClick = onNavigateToGrades,
                     modifier = Modifier.weight(1f),
@@ -234,7 +235,7 @@ fun LazyListScope.parentContent(
                 BentoActionCard(
                     title = "Pesan Sekolah",
                     subtitle = "Pengumuman wali kelas",
-                    icon = Icons.AutoMirrored.Filled.Message,
+                    iconRes = CoreR.drawable.ic_modern_announcement,
                     accentColor = NeonWarning,
                     onClick = onNavigateToNotifications,
                     modifier = Modifier.weight(1f),

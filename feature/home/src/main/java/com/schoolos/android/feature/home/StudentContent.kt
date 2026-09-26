@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.home
 
+import com.schoolos.android.core.R as CoreR
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -113,7 +114,7 @@ fun LazyListScope.studentContent(
                 BentoActionCard(
                     title = "Tugas Sekolah",
                     subtitle = "Cek tenggat PR & proyek",
-                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    iconRes = CoreR.drawable.ic_modern_tasks,
                     accentColor = StudentNeon,
                     badgeText = "Aktif",
                     onClick = { onNavigateToAssignmentWithSubject(currentSubjectClean) },
@@ -123,7 +124,7 @@ fun LazyListScope.studentContent(
                 BentoActionCard(
                     title = "Kuis & Ujian",
                     subtitle = "Latihan & evaluasi",
-                    icon = Icons.Default.Quiz,
+                    iconRes = CoreR.drawable.ic_modern_quiz,
                     accentColor = NeonWarning,
                     badgeText = "Online",
                     onClick = { onNavigateToQuizWithSubject(currentSubjectClean) },
@@ -139,7 +140,7 @@ fun LazyListScope.studentContent(
                 BentoActionCard(
                     title = "Materi Belajar",
                     subtitle = "Buku digital & modul",
-                    icon = Icons.Default.Book,
+                    iconRes = CoreR.drawable.ic_modern_book,
                     accentColor = NeonBlue,
                     onClick = { onNavigateToMaterialWithSubject(currentSubjectClean) },
                     modifier = Modifier.weight(1f),
@@ -148,7 +149,7 @@ fun LazyListScope.studentContent(
                 BentoActionCard(
                     title = "Rapor & Nilai",
                     subtitle = "Transkrip akademik",
-                    icon = Icons.Default.Assessment,
+                    iconRes = CoreR.drawable.ic_modern_grades,
                     accentColor = NeonSuccess,
                     badgeText = if (gradeAverage != "-") "Rata $gradeAverage" else "",
                     onClick = onNavigateToGrades,

@@ -170,21 +170,21 @@ fun TeacherSessionDetailContent(
             ) {
                 ResourceAction(
                     label = "Beri Tugas",
-                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_tasks,
                     color = StudentNeon,
                     modifier = Modifier.weight(1f),
                     onClick = { onOpenAssignments(session.subjectName?.trim().orEmpty()) },
                 )
                 ResourceAction(
                     label = "Buat Kuis",
-                    icon = Icons.Default.Quiz,
+                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_quiz,
                     color = NeonSuccess,
                     modifier = Modifier.weight(1f),
                     onClick = { onOpenQuizzes(session.subjectName?.trim().orEmpty()) },
                 )
                 ResourceAction(
                     label = "Unggah Materi",
-                    icon = Icons.Default.Book,
+                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_book,
                     color = NeonBlue,
                     modifier = Modifier.weight(1f),
                     onClick = { onOpenMaterials(session.subjectName?.trim().orEmpty()) },
@@ -367,7 +367,8 @@ private fun AttendanceMiniCard(label: String, value: String, color: Color, modif
 @Composable
 private fun ResourceAction(
     label: String,
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    @androidx.annotation.DrawableRes iconRes: Int? = null,
     color: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
@@ -389,7 +390,16 @@ private fun ResourceAction(
                 .background(color.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(22.dp))
+            if (iconRes != null) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(20.dp),
+                )
+            } else if (icon != null) {
+                Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+            }
         }
         Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
     }

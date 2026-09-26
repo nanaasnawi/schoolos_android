@@ -37,7 +37,8 @@ fun DetailMetricItem(label: String, value: String, icon: ImageVector, modifier: 
 @Composable
 fun ResourceItem(
     label: String, 
-    icon: ImageVector, 
+    icon: ImageVector? = null,
+    @androidx.annotation.DrawableRes iconRes: Int? = null,
     color: Color, 
     modifier: Modifier = Modifier, 
     onClick: () -> Unit
@@ -46,23 +47,32 @@ fun ResourceItem(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(color.copy(alpha = 0.08f))
-            .border(1.dp, color.copy(alpha = 0.15f), RoundedCornerShape(12.dp))
+            .border(1.dp, color.copy(alpha = 0.18f), RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 14.dp, horizontal = 8.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = color,
-                modifier = Modifier.size(22.dp)
-            )
+            if (iconRes != null) {
+                Icon(
+                    painter = androidx.compose.ui.res.painterResource(id = iconRes),
+                    contentDescription = label,
+                    tint = color,
+                    modifier = Modifier.size(22.dp)
+                )
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = label,
+                    tint = color,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
             Spacer(Modifier.height(6.dp))
             Text(
                 text = label,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
         }
