@@ -39,7 +39,17 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            
+            val keystoreFile = localProps.getProperty("release.keystoreFile")
+            if (!keystoreFile.isNullOrEmpty() && file(keystoreFile).exists()) {
+                val releaseSigning = signingConfigs.create("release") {
+                    storeFile = file(keystoreFile)
+                    storePassword = localProps.getProperty("release.storePassword", "")
+                    keyAlias = localProps.getProperty("release.keyAlias", "")
+                    keyPassword = localProps.getProperty("release.keyPassword", "")
+                }
+                signingConfig = releaseSigning
+            }
         }
     }
 

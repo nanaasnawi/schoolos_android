@@ -2,7 +2,9 @@ package com.schoolos.android.core.network
 
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.common.BuildConfig
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
@@ -21,13 +23,7 @@ class DynamicHostInterceptor(
 ) : Interceptor {
     override fun intercept(chain: Interceptor.Chain): Response {
         val originalRequest = chain.request()
-        val customUrl = runBlocking {
-            try {
-                authManager.getCustomServerUrl()
-            } catch (_: Exception) {
-                null
-            }
-        }
+        val customUrl = authManager.getCustomServerUrlSync()
 
         var primaryRequest = originalRequest
         if (!customUrl.isNullOrBlank()) {
@@ -94,8 +90,8 @@ class DynamicHostInterceptor(
                     val fallbackRequest = primaryRequest.newBuilder().url(fallbackUrl).build()
                     val response = chain.proceed(fallbackRequest)
 
-                    // Fallback worked! Persist working URL so next calls are instant
-                    runBlocking {
+                    // Fallback worked! Persist working URL asynchronously so next calls are instant
+                    CoroutineScope(Dispatchers.IO).launch {
                         try {
                             authManager.saveCustomServerUrl(targetUrl.toString())
                         } catch (_: Exception) {}
