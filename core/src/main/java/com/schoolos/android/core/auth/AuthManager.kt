@@ -82,27 +82,6 @@ class AuthManager @Inject constructor(
         private val KEY_CUSTOM_SERVER_URL = stringPreferencesKey("custom_server_url")
     }
 
-    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
-    @Volatile private var cachedAccessToken: String? = null
-    @Volatile private var cachedRefreshToken: String? = null
-    @Volatile private var cachedIsLoggedIn: Boolean = false
-    @Volatile private var cachedCustomServerUrl: String? = null
-
-    init {
-        scope.launch {
-            authState.collect { state ->
-                cachedAccessToken = state.accessToken
-                cachedRefreshToken = state.refreshToken
-                cachedIsLoggedIn = state.isLoggedIn
-            }
-        }
-        scope.launch {
-            context.dataStore.data.collect { prefs ->
-                cachedCustomServerUrl = prefs[KEY_CUSTOM_SERVER_URL]
-            }
-        }
-    }
-
     val authState: Flow<AuthState> = context.dataStore.data.map { prefs ->
         AuthState(
             accessToken = prefs[KEY_ACCESS_TOKEN],
@@ -121,6 +100,27 @@ class AuthManager @Inject constructor(
             schoolName = prefs[KEY_SCHOOL_NAME],
             schoolLogoUrl = prefs[KEY_SCHOOL_LOGO_URL],
         )
+    }
+
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    @Volatile private var cachedAccessToken: String? = null
+    @Volatile private var cachedRefreshToken: String? = null
+    @Volatile private var cachedIsLoggedIn: Boolean = false
+    @Volatile private var cachedCustomServerUrl: String? = null
+
+    init {
+        scope.launch {
+            try {
+                context.dataStore.data.collect { prefs ->
+                    cachedAccessToken = prefs[KEY_ACCESS_TOKEN]
+                    cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
+                    cachedIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
+                    cachedCustomServerUrl = prefs[KEY_CUSTOM_SERVER_URL]
+                }
+            } catch (e: Exception) {
+                timber.log.Timber.e(e, "Error collecting auth preferences cache")
+            }
+        }
     }
 
     suspend fun checkIsLoggedIn(): Boolean {
@@ -166,6 +166,9 @@ class AuthManager @Inject constructor(
         childName: String? = null,
         childId: String? = null,
     ) {
+        cachedAccessToken = accessToken
+        cachedRefreshToken = refreshToken
+        cachedIsLoggedIn = true
         context.dataStore.edit { prefs ->
             prefs[KEY_ACCESS_TOKEN] = accessToken
             prefs[KEY_REFRESH_TOKEN] = refreshToken
@@ -217,6 +220,11 @@ class AuthManager @Inject constructor(
     }
 
     suspend fun updateTokens(accessToken: String, refreshToken: String) {
+        cachedAccessToken = accessToken
+        if (refreshToken.isNotBlank()) {
+            cachedRefreshToken = refreshToken
+        }
+        cachedIsLoggedIn = true
         context.dataStore.edit { prefs ->
             prefs[KEY_ACCESS_TOKEN] = accessToken
             if (refreshToken.isNotBlank()) {
@@ -227,6 +235,9 @@ class AuthManager @Inject constructor(
     }
 
     suspend fun clearSession() {
+        cachedAccessToken = null
+        cachedRefreshToken = null
+        cachedIsLoggedIn = false
         context.dataStore.edit {
             it.remove(KEY_ACCESS_TOKEN)
             it.remove(KEY_REFRESH_TOKEN)
@@ -323,6 +334,20 @@ class AuthManager @Inject constructor(
     }
 
     suspend fun saveCustomServerUrl(url: String) {
+        if (url.isBlank()) {
+            cachedCustomServerUrl = null
+        } else {
+            var clean = url.trim().replace(" ", "")
+            if (!clean.startsWith("http://") && !clean.startsWith("https://")) {
+                clean = "https://$clean"
+            }
+            clean = clean.trimEnd('/')
+            if (!clean.endsWith("/api/v1")) {
+                clean = "$clean/api/v1"
+            }
+            clean = "$clean/"
+            cachedCustomServerUrl = clean
+        }
         context.dataStore.edit { prefs ->
             if (url.isBlank()) {
                 prefs.remove(KEY_CUSTOM_SERVER_URL)

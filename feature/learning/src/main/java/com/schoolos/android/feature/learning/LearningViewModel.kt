@@ -37,6 +37,7 @@ data class MaterialItem(
 
 data class LearningUiState(
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val error: String? = null,
     val searchQuery: String = "",
     val selectedCategory: String = "Semua",
@@ -81,49 +82,79 @@ class LearningViewModel @Inject constructor(
     fun loadMaterials() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            repository.getMaterials()
-                .onSuccess { list ->
-                    val mapped = list.mapIndexed { idx, m ->
-                        val color = when (idx % 4) {
-                            0 -> NeonBlue
-                            1 -> TeacherNeon
-                            2 -> AccentNeonPurple
-                            else -> StudentNeon
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(5000L) {
+                    repository.getMaterials()
+                        .onSuccess { list ->
+                            allMaterials = mapMaterials(list)
+                            filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
                         }
-                        val typeLabel = when (m.materialType) {
-                            MaterialType.VIDEO -> "VIDEO"
-                            MaterialType.DOCUMENT -> "PDF"
-                            MaterialType.IMAGE -> "IMAGE"
-                            MaterialType.ARTICLE -> "ARTICLE"
+                        .onFailure { err ->
+                            _state.value = _state.value.copy(
+                                error = err.message ?: "Gagal memuat modul pembelajaran."
+                            )
                         }
-                        MaterialItem(
-                            id = m.id,
-                            title = m.title,
-                            type = typeLabel,
-                            size = m.size ?: "PDF Digital",
-                            subject = m.subject,
-                            color = color,
-                            isCompleted = m.isCompleted,
-                            completedCount = m.completedCount,
-                            readTimeMinutes = if (typeLabel == "VIDEO") 12 else 8,
-                            description = m.description,
-                            teacherName = m.teacherName,
-                            className = m.className,
-                            startPage = m.startPage,
-                            endPage = m.endPage,
-                            mediaUrl = m.mediaUrl,
-                            thumbnailUrl = m.thumbnailUrl,
-                        )
-                    }
-                    allMaterials = mapped
-                    filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
                 }
-                .onFailure { err ->
-                    _state.value = _state.value.copy(
-                        isLoading = false,
-                        error = err.message ?: "Gagal memuat modul pembelajaran."
-                    )
+            } finally {
+                _state.value = _state.value.copy(isLoading = false)
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isRefreshing = true, error = null)
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(3500L) {
+                    repository.getMaterials()
+                        .onSuccess { list ->
+                            allMaterials = mapMaterials(list)
+                            filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
+                        }
+                        .onFailure { err ->
+                            _state.value = _state.value.copy(
+                                error = err.message ?: "Gagal memperbarui modul pembelajaran."
+                            )
+                        }
                 }
+            } finally {
+                _state.value = _state.value.copy(isRefreshing = false, isLoading = false)
+            }
+        }
+    }
+
+    private fun mapMaterials(list: List<com.schoolos.android.domain.model.LearningMaterial>): List<MaterialItem> {
+        return list.mapIndexed { idx, m ->
+            val color = when (idx % 4) {
+                0 -> NeonBlue
+                1 -> TeacherNeon
+                2 -> AccentNeonPurple
+                else -> StudentNeon
+            }
+            val typeLabel = when (m.materialType) {
+                MaterialType.VIDEO -> "VIDEO"
+                MaterialType.DOCUMENT -> "PDF"
+                MaterialType.IMAGE -> "IMAGE"
+                MaterialType.ARTICLE -> "ARTICLE"
+            }
+            MaterialItem(
+                id = m.id,
+                title = m.title,
+                type = typeLabel,
+                size = m.size ?: "PDF Digital",
+                subject = m.subject,
+                color = color,
+                isCompleted = m.isCompleted,
+                completedCount = m.completedCount,
+                readTimeMinutes = if (typeLabel == "VIDEO") 12 else 8,
+                description = m.description,
+                teacherName = m.teacherName,
+                className = m.className,
+                startPage = m.startPage,
+                endPage = m.endPage,
+                mediaUrl = m.mediaUrl,
+                thumbnailUrl = m.thumbnailUrl,
+            )
         }
     }
 

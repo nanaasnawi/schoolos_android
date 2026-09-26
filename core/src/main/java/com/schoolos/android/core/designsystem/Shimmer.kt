@@ -7,6 +7,8 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,11 +16,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -27,11 +28,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.unit.dp
 
 @Composable
 fun ShimmerBrush(
-    targetValue: Float = 1000f,
+    targetValue: Float = 1200f,
     showShimmer: Boolean = true,
 ): Brush {
     if (!showShimmer) return Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
@@ -40,16 +42,25 @@ fun ShimmerBrush(
         initialValue = 0f,
         targetValue = targetValue,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "shimmer",
     )
-    val shimmerColors = listOf(
-        Color.LightGray.copy(alpha = 0.4f),
-        Color.LightGray.copy(alpha = 0.8f),
-        Color.LightGray.copy(alpha = 0.4f),
-    )
+    val isDark = LocalIsDarkTheme.current
+    val shimmerColors = if (isDark) {
+        listOf(
+            Color(0xFF18181B).copy(alpha = 0.55f),
+            Color(0xFF27272A).copy(alpha = 0.95f),
+            Color(0xFF18181B).copy(alpha = 0.55f),
+        )
+    } else {
+        listOf(
+            Color(0xFFE2E8F0).copy(alpha = 0.55f),
+            Color(0xFFF8FAFC).copy(alpha = 0.95f),
+            Color(0xFFE2E8F0).copy(alpha = 0.55f),
+        )
+    }
     return Brush.linearGradient(
         colors = shimmerColors,
         start = Offset(translateAnim - targetValue, 0.0f),
@@ -60,11 +71,11 @@ fun ShimmerBrush(
 @Composable
 fun ShimmerBox(
     modifier: Modifier = Modifier,
-    shimmerModifier: Modifier = Modifier,
+    shape: Shape = RoundedCornerShape(8.dp),
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(shape)
             .background(ShimmerBrush())
     )
 }
@@ -73,21 +84,40 @@ fun ShimmerBox(
 fun ShimmerCard(
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .padding(16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(16.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            ShimmerBox(modifier = Modifier.width(48.dp).height(48.dp))
-            Column(modifier = Modifier.padding(start = 16.dp).weight(1f)) {
-                ShimmerBox(modifier = Modifier.fillMaxWidth(0.7f).height(16.dp))
+            ShimmerBox(modifier = Modifier.size(44.dp), shape = RoundedCornerShape(10.dp))
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.65f).height(15.dp))
                 Spacer(Modifier.height(8.dp))
-                ShimmerBox(modifier = Modifier.fillMaxWidth(0.4f).height(12.dp))
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.35f).height(12.dp))
             }
+        }
+    }
+}
+
+@Composable
+fun ShimmerList(
+    count: Int = 4,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        repeat(count) {
+            ShimmerCard()
         }
     }
 }

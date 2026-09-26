@@ -191,29 +191,42 @@ fun InAppPdfViewer(
 
     Column(modifier = modifier) {
         if (isLoading) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(200.dp)
+                    .height(240.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicDark),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
             ) {
-                CircularProgressIndicator(color = NeonBlue, modifier = Modifier.size(36.dp))
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = "Mengunduh & Merender Buku Digital...",
-                    color = TextPrimary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = if (startPage != null && endPage != null) "Halaman $startPage — $endPage" else "Menyiapkan lembar bacaan resmi",
-                    color = TextTertiary,
-                    fontSize = 11.sp
-                )
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    ShimmerBox(
+                        modifier = Modifier
+                            .fillMaxWidth(0.88f)
+                            .height(150.dp),
+                        shape = RoundedCornerShape(8.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    ShimmerBox(
+                        modifier = Modifier
+                            .fillMaxWidth(0.55f)
+                            .height(14.dp),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    ShimmerBox(
+                        modifier = Modifier
+                            .fillMaxWidth(0.35f)
+                            .height(10.dp),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                }
             }
         } else if (pages.isNotEmpty()) {
             val totalPages = pages.size

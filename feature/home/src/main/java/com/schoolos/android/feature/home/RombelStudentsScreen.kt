@@ -166,23 +166,12 @@ fun RombelStudentsScreen(
         // ── Content ─────────────────────────────────────────────────────
         when {
             isLoading && students.isEmpty() -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        CircularProgressIndicator(
-                            color = TextSecondary,
-                            strokeWidth = 2.5.dp,
-                            modifier = Modifier.size(32.dp)
-                        )
-                        Text(
-                            text = "Memuat data siswa...",
-                            fontSize = 13.sp,
-                            color = TextTertiary
-                        )
-                    }
-                }
+                com.schoolos.android.core.designsystem.ShimmerList(
+                    count = 6,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                )
             }
             errorMessage != null && students.isEmpty() -> {
                 Box(

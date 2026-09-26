@@ -325,21 +325,28 @@ fun BookReaderDialog(
                 if (isLoading) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(24.dp),
                     ) {
-                        CircularProgressIndicator(color = NeonBlue, modifier = Modifier.size(36.dp))
-                        Spacer(Modifier.height(14.dp))
-                        Text(
-                            text = "Memuat Lembar Buku SIBI...",
-                            color = Color.White,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold
+                        ShimmerBox(
+                            modifier = Modifier
+                                .fillMaxWidth(0.85f)
+                                .height(320.dp),
+                            shape = RoundedCornerShape(12.dp)
                         )
-                        Spacer(Modifier.height(4.dp))
-                        Text(
-                            text = "Menyiapkan berkas resmi Kemendikdasmen",
-                            color = Color(0xFF94A3B8),
-                            fontSize = 11.sp
+                        Spacer(Modifier.height(16.dp))
+                        ShimmerBox(
+                            modifier = Modifier
+                                .fillMaxWidth(0.55f)
+                                .height(16.dp),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        ShimmerBox(
+                            modifier = Modifier
+                                .fillMaxWidth(0.35f)
+                                .height(12.dp),
+                            shape = RoundedCornerShape(4.dp)
                         )
                     }
                 } else if (errorMessage != null) {
