@@ -8,10 +8,13 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -79,6 +82,27 @@ class AuthManager @Inject constructor(
         private val KEY_CUSTOM_SERVER_URL = stringPreferencesKey("custom_server_url")
     }
 
+    private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
+    @Volatile private var cachedAccessToken: String? = null
+    @Volatile private var cachedRefreshToken: String? = null
+    @Volatile private var cachedIsLoggedIn: Boolean = false
+    @Volatile private var cachedCustomServerUrl: String? = null
+
+    init {
+        scope.launch {
+            authState.collect { state ->
+                cachedAccessToken = state.accessToken
+                cachedRefreshToken = state.refreshToken
+                cachedIsLoggedIn = state.isLoggedIn
+            }
+        }
+        scope.launch {
+            context.dataStore.data.collect { prefs ->
+                cachedCustomServerUrl = prefs[KEY_CUSTOM_SERVER_URL]
+            }
+        }
+    }
+
     val authState: Flow<AuthState> = context.dataStore.data.map { prefs ->
         AuthState(
             accessToken = prefs[KEY_ACCESS_TOKEN],
@@ -104,9 +128,29 @@ class AuthManager @Inject constructor(
     }
 
     val isLoggedIn: Boolean
-        get() = runBlocking {
-            context.dataStore.data.first()[KEY_IS_LOGGED_IN] ?: false
+        get() = cachedIsLoggedIn
+
+    fun getAccessTokenSync(): String? = cachedAccessToken
+    fun getRefreshTokenSync(): String? = cachedRefreshToken
+    fun getCustomServerUrlSync(): String? = cachedCustomServerUrl
+
+    fun updateTokensSync(accessToken: String, refreshToken: String) {
+        cachedAccessToken = accessToken
+        if (refreshToken.isNotBlank()) cachedRefreshToken = refreshToken
+        cachedIsLoggedIn = true
+        scope.launch {
+            updateTokens(accessToken, refreshToken)
         }
+    }
+
+    fun clearSessionSync() {
+        cachedAccessToken = null
+        cachedRefreshToken = null
+        cachedIsLoggedIn = false
+        scope.launch {
+            clearSession()
+        }
+    }
 
     suspend fun saveSession(
         accessToken: String,

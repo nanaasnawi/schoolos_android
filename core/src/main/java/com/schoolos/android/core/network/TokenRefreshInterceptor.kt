@@ -1,7 +1,6 @@
 package com.schoolos.android.core.network
 
 import com.schoolos.android.core.auth.AuthManager
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import okhttp3.Authenticator
@@ -59,51 +58,49 @@ class TokenRefreshInterceptor @Inject constructor(
             return null
         }
 
-        return runBlocking {
-            val refreshToken = authManager.getRefreshToken()
-            if (refreshToken.isNullOrBlank()) {
-                return@runBlocking null
-            }
+        val refreshToken = authManager.getRefreshTokenSync()
+        if (refreshToken.isNullOrBlank()) {
+            return null
+        }
 
-            try {
-                val body = json.encodeToString(
-                    RefreshBody.serializer(),
-                    RefreshBody(refreshToken),
-                )
-                val originalUrl = response.request.url
-                val refreshHttpUrl = originalUrl.newBuilder()
-                    .encodedPath("/api/v1/auth/refresh")
-                    .query(null)
+        return try {
+            val body = json.encodeToString(
+                RefreshBody.serializer(),
+                RefreshBody(refreshToken),
+            )
+            val originalUrl = response.request.url
+            val refreshHttpUrl = originalUrl.newBuilder()
+                .encodedPath("/api/v1/auth/refresh")
+                .query(null)
+                .build()
+
+            val refreshResponse = refreshClient.newCall(
+                Request.Builder()
+                    .url(refreshHttpUrl)
+                    .post(body.toRequestBody("application/json".toMediaType()))
                     .build()
+            ).execute()
 
-                val refreshResponse = refreshClient.newCall(
-                    Request.Builder()
-                        .url(refreshHttpUrl)
-                        .post(body.toRequestBody("application/json".toMediaType()))
-                        .build()
-                ).execute()
-
-                if (!refreshResponse.isSuccessful) {
-                    if (refreshResponse.code == 401) {
-                        authManager.clearSession()
-                    }
-                    return@runBlocking null
+            if (!refreshResponse.isSuccessful) {
+                if (refreshResponse.code == 401) {
+                    authManager.clearSessionSync()
                 }
-
-                val responseBody = refreshResponse.body?.string() ?: return@runBlocking null
-                val tokenResponse = json.decodeFromString<RefreshResult>(responseBody)
-
-                authManager.updateTokens(
-                    accessToken = tokenResponse.accessToken,
-                    refreshToken = tokenResponse.refreshToken,
-                )
-
-                response.request.newBuilder()
-                    .header("Authorization", "Bearer ${tokenResponse.accessToken}")
-                    .build()
-            } catch (_: Exception) {
-                null
+                return null
             }
+
+            val responseBody = refreshResponse.body?.string() ?: return null
+            val tokenResponse = json.decodeFromString<RefreshResult>(responseBody)
+
+            authManager.updateTokensSync(
+                accessToken = tokenResponse.accessToken,
+                refreshToken = tokenResponse.refreshToken,
+            )
+
+            response.request.newBuilder()
+                .header("Authorization", "Bearer ${tokenResponse.accessToken}")
+                .build()
+        } catch (_: Exception) {
+            null
         }
     }
 }
