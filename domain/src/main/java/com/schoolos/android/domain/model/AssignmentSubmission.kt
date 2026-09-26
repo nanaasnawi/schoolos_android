@@ -14,5 +14,6 @@ data class AssignmentSubmission(
     val gradedBy: String?,
     val studentName: String? = null,
     val studentNisn: String? = null,
+    val studentUserId: String? = null,
     val answers: List<SubmissionAnswer> = emptyList(),
 )

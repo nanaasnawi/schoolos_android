@@ -218,7 +218,8 @@ class AuthManager @Inject constructor(
     }
 
     suspend fun getStudentId(): String? {
-        return context.dataStore.data.first()[KEY_USER_ID]
+        val prefs = context.dataStore.data.first()
+        return prefs[KEY_CHILD_ID]?.takeIf { it.isNotBlank() } ?: prefs[KEY_USER_ID]
     }
 
     suspend fun getClassId(): String? {
