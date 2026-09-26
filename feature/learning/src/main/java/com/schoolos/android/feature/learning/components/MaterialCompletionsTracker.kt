@@ -209,20 +209,35 @@ fun TeacherCompletionsTrackerCard(
             // Student list preview or content
             when {
                 isLoading && completions.isEmpty() -> {
-                    Box(
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
-                        contentAlignment = Alignment.Center
+                            .padding(vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            CircularProgressIndicator(
-                                strokeWidth = 2.dp,
-                                color = TeacherNeon,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Memuat data pembaca materi...", fontSize = 12.sp, color = TextSecondary)
+                        repeat(3) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(CosmicNavy)
+                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    ShimmerBox(modifier = Modifier.size(32.dp), shape = CircleShape)
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        ShimmerBox(modifier = Modifier.fillMaxWidth(0.6f).height(12.dp))
+                                        Spacer(Modifier.height(4.dp))
+                                        ShimmerBox(modifier = Modifier.fillMaxWidth(0.35f).height(10.dp))
+                                    }
+                                    ShimmerBox(modifier = Modifier.width(48.dp).height(18.dp), shape = RoundedCornerShape(6.dp))
+                                }
+                            }
                         }
                     }
                 }

@@ -68,13 +68,18 @@ fun LearningMaterialListScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
+        PullRefreshContainer(
+            isRefreshing = state.isRefreshing,
+            onRefresh = viewModel::refresh,
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
 
             // ── ACTIVE SUBJECT FILTER (passed from schedule/session) ─────────
             if (state.subjectFilter != null) {
@@ -157,17 +162,10 @@ fun LearningMaterialListScreen(
                 )
             }
 
-            // ── LOADING STATE ────────────────────────────────────────────────
+            // ── SKELETON SHIMMER LOADING STATE ───────────────────────────────
             if (state.isLoading) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 40.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(color = NeonBlue, modifier = Modifier.size(32.dp))
-                    }
+                items(4) {
+                    LearningMaterialShimmerItem()
                 }
             }
 
@@ -225,6 +223,47 @@ fun LearningMaterialListScreen(
                     isTeacher = isTeacher,
                     onClick = { onMaterialClick(item.id) }
                 )
+            }
+        }
+    }
+}
+}
+
+// ── SKELETON SHIMMER ITEM ─────────────────────────────────────────────────────
+
+@Composable
+private fun LearningMaterialShimmerItem(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .padding(14.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ShimmerBox(modifier = Modifier.width(64.dp).height(16.dp), shape = RoundedCornerShape(4.dp))
+                ShimmerBox(modifier = Modifier.width(52.dp).height(16.dp), shape = RoundedCornerShape(4.dp))
+            }
+            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
+            ) {
+                ShimmerBox(modifier = Modifier.size(38.dp), shape = RoundedCornerShape(8.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.72f).height(15.dp))
+                    Spacer(Modifier.height(6.dp))
+                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.48f).height(12.dp))
+                    Spacer(Modifier.height(6.dp))
+                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.30f).height(10.dp))
+                }
             }
         }
     }

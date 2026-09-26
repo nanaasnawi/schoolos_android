@@ -1,11 +1,15 @@
 package com.schoolos.android.core.designsystem
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -48,7 +52,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -67,7 +71,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -724,19 +730,17 @@ fun EmptyState(
     }
 }
 
-// ─── Loading State — RETAINED ANIMATION & WIDGET ────────────────────────────
+// ─── Loading State — MODERN SKELETON SHIMMER ─────────────────────────────────
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            CircularProgressIndicator(
-                color = NeonBlue,
-                trackColor = NeonBlueBg,
-                strokeWidth = 3.dp,
-                modifier = Modifier.size(42.dp),
-            )
-            Spacer(Modifier.height(12.dp))
-            Text("Memuat data...", fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        repeat(4) {
+            ShimmerCard()
         }
     }
 }
@@ -772,14 +776,149 @@ fun ErrorState(
 // ─── Pull Refresh ─────────────────────────────────────────────────────────────
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
+fun DoubleDotRefreshIndicator(
+    state: PullToRefreshState,
+    isRefreshing: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val distanceFraction = state.distanceFraction
+    val isDark = LocalIsDarkTheme.current
+    val dotColor = if (isDark) Color(0xFFA1A1AA) else Color(0xFF8E8E93)
+    val textColor = if (isDark) Color(0xFFA1A1AA) else Color(0xFF8E8E93)
+
+    // Infinite spinner rotation & pulse when refreshing
+    val infiniteTransition = rememberInfiniteTransition(label = "RefreshDotsTransition")
+    val spinRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
+        label = "SpinRotation",
+    )
+    val orbitScale by infiniteTransition.animateFloat(
+        initialValue = 0.9f,
+        targetValue = 1.15f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "OrbitScale",
+    )
+
+    // When pulling: rotate from 0° (horizontal ● ●) to 90° (vertical : ) directly with zero lag
+    val currentRotation = if (isRefreshing) spinRotation else (distanceFraction.coerceIn(0f, 1f) * 90f)
+
+    // Alpha & appearance
+    val targetAlpha = when {
+        isRefreshing -> 1f
+        distanceFraction > 0.08f -> ((distanceFraction - 0.08f) / 0.4f).coerceIn(0f, 1f)
+        else -> 0f
+    }
+    val animatedAlpha by animateFloatAsState(
+        targetValue = targetAlpha,
+        animationSpec = tween(durationMillis = 150),
+        label = "IndicatorAlpha",
+    )
+
+    // Dynamic text in Indonesian
+    val statusText = when {
+        isRefreshing -> "Sedang memperbarui..."
+        distanceFraction >= 1.0f -> "Lepaskan untuk memperbarui"
+        else -> "Tarik ke bawah untuk memperbarui"
+    }
+
+    if (animatedAlpha > 0.01f) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(top = 10.dp, bottom = 6.dp)
+                .graphicsLayer {
+                    alpha = animatedAlpha
+                },
+        ) {
+            // Dual Dot Canvas
+            Canvas(
+                modifier = Modifier
+                    .size(24.dp)
+                    .graphicsLayer {
+                        rotationZ = currentRotation
+                    },
+            ) {
+                val baseSpacing = 5.5.dp.toPx()
+                val currentSpacing = if (isRefreshing) baseSpacing * orbitScale else baseSpacing
+                val dotRadius = 3.5.dp.toPx()
+
+                // Dot 1 (Left / Orbit 1)
+                drawCircle(
+                    color = dotColor,
+                    radius = dotRadius,
+                    center = Offset(center.x - currentSpacing, center.y),
+                )
+                // Dot 2 (Right / Orbit 2)
+                drawCircle(
+                    color = dotColor,
+                    radius = dotRadius,
+                    center = Offset(center.x + currentSpacing, center.y),
+                )
+            }
+
+            Spacer(modifier = Modifier.height(7.dp))
+
+            Text(
+                text = statusText,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = textColor,
+                letterSpacing = (-0.1).sp,
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
 fun PullRefreshContainer(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     modifier: Modifier = Modifier,
+    includeStatusBarPadding: Boolean = false,
     content: @Composable () -> Unit,
 ) {
-    PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = modifier) {
-        content()
+    val state = rememberPullToRefreshState()
+    val density = LocalDensity.current
+
+    // Single source of truth: continuously driven by state.distanceFraction (fully managed by PullToRefreshBox)
+    // Eliminates jump-to-zero, double bounce, and oscillation artifacts!
+    val currentOffsetY = 62.dp * state.distanceFraction.coerceIn(0f, 1.25f)
+
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier,
+        state = state,
+        indicator = {
+            DoubleDotRefreshIndicator(
+                state = state,
+                isRefreshing = isRefreshing,
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .then(if (includeStatusBarPadding) Modifier.statusBarsPadding() else Modifier),
+            )
+        },
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .graphicsLayer {
+                    translationY = with(density) { currentOffsetY.toPx() }
+                },
+        ) {
+            content()
+        }
     }
 }
 

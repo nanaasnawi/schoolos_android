@@ -84,6 +84,7 @@ import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.PullRefreshContainer
+import com.schoolos.android.core.designsystem.ShimmerList
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
@@ -326,26 +327,12 @@ fun TeacherChatScreen(
                 ) { state ->
                     when (state) {
                         "loading" -> {
-                            Box(
-                                modifier = Modifier.fillMaxSize(),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                                ) {
-                                    CircularProgressIndicator(
-                                        color = if (isTeacherMode) TeacherNeon else StudentNeon,
-                                        strokeWidth = 2.5.dp,
-                                        modifier = Modifier.size(32.dp),
-                                    )
-                                    Text(
-                                        text = "Memuat percakapan...",
-                                        fontSize = 12.sp,
-                                        color = TextSecondary,
-                                    )
-                                }
-                            }
+                            ShimmerList(
+                                count = 5,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                            )
                         }
 
                         "empty" -> {

@@ -49,6 +49,8 @@ android {
                     keyPassword = localProps.getProperty("release.keyPassword", "")
                 }
                 signingConfig = releaseSigning
+            } else {
+                signingConfig = signingConfigs.getByName("debug")
             }
         }
     }

@@ -26,12 +26,14 @@ import com.schoolos.android.domain.repository.NotificationRepository
 import com.schoolos.android.domain.repository.ProgressRepository
 import com.schoolos.android.domain.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -153,9 +155,16 @@ class HomeViewModel @Inject constructor(
             _state.update { it.copy(isRefreshing = true) }
         }
         viewModelScope.launch {
-            syncData(silent = !isPullRefresh, force = isPullRefresh)
-            if (isPullRefresh) {
-                _state.update { it.copy(isRefreshing = false) }
+            try {
+                withTimeoutOrNull(3500L) {
+                    syncData(silent = !isPullRefresh, force = isPullRefresh)
+                }
+            } catch (e: Exception) {
+                timber.log.Timber.e(e, "Error refreshing home data")
+            } finally {
+                if (isPullRefresh) {
+                    _state.update { it.copy(isRefreshing = false) }
+                }
             }
         }
     }
@@ -177,7 +186,7 @@ class HomeViewModel @Inject constructor(
     }
 
     private suspend fun syncData(silent: Boolean, force: Boolean = false) {
-        if (isSyncInProgress) return
+        if (isSyncInProgress && !force) return
         if (!force && System.currentTimeMillis() - lastSyncTimestamp < 15_000L) return
         isSyncInProgress = true
         try {

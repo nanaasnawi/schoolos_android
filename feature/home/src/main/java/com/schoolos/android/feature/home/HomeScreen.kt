@@ -138,6 +138,7 @@ fun HomeScreen(
         PullRefreshContainer(
             isRefreshing = state.isRefreshing,
             onRefresh = { viewModel.refresh(isPullRefresh = true) },
+            includeStatusBarPadding = true,
             modifier = Modifier.fillMaxSize(),
         ) {
             LazyColumn(
