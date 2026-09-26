@@ -1,5 +1,8 @@
 package com.schoolos.android.feature.profile.components
 
+import androidx.annotation.DrawableRes
+import androidx.compose.ui.res.painterResource
+import com.schoolos.android.core.R as CoreR
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -82,7 +85,7 @@ fun ProfileSettingsGroup(
         ) {
             Column {
                 ProfileSettingRow(
-                    icon = Icons.Default.Lock,
+                    iconRes = CoreR.drawable.ic_modern_lock,
                     color = NeonBlue,
                     title = "Keamanan & Kata Sandi",
                     sub = "Perbarui kata sandi akun SchoolOS",
@@ -144,7 +147,7 @@ fun ProfileSettingsGroup(
                 Box(Modifier.fillMaxWidth().height(1.dp).background(GlassBorder2))
 
                 ProfileSettingRow(
-                    icon = Icons.Default.Notifications,
+                    iconRes = CoreR.drawable.ic_modern_bell,
                     color = NeonWarning,
                     title = "Notifikasi Akademik",
                     sub = "Pengingat jadwal, tugas & pengumuman",
@@ -186,8 +189,8 @@ fun ProfileSettingsGroup(
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    Icons.AutoMirrored.Filled.ExitToApp,
-                    null,
+                    painter = painterResource(id = CoreR.drawable.ic_modern_logout),
+                    contentDescription = null,
                     tint = NeonError,
                     modifier = Modifier.size(18.dp),
                 )
@@ -205,7 +208,8 @@ fun ProfileSettingsGroup(
 
 @Composable
 private fun ProfileSettingRow(
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    @DrawableRes iconRes: Int? = null,
     color: Color,
     title: String,
     sub: String,
@@ -226,7 +230,16 @@ private fun ProfileSettingRow(
                 .border(0.5.dp, color.copy(alpha = 0.22f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = color,
+                    modifier = Modifier.size(20.dp),
+                )
+            } else if (icon != null) {
+                Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+            }
         }
         Spacer(Modifier.width(14.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -234,10 +247,10 @@ private fun ProfileSettingRow(
             Text(sub, fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Medium)
         }
         Icon(
-            imageVector = Icons.Default.ChevronRight,
+            painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
             contentDescription = null,
             tint = TextTertiary.copy(alpha = 0.5f),
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(16.dp),
         )
     }
 }

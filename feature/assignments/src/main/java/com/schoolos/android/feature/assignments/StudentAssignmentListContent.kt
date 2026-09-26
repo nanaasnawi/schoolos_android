@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.assignments
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -220,10 +222,10 @@ private fun StudentAssignmentCard(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = if (isCompleted) Icons.Default.CheckCircle else Icons.AutoMirrored.Filled.Assignment,
+                        painter = painterResource(id = if (isCompleted) CoreR.drawable.ic_modern_check_circle else CoreR.drawable.ic_modern_tasks),
                         contentDescription = null,
-                        tint = if (isCompleted) NeonSuccess else TextSecondary,
-                        modifier = Modifier.size(18.dp)
+                        tint = if (isCompleted) NeonSuccess else StudentNeon,
+                        modifier = Modifier.size(19.dp)
                     )
                 }
 
@@ -253,10 +255,10 @@ private fun StudentAssignmentCard(
 
                 Spacer(Modifier.width(8.dp))
                 Icon(
-                    imageVector = Icons.Default.ChevronRight,
+                    painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                     contentDescription = null,
                     tint = TextTertiary,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(14.dp)
                 )
             }
 
@@ -278,14 +280,14 @@ private fun StudentAssignmentCard(
                     modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Schedule,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_clock),
                         contentDescription = null,
                         tint = when {
                             isOverdue -> NeonWarning
                             dueInfo != null -> dueInfo.color
                             else -> TextTertiary
                         },
-                        modifier = Modifier.size(12.dp)
+                        modifier = Modifier.size(13.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
@@ -358,7 +360,7 @@ private fun EmptyAssignmentState(selectedTab: String) {
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Assignment,
+                    painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
                     contentDescription = null,
                     tint = TextSecondary,
                     modifier = Modifier.size(20.dp)

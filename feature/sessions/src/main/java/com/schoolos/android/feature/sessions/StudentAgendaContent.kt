@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.sessions
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -97,7 +99,7 @@ fun LazyListScope.studentAgendaContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.CalendarMonth,
+                            painter = painterResource(id = CoreR.drawable.ic_modern_calendar),
                             contentDescription = null,
                             tint = TextSecondary,
                             modifier = Modifier.size(20.dp)
@@ -365,12 +367,21 @@ private fun StudentTimelineItem(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.weight(1f, fill = false),
                     ) {
-                        Icon(
-                            imageVector = if (isOnline) Icons.Default.Videocam else Icons.Default.LocationOn,
-                            contentDescription = null,
-                            tint = TextTertiary,
-                            modifier = Modifier.size(12.dp),
-                        )
+                        if (isOnline) {
+                            Icon(
+                                imageVector = Icons.Default.Videocam,
+                                contentDescription = null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(12.dp),
+                            )
+                        } else {
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_location),
+                                contentDescription = null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(12.dp),
+                            )
+                        }
                         Spacer(Modifier.width(4.dp))
                         Text(
                             text = room,
@@ -402,10 +413,10 @@ private fun StudentTimelineItem(
                             )
                             Spacer(Modifier.width(3.dp))
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                                 contentDescription = null,
                                 tint = if (isActive) NeonSuccess else TextSecondary,
-                                modifier = Modifier.size(10.dp),
+                                modifier = Modifier.size(9.dp),
                             )
                         }
                     }

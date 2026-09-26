@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.home
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -35,6 +36,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -74,7 +76,8 @@ fun BentoActionCard(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String,
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    @DrawableRes iconRes: Int? = null,
     accentColor: Color,
     badgeCount: Int = 0,
     badgeText: String = "",
@@ -83,9 +86,9 @@ fun BentoActionCard(
     Box(
         modifier = modifier
             .height(108.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
             .padding(12.dp),
     ) {
@@ -98,21 +101,30 @@ fun BentoActionCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Minimalist Icon Container
+                // Modern Squircle Icon Container with Duotone Soft Accent
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(accentColor.copy(alpha = 0.12f))
+                        .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = TextPrimary,
-                        modifier = Modifier.size(17.dp),
-                    )
+                    if (iconRes != null) {
+                        Icon(
+                            painter = painterResource(id = iconRes),
+                            contentDescription = title,
+                            tint = accentColor,
+                            modifier = Modifier.size(19.dp),
+                        )
+                    } else if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = title,
+                            tint = accentColor,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
 
                 // Dynamic Badge (with ellipsis so it never pushes layout)

@@ -108,9 +108,24 @@ fun StudentSessionDetailContent(
         SectionTitle("SUMBER DAYA PELAJARAN")
         GlassCard(cornerRadius = 16.dp) {
             Row(modifier = Modifier.fillMaxWidth().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                ResourceItem("Tugas", Icons.AutoMirrored.Filled.Assignment, StudentNeon, Modifier.weight(1f)) { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
-                ResourceItem("Kuis", Icons.Default.Quiz, NeonSuccess, Modifier.weight(1f)) { onOpenQuizzes(session.subjectName?.trim().orEmpty()) }
-                ResourceItem("Materi", Icons.Default.Book, NeonBlue, Modifier.weight(1f)) { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
+                ResourceItem(
+                    label = "Tugas",
+                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_tasks,
+                    color = StudentNeon,
+                    modifier = Modifier.weight(1f)
+                ) { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
+                ResourceItem(
+                    label = "Kuis",
+                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_quiz,
+                    color = NeonSuccess,
+                    modifier = Modifier.weight(1f)
+                ) { onOpenQuizzes(session.subjectName?.trim().orEmpty()) }
+                ResourceItem(
+                    label = "Materi",
+                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_book,
+                    color = NeonBlue,
+                    modifier = Modifier.weight(1f)
+                ) { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
             }
         }
 
