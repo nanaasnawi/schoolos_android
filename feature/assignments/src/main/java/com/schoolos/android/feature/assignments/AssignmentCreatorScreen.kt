@@ -301,11 +301,13 @@ fun AssignmentCreatorScreen(
                     )
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            Triple("STRUCTURED_QUESTIONS", "📝 Soal PG & Essay", "Dikerjakan online"),
+                            Triple("STRUCTURED_QUESTIONS", "📝 PG & Essay", "Dikerjakan online"),
                             Triple("HOMEWORK_PR", "📄 PR / Berkas", "Upload Foto/PDF"),
                             Triple("HYBRID", "🔄 Kombinasi", "Soal + Upload")
                         ).forEach { (formatKey, label, sublabel) ->
@@ -313,6 +315,7 @@ fun AssignmentCreatorScreen(
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
+                                    .fillMaxHeight()
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(
                                         if (isSelected) TeacherNeon.copy(alpha = 0.12f) else CosmicSurface2
@@ -326,13 +329,17 @@ fun AssignmentCreatorScreen(
                                     .padding(vertical = 12.dp, horizontal = 6.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
                                     Text(
                                         label,
                                         color = if (isSelected) TeacherNeon else TextPrimary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
-                                        textAlign = TextAlign.Center
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1
                                     )
                                     Spacer(Modifier.height(3.dp))
                                     Text(
@@ -340,7 +347,8 @@ fun AssignmentCreatorScreen(
                                         color = if (isSelected) TeacherNeon.copy(alpha = 0.8f) else TextTertiary,
                                         fontSize = 9.sp,
                                         textAlign = TextAlign.Center,
-                                        lineHeight = 11.sp
+                                        lineHeight = 11.sp,
+                                        maxLines = 1
                                     )
                                 }
                             }

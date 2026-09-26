@@ -168,111 +168,83 @@ fun MaterialCreatorScreen(
             viewModel.resetState()
         }
     }
-
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
-            // Hero Header — flat bottom, emerald-teal gradient
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(EmeraldGradient)
-                    .statusBarsPadding()
-            ) {
-                // Decorative circles
-                Box(
-                    modifier = Modifier
-                        .size(140.dp)
-                        .offset(x = 260.dp, y = (-30).dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.07f))
-                )
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .offset(x = 290.dp, y = 20.dp)
-                        .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.05f))
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CustomBackButton(
-                        onClick = onBack,
-                        onHero = true,
-                    )
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(
-                            "Studio Materi Guru",
-                            fontSize = 19.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White,
-                            letterSpacing = (-0.3).sp
-                        )
-                        Text(
-                            "Publikasikan Modul Digital ke Kelas",
-                            fontSize = 12.sp,
-                            color = Color.White.copy(alpha = 0.8f),
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
-                    Spacer(Modifier.weight(1f))
-                    // Badge icon
+            ExecutiveTopBar(
+                title = "Studio Materi Guru",
+                subtitle = "Publikasikan Modul Digital ke Kelas",
+                onBack = onBack,
+                actions = {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color.White.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (showPreview) EmeraldGlow.copy(alpha = 0.2f) else CosmicSurface2)
+                            .border(
+                                0.5.dp,
+                                if (showPreview) EmeraldGlow else GlassBorder,
+                                RoundedCornerShape(8.dp)
+                            )
+                            .clickable { showPreview = !showPreview }
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
-                        Icon(
-                            Icons.Default.MenuBook,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                if (showPreview) Icons.Default.Edit else Icons.Default.Visibility,
+                                contentDescription = null,
+                                tint = if (showPreview) EmeraldGlow else TextSecondary,
+                                modifier = Modifier.size(14.dp)
+                            )
+                            Text(
+                                if (showPreview) "Tutup" else "Preview",
+                                color = if (showPreview) EmeraldGlow else TextPrimary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
-            }
+            )
         },
         bottomBar = {
             Surface(
                 color = CosmicNavy,
-                shadowElevation = 12.dp,
-                modifier = Modifier.fillMaxWidth()
+                tonalElevation = 10.dp,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .border(1.dp, GlassBorder, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     OutlinedButton(
                         onClick = { showPreview = !showPreview },
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1f).height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldGlow),
-                        border = ButtonDefaults.outlinedButtonBorder().copy(
-                            brush = Brush.linearGradient(listOf(EmeraldGlow, TealAccent))
-                        )
+                        border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.5f))
                     ) {
                         Icon(
                             if (showPreview) Icons.Default.Edit else Icons.Default.Visibility,
                             contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                            modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
                             if (showPreview) "Tutup Preview" else "Preview",
                             fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            fontSize = 12.sp
                         )
                     }
 
@@ -313,16 +285,21 @@ fun MaterialCreatorScreen(
                             )
                         },
                         enabled = title.isNotBlank() && !state.isLoading && !state.isUploadingFile,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1.4f).height(50.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow)
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier
+                            .weight(1.4f)
+                            .height(48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = EmeraldGlow,
+                            disabledContainerColor = EmeraldGlow.copy(alpha = 0.35f)
+                        )
                     ) {
                         if (state.isLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         } else {
                             Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Terbitkan Materi", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            Text("Terbitkan Modul", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -333,370 +310,80 @@ fun MaterialCreatorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState()),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(Modifier.height(16.dp))
-
             // ── LIVE STUDENT FEED PREVIEW CARD ──
             AnimatedVisibility(visible = showPreview) {
-                Card(
-                    colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                    shape = RoundedCornerShape(0.dp),
-                    modifier = Modifier.fillMaxWidth()
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CosmicNavy)
+                        .border(1.dp, EmeraldGlow.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                        .padding(16.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Brush.linearGradient(listOf(EmeraldGlow.copy(alpha = 0.08f), TealAccent.copy(alpha = 0.05f))))
-                    ) {
-                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier.size(8.dp).clip(CircleShape)
-                                            .background(NeonSuccess)
-                                    )
-                                    Text("Preview Modul di HP Siswa", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Text("In-App Reader", color = TextTertiary, fontSize = 10.sp)
+                                Box(
+                                    modifier = Modifier
+                                        .size(8.dp)
+                                        .clip(CircleShape)
+                                        .background(NeonSuccess)
+                                )
+                                Text("Preview Modul di HP Siswa", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
-                            Text(
-                                text = title.ifBlank { "Judul Modul Materi Pembelajaran" },
-                                color = TextPrimary,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                            Text(
-                                text = description.ifBlank { "Deskripsi pengantar dan capaian kompetensi materi..." },
-                                color = TextSecondary,
-                                fontSize = 12.sp
-                            )
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Chip(label = selectedSubject, color = EmeraldGlow)
-                                Chip(label = selectedType.name, color = TealAccent)
+                            Text("In-App Reader", color = TextTertiary, fontSize = 10.sp)
+                        }
+                        Text(
+                            text = title.ifBlank { "Judul Modul Materi Pembelajaran" },
+                            color = TextPrimary,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = description.ifBlank { "Deskripsi pengantar dan capaian kompetensi materi..." },
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                            maxLines = 3
+                        )
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Chip(label = selectedSubject.ifBlank { "Mata Pelajaran" }, color = EmeraldGlow)
+                            Chip(label = selectedType.name, color = TealAccent)
+                            if (selectedClass.isNotBlank()) {
+                                Chip(label = selectedClass, color = NeonBlue)
                             }
                         }
                     }
                 }
             }
 
-            // ── PERPUSTAKAAN GURU / KATALOG BUKU SELEKTOR ──
-            Card(
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
-                ),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.35f)),
+            // ── SECTION 1: SASARAN ROMBEL & MAPEL ──
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text("📚", fontSize = 20.sp)
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "Katalog Buku Perpustakaan Guru",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 14.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = if (selectedBook != null)
-                                    "Buku dipilih: ${selectedBook!!.title}"
-                                else
-                                    "Gunakan buku teks resmi Kurikulum Merdeka yang siap dibaca siswa",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    }
-
-                    if (selectedBook != null) {
-                        Surface(
-                            color = MaterialTheme.colorScheme.surface,
-                            shape = RoundedCornerShape(10.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = selectedBook!!.title,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 12.sp,
-                                            color = MaterialTheme.colorScheme.primary
-                                        )
-                                        Text(
-                                            text = "${selectedBook!!.publisher ?: "Kemendikbudristek"} • Total ${selectedBook!!.totalPages} Hal.",
-                                            fontSize = 10.sp,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
-                                    }
-                                    IconButton(
-                                        onClick = { selectedBook = null },
-                                        modifier = Modifier.size(28.dp)
-                                    ) {
-                                        Icon(Icons.Default.Close, "Batal", tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(16.dp))
-                                    }
-                                }
-
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    OutlinedTextField(
-                                        value = startPageInput,
-                                        onValueChange = { startPageInput = it.filter { ch -> ch.isDigit() } },
-                                        label = { Text("Hal. Mulai", fontSize = 10.sp) },
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true,
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                                    )
-                                    OutlinedTextField(
-                                        value = endPageInput,
-                                        onValueChange = { endPageInput = it.filter { ch -> ch.isDigit() } },
-                                        label = { Text("Hal. Selesai", fontSize = 10.sp) },
-                                        modifier = Modifier.weight(1f),
-                                        singleLine = true,
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    if (selectedBook == null && state.recommendedBooks.isNotEmpty()) {
-                        val primaryBook = state.recommendedBooks.first()
-                        val otherBooks = state.recommendedBooks.drop(1).take(3)
-
-                        Surface(
-                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.6f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("💡", fontSize = 16.sp)
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = "Buku Resmi yang Direkomendasikan (${state.recommendedBooks.size} Pilihan):",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.primary
-                                    )
-                                }
-                                Text(
-                                    text = primaryBook.title,
-                                    fontWeight = FontWeight.Black,
-                                    fontSize = 13.sp,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer
-                                )
-                                Text(
-                                    text = "${primaryBook.publisher ?: "Kemendikdasmen"} • ${primaryBook.totalPages} Halaman",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
-                                )
-                                Button(
-                                    onClick = {
-                                        selectedBook = primaryBook
-                                        if (title.isBlank()) {
-                                            title = "Materi: ${primaryBook.title}"
-                                        }
-                                        startPageInput = "1"
-                                        endPageInput = minOf(20, primaryBook.totalPages).toString()
-                                    },
-                                    modifier = Modifier.fillMaxWidth().height(38.dp),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow)
-                                ) {
-                                    Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(15.dp))
-                                    Spacer(Modifier.width(6.dp))
-                                    Text("Gunakan Buku Utama Ini", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                                }
-
-                                if (otherBooks.isNotEmpty()) {
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(
-                                        text = "Pilihan Terkait Lainnya:",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                    )
-                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        otherBooks.forEach { altBook ->
-                                            Surface(
-                                                color = MaterialTheme.colorScheme.surface.copy(alpha = 0.7f),
-                                                shape = RoundedCornerShape(6.dp),
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clickable {
-                                                        selectedBook = altBook
-                                                        if (title.isBlank()) {
-                                                            title = "Materi: ${altBook.title}"
-                                                        }
-                                                        startPageInput = "1"
-                                                        endPageInput = minOf(20, altBook.totalPages).toString()
-                                                    }
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(
-                                                        text = altBook.title,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Medium,
-                                                        modifier = Modifier.weight(1f),
-                                                        maxLines = 1,
-                                                        color = MaterialTheme.colorScheme.onSurface
-                                                    )
-                                                    Text(
-                                                        text = "Pilih →",
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold,
-                                                        color = MaterialTheme.colorScheme.primary
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    OutlinedButton(
-                        onClick = { showBookCatalogSheet = true },
-                        modifier = Modifier.fillMaxWidth().height(42.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.primary),
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.5f))
-                    ) {
-                        Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(
-                            text = if (selectedBook != null) "Ganti Buku dari Katalog" else "Jelajahi Katalog Lengkap (${state.availableBooks.size} Buku)",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 12.sp
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // ── SECTION 1: FORMAT MATERI ──
-            Column(modifier = Modifier.padding(horizontal = 10.dp)) {
-                Spacer(Modifier.height(4.dp))
-                SectionHeader(
-                    number = null,
-                    title = "Format Modul Pembelajaran",
-                    subtitle = "Pilih jenis konten yang akan diunggah",
-                    accentColor = EmeraldGlow
-                )
-                Spacer(Modifier.height(12.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    listOf(
-                        Triple(MaterialType.DOCUMENT, "PDF", Icons.Default.PictureAsPdf),
-                        Triple(MaterialType.VIDEO, "Video", Icons.Default.PlayCircle),
-                        Triple(MaterialType.IMAGE, "Infografis", Icons.Default.Image),
-                        Triple(MaterialType.ARTICLE, "Artikel", Icons.Default.Article)
-                    ).forEach { (type, label, icon) ->
-                        val isSelected = selectedType == type
-                        val bgAlpha by animateFloatAsState(
-                            targetValue = if (isSelected) 1f else 0f,
-                            animationSpec = tween(200), label = ""
-                        )
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(
-                                    if (isSelected)
-                                        Brush.linearGradient(listOf(EmeraldGlow, TealAccent))
-                                    else
-                                        Brush.linearGradient(listOf(CosmicNavy, CosmicNavy))
-                                )
-                                .border(
-                                    width = if (isSelected) 0.dp else 1.5.dp,
-                                    color = if (isSelected) Color.Transparent else GlassBorder,
-                                    shape = RoundedCornerShape(14.dp)
-                                )
-                                .clickable { selectedType = type }
-                                .padding(vertical = 14.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    icon,
-                                    contentDescription = label,
-                                    tint = if (isSelected) Color.White else EmeraldGlow,
-                                    modifier = Modifier.size(26.dp)
-                                )
-                                Text(
-                                    label,
-                                    color = if (isSelected) Color.White else TextSecondary,
-                                    fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium,
-                                    fontSize = 10.sp,
-                                    textAlign = TextAlign.Center
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(20.dp))
-
-            // ── SECTION 2: SASARAN ROMBEL & MAPEL ──
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     SectionHeader(
-                        number = null,
+                        number = 1,
                         title = "Sasaran Rombel & Mapel",
-                        subtitle = "Tentukan kelas dan mata pelajaran target",
-                        accentColor = TealAccent
+                        subtitle = "Tentukan kelas dan mata pelajaran target penerima modul",
+                        accentColor = EmeraldGlow
                     )
 
-                    // Rombel Dropdown
                     ModernDropdown(
                         value = selectedClass,
                         label = "Rombel Target",
@@ -709,7 +396,6 @@ fun MaterialCreatorScreen(
                         onSelect = { selectedClass = it }
                     )
 
-                    // Mapel Dropdown
                     ModernDropdown(
                         value = selectedSubject,
                         label = "Mata Pelajaran",
@@ -724,22 +410,315 @@ fun MaterialCreatorScreen(
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
-
-            // ── SECTION 3: KONTEN & BERKAS ──
-            Card(
-                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                shape = RoundedCornerShape(0.dp),
-                modifier = Modifier.fillMaxWidth()
+            // ── SECTION 2: FORMAT MODUL PEMBELAJARAN ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                     SectionHeader(
-                        number = null,
-                        title = "Konten & Berkas Materi",
-                        subtitle = "Isi detail dan lampirkan dokumen",
+                        number = 2,
+                        title = "Format Modul Pembelajaran",
+                        subtitle = "Pilih jenis konten media yang akan diunggah",
+                        accentColor = TealAccent
+                    )
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(IntrinsicSize.Min),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            Triple(MaterialType.DOCUMENT, "PDF", Icons.Default.PictureAsPdf),
+                            Triple(MaterialType.VIDEO, "Video", Icons.Default.PlayCircle),
+                            Triple(MaterialType.IMAGE, "Infografis", Icons.Default.Image),
+                            Triple(MaterialType.ARTICLE, "Artikel", Icons.Default.Article)
+                        ).forEach { (type, label, icon) ->
+                            val isSelected = selectedType == type
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(
+                                        if (isSelected) EmeraldGlow.copy(alpha = 0.15f) else CosmicSurface2
+                                    )
+                                    .border(
+                                        width = if (isSelected) 1.5.dp else 0.5.dp,
+                                        color = if (isSelected) EmeraldGlow else GlassBorder,
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
+                                    .clickable { selectedType = type }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Column(
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Icon(
+                                        icon,
+                                        contentDescription = label,
+                                        tint = if (isSelected) EmeraldGlow else TextSecondary,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        label,
+                                        color = if (isSelected) EmeraldGlow else TextPrimary,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 11.sp,
+                                        textAlign = TextAlign.Center,
+                                        maxLines = 1
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── SECTION 3: INTEGRASI BUKU PERPUSTAKAAN (OPSIONAL) ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SectionHeader(
+                        number = 3,
+                        title = "Katalog Buku Kurikulum (Opsional)",
+                        subtitle = "Gunakan buku teks resmi Kurikulum Merdeka yang siap dibaca siswa",
+                        accentColor = EmeraldGlow
+                    )
+
+                    if (selectedBook != null) {
+                        Surface(
+                            color = CosmicSurface2,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.5f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(EmeraldGlow.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text("📚", fontSize = 18.sp)
+                                    }
+                                    Spacer(Modifier.width(10.dp))
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = selectedBook!!.title,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = EmeraldGlow,
+                                            maxLines = 1
+                                        )
+                                        Text(
+                                            text = "${selectedBook!!.publisher ?: "Kemendikbudristek"} • Total ${selectedBook!!.totalPages} Hal.",
+                                            fontSize = 10.sp,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                    IconButton(
+                                        onClick = { selectedBook = null },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(Icons.Default.Close, "Batal", tint = NeonError, modifier = Modifier.size(16.dp))
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    OutlinedTextField(
+                                        value = startPageInput,
+                                        onValueChange = { startPageInput = it.filter { ch -> ch.isDigit() } },
+                                        label = { Text("Hal. Mulai", fontSize = 10.sp) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = EmeraldGlow,
+                                            unfocusedBorderColor = GlassBorder,
+                                            focusedLabelColor = EmeraldGlow,
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary,
+                                            unfocusedLabelColor = TextTertiary
+                                        )
+                                    )
+                                    OutlinedTextField(
+                                        value = endPageInput,
+                                        onValueChange = { endPageInput = it.filter { ch -> ch.isDigit() } },
+                                        label = { Text("Hal. Selesai", fontSize = 10.sp) },
+                                        modifier = Modifier.weight(1f),
+                                        singleLine = true,
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = EmeraldGlow,
+                                            unfocusedBorderColor = GlassBorder,
+                                            focusedLabelColor = EmeraldGlow,
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary,
+                                            unfocusedLabelColor = TextTertiary
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    if (selectedBook == null && state.recommendedBooks.isNotEmpty()) {
+                        val primaryBook = state.recommendedBooks.first()
+                        val otherBooks = state.recommendedBooks.drop(1).take(3)
+
+                        Surface(
+                            color = CosmicSurface2,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(0.5.dp, GlassBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("💡", fontSize = 15.sp)
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Rekomendasi Buku Resmi (${state.recommendedBooks.size} Pilihan):",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.sp,
+                                        color = EmeraldGlow
+                                    )
+                                }
+                                Text(
+                                    text = primaryBook.title,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = TextPrimary
+                                )
+                                Text(
+                                    text = "${primaryBook.publisher ?: "Kemendikbudristek"} • ${primaryBook.totalPages} Halaman",
+                                    fontSize = 10.sp,
+                                    color = TextSecondary
+                                )
+                                Button(
+                                    onClick = {
+                                        selectedBook = primaryBook
+                                        if (title.isBlank()) {
+                                            title = "Materi: ${primaryBook.title}"
+                                        }
+                                        startPageInput = "1"
+                                        endPageInput = minOf(20, primaryBook.totalPages).toString()
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(36.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow)
+                                ) {
+                                    Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("Gunakan Buku Ini", fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                                }
+
+                                if (otherBooks.isNotEmpty()) {
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = "Pilihan Terkait Lainnya:",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextTertiary
+                                    )
+                                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        otherBooks.forEach { altBook ->
+                                            Surface(
+                                                color = CosmicNavy,
+                                                shape = RoundedCornerShape(8.dp),
+                                                border = BorderStroke(0.5.dp, GlassBorder),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clickable {
+                                                        selectedBook = altBook
+                                                        if (title.isBlank()) {
+                                                            title = "Materi: ${altBook.title}"
+                                                        }
+                                                        startPageInput = "1"
+                                                        endPageInput = minOf(20, altBook.totalPages).toString()
+                                                    }
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = altBook.title,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Medium,
+                                                        modifier = Modifier.weight(1f),
+                                                        maxLines = 1,
+                                                        color = TextPrimary
+                                                    )
+                                                    Text(
+                                                        text = "Pilih →",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = EmeraldGlow
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    OutlinedButton(
+                        onClick = { showBookCatalogSheet = true },
+                        modifier = Modifier.fillMaxWidth().height(42.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldGlow),
+                        border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.5f))
+                    ) {
+                        Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = if (selectedBook != null) "Ganti Buku dari Katalog" else "Jelajahi Katalog Lengkap (${state.availableBooks.size} Buku)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp
+                        )
+                    }
+                }
+            }
+
+            // ── SECTION 4: KONTEN & BERKAS MATERI ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                    SectionHeader(
+                        number = 4,
+                        title = "Konten & Berkas Modul",
+                        subtitle = "Lengkapi judul, panduan belajar, dan lampiran materi",
                         accentColor = EmeraldGlow
                     )
 
@@ -755,7 +734,7 @@ fun MaterialCreatorScreen(
                     StudioTextField(
                         value = description,
                         onValueChange = { description = it },
-                        label = "Deskripsi & Tujuan Pembelajaran",
+                        label = "Deskripsi & Panduan Belajar",
                         placeholder = "Uraian singkat materi untuk panduan siswa...",
                         icon = Icons.Default.Notes,
                         accentColor = EmeraldGlow,
@@ -864,11 +843,9 @@ fun MaterialCreatorScreen(
             }
 
             if (!state.error.isNullOrBlank()) {
-                Spacer(Modifier.height(12.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
                         .clip(RoundedCornerShape(12.dp))
                         .background(NeonError.copy(alpha = 0.12f))
                         .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
@@ -881,7 +858,7 @@ fun MaterialCreatorScreen(
                 }
             }
 
-            Spacer(Modifier.height(30.dp))
+            Spacer(Modifier.height(40.dp))
         }
     }
 
@@ -889,7 +866,7 @@ fun MaterialCreatorScreen(
         ModalBottomSheet(
             onDismissRequest = { showBookCatalogSheet = false },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-            containerColor = MaterialTheme.colorScheme.surface,
+            containerColor = CosmicNavy,
         ) {
             LibraryBookCatalogSheetContent(
                 books = state.availableBooks,
@@ -1193,7 +1170,7 @@ private fun LibraryBookCatalogSheetContent(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 10.dp, vertical = 8.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp)
             .navigationBarsPadding()
     ) {
         // Header
@@ -1205,18 +1182,18 @@ private fun LibraryBookCatalogSheetContent(
             Column {
                 Text(
                     text = "Katalog Buku Kurikulum",
-                    fontWeight = FontWeight.Black,
-                    fontSize = 18.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 17.sp,
+                    color = TextPrimary
                 )
                 Text(
                     text = "Pilih buku teks & rentang halaman yang akan dibaca siswa",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    fontSize = 11.sp,
+                    color = TextSecondary
                 )
             }
             IconButton(onClick = onDismiss) {
-                Icon(Icons.Default.Close, "Tutup", tint = MaterialTheme.colorScheme.onSurface)
+                Icon(Icons.Default.Close, "Tutup", tint = TextPrimary)
             }
         }
 
@@ -1226,26 +1203,33 @@ private fun LibraryBookCatalogSheetContent(
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
-            placeholder = { Text("Cari judul buku, mapel, atau penerbit...", fontSize = 13.sp) },
-            leadingIcon = { Icon(Icons.Default.Search, null, tint = MaterialTheme.colorScheme.primary) },
+            placeholder = { Text("Cari judul buku, mapel, atau penerbit...", fontSize = 12.sp, color = TextTertiary) },
+            leadingIcon = { Icon(Icons.Default.Search, null, tint = EmeraldGlow, modifier = Modifier.size(18.dp)) },
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            singleLine = true
+            singleLine = true,
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = EmeraldGlow,
+                unfocusedBorderColor = GlassBorder,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary,
+                cursorColor = EmeraldGlow
+            )
         )
 
         Spacer(Modifier.height(14.dp))
 
         if (isLoading) {
             Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
+                CircularProgressIndicator(color = EmeraldGlow)
             }
         } else if (filtered.isEmpty()) {
             Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("📖", fontSize = 36.sp)
                     Spacer(Modifier.height(8.dp))
-                    Text("Tidak ada buku ditemukan", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onSurface)
-                    Text("Coba cari dengan kata kunci lain", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Tidak ada buku ditemukan", fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Coba cari dengan kata kunci lain", fontSize = 12.sp, color = TextTertiary)
                 }
             }
         } else {
@@ -1260,16 +1244,12 @@ private fun LibraryBookCatalogSheetContent(
 
                     Card(
                         colors = CardDefaults.cardColors(
-                            containerColor = if (isExpanded)
-                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-                            else
-                                MaterialTheme.colorScheme.surface
+                            containerColor = if (isExpanded) CosmicSurface2 else CosmicNavy
                         ),
                         shape = RoundedCornerShape(14.dp),
                         border = BorderStroke(
                             1.dp,
-                            if (isExpanded) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+                            if (isExpanded) EmeraldGlow else GlassBorder
                         ),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1287,12 +1267,12 @@ private fun LibraryBookCatalogSheetContent(
                             Row(verticalAlignment = Alignment.Top) {
                                 Box(
                                     modifier = Modifier
-                                        .size(44.dp)
+                                        .size(40.dp)
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)),
+                                        .background(EmeraldGlow.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("📕", fontSize = 22.sp)
+                                    Text("📕", fontSize = 20.sp)
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
@@ -1300,12 +1280,12 @@ private fun LibraryBookCatalogSheetContent(
                                         text = book.title,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 13.sp,
-                                        color = MaterialTheme.colorScheme.onSurface
+                                        color = TextPrimary
                                     )
                                     Text(
                                         text = "${book.author ?: "Tim Penulis"} • ${book.publisher ?: "Kemendikbudristek"}",
                                         fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        color = TextSecondary
                                     )
                                     Row(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1315,26 +1295,26 @@ private fun LibraryBookCatalogSheetContent(
                                         if (subj != null) {
                                             Surface(
                                                 shape = RoundedCornerShape(6.dp),
-                                                color = MaterialTheme.colorScheme.secondaryContainer
+                                                color = EmeraldGlow.copy(alpha = 0.15f)
                                             ) {
                                                 Text(
                                                     subj,
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                                                    color = EmeraldGlow,
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                 )
                                             }
                                         }
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = MaterialTheme.colorScheme.surfaceVariant
+                                            color = CosmicSurface2
                                         ) {
                                             Text(
                                                 "${book.totalPages} Halaman",
                                                 fontSize = 10.sp,
                                                 fontWeight = FontWeight.Medium,
-                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                color = TextTertiary,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                             )
                                         }
@@ -1343,12 +1323,12 @@ private fun LibraryBookCatalogSheetContent(
                             }
 
                             if (isExpanded) {
-                                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+                                HorizontalDivider(color = GlassBorder)
                                 Text(
                                     text = "Tentukan Halaman Bacaan Siswa:",
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.primary
+                                    color = EmeraldGlow
                                 )
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1358,18 +1338,34 @@ private fun LibraryBookCatalogSheetContent(
                                     OutlinedTextField(
                                         value = tempStartPage,
                                         onValueChange = { tempStartPage = it.filter { c -> c.isDigit() } },
-                                        label = { Text("Dari Hal.") },
+                                        label = { Text("Dari Hal.", fontSize = 11.sp) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = EmeraldGlow,
+                                            unfocusedBorderColor = GlassBorder,
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary,
+                                            focusedLabelColor = EmeraldGlow
+                                        )
                                     )
                                     OutlinedTextField(
                                         value = tempEndPage,
                                         onValueChange = { tempEndPage = it.filter { c -> c.isDigit() } },
-                                        label = { Text("Sampai Hal.") },
+                                        label = { Text("Sampai Hal.", fontSize = 11.sp) },
                                         modifier = Modifier.weight(1f),
                                         singleLine = true,
-                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = EmeraldGlow,
+                                            unfocusedBorderColor = GlassBorder,
+                                            focusedTextColor = TextPrimary,
+                                            unfocusedTextColor = TextPrimary,
+                                            focusedLabelColor = EmeraldGlow
+                                        )
                                     )
                                 }
                                 Button(
@@ -1378,7 +1374,7 @@ private fun LibraryBookCatalogSheetContent(
                                     },
                                     modifier = Modifier.fillMaxWidth().height(42.dp),
                                     shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow)
                                 ) {
                                     Text("Gunakan Buku & Rentang Halaman Ini", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                 }
