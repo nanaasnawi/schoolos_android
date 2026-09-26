@@ -9,6 +9,7 @@ import com.schoolos.android.domain.repository.AssignmentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -73,12 +74,25 @@ class AssignmentDetailViewModel @Inject constructor(
     }
 
     private suspend fun loadSubmissions() {
-        val studentId = authManager.getStudentId()
+        val auth = authManager.authState.first()
+        val isTeacher = com.schoolos.android.core.auth.isTeacherRole(auth.role)
+        val studentId = auth.childId ?: auth.userId ?: ""
+        val studentUserId = auth.userId ?: ""
+        val studentName = auth.name ?: ""
+        val studentNisn = auth.identifier ?: ""
 
         repository.getSubmissions(assignmentId)
             .onSuccess { submissions ->
-                val ownSubmission = submissions.firstOrNull { it.studentId == studentId }
-                    ?: submissions.firstOrNull() // Fallback for backward compatibility
+                val ownSubmission = if (isTeacher) {
+                    null
+                } else {
+                    submissions.firstOrNull { sub ->
+                        (!sub.studentUserId.isNullOrBlank() && sub.studentUserId == studentUserId) ||
+                        (sub.studentId.isNotBlank() && (sub.studentId == studentId || sub.studentId == studentUserId)) ||
+                        (!sub.studentNisn.isNullOrBlank() && studentNisn.isNotBlank() && sub.studentNisn == studentNisn) ||
+                        (!sub.studentName.isNullOrBlank() && studentName.isNotBlank() && sub.studentName.equals(studentName, ignoreCase = true))
+                    }
+                }
                 _state.value = _state.value.copy(
                     allSubmissions = submissions,
                     submission = ownSubmission,

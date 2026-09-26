@@ -18,6 +18,7 @@ data class SubmissionDto(
     @SerialName("graded_by") val gradedBy: String? = null,
     @SerialName("student_name") val studentName: String? = null,
     @SerialName("student_nisn") val studentNisn: String? = null,
+    @SerialName("student_user_id") val studentUserId: String? = null,
     val answers: List<SubmissionAnswerDetailDto> = emptyList(),
 )
 

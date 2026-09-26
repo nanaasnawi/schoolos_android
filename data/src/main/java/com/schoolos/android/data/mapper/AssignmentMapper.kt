@@ -73,5 +73,6 @@ fun SubmissionDto.toDomain() = AssignmentSubmission(
     gradedBy = gradedBy,
     studentName = studentName,
     studentNisn = studentNisn,
+    studentUserId = studentUserId,
     answers = answers.map { it.toDomain() },
 )
