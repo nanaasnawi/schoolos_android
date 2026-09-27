@@ -60,7 +60,6 @@ import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.ErrorState
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.GlassOverlay
-import com.schoolos.android.core.designsystem.LoadingState
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonBlueDark
@@ -131,7 +130,7 @@ fun TodayScreen(
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
             if (state.isLoading) {
-                LoadingState()
+                TodayScreenShimmer()
             } else if (state.error != null) {
                 ErrorState(message = state.error!!, onRetry = viewModel::refresh)
             } else {
@@ -262,39 +261,81 @@ private fun ScreenTopNavigation(
     onJumpToToday: () -> Unit,
     accentColor: Color,
 ) {
-    com.schoolos.android.core.designsystem.ExecutiveTopBar(
-        title = title,
-        subtitle = subtitle,
-        onBack = onBack,
-        actions = {
-            if (!isViewingToday) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(accentColor.copy(alpha = 0.15f))
-                        .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                        .clickable(onClick = onJumpToToday)
-                        .padding(horizontal = 10.dp, vertical = 5.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier.size(36.dp),
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.Today,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "Hari Ini",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = accentColor,
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Kembali",
+                        tint = TextPrimary,
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.Center) {
+                Text(
+                    text = title,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                if (!subtitle.isNullOrBlank()) {
+                    Text(
+                        text = subtitle,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
                 }
             }
         }
-    )
+
+        if (!isViewingToday) {
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(accentColor.copy(alpha = 0.15f))
+                    .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                    .clickable(onClick = onJumpToToday)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Today,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(13.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = "Hari Ini",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor,
+                    )
+                }
+            }
+        }
+    }
 }
 
 // ── SIGNATURE EXECUTIVE HERO BANNER ───────────────────────────────────────────
@@ -659,6 +700,187 @@ private fun ScheduleFilterChips(
                             )
                         }
                     }
+                }
+            }
+        }
+    }
+}
+
+// ── SKELETON SHIMMER FOR JADWAL PELAJARAN ─────────────────────────────────────
+
+@Composable
+private fun TodayScreenShimmer() {
+    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
+    val shimmerAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.25f,
+        targetValue = 0.55f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "shimmer_alpha"
+    )
+    val shimmerColor = CosmicNavy.copy(alpha = shimmerAlpha)
+    val bgColor = CosmicDark.copy(alpha = 0.6f)
+
+    @Composable
+    fun ShimmerBox(modifier: Modifier) {
+        Box(
+            modifier = modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(bgColor)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+        ) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(shimmerColor)
+            )
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CosmicBlack)
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp)
+            .padding(top = 6.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // ── 1. TOP BAR SKELETON ──────────────────────────────────────
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                ShimmerBox(Modifier.width(140.dp).height(18.dp))
+                ShimmerBox(Modifier.width(80.dp).height(12.dp))
+            }
+            ShimmerBox(Modifier.width(64.dp).height(28.dp))
+        }
+
+        // ── 2. HERO BANNER SKELETON ──────────────────────────────────
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                .padding(16.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Top row: date + badge
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ShimmerBox(Modifier.width(160.dp).height(11.dp))
+                    ShimmerBox(Modifier.width(70.dp).height(11.dp))
+                }
+                // 3 metric mini cards
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    repeat(3) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(58.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(bgColor)
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                        ) {
+                            Box(modifier = Modifier.matchParentSize().background(shimmerColor))
+                        }
+                    }
+                }
+                // Progress label + bar
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    ShimmerBox(Modifier.width(90.dp).height(10.dp))
+                    ShimmerBox(Modifier.width(60.dp).height(10.dp))
+                }
+                ShimmerBox(Modifier.fillMaxWidth().height(4.dp))
+            }
+        }
+
+        // ── 3. CALENDAR STRIP SKELETON (6 day bubbles) ───────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            repeat(6) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    ShimmerBox(Modifier.width(28.dp).height(10.dp))
+                    ShimmerBox(
+                        Modifier
+                            .defaultMinSize(minWidth = 34.dp)
+                            .height(32.dp)
+                            .clip(RoundedCornerShape(9.dp))
+                    )
+                    Box(
+                        modifier = Modifier
+                            .size(4.dp)
+                            .clip(CircleShape)
+                            .background(GlassBorder)
+                    )
+                }
+            }
+        }
+
+        // ── 4. FILTER CHIPS SKELETON ─────────────────────────────────
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            repeat(4) {
+                ShimmerBox(Modifier.width(78.dp).height(30.dp))
+            }
+        }
+
+        // ── 5. SESSION CARD SKELETONS (3 cards) ──────────────────────
+        repeat(3) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(88.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .padding(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    // Left color bar
+                    Box(
+                        modifier = Modifier
+                            .width(3.dp)
+                            .fillMaxHeight()
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(bgColor)
+                    ) { Box(modifier = Modifier.matchParentSize().background(shimmerColor)) }
+                    Spacer(Modifier.width(12.dp))
+                    // Text lines
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(7.dp)
+                    ) {
+                        ShimmerBox(Modifier.fillMaxWidth(0.65f).height(13.dp))
+                        ShimmerBox(Modifier.fillMaxWidth(0.45f).height(10.dp))
+                        ShimmerBox(Modifier.fillMaxWidth(0.30f).height(10.dp))
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    // Badge
+                    ShimmerBox(Modifier.width(52.dp).height(20.dp))
                 }
             }
         }

@@ -1,5 +1,6 @@
 package com.schoolos.android.domain.repository
 
+import com.schoolos.android.domain.model.SchoolContactInfo
 import com.schoolos.android.domain.model.User
 
 interface AuthRepository {
@@ -10,5 +11,6 @@ interface AuthRepository {
     suspend fun isLoggedIn(): Boolean
     suspend fun getCurrentUser(): Result<User>
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
+    suspend fun getSchoolContactInfo(): Result<SchoolContactInfo>
 }
 
