@@ -116,7 +116,7 @@ class HomeViewModel @Inject constructor(
             authManager.authState.collect { auth ->
                 val authChanged = currentAuth.userId != auth.userId || currentAuth.role != auth.role || currentAuth.tenantId != auth.tenantId
                 currentAuth = auth
-                val name = if (!auth.name.isNullOrBlank()) auth.name!! else "Pengguna Akselerasi Edu"
+                val name = if (!auth.name.isNullOrBlank()) auth.name!! else "Pengguna School OS"
                 val role = if (!auth.role.isNullOrBlank()) auth.role!! else "student"
                 val homeroom = auth.className ?: ""
                 val child = auth.childName ?: ""
