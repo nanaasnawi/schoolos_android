@@ -73,11 +73,6 @@ fun SessionDetailScreen(
                 title = subject,
                 subtitle = "Jadwal Pembelajaran • $roomText",
                 onBack = onBack,
-                actions = {
-                    session?.let {
-                        StatusChip(label = it.status)
-                    }
-                }
             )
         }
     ) { padding ->
@@ -147,27 +142,28 @@ fun SessionDetailScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = subject,
-                                        fontSize = 18.sp,
+                                        fontSize = 17.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = TextPrimary
+                                        color = TextPrimary,
+                                        lineHeight = 22.sp,
                                     )
-                                    Spacer(Modifier.height(2.dp))
+                                    Spacer(Modifier.height(3.dp))
                                     Text(
                                         text = roomText,
                                         fontSize = 12.sp,
                                         color = TextSecondary,
                                         fontWeight = FontWeight.Medium
                                     )
-                                    Spacer(Modifier.height(4.dp))
+                                    Spacer(Modifier.height(8.dp))
                                     Row(
                                         verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(6.dp)
-                                                .clip(CircleShape)
-                                                .background(NeonSuccess)
+                                        StatusChip(label = s.status)
+                                        Text(
+                                            text = "•",
+                                            fontSize = 11.sp,
+                                            color = TextTertiary,
                                         )
                                         Text(
                                             text = "Sesi Terjadwal Resmi",

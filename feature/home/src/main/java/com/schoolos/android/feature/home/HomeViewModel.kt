@@ -109,6 +109,30 @@ class HomeViewModel @Inject constructor(
 
     init {
         observeAuthState()
+        observeNotifications()
+    }
+
+    private fun observeNotifications() {
+        viewModelScope.launch {
+            notificationRepository.getUnreadCountFlow().collect { localCount ->
+                _state.update { current ->
+                    if (localCount > 0 || current.unreadCount == 0) {
+                        current.copy(unreadCount = localCount)
+                    } else {
+                        current
+                    }
+                }
+            }
+        }
+        refreshUnreadCount()
+    }
+
+    fun refreshUnreadCount() {
+        viewModelScope.launch {
+            notificationRepository.getUnreadCount().onSuccess { count ->
+                _state.update { it.copy(unreadCount = count) }
+            }
+        }
     }
 
     private fun observeAuthState() {
@@ -154,9 +178,10 @@ class HomeViewModel @Inject constructor(
         if (isPullRefresh) {
             _state.update { it.copy(isRefreshing = true) }
         }
+        refreshUnreadCount()
         viewModelScope.launch {
             try {
-                withTimeoutOrNull(3500L) {
+                withTimeoutOrNull(15000L) {
                     syncData(silent = !isPullRefresh, force = isPullRefresh)
                 }
             } catch (e: Exception) {

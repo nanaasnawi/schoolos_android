@@ -266,10 +266,12 @@ private fun ModernNavItem(
             if (item.badgeCount > 0) {
                 BadgedBox(
                     badge = {
-                        Badge(containerColor = NeonError) {
+                        Badge(
+                            containerColor = NeonError,
+                            contentColor = Color.White,
+                        ) {
                             Text(
-                                text = "${item.badgeCount}",
-                                color = Color.White,
+                                text = if (item.badgeCount > 99) "99+" else "${item.badgeCount}",
                                 fontSize = 8.sp,
                                 fontWeight = FontWeight.Bold,
                             )

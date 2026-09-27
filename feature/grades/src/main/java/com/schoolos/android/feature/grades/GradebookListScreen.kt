@@ -93,7 +93,7 @@ fun GradebookListScreen(
             if (state.isLoading) {
                 LoadingState()
             } else if (state.error != null) {
-                ErrorState(message = state.error!!)
+                ErrorState(message = state.error!!, onRetry = viewModel::refresh)
             } else if (state.subjects.isEmpty()) {
                 EmptyState("Belum ada mata pelajaran tercatat.", Icons.Default.Assessment)
             } else {

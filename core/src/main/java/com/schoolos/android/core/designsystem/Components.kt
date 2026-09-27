@@ -925,27 +925,170 @@ fun PullRefreshContainer(
 // ─── Status Chip ──────────────────────────────────────────────────────────────
 @Composable
 fun StatusChip(label: String, modifier: Modifier = Modifier) {
-    val (bg, fg) = when (label.lowercase()) {
-        "active", "berjalan", "open", "published" -> Pair(SuccessBg, NeonSuccess)
-        "submitted", "completed", "selesai"       -> Pair(InfoBg, NeonBlue)
-        "graded", "dinilai"                       -> Pair(StudentContainer, StudentNeon)
-        "due_soon", "segera"                       -> Pair(WarningBg, NeonWarning)
-        "draft", "closed", "nonaktif", "inactive" -> Pair(GlassBorder, TextTertiary)
-        else -> Pair(GlassBorder, TextSecondary)
+    val isDark = LocalIsDarkTheme.current
+    val normalized = label.trim().lowercase()
+
+    // Standarisasi Bahasa Indonesia resmi untuk semua status sistem
+    val displayLabel = when (normalized) {
+        "completed", "selesai"               -> "Selesai"
+        "active", "berjalan", "open"         -> "Sedang Berlangsung"
+        "scheduled", "terjadwal", "upcoming" -> "Terjadwal"
+        "submitted", "terkirim"              -> "Terkirim"
+        "graded", "dinilai", "sudah dinilai" -> "Sudah Dinilai"
+        "due_soon", "segera"                 -> "Segera Berakhir"
+        "present", "hadir"                   -> "Hadir"
+        "absent", "alpa"                     -> "Alpa"
+        "late", "terlambat"                  -> "Terlambat"
+        "excused", "izin"                    -> "Izin"
+        "draft", "draf"                      -> "Draf"
+        "closed", "nonaktif", "inactive"     -> "Ditutup"
+        "belum_ada", "belum ada", "none"     -> "Belum Tercatat"
+        else -> label.replace("_", " ").replaceFirstChar { it.uppercase() }
     }
+
+    // Warna dinamis adaptif terhadap Light / Dark Mode tanpa hardcode kontras pekat
+    val (bg, border, fg) = when (normalized) {
+        "completed", "selesai", "present", "hadir" -> {
+            if (isDark) {
+                Triple(
+                    NeonSuccess.copy(alpha = 0.16f),
+                    NeonSuccess.copy(alpha = 0.35f),
+                    Color(0xFF34D399),
+                )
+            } else {
+                Triple(
+                    Color(0xFFECFDF5),
+                    Color(0xFFA7F3D0),
+                    Color(0xFF047857),
+                )
+            }
+        }
+        "active", "berjalan", "open", "submitted", "terkirim" -> {
+            if (isDark) {
+                Triple(
+                    NeonBlue.copy(alpha = 0.16f),
+                    NeonBlue.copy(alpha = 0.35f),
+                    Color(0xFF60A5FA),
+                )
+            } else {
+                Triple(
+                    Color(0xFFEFF6FF),
+                    Color(0xFFBFDBFE),
+                    Color(0xFF1D4ED8),
+                )
+            }
+        }
+        "graded", "dinilai", "sudah dinilai" -> {
+            if (isDark) {
+                Triple(
+                    StudentNeon.copy(alpha = 0.16f),
+                    StudentNeon.copy(alpha = 0.35f),
+                    Color(0xFFA78BFA),
+                )
+            } else {
+                Triple(
+                    Color(0xFFF5F3FF),
+                    Color(0xFFDDD6FE),
+                    Color(0xFF6D28D9),
+                )
+            }
+        }
+        "due_soon", "segera", "scheduled", "terjadwal", "upcoming", "late", "terlambat" -> {
+            if (isDark) {
+                Triple(
+                    NeonWarning.copy(alpha = 0.16f),
+                    NeonWarning.copy(alpha = 0.35f),
+                    Color(0xFFFBBF24),
+                )
+            } else {
+                Triple(
+                    Color(0xFFFFFBEB),
+                    Color(0xFFFDE68A),
+                    Color(0xFFB45309),
+                )
+            }
+        }
+        "absent", "alpa" -> {
+            if (isDark) {
+                Triple(
+                    NeonError.copy(alpha = 0.16f),
+                    NeonError.copy(alpha = 0.35f),
+                    Color(0xFFF87171),
+                )
+            } else {
+                Triple(
+                    Color(0xFFFEF2F2),
+                    Color(0xFFFECACA),
+                    Color(0xFFB91C1C),
+                )
+            }
+        }
+        "excused", "izin" -> {
+            if (isDark) {
+                Triple(
+                    AccentNeonPurple.copy(alpha = 0.16f),
+                    AccentNeonPurple.copy(alpha = 0.35f),
+                    Color(0xFFA5B4FC),
+                )
+            } else {
+                Triple(
+                    Color(0xFFEEF2FF),
+                    Color(0xFFC7D2FE),
+                    Color(0xFF4338CA),
+                )
+            }
+        }
+        else -> {
+            if (isDark) {
+                Triple(
+                    CosmicDark,
+                    GlassBorder,
+                    TextSecondary,
+                )
+            } else {
+                Triple(
+                    Color(0xFFF1F5F9),
+                    Color(0xFFCBD5E1),
+                    Color(0xFF475569),
+                )
+            }
+        }
+    }
+
+    val dotColor = when (normalized) {
+        "completed", "selesai", "present", "hadir" -> if (isDark) Color(0xFF34D399) else Color(0xFF059669)
+        "active", "berjalan", "open"                -> if (isDark) Color(0xFF60A5FA) else Color(0xFF2563EB)
+        "due_soon", "segera", "scheduled", "terjadwal" -> if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+        "absent", "alpa"                            -> if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
+        else -> null
+    }
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(bg)
-            .border(1.dp, fg.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .border(1.dp, border, RoundedCornerShape(20.dp))
+            .padding(horizontal = 9.dp, vertical = 3.5.dp),
     ) {
-        Text(
-            label.replace("_", " ").replaceFirstChar { it.uppercase() },
-            fontSize = 10.sp,
-            color = fg,
-            fontWeight = FontWeight.Bold,
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            if (dotColor != null) {
+                Box(
+                    modifier = Modifier
+                        .size(5.dp)
+                        .clip(CircleShape)
+                        .background(dotColor)
+                )
+            }
+            Text(
+                text = displayLabel,
+                fontSize = 11.sp,
+                color = fg,
+                fontWeight = FontWeight.SemiBold,
+            )
+        }
     }
 }
 
@@ -975,23 +1118,39 @@ fun ScoreBadge(score: Int?, maxScore: Int, modifier: Modifier = Modifier) {
 // ─── Role Badge ───────────────────────────────────────────────────────────────
 @Composable
 fun RoleBadge(role: String, modifier: Modifier = Modifier) {
+    val isDark = LocalIsDarkTheme.current
     val r = role.lowercase()
-    val (bg, fg) = when {
-        r.contains("parent") || r.contains("guardian") || r.contains("ortu") || r.contains("wali") -> Pair(ParentContainer, ParentNeon)
-        r.contains("teacher") || r.contains("guru") -> Pair(TeacherContainer, TeacherNeon)
-        r.contains("student") || r.contains("siswa") -> Pair(StudentContainer, StudentNeon)
-        r.contains("admin") -> Pair(InfoBg, NeonBlue)
-        else -> Pair(GlassBorder, TextTertiary)
+    val (bg, border, fg) = when {
+        r.contains("parent") || r.contains("guardian") || r.contains("ortu") || r.contains("wali") -> {
+            if (isDark) Triple(ParentContainer, ParentNeon.copy(alpha = 0.35f), ParentNeon)
+            else Triple(Color(0xFFFFE4E6), Color(0xFFFECDD3), Color(0xFFBE123C))
+        }
+        r.contains("teacher") || r.contains("guru") -> {
+            if (isDark) Triple(TeacherContainer, TeacherNeon.copy(alpha = 0.35f), TeacherNeon)
+            else Triple(Color(0xFFD1FAE5), Color(0xFFA7F3D0), Color(0xFF047857))
+        }
+        r.contains("student") || r.contains("siswa") -> {
+            if (isDark) Triple(StudentContainer, StudentNeon.copy(alpha = 0.35f), StudentNeon)
+            else Triple(Color(0xFFEDE9FE), Color(0xFFDDD6FE), Color(0xFF5B21B6))
+        }
+        r.contains("admin") -> {
+            if (isDark) Triple(Color(0xFF1E293B), NeonBlue.copy(alpha = 0.35f), NeonBlue)
+            else Triple(Color(0xFFDBEAFE), Color(0xFFBFDBFE), Color(0xFF1D4ED8))
+        }
+        else -> {
+            if (isDark) Triple(GlassBorder, GlassBorder, TextTertiary)
+            else Triple(Color(0xFFF1F5F9), Color(0xFFCBD5E1), Color(0xFF64748B))
+        }
     }
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
             .background(bg)
-            .border(1.dp, fg.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-            .padding(horizontal = 12.dp, vertical = 4.dp),
+            .border(1.dp, border, RoundedCornerShape(20.dp))
+            .padding(horizontal = 11.dp, vertical = 3.5.dp),
     ) {
         Text(
-            role.replaceFirstChar { it.uppercase() },
+            text = role.replaceFirstChar { it.uppercase() },
             color = fg,
             fontSize = 11.sp,
             fontWeight = FontWeight.Bold,
