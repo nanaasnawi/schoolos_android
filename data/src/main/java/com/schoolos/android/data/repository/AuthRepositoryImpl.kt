@@ -97,11 +97,9 @@ class AuthRepositoryImpl @Inject constructor(
             com.schoolos.android.data.remote.dto.RefreshTokenRequest(refreshToken)
         )
         val data = response.data ?: throw Exception("Token refresh failed")
-        authManager.saveSession(
+        authManager.updateTokens(
             accessToken = data.accessToken,
             refreshToken = data.refreshToken,
-            userId = "",
-            tenantId = "",
         )
         data.accessToken
     }

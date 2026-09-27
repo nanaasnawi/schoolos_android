@@ -51,8 +51,9 @@ captures/
 .externalNativeBuild
 .cxx/
 
-# Google Services (if applicable)
-# google-services.json
+# Google Services
+google-services.json
+!google-services.json.example
 
 # OS specific files
 .DS_Store

@@ -50,7 +50,11 @@ class DynamicHostInterceptor(
         return try {
             chain.proceed(primaryRequest)
         } catch (e: Exception) {
-            // Smart auto-fallback for physical devices & network changes
+            // Only perform local emulator fallback during DEBUG development
+            if (!com.schoolos.android.core.common.BuildConfig.DEBUG) {
+                throw e
+            }
+
             val isEmulator = android.os.Build.FINGERPRINT.startsWith("generic")
                 || android.os.Build.MODEL.contains("google_sdk")
                 || android.os.Build.MODEL.contains("Emulator")

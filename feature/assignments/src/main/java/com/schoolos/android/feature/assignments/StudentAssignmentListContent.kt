@@ -338,13 +338,36 @@ private fun StudentAssignmentCard(
 
 @Composable
 private fun EmptyAssignmentState(selectedTab: String) {
+    val (title, subtitle, accentColor) = when (selectedTab) {
+        "Segera" -> Triple(
+            "Tidak Ada Tugas Mendesak",
+            "Bagus sekali! Semua tugas aman dan tidak ada tenggat waktu yang mepet.",
+            NeonSuccess
+        )
+        "Aktif" -> Triple(
+            "Semua Tugas Aktif Selesai",
+            "Tidak ada tugas yang sedang berjalan saat ini. Kerja bagus!",
+            StudentNeon
+        )
+        "Selesai" -> Triple(
+            "Belum Ada Tugas Selesai",
+            "Tugas yang telah kamu kumpulkan akan tersimpan dan tampil di sini.",
+            TextTertiary
+        )
+        else -> Triple(
+            "Semua Tugas Beres! 🎉",
+            "Belum ada penugasan baru dari bapak/ibu guru. Waktunya istirahat atau pelajari materi berikutnya.",
+            NeonSuccess
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
             .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(28.dp),
+            .padding(vertical = 32.dp, horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(
@@ -353,42 +376,58 @@ private fun EmptyAssignmentState(selectedTab: String) {
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                    .size(52.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(accentColor.copy(alpha = 0.12f))
+                    .border(0.5.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
+                    painter = painterResource(
+                        id = if (selectedTab == "Selesai") CoreR.drawable.ic_modern_tasks else CoreR.drawable.ic_modern_check_circle
+                    ),
                     contentDescription = null,
-                    tint = TextSecondary,
-                    modifier = Modifier.size(20.dp)
+                    tint = accentColor,
+                    modifier = Modifier.size(26.dp)
                 )
             }
             Spacer(Modifier.height(4.dp))
             Text(
-                text = when (selectedTab) {
-                    "Segera" -> "Tidak Ada Tugas Mendesak"
-                    "Aktif" -> "Semua Tugas Aktif Selesai"
-                    "Selesai" -> "Belum Ada Tugas Selesai"
-                    else -> "Semua Tugas Beres"
-                },
+                text = title,
                 fontSize = 15.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary
             )
             Text(
-                text = when (selectedTab) {
-                    "Segera" -> "Bagus! Kamu tidak memiliki tugas dengan tenggat dekat."
-                    "Selesai" -> "Tugas yang sudah kamu kumpulkan akan muncul di sini."
-                    else -> "Tidak ada penugasan baru. Waktunya istirahat atau pelajari materi berikutnya."
-                },
+                text = subtitle,
                 fontSize = 12.sp,
                 color = TextTertiary,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                lineHeight = 16.sp
+                lineHeight = 17.sp,
+                modifier = Modifier.padding(horizontal = 12.dp)
             )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = null,
+                    tint = TextTertiary,
+                    modifier = Modifier.size(12.dp)
+                )
+                Text(
+                    text = "Tarik ke bawah untuk memuat ulang",
+                    fontSize = 11.sp,
+                    color = TextTertiary
+                )
+            }
         }
     }
 }

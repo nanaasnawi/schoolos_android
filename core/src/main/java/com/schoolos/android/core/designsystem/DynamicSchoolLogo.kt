@@ -8,13 +8,16 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.rememberVectorPainter
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun DynamicSchoolLogo(
@@ -36,18 +39,21 @@ fun DynamicSchoolLogo(
     }
 
     if (logoUrl.startsWith("data:image", ignoreCase = true)) {
-        val bitmap = remember(logoUrl) {
-            try {
-                val base64Data = logoUrl.substringAfter("base64,", "")
-                if (base64Data.isNotEmpty()) {
-                    val bytes = Base64.decode(base64Data, Base64.DEFAULT)
-                    BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
-                } else null
-            } catch (_: Exception) {
-                null
+        val imageBitmapState = produceState<ImageBitmap?>(initialValue = null, key1 = logoUrl) {
+            value = withContext(Dispatchers.Default) {
+                try {
+                    val base64Data = logoUrl.substringAfter("base64,", "")
+                    if (base64Data.isNotEmpty()) {
+                        val bytes = Base64.decode(base64Data, Base64.DEFAULT)
+                        BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+                    } else null
+                } catch (_: Exception) {
+                    null
+                }
             }
         }
 
+        val bitmap = imageBitmapState.value
         if (bitmap != null) {
             Image(
                 bitmap = bitmap,

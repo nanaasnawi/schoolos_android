@@ -68,7 +68,7 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
         val body = data["body"]
             ?: data["content"]
             ?: remoteMessage.notification?.body
-            ?: "Ada informasi baru di Akselerasi Edu"
+            ?: "Ada informasi baru di School OS"
 
         val category = data["category"] ?: "ANNOUNCEMENT"
         val referenceType = data["reference_type"] ?: category.lowercase()

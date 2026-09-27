@@ -136,8 +136,6 @@ fun AssignmentListScreen(
                     LoadingState()
                 } else if (state.error != null) {
                     ErrorState(message = state.error!!, onRetry = viewModel::refresh)
-                } else if (state.active.isEmpty() && state.dueSoon.isEmpty() && state.completed.isEmpty() && !isTeacher) {
-                    EmptyState("Belum ada tugas yang diberikan!", Icons.AutoMirrored.Filled.Assignment)
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
@@ -373,7 +371,7 @@ private fun StudentAssignmentHeroHeader(
                 )
 
                 Text(
-                    text = "$completionPercent% Selesai",
+                    text = if (totalCount > 0) "$completionPercent% Selesai" else "Bebas Tugas",
                     color = NeonSuccess,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -414,10 +412,10 @@ private fun StudentAssignmentHeroHeader(
             ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth((completionPercent / 100f).coerceIn(0f, 1f))
+                        .fillMaxWidth(if (totalCount > 0) (completionPercent / 100f).coerceIn(0f, 1f) else 1f)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(2.dp))
-                        .background(NeonBlue)
+                        .background(if (totalCount > 0 && completionPercent < 100) NeonBlue else NeonSuccess)
                 )
             }
 
