@@ -63,20 +63,35 @@ class NotificationRepositoryImpl @Inject constructor(
         }.map { list -> list.map { it.entityToDomain() } }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
+    override fun getUnreadCountFlow(): Flow<Int> {
+        return authManager.authState.flatMapLatest { auth ->
+            val uid = auth.userId ?: ""
+            if (uid.isEmpty()) flowOf(0)
+            else notificationDao.getUnreadCount(uid)
+        }
+    }
+
     override suspend fun getUnreadCount(): Result<Int> = runCatching {
         val isOnline = try { networkMonitor.isOnline.first() } catch (_: Exception) { true }
         if (isOnline) {
-            api.getUnreadCount().data?.count ?: 0
-        } else {
-            val userId = authManager.getStudentId() ?: ""
             try {
-                if (userId.isNotEmpty()) {
-                    notificationDao.getUnreadCount(userId).first()
-                } else {
-                    0
+                val apiCount = api.getUnreadCount().data?.count
+                if (apiCount != null) {
+                    return@runCatching apiCount
                 }
-            } catch (_: Exception) { 0 }
+            } catch (e: Exception) {
+                timber.log.Timber.w(e, "Remote unread count fetch failed, falling back to local DB")
+            }
         }
+        val userId = authManager.getStudentId() ?: ""
+        try {
+            if (userId.isNotEmpty()) {
+                notificationDao.getUnreadCount(userId).first()
+            } else {
+                0
+            }
+        } catch (_: Exception) { 0 }
     }
 
     override suspend fun markRead(id: String) {

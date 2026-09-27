@@ -138,7 +138,10 @@ fun StudentSessionDetailContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("Presensi Saya", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    if (session.status == "completed") StatusChip(label = "Selesai")
+                    val myAtt = attendance.firstOrNull()
+                    if (myAtt != null) {
+                        StatusChip(label = myAtt.status)
+                    }
                 }
                 Spacer(Modifier.height(14.dp))
 

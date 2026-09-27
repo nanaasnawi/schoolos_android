@@ -38,6 +38,8 @@ class GradeDetailViewModel @Inject constructor(
     private val _state = MutableStateFlow(GradeDetailUiState())
     val state = _state.asStateFlow()
 
+    private var loadJob: kotlinx.coroutines.Job? = null
+
     init {
         viewModelScope.launch {
             authManager.authState.collect { auth ->
@@ -48,8 +50,12 @@ class GradeDetailViewModel @Inject constructor(
     }
 
     fun load() {
-        viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+        loadJob?.cancel()
+        loadJob = viewModelScope.launch {
+            _state.value = _state.value.copy(
+                isLoading = _state.value.detail == null,
+                error = null
+            )
 
             val auth = authManager.authState.first()
             var targetClassId = auth.classId.orEmpty()
