@@ -3,6 +3,7 @@ package com.schoolos.android.data.repository
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.data.remote.dto.LoginRequest
+import com.schoolos.android.domain.model.SchoolContactInfo
 import com.schoolos.android.domain.model.User
 import com.schoolos.android.domain.repository.AuthRepository
 import javax.inject.Inject
@@ -151,5 +152,21 @@ class AuthRepositoryImpl @Inject constructor(
         if (!response.success) {
             throw Exception(response.error?.message ?: "Gagal memperbarui kata sandi.")
         }
+    }
+
+    override suspend fun getSchoolContactInfo(): Result<SchoolContactInfo> = runCatching {
+        val response = api.getSchoolProfile()
+        val data = response.data ?: throw Exception(
+            response.error?.message ?: "Gagal memuat informasi kontak sekolah."
+        )
+        SchoolContactInfo(
+            name = data.name,
+            npsn = data.npsn?.takeIf { it.isNotBlank() },
+            phone = data.phoneNumber?.takeIf { it.isNotBlank() },
+            email = data.email?.takeIf { it.isNotBlank() },
+            address = data.address?.takeIf { it.isNotBlank() },
+            accreditation = data.accreditation?.takeIf { it.isNotBlank() },
+            website = data.dapodikUrl?.takeIf { it.isNotBlank() },
+        )
     }
 }

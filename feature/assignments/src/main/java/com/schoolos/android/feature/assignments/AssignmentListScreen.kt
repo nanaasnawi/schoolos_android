@@ -104,8 +104,8 @@ fun AssignmentListScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
-                title = if (isTeacher) "Tugas & Evaluasi" else "Daftar Tugas",
-                subtitle = if (isTeacher) "Kelola penugasan siswa" else "PR & latihan mandiri",
+                title = if (subjectId.isNotBlank()) "Tugas • $subjectId" else if (isTeacher) "Tugas & Evaluasi" else "Daftar Tugas",
+                subtitle = if (subjectId.isNotBlank()) "Mata Pelajaran Aktif" else if (isTeacher) "Kelola penugasan siswa" else "PR & latihan mandiri",
                 onBack = onBack,
             )
         },

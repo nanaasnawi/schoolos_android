@@ -238,6 +238,7 @@ fun NavGraph(
             // Sessions
             composable(Screen.Sessions.route) {
                 TodayScreen(
+                    onBack = null,
                     onSessionClick = { id -> navController.navigate(Screen.SessionDetail.createRoute(id)) },
                 )
             }
@@ -265,6 +266,7 @@ fun NavGraph(
             // Assignments
             composable(Screen.Assignments.route) {
                 AssignmentListScreen(
+                    onBack = null,
                     onAssignmentClick = { id -> navController.navigate(Screen.AssignmentDetail.createRoute(id)) },
                     onCreateAssignment = { navController.navigate(Screen.AssignmentCreator.route) },
                     onCreateQuiz = { navController.navigate(Screen.QuizBuilder.route) },
@@ -277,6 +279,7 @@ fun NavGraph(
                 val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
                 AssignmentListScreen(
                     subjectId = subjectId,
+                    onBack = { navController.popBackStack() },
                     onAssignmentClick = { id -> navController.navigate(Screen.AssignmentDetail.createRoute(id)) },
                     onCreateAssignment = { navController.navigate(Screen.AssignmentCreator.route) },
                     onCreateQuiz = { navController.navigate(Screen.QuizBuilder.route) },
@@ -396,8 +399,9 @@ fun NavGraph(
 
             // Notifications
             composable(Screen.Notifications.route) {
+                val isParent = authState?.isParent == true
                 NotificationListScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = if (isParent) null else { { navController.popBackStack() } },
                     onNotificationClick = { notification ->
                         NotificationDeepLink.navigate(notification.referenceType, notification.referenceId, navController)
                     },
@@ -443,8 +447,9 @@ fun NavGraph(
 
             // Progress
             composable(Screen.Progress.route) {
+                val isParent = authState?.isParent == true
                 ProgressScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = if (isParent) null else { { navController.popBackStack() } },
                     onNavigateToAssignments = { navController.navigate(Screen.Assignments.route) },
                     onNavigateToMaterials = { navController.navigate(Screen.Learning.route) },
                     onNavigateToQuizzes = { navController.navigate(Screen.Quizzes.route) },

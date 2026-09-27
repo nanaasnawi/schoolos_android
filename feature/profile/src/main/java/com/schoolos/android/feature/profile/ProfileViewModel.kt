@@ -30,6 +30,14 @@ data class ProfileUiState(
     val currentLanguage: String = "en",
     val appVersion: String = "",
     val loggingOut: Boolean = false,
+    // Dynamic school contact info fetched from /schools/profile
+    val schoolPhone: String? = null,
+    val schoolEmail: String? = null,
+    val schoolAddress: String? = null,
+    val schoolNpsn: String? = null,
+    val schoolAccreditation: String? = null,
+    val schoolWebsite: String? = null,
+    val schoolContactLoading: Boolean = false,
 )
 
 @HiltViewModel
@@ -74,6 +82,26 @@ class ProfileViewModel @Inject constructor(
             if (authManager.isLoggedIn) {
                 authRepository.getCurrentUser()
             }
+        }
+        loadSchoolContactInfo()
+    }
+
+    private fun loadSchoolContactInfo() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(schoolContactLoading = true)
+            authRepository.getSchoolContactInfo()
+                .onSuccess { info ->
+                    _state.value = _state.value.copy(
+                        schoolPhone = info.phone,
+                        schoolEmail = info.email,
+                        schoolAddress = info.address,
+                        schoolNpsn = info.npsn,
+                        schoolAccreditation = info.accreditation,
+                        schoolWebsite = info.website,
+                    )
+                }
+            // Fail silently — contact info is non-critical
+            _state.value = _state.value.copy(schoolContactLoading = false)
         }
     }
 
