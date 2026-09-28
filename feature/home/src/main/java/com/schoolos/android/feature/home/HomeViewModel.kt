@@ -533,7 +533,7 @@ class HomeViewModel @Inject constructor(
             id = book.id,
             title = book.title,
             author = book.author ?: "Pusat Perbukuan",
-            publisher = book.publisher ?: "Kemendikbudristek",
+            publisher = book.publisher ?: "Kemendikdasmen",
             subjectName = book.subjectName ?: "Mata Pelajaran",
             gradeLevelName = book.gradeLevelName,
             coverUrl = book.coverUrl,
