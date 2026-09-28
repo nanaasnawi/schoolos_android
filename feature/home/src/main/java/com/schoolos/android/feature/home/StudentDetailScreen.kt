@@ -1,11 +1,9 @@
-package com.schoolos.android.feature.home
+﻿package com.schoolos.android.feature.home
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,6 +18,7 @@ import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
+import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -39,6 +38,10 @@ import com.schoolos.android.domain.model.Achievement
 import com.schoolos.android.domain.model.ClassStudent
 import com.schoolos.android.domain.model.Progress
 
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// SCREEN
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 @Composable
 fun StudentDetailScreen(
     onBack: () -> Unit,
@@ -55,16 +58,18 @@ fun StudentDetailScreen(
     val errorMessage = uiState.errorMessage
     val selectedTab = uiState.selectedTab
 
-    val tabs = listOf("Perkembangan", "Metrik Belajar", "Pencapaian", "Kontak")
+    val tabs = listOf("Perkembangan", "Metrik", "Pencapaian", "Kontak")
 
     val isFemale = student.gender?.trim()?.uppercase() == "P"
     val genderLabel = if (isFemale) "Perempuan" else "Laki-laki"
+    val genderIcon = if (isFemale) Icons.Default.Female else Icons.Default.Male
+
+    // Hero accent adapts to gender and follows MaterialTheme palette
+    val heroAccent = if (isFemale) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
 
     Scaffold(
-        modifier = modifier
-            .fillMaxSize()
-            .background(CosmicBlack),
-        containerColor = CosmicBlack,
+        modifier = modifier.fillMaxSize(),
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             ExecutiveTopBar(
                 title = "Detail Siswa",
@@ -76,14 +81,13 @@ fun StudentDetailScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Muat Ulang",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(16.dp)
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
@@ -94,660 +98,649 @@ fun StudentDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            // ── HERO PROFILE CARD (Quiet Apple Minimalist) ─────────────────
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(14.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .background(CosmicSurface2)
-                                .border(0.5.dp, GlassBorder, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = student.fullName.firstOrNull()?.toString()?.uppercase() ?: "?",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary
-                            )
-                        }
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = student.fullName,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(Modifier.height(3.dp))
-                            Text(
-                                text = "NISN: ${student.nisn.ifBlank { "-" }} • $genderLabel",
-                                fontSize = 12.sp,
-                                color = TextTertiary
-                            )
-                        }
-                    }
+            // â”€â”€ HERO HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            item {
+                StudentHeroCard(
+                    student = student,
+                    genderLabel = genderLabel,
+                    genderIcon = genderIcon,
+                    heroAccent = heroAccent,
+                )
+            }
+
+            // â”€â”€ 4 KEY METRICS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            item {
+                val avgGrade = progress?.overallProgress?.let { "%.0f%%".format(it) } ?: "--"
+                val quizDone = progress?.let { "${it.quizCompleted}/${it.quizTotal}" } ?: "--"
+                val assignDone = progress?.let { "${it.assignmentCompleted}/${it.assignmentTotal}" } ?: "--"
+                val attendance = progress?.let {
+                    val pct = if (it.sessionTotal > 0) (it.sessionAttended * 100 / it.sessionTotal) else 0
+                    "$pct%"
+                } ?: "--"
+
+                MetricsRow(
+                    avgGrade = avgGrade,
+                    quizDone = quizDone,
+                    assignDone = assignDone,
+                    attendance = attendance,
+                    isLoading = isLoading,
+                )
+            }
+
+            // â”€â”€ TAB ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            item {
+                StudentTabRow(
+                    tabs = tabs,
+                    selectedTab = selectedTab,
+                    onTabSelected = viewModel::selectTab
+                )
+            }
+
+            // â”€â”€ ERROR BANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            if (errorMessage != null) {
+                item {
+                    ErrorBanner(
+                        message = errorMessage,
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(Modifier.height(12.dp))
                 }
             }
 
-            // ── 4 KEY METRIC CARDS (Quiet Flat Style) ──────────────────────
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val avgGrade = progress?.overallProgress?.let { "%.0f%%".format(it) } ?: "88%"
-                    val quizDone = progress?.let { "${it.quizCompleted}/${it.quizTotal}" } ?: "8/10"
-                    val assignDone = progress?.let { "${it.assignmentCompleted}/${it.assignmentTotal}" } ?: "12/14"
-                    val attendance = progress?.let {
-                        val pct = if (it.sessionTotal > 0) (it.sessionAttended * 100 / it.sessionTotal) else 95
-                        "$pct%"
-                    } ?: "96%"
-
-                    MetricCard(
-                        title = "Rata-rata",
-                        value = avgGrade,
-                        icon = Icons.Default.Grade,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricCard(
-                        title = "Kuis",
-                        value = quizDone,
-                        icon = Icons.Default.Quiz,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricCard(
-                        title = "Tugas",
-                        value = assignDone,
-                        icon = Icons.Default.AssignmentTurnedIn,
-                        modifier = Modifier.weight(1f)
-                    )
-                    MetricCard(
-                        title = "Kehadiran",
-                        value = attendance,
-                        icon = Icons.Default.EventAvailable,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            // ── TAB SELECTOR (Apple Segmented Control) ──────────────────────
-            item {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(CosmicNavy)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
-                        .padding(3.dp),
-                    horizontalArrangement = Arrangement.spacedBy(3.dp)
-                ) {
-                    tabs.forEachIndexed { index, tabTitle ->
-                        val isSelected = selectedTab == index
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(7.dp))
-                                .background(if (isSelected) CosmicSurface2 else Color.Transparent)
-                                .border(
-                                    if (isSelected) 0.5.dp else 0.dp,
-                                    if (isSelected) GlassBorder else Color.Transparent,
-                                    RoundedCornerShape(7.dp)
-                                )
-                                .clickable { viewModel.selectTab(index) }
-                                .padding(vertical = 7.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = tabTitle,
-                                fontSize = 11.sp,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                color = if (isSelected) TextPrimary else TextTertiary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ── TAB CONTENT ────────────────────────────────────────────────
+            // â”€â”€ TAB CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
             when (selectedTab) {
                 0 -> {
-                    // TAB 0: PERKEMBANGAN & CATATAN GURU
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.TrendingUp,
-                                        contentDescription = null,
-                                        tint = TeacherNeon,
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Text(
-                                        text = "Status Perkembangan Akademik",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
-                                    )
-                                }
-
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = TeacherNeon.copy(alpha = 0.08f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.25f))
-                                ) {
-                                    Column(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Text(
-                                            text = progress?.academicStatus ?: "Performa Sangat Baik (Predikat A)",
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = TeacherNeon
-                                        )
-                                        Text(
-                                            text = progress?.teacherNotes ?: "Siswa menunjukkan konsistensi tinggi dalam pengerjaan materi mandiri dan tepat waktu dalam mengumpulkan tugas.",
-                                            fontSize = 12.sp,
-                                            color = TextSecondary,
-                                            lineHeight = 18.sp
-                                        )
-                                    }
-                                }
-
-                                HorizontalDivider(color = GlassBorder, thickness = 1.dp)
-
-                                Text(
-                                    text = "Catatan Pembinaan Guru",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
-
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = CosmicSurface2,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
-                                ) {
-                                    Text(
-                                        text = "Siswa aktif berpartisipasi dalam diskusi kelas. Direkomendasikan untuk mengikuti program pengayaan matematika & sains.",
-                                        modifier = Modifier.padding(12.dp),
-                                        fontSize = 12.sp,
-                                        color = TextSecondary,
-                                        lineHeight = 18.sp
-                                    )
-                                }
-                            }
-                        }
+                        AcademicProgressTab(
+                            progress = progress,
+                            isLoading = isLoading,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
                     }
                 }
 
                 1 -> {
-                    // TAB 1: METRIK BELAJAR
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(16.dp)
-                            ) {
-                                val lp = progress
-                                val lessonsDone = lp?.lessonCompleted ?: 16
-                                val lessonsTotal = lp?.lessonTotal ?: 20
-                                val assignDone = lp?.assignmentCompleted ?: 12
-                                val assignTotal = lp?.assignmentTotal ?: 14
-                                val quizDone = lp?.quizCompleted ?: 8
-                                val quizTotal = lp?.quizTotal ?: 10
-                                val sessionDone = lp?.sessionAttended ?: 28
-                                val sessionTotal = lp?.sessionTotal ?: 30
-
-                                MetricProgressRow(
-                                    title = "Modul & Bacaan Materi",
-                                    current = lessonsDone,
-                                    total = lessonsTotal,
-                                    color = TeacherNeon,
-                                    icon = Icons.AutoMirrored.Filled.MenuBook
-                                )
-
-                                MetricProgressRow(
-                                    title = "Penugasan & Praktik",
-                                    current = assignDone,
-                                    total = assignTotal,
-                                    color = NeonBlue,
-                                    icon = Icons.Default.Assignment
-                                )
-
-                                MetricProgressRow(
-                                    title = "Kuis & Asesmen Formatif",
-                                    current = quizDone,
-                                    total = quizTotal,
-                                    color = StudentNeon,
-                                    icon = Icons.Default.Quiz
-                                )
-
-                                MetricProgressRow(
-                                    title = "Kehadiran Sesi Pembelajaran",
-                                    current = sessionDone,
-                                    total = sessionTotal,
-                                    color = NeonWarning,
-                                    icon = Icons.Default.EventAvailable
-                                )
-                            }
-                        }
+                        LearningMetricsTab(
+                            progress = progress,
+                            isLoading = isLoading,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
                     }
                 }
 
                 2 -> {
-                    // TAB 2: PENCAPAIAN (ACHIEVEMENTS)
-                    if (achievements.isEmpty()) {
+                    if (achievements.isEmpty() && !isLoading) {
                         item {
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(28.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.EmojiEvents,
-                                        contentDescription = null,
-                                        tint = NeonWarning.copy(alpha = 0.6f),
-                                        modifier = Modifier.size(48.dp)
-                                    )
-                                    Text(
-                                        text = "Belum Ada Lencana",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
-                                    )
-                                    Text(
-                                        text = "Lencana prestasi siswa akan otomatis tercatat saat menyelesaikan modul tantangan.",
-                                        fontSize = 12.sp,
-                                        color = TextSecondary,
-                                        textAlign = TextAlign.Center
-                                    )
-                                }
-                            }
+                            EmptyAchievementsCard(modifier = Modifier.padding(horizontal = 16.dp))
                         }
                     } else {
-                        items(achievements, key = { it.id }) { item ->
-                            Card(
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .background(NeonWarning.copy(alpha = 0.15f))
-                                            .border(1.dp, NeonWarning.copy(alpha = 0.4f), CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.EmojiEvents,
-                                            contentDescription = null,
-                                            tint = NeonWarning,
-                                            modifier = Modifier.size(24.dp)
-                                        )
-                                    }
-
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = item.title,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = TextPrimary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = item.description,
-                                            fontSize = 12.sp,
-                                            color = TextSecondary,
-                                            lineHeight = 16.sp,
-                                            maxLines = 2,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        val earnedAt = item.earnedAt
-                                        if (!earnedAt.isNullOrBlank()) {
-                                            Spacer(Modifier.height(2.dp))
-                                            Text(
-                                                text = "Diraih: $earnedAt",
-                                                fontSize = 11.sp,
-                                                color = TeacherNeon,
-                                                fontWeight = FontWeight.SemiBold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
-                                        }
-                                    }
-                                }
-                            }
+                        items(achievements, key = { it.id }) { achievement ->
+                            AchievementItem(
+                                achievement = achievement,
+                                modifier = Modifier.padding(horizontal = 16.dp)
+                            )
+                            Spacer(Modifier.height(8.dp))
                         }
                     }
                 }
 
                 3 -> {
-                    // TAB 3: KONTAK WALI & SISWA
                     item {
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
-                        ) {
-                            Column(
-                                modifier = Modifier.padding(16.dp),
-                                verticalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                Text(
-                                    text = "Informasi Kontak Wali / Siswa",
-                                    fontSize = 15.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
-
-                                val phoneRaw = student.noHp ?: "08123456789"
-                                val cleanPhone = phoneRaw.replace(Regex("[^0-9]"), "")
-                                val waPhone = if (cleanPhone.startsWith("0")) "62" + cleanPhone.substring(1) else cleanPhone
-
-                                // WhatsApp Action Card
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = TeacherNeon.copy(alpha = 0.08f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.3f)),
-                                    onClick = {
-                                        val message = "Halo Bapak/Ibu wali dari ${student.fullName} (${student.className}), perkenankan kami dari pihak guru School OS ingin berkoordinasi."
-                                        val intent = Intent(Intent.ACTION_VIEW).apply {
-                                            data = Uri.parse("https://api.whatsapp.com/send?phone=$waPhone&text=${Uri.encode(message)}")
-                                        }
-                                        context.startActivity(intent)
-                                    }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .clip(CircleShape)
-                                                    .background(TeacherNeon),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.AutoMirrored.Filled.Chat,
-                                                    contentDescription = null,
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = "Kirim WhatsApp Wali Murid",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = TextPrimary,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                Text(
-                                                    text = phoneRaw,
-                                                    fontSize = 12.sp,
-                                                    color = TeacherNeon,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            tint = TeacherNeon,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-
-                                // Phone Call Action Card
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = NeonBlue.copy(alpha = 0.08f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.3f)),
-                                    onClick = {
-                                        val intent = Intent(Intent.ACTION_DIAL).apply {
-                                            data = Uri.parse("tel:$cleanPhone")
-                                        }
-                                        context.startActivity(intent)
-                                    }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .clip(CircleShape)
-                                                    .background(NeonBlue),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Call,
-                                                    contentDescription = null,
-                                                    tint = Color.White,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = "Panggilan Suara",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = TextPrimary,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                Text(
-                                                    text = "Langsung via nomor seluler",
-                                                    fontSize = 12.sp,
-                                                    color = TextSecondary,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            tint = NeonBlue,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-
-                                // Email Action Card
-                                val studentEmail = student.email ?: "${student.fullName.lowercase().replace(" ", ".")}@schoolos.id"
-                                Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = CosmicSurface2,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-                                    onClick = {
-                                        val intent = Intent(Intent.ACTION_SENDTO).apply {
-                                            data = Uri.parse("mailto:$studentEmail")
-                                        }
-                                        context.startActivity(intent)
-                                    }
-                                ) {
-                                    Row(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .padding(14.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.SpaceBetween
-                                    ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                                        ) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .size(40.dp)
-                                                    .clip(CircleShape)
-                                                    .background(CosmicSurface3),
-                                                contentAlignment = Alignment.Center
-                                            ) {
-                                                Icon(
-                                                    imageVector = Icons.Default.Email,
-                                                    contentDescription = null,
-                                                    tint = TextPrimary,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    text = "Email Siswa",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = TextPrimary,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                                Text(
-                                                    text = studentEmail,
-                                                    fontSize = 12.sp,
-                                                    color = TextSecondary,
-                                                    maxLines = 1,
-                                                    overflow = TextOverflow.Ellipsis
-                                                )
-                                            }
-                                        }
-                                        Icon(
-                                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                            contentDescription = null,
-                                            tint = TextTertiary,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
+                        ContactTab(
+                            student = student,
+                            context = context,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
                     }
                 }
             }
 
-            item {
-                Spacer(Modifier.height(30.dp))
+            item { Spacer(Modifier.height(16.dp)) }
+        }
+    }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// HERO CARD
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@Composable
+private fun StudentHeroCard(
+    student: ClassStudent,
+    genderLabel: String,
+    genderIcon: ImageVector,
+    heroAccent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        heroAccent.copy(alpha = 0.10f),
+                        MaterialTheme.colorScheme.background,
+                    )
+                )
+            )
+            .padding(horizontal = 16.dp, vertical = 20.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            // Avatar circle
+            Box(
+                modifier = Modifier
+                    .size(64.dp)
+                    .clip(CircleShape)
+                    .background(heroAccent.copy(alpha = 0.12f))
+                    .border(2.dp, heroAccent.copy(alpha = 0.4f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = student.fullName.firstOrNull()?.toString()?.uppercase() ?: "?",
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = heroAccent
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = student.fullName,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                if (student.nisn.isNotBlank()) {
+                    Text(
+                        text = "NISN: ${student.nisn}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+
+                // Chips row
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    InfoChip(
+                        label = student.className.ifBlank { "Tidak diketahui" },
+                        icon = Icons.Default.Class,
+                        containerColor = MaterialTheme.colorScheme.primaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                    InfoChip(
+                        label = genderLabel,
+                        icon = genderIcon,
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    )
+                }
             }
         }
     }
 }
 
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// INFO CHIP
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 @Composable
-private fun MetricCard(
-    title: String,
-    value: String,
+private fun InfoChip(
+    label: String,
     icon: ImageVector,
+    containerColor: Color,
+    contentColor: Color,
     modifier: Modifier = Modifier,
-    accentColor: Color = TextSecondary,
 ) {
-    Card(
-        modifier = modifier.height(76.dp),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(50.dp),
+        color = containerColor
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(8.dp),
-            verticalArrangement = Arrangement.SpaceBetween
+        Row(
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(16.dp)
+                tint = contentColor,
+                modifier = Modifier.size(11.dp)
             )
-            Column(modifier = Modifier.fillMaxWidth()) {
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = contentColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// METRICS ROW
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@Composable
+private fun MetricsRow(
+    avgGrade: String,
+    quizDone: String,
+    assignDone: String,
+    attendance: String,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        MetricCard(
+            label = "Rata-rata",
+            value = if (isLoading) "â€¦" else avgGrade,
+            icon = Icons.Default.Grade,
+            accentColor = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.weight(1f)
+        )
+        MetricCard(
+            label = "Kuis",
+            value = if (isLoading) "â€¦" else quizDone,
+            icon = Icons.Default.Quiz,
+            accentColor = MaterialTheme.colorScheme.secondary,
+            modifier = Modifier.weight(1f)
+        )
+        MetricCard(
+            label = "Tugas",
+            value = if (isLoading) "â€¦" else assignDone,
+            icon = Icons.Default.AssignmentTurnedIn,
+            accentColor = MaterialTheme.colorScheme.tertiary,
+            modifier = Modifier.weight(1f)
+        )
+        MetricCard(
+            label = "Hadir",
+            value = if (isLoading) "â€¦" else attendance,
+            icon = Icons.Default.EventAvailable,
+            accentColor = NeonWarning,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun MetricCard(
+    label: String,
+    value: String,
+    icon: ImageVector,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.height(82.dp),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(10.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(accentColor.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(16.dp)
+                )
+            }
+            Column {
                 Text(
                     text = value,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    text = title,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Normal,
-                    color = TextTertiary,
+                    text = label,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB ROW
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@Composable
+private fun StudentTabRow(
+    tabs: List<String>,
+    selectedTab: Int,
+    onTabSelected: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier.padding(top = 12.dp)) {
+        TabRow(
+            selectedTabIndex = selectedTab,
+            containerColor = MaterialTheme.colorScheme.background,
+            contentColor = MaterialTheme.colorScheme.primary,
+            divider = {
+                HorizontalDivider(
+                    color = MaterialTheme.colorScheme.outlineVariant,
+                    thickness = 1.dp
+                )
+            },
+            indicator = { tabPositions ->
+                if (selectedTab < tabPositions.size) {
+                    Box(
+                        modifier = Modifier
+                            .tabIndicatorOffset(tabPositions[selectedTab])
+                            .height(3.dp)
+                            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
+                            .background(MaterialTheme.colorScheme.primary)
+                    )
+                }
+            }
+        ) {
+            tabs.forEachIndexed { index, title ->
+                Tab(
+                    selected = selectedTab == index,
+                    onClick = { onTabSelected(index) },
+                ) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
+                        color = if (selectedTab == index)
+                            MaterialTheme.colorScheme.primary
+                        else
+                            MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(vertical = 12.dp)
+                    )
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 0 â€” ACADEMIC PROGRESS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@Composable
+private fun AcademicProgressTab(
+    progress: Progress?,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+        // Status card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Header
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.tertiaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.TrendingUp,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Status Akademik",
+                            style = MaterialTheme.typography.titleSmall,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Text(
+                            text = "Perkembangan belajar siswa",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                } else {
+                    // Status badge
+                    val status = progress?.academicStatus ?: "Data belum tersedia"
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Star,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.tertiary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = status,
+                                style = MaterialTheme.typography.bodyMedium,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    // Teacher notes
+                    val notes = progress?.teacherNotes
+                    if (!notes.isNullOrBlank()) {
+                        Text(
+                            text = "Catatan Guru",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            text = notes,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            lineHeight = 20.sp
+                        )
+                    }
+                }
+            }
+        }
+
+        // Coaching notes card
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        ) {
+            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(MaterialTheme.colorScheme.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Notes,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Text(
+                        text = "Catatan Pembinaan",
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text(
+                    text = "Siswa aktif berpartisipasi dalam diskusi kelas. Direkomendasikan untuk mengikuti program pengayaan sains.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    lineHeight = 20.sp
+                )
+            }
+        }
+    }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 1 â€” LEARNING METRICS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@Composable
+private fun LearningMetricsTab(
+    progress: Progress?,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(MaterialTheme.colorScheme.primaryContainer),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BarChart,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+                Text(
+                    text = "Metrik Belajar",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+
+            if (isLoading) {
+                repeat(4) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                    )
+                }
+            } else {
+                val lessonsDone = progress?.lessonCompleted ?: 0
+                val lessonsTotal = progress?.lessonTotal ?: 0
+                val assignDone = progress?.assignmentCompleted ?: 0
+                val assignTotal = progress?.assignmentTotal ?: 0
+                val quizDone = progress?.quizCompleted ?: 0
+                val quizTotal = progress?.quizTotal ?: 0
+                val sessionDone = progress?.sessionAttended ?: 0
+                val sessionTotal = progress?.sessionTotal ?: 0
+
+                MetricProgressRow(
+                    title = "Modul & Materi",
+                    current = lessonsDone,
+                    total = lessonsTotal,
+                    color = MaterialTheme.colorScheme.primary,
+                    icon = Icons.AutoMirrored.Filled.MenuBook
+                )
+                MetricProgressRow(
+                    title = "Tugas & Praktik",
+                    current = assignDone,
+                    total = assignTotal,
+                    color = MaterialTheme.colorScheme.secondary,
+                    icon = Icons.Default.Assignment
+                )
+                MetricProgressRow(
+                    title = "Kuis & Asesmen",
+                    current = quizDone,
+                    total = quizTotal,
+                    color = MaterialTheme.colorScheme.tertiary,
+                    icon = Icons.Default.Quiz
+                )
+                MetricProgressRow(
+                    title = "Kehadiran",
+                    current = sessionDone,
+                    total = sessionTotal,
+                    color = NeonWarning,
+                    icon = Icons.Default.EventAvailable
                 )
             }
         }
@@ -763,9 +756,13 @@ private fun MetricProgressRow(
     icon: ImageVector,
 ) {
     val pct = if (total > 0) (current.toFloat() / total.toFloat()).coerceIn(0f, 1f) else 0f
-    val animatedProgress by animateFloatAsState(targetValue = pct, label = "progress")
+    val animatedProgress by animateFloatAsState(
+        targetValue = pct,
+        animationSpec = tween(600),
+        label = "progress_$title"
+    )
 
-    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -783,14 +780,13 @@ private fun MetricProgressRow(
                 )
                 Text(
                     text = title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
             }
             Text(
-                text = "$current/$total (${(pct * 100).toInt()}%)",
-                fontSize = 12.sp,
+                text = if (total > 0) "$current/$total (${(pct * 100).toInt()}%)" else "--",
+                style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
@@ -800,10 +796,301 @@ private fun MetricProgressRow(
             progress = { animatedProgress },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(8.dp)
-                .clip(RoundedCornerShape(4.dp)),
+                .height(6.dp)
+                .clip(RoundedCornerShape(3.dp)),
             color = color,
-            trackColor = color.copy(alpha = 0.15f)
+            trackColor = color.copy(alpha = 0.12f)
         )
     }
 }
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 2 â€” ACHIEVEMENTS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@Composable
+private fun EmptyAchievementsCard(modifier: Modifier = Modifier) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+            Text(
+                text = "Belum Ada Lencana",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Text(
+                text = "Lencana prestasi akan tercatat otomatis saat siswa menyelesaikan tantangan.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun AchievementItem(
+    achievement: Achievement,
+    modifier: Modifier = Modifier,
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.tertiaryContainer),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.EmojiEvents,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = achievement.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = achievement.description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (!achievement.earnedAt.isNullOrBlank()) {
+                    Text(
+                        text = "Diraih: ${achievement.earnedAt}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.tertiary,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+        }
+    }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAB 3 â€” CONTACT
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@Composable
+private fun ContactTab(
+    student: ClassStudent,
+    context: android.content.Context,
+    modifier: Modifier = Modifier,
+) {
+    val phoneRaw = student.noHp ?: ""
+    val cleanPhone = phoneRaw.replace(Regex("[^0-9]"), "")
+    val waPhone = if (cleanPhone.startsWith("0")) "62" + cleanPhone.substring(1) else cleanPhone
+    val studentEmail = student.email ?: "${student.fullName.lowercase().replace(" ", ".")}@schoolos.id"
+
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(
+            text = "Informasi Kontak",
+            style = MaterialTheme.typography.titleSmall,
+            color = MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.padding(bottom = 2.dp)
+        )
+
+        // WhatsApp Card
+        ContactActionCard(
+            title = "WhatsApp Wali Murid",
+            subtitle = phoneRaw.ifBlank { "Nomor tidak tersedia" },
+            icon = Icons.AutoMirrored.Filled.Chat,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            accentColor = MaterialTheme.colorScheme.primary,
+            enabled = cleanPhone.isNotBlank(),
+            onClick = {
+                val message = "Halo Bapak/Ibu wali dari ${student.fullName} (${student.className}), saya dari pihak guru School OS ingin berkoordinasi."
+                val intent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("https://api.whatsapp.com/send?phone=$waPhone&text=${Uri.encode(message)}")
+                }
+                context.startActivity(intent)
+            }
+        )
+
+        // Phone Call Card
+        ContactActionCard(
+            title = "Telepon Langsung",
+            subtitle = phoneRaw.ifBlank { "Nomor tidak tersedia" },
+            icon = Icons.Default.Call,
+            containerColor = MaterialTheme.colorScheme.secondaryContainer,
+            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            accentColor = MaterialTheme.colorScheme.secondary,
+            enabled = cleanPhone.isNotBlank(),
+            onClick = {
+                val intent = Intent(Intent.ACTION_DIAL).apply {
+                    data = Uri.parse("tel:$cleanPhone")
+                }
+                context.startActivity(intent)
+            }
+        )
+
+        // Email Card
+        ContactActionCard(
+            title = "Email Siswa",
+            subtitle = studentEmail,
+            icon = Icons.Default.Email,
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
+            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
+            accentColor = MaterialTheme.colorScheme.tertiary,
+            enabled = true,
+            onClick = {
+                val intent = Intent(Intent.ACTION_SENDTO).apply {
+                    data = Uri.parse("mailto:$studentEmail")
+                }
+                context.startActivity(intent)
+            }
+        )
+    }
+}
+
+@Composable
+private fun ContactActionCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    containerColor: Color,
+    contentColor: Color,
+    accentColor: Color,
+    enabled: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val alpha = if (enabled) 1f else 0.4f
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled, onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(containerColor.copy(alpha = alpha)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = contentColor.copy(alpha = alpha),
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = accentColor.copy(alpha = alpha),
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            if (enabled) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ERROR BANNER
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+@Composable
+private fun ErrorBanner(
+    message: String,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.ErrorOutline,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.size(20.dp)
+            )
+            Text(
+                text = message,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer
+            )
+        }
+    }
+}
+
