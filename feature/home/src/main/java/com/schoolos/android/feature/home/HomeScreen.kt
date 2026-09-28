@@ -212,7 +212,7 @@ fun HomeScreen(
                                     letterSpacing = (-0.2).sp,
                                     lineHeight = 16.sp,
                                 )
-                                Spacer(Modifier.height(1.dp))
+                                Spacer(Modifier.height(0.dp))
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.fillMaxWidth(),
