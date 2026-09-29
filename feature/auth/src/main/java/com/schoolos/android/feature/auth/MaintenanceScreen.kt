@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.auth
 
+import android.webkit.WebView
+import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -27,7 +29,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dns
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Schedule
@@ -51,8 +52,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontStyle
@@ -60,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.CosmicSurface
@@ -92,17 +92,8 @@ fun MaintenanceScreen(
     var countdown by remember { mutableIntStateOf(15) }
     var feedbackMessage by remember { mutableStateOf<String?>(null) }
 
-    // Pulsing radar animation for enterprise look
-    val infiniteTransition = rememberInfiniteTransition(label = "RadarAura")
-    val pulseScale by infiniteTransition.animateFloat(
-        initialValue = 0.92f,
-        targetValue = 1.16f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "PulseScale"
-    )
+    // Pulsing beacon animation for the live-status pill
+    val infiniteTransition = rememberInfiniteTransition(label = "BeaconAura")
     val beaconAlpha by infiniteTransition.animateFloat(
         initialValue = 0.35f,
         targetValue = 1.0f,
@@ -162,49 +153,64 @@ fun MaintenanceScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // ── Concentric Radar Core Icon ─────────────────────────
-            Box(
-                modifier = Modifier.size(100.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                // Outer Pulse Aura
-                Box(
-                    modifier = Modifier
-                        .size(96.dp)
-                        .scale(pulseScale)
-                        .clip(CircleShape)
-                        .background(NeonWarning.copy(alpha = 0.12f))
-                        .border(1.dp, NeonWarning.copy(alpha = 0.25f), CircleShape)
-                )
-
-                // Inner Glass Core
-                Box(
-                    modifier = Modifier
-                        .size(76.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .background(
-                            Brush.linearGradient(
-                                listOf(
-                                    NeonWarning.copy(alpha = 0.20f),
-                                    NeonBlue.copy(alpha = 0.15f)
-                                )
-                            )
+            // ── Animated SVG Illustration (phone-maintenance-animate.svg) ───
+            AndroidView(
+                factory = { ctx ->
+                    WebView(ctx).apply {
+                        webViewClient = WebViewClient()
+                        settings.javaScriptEnabled = true
+                        settings.domStorageEnabled = true
+                        settings.loadWithOverviewMode = true
+                        settings.useWideViewPort = true
+                        setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        isOpaque = false
+                        val html = """
+                            <!DOCTYPE html>
+                            <html>
+                            <head>
+                              <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                              <style>
+                                * { margin: 0; padding: 0; box-sizing: border-box; }
+                                html, body {
+                                  background: transparent;
+                                  display: flex;
+                                  align-items: center;
+                                  justify-content: center;
+                                  width: 100%;
+                                  height: 100%;
+                                  overflow: hidden;
+                                }
+                                img {
+                                  width: 100%;
+                                  max-width: 320px;
+                                  height: auto;
+                                  display: block;
+                                }
+                              </style>
+                            </head>
+                            <body>
+                              <img src="file:///android_res/raw/phone_maintenance_animate.svg"
+                                   alt="Maintenance" />
+                            </body>
+                            </html>
+                        """.trimIndent()
+                        loadDataWithBaseURL(
+                            "file:///android_res/raw/",
+                            html,
+                            "text/html",
+                            "UTF-8",
+                            null
                         )
-                        .border(1.5.dp, NeonWarning.copy(alpha = 0.45f), RoundedCornerShape(22.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Dns,
-                        contentDescription = "Maintenance Mode",
-                        tint = NeonWarning,
-                        modifier = Modifier.size(38.dp)
-                    )
-                }
-            }
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(240.dp)
+            )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(8.dp))
 
             // ── Live Operational Status Pill ───────────────────────
             Row(
@@ -231,7 +237,7 @@ fun MaintenanceScreen(
                 )
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(14.dp))
 
             // ── Main Titles ─────────────────────────────────────────
             Text(
@@ -254,7 +260,7 @@ fun MaintenanceScreen(
                 modifier = Modifier.padding(horizontal = 8.dp)
             )
 
-            Spacer(Modifier.height(20.dp))
+            Spacer(Modifier.height(18.dp))
 
             // ── Telemetry Status Rows (3 High-Tech Badges) ─────────
             Column(
@@ -320,7 +326,7 @@ fun MaintenanceScreen(
 
             Spacer(Modifier.height(16.dp))
 
-            // ── Technical Operational Notice (Zero Super Admin Leak) ─
+            // ── Technical Operational Notice ─────────────────────────
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -428,7 +434,7 @@ fun MaintenanceScreen(
 
             Spacer(Modifier.height(20.dp))
 
-            // ── Footer Assistance Text (No Super Admin mention) ────
+            // ── Footer Assistance Text ──────────────────────────────
             Text(
                 text = "Hubungi Administrator TI Sekolah jika membutuhkan akses darurat.\nSchool OS Enterprise \u2022 v2.4.0",
                 fontSize = 10.5.sp,
