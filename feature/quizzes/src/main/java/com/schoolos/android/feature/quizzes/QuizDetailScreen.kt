@@ -394,9 +394,6 @@ private fun CosmicQuizHeroCard(
                         fontWeight = FontWeight.Bold
                     )
                 }
-                        fontWeight = FontWeight.Bold
-                    )
-                }
 
                 // Mapel Pill
                 Text(
