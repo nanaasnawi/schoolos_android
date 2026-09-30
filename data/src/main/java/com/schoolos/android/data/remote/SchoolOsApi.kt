@@ -136,6 +136,13 @@ interface SchoolOsApi {
         @Header("X-Idempotency-Key") idempotencyKey: String? = null,
     ): ApiResponse<SessionAttendanceDto>
 
+    @POST("learning/sessions/{id}/attendance/bulk")
+    suspend fun recordAttendanceBulk(
+        @Path("id") id: String,
+        @Body request: List<RecordAttendanceRequestDto>,
+        @Header("X-Idempotency-Key") idempotencyKey: String? = null,
+    ): ApiResponse<List<SessionAttendanceDto>>
+
 
     @GET("learning/materials/{id}")
     suspend fun getMaterial(@Path("id") id: String): ApiResponse<com.schoolos.android.data.remote.dto.MaterialDto>

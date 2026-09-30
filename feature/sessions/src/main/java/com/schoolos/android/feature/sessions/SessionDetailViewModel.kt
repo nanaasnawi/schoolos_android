@@ -30,6 +30,9 @@ data class SessionDetailUiState(
     val session: LearningSession? = null,
     val attendance: List<SessionAttendance> = emptyList(),
     val studentItems: List<StudentAttendanceUiItem> = emptyList(),
+    val updatingStudentId: String? = null,
+    val isBulkSaving: Boolean = false,
+    val snackbarMessage: String? = null,
 )
 
 @HiltViewModel
@@ -88,7 +91,9 @@ class SessionDetailViewModel @Inject constructor(
                     studentId = student.id,
                     studentName = student.fullName,
                     nisn = student.nisn,
-                    status = att?.status ?: "present",
+                    // Default "absent" — guru harus secara aktif menandai hadir,
+                    // bukan sebaliknya. Mencegah siswa alpa tercatat hadir.
+                    status = att?.status ?: "absent",
                     checkedInAt = att?.checkedInAt,
                     notes = att?.notes,
                 )
@@ -118,16 +123,92 @@ class SessionDetailViewModel @Inject constructor(
             val updated = currentList.map { item ->
                 if (item.studentId == studentId) item.copy(status = newStatus) else item
             }
-            _state.value = _state.value.copy(studentItems = updated)
+            // Optimistic update + tandai siswa sedang diproses
+            _state.value = _state.value.copy(
+                studentItems = updated,
+                updatingStudentId = studentId,
+            )
 
             repository.recordAttendance(
                 sessionId = sessionId,
                 studentId = studentId,
                 status = newStatus,
-            ).onFailure { e ->
-                _state.value = _state.value.copy(studentItems = currentList, error = e.message)
+            ).onSuccess {
+                _state.value = _state.value.copy(
+                    updatingStudentId = null,
+                    snackbarMessage = "Presensi disimpan",
+                )
+            }.onFailure { e ->
+                // Revert optimistic update
+                _state.value = _state.value.copy(
+                    studentItems = currentList,
+                    updatingStudentId = null,
+                    snackbarMessage = "Gagal menyimpan: ${e.message}",
+                )
             }
         }
+    }
+
+    fun markAllPresent() {
+        val currentList = _state.value.studentItems
+        if (currentList.isEmpty()) return
+        val updated = currentList.map { it.copy(status = "present") }
+        _state.value = _state.value.copy(studentItems = updated, isBulkSaving = true)
+        viewModelScope.launch {
+            val bulkItems = updated.map { item ->
+                com.schoolos.android.domain.repository.RecordAttendanceItem(
+                    studentId = item.studentId,
+                    status = "present",
+                    notes = item.notes,
+                )
+            }
+            repository.recordAttendanceBulk(sessionId, bulkItems)
+                .onSuccess {
+                    _state.value = _state.value.copy(
+                        isBulkSaving = false,
+                        snackbarMessage = "Semua siswa (${bulkItems.size}) ditandai Hadir",
+                    )
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        studentItems = currentList,
+                        isBulkSaving = false,
+                        snackbarMessage = "Gagal menyimpan: ${e.message}",
+                    )
+                }
+        }
+    }
+
+    fun saveAllAttendance() {
+        val currentList = _state.value.studentItems
+        if (currentList.isEmpty()) return
+        _state.value = _state.value.copy(isBulkSaving = true)
+        viewModelScope.launch {
+            val bulkItems = currentList.map { item ->
+                com.schoolos.android.domain.repository.RecordAttendanceItem(
+                    studentId = item.studentId,
+                    status = item.status,
+                    notes = item.notes,
+                )
+            }
+            repository.recordAttendanceBulk(sessionId, bulkItems)
+                .onSuccess {
+                    _state.value = _state.value.copy(
+                        isBulkSaving = false,
+                        snackbarMessage = "Berhasil menyimpan presensi ${bulkItems.size} siswa",
+                    )
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isBulkSaving = false,
+                        snackbarMessage = "Gagal menyimpan: ${e.message}",
+                    )
+                }
+        }
+    }
+
+    fun clearSnackbar() {
+        _state.value = _state.value.copy(snackbarMessage = null)
     }
 }
 

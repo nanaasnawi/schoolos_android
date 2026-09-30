@@ -34,6 +34,9 @@ fun TeacherSessionDetailContent(
     attendance: List<SessionAttendance> = emptyList(),
     students: List<StudentAttendanceUiItem> = emptyList(),
     onUpdateAttendance: (studentId: String, status: String) -> Unit = { _, _ -> },
+    onMarkAllPresent: () -> Unit = {},
+    onSaveAll: () -> Unit = {},
+    isBulkSaving: Boolean = false,
     onOpenAssignments: (String) -> Unit,
     onOpenQuizzes: (String) -> Unit,
     onOpenMaterials: (String) -> Unit,
@@ -54,9 +57,12 @@ fun TeacherSessionDetailContent(
         }
     }
     val presentCount = effectiveStudents.count { it.status.lowercase() == "present" }
-    val absentCount = effectiveStudents.count { it.status.lowercase() == "absent" }
+    val lateCount = effectiveStudents.count { it.status.lowercase() == "late" }
+    val absentCount = effectiveStudents.count {
+        it.status.lowercase() in listOf("absent", "sick", "excused")
+    }
     val totalCount = effectiveStudents.size
-    val attendanceRate = if (totalCount > 0) (presentCount * 100 / totalCount) else 0
+    val attendanceRate = if (totalCount > 0) ((presentCount + lateCount) * 100 / totalCount) else 0
     val sessionPeriod = formatSessionPeriod(session.scheduledAt)
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -124,7 +130,7 @@ fun TeacherSessionDetailContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    AttendanceMiniCard("HADIR", presentCount.toString(), NeonSuccess, Modifier.weight(1f))
+                    AttendanceMiniCard("HADIR", "${presentCount + lateCount}", NeonSuccess, Modifier.weight(1f))
                     AttendanceMiniCard("TIDAK HADIR", absentCount.toString(), NeonError, Modifier.weight(1f))
                     AttendanceMiniCard("KEHADIRAN", "$attendanceRate%", accentColor, Modifier.weight(1f))
                 }
@@ -217,6 +223,81 @@ fun TeacherSessionDetailContent(
             }
         }
 
+        if (effectiveStudents.isNotEmpty()) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Button Tandai Hadir Semua
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(NeonSuccess.copy(alpha = 0.12f))
+                        .border(1.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .clickable(enabled = !isBulkSaving) { onMarkAllPresent() }
+                        .padding(vertical = 8.dp, horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            Icons.Default.DoneAll,
+                            contentDescription = null,
+                            tint = NeonSuccess,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            "Hadir Semua",
+                            color = NeonSuccess,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+
+                // Button Simpan Presensi
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(accentColor.copy(alpha = 0.15f))
+                        .border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .clickable(enabled = !isBulkSaving) { onSaveAll() }
+                        .padding(vertical = 8.dp, horizontal = 10.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (isBulkSaving) {
+                            androidx.compose.material3.CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp),
+                                color = accentColor,
+                                strokeWidth = 2.dp,
+                            )
+                        } else {
+                            Icon(
+                                Icons.Default.Save,
+                                contentDescription = null,
+                                tint = accentColor,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                        Text(
+                            if (isBulkSaving) "Menyimpan..." else "Simpan Presensi",
+                            color = accentColor,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
+            }
+        }
+
         GlassCard(cornerRadius = 16.dp) {
             Column(modifier = Modifier.padding(12.dp)) {
                 if (effectiveStudents.isEmpty()) {
@@ -236,9 +317,11 @@ fun TeacherSessionDetailContent(
                         val currentStatus = student.status.lowercase()
                         val statusColor = when (currentStatus) {
                             "present" -> NeonSuccess
+                            "late" -> Color(0xFFFFA040)
                             "excused" -> NeonWarning
-                            "late" -> NeonBlue
-                            else -> NeonError
+                            "sick" -> NeonBlue
+                            "absent" -> NeonError
+                            else -> TextTertiary
                         }
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
@@ -275,7 +358,7 @@ fun TeacherSessionDetailContent(
                                     color = TextTertiary,
                                 )
                             }
-                            // Interactive status selector buttons (H: Hadir, I: Izin, S: Sakit/Terlambat, A: Alpa)
+                            // Tombol status: H=Hadir, I=Izin, S=Sakit, T=Terlambat, A=Alpa
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 AttendanceStatusButton(
                                     label = "H",
@@ -291,8 +374,14 @@ fun TeacherSessionDetailContent(
                                 )
                                 AttendanceStatusButton(
                                     label = "S",
-                                    selected = currentStatus == "late",
+                                    selected = currentStatus == "sick",
                                     color = NeonBlue,
+                                    onClick = { onUpdateAttendance(student.studentId, "sick") }
+                                )
+                                AttendanceStatusButton(
+                                    label = "T",
+                                    selected = currentStatus == "late",
+                                    color = Color(0xFFFFA040),
                                     onClick = { onUpdateAttendance(student.studentId, "late") }
                                 )
                                 AttendanceStatusButton(

@@ -20,10 +20,15 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -60,6 +65,14 @@ fun SessionDetailScreen(
     viewModel: SessionDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(state.snackbarMessage) {
+        state.snackbarMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearSnackbar()
+        }
+    }
 
     val session = state.session
     val rawSubject = session?.subjectName ?: session?.notes ?: "Pelajaran"
@@ -68,6 +81,15 @@ fun SessionDetailScreen(
 
     Scaffold(
         containerColor = CosmicBlack,
+        snackbarHost = {
+            SnackbarHost(snackbarHostState) { data ->
+                Snackbar(
+                    snackbarData = data,
+                    containerColor = androidx.compose.ui.graphics.Color(0xFF1E2A3A),
+                    contentColor = TextPrimary,
+                )
+            }
+        },
         topBar = {
             ExecutiveTopBar(
                 title = subject,
@@ -182,6 +204,9 @@ fun SessionDetailScreen(
                                 attendance = state.attendance,
                                 students = state.studentItems,
                                 onUpdateAttendance = viewModel::updateAttendance,
+                                onMarkAllPresent = viewModel::markAllPresent,
+                                onSaveAll = viewModel::saveAllAttendance,
+                                isBulkSaving = state.isBulkSaving,
                                 onOpenAssignments = openAssignments,
                                 onOpenQuizzes = openQuizzes,
                                 onOpenMaterials = openMaterials,
