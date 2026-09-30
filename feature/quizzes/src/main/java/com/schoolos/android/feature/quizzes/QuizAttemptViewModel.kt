@@ -100,12 +100,27 @@ class QuizAttemptViewModel @Inject constructor(
     fun submit() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isSubmitting = true, submitError = null)
-            val answerInputs = _state.value.answers.map { (qId, value) ->
-                AnswerInput(
-                    questionId = qId,
-                    chosenChoiceId = if (value?.startsWith("choice_") == true) value.removePrefix("choice_") else null,
-                    textAnswer = if (value?.startsWith("choice_") == false) value else null,
-                )
+            val questionsMap = _state.value.questions.associateBy { it.id }
+            val answerInputs = _state.value.answers.mapNotNull { (qId, value) ->
+                if (value.isNullOrBlank()) return@mapNotNull null
+                val question = questionsMap[qId]
+                val isMultipleChoice = question?.choices?.isNotEmpty() == true ||
+                    question?.questionType?.lowercase() in listOf("multiple_choice", "true_false", "pg")
+
+                if (isMultipleChoice) {
+                    val choiceId = if (value.startsWith("choice_")) value.removePrefix("choice_") else value
+                    AnswerInput(
+                        questionId = qId,
+                        chosenChoiceId = choiceId,
+                        textAnswer = null,
+                    )
+                } else {
+                    AnswerInput(
+                        questionId = qId,
+                        chosenChoiceId = null,
+                        textAnswer = value,
+                    )
+                }
             }
             repository.submitAttempt(quizId, attemptId, answerInputs)
                 .onSuccess { attempt ->

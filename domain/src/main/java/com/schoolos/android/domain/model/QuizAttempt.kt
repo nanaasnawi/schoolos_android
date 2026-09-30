@@ -8,7 +8,11 @@ data class QuizAttempt(
     val completedAt: String?,
     val score: Int?,
     val totalPoints: Int,
+    val percentage: Int? = null,
+    val passed: Boolean? = null,
     val status: String,
+    val studentName: String? = null,
+    val studentNisn: String? = null,
     val createdAt: String,
     val updatedAt: String,
 )
