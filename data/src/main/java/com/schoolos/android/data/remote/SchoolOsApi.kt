@@ -91,7 +91,7 @@ interface SchoolOsApi {
 
     // Quizzes
     @GET("learning/quizzes")
-    suspend fun getQuizzes(@Query("class_id") classId: String): ApiResponse<List<QuizDto>>
+    suspend fun getQuizzes(@Query("class_id") classId: String? = null): ApiResponse<List<QuizDto>>
 
     @GET("learning/quizzes/{id}")
     suspend fun getQuiz(@Path("id") id: String): ApiResponse<QuizDto>
@@ -109,6 +109,17 @@ interface SchoolOsApi {
     suspend fun startAttempt(
         @Path("id") id: String,
         @Body request: StartAttemptRequest,
+    ): ApiResponse<QuizAttemptDto>
+
+    @GET("learning/quizzes/{id}/attempts")
+    suspend fun getQuizAttempts(
+        @Path("id") id: String,
+    ): ApiResponse<List<QuizAttemptDto>>
+
+    @GET("learning/quizzes/{id}/attempts/{attempt_id}")
+    suspend fun getQuizAttempt(
+        @Path("id") quizId: String,
+        @Path("attempt_id") attemptId: String,
     ): ApiResponse<QuizAttemptDto>
 
     @POST("learning/quizzes/{id}/attempts/{attempt_id}/submit")

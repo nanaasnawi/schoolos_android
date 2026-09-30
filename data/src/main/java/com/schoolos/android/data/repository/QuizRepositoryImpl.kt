@@ -156,4 +156,9 @@ class QuizRepositoryImpl @Inject constructor(
         )
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal mengumpulkan jawaban kuis.")
     }
+
+    override suspend fun getQuizAttempts(quizId: String): Result<List<QuizAttempt>> = runCatching {
+        val response = api.getQuizAttempts(quizId)
+        response.data?.map { it.dtoToDomain() } ?: emptyList()
+    }
 }
