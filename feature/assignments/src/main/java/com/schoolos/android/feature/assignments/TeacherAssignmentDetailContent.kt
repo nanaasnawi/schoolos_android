@@ -39,8 +39,15 @@ fun TeacherAssignmentDetailContent(
     onDismissGradeSuccess: () -> Unit = {},
     onDismissGradeError: () -> Unit = {},
 ) {
+    // 0: Butir Soal & Petunjuk, 1: Pengumpulan Siswa
+    var selectedTab by remember { mutableStateOf(if (assignment.questions.isNotEmpty()) 0 else 1) }
+    // Filter: ALL, PENDING, GRADED, UNSUBMITTED
+    var submissionFilter by remember { mutableStateOf("ALL") }
+
     // Track which submission is open in the grading dialog
     var gradingSubmission by remember { mutableStateOf<AssignmentSubmission?>(null) }
+    // Track if teacher clicked an unsubmitted student to show dialog
+    var unsubmittedStudentDialog by remember { mutableStateOf<AssignmentSubmission?>(null) }
 
     // Grade success snackbar
     LaunchedEffect(gradeSuccess) {
@@ -50,78 +57,14 @@ fun TeacherAssignmentDetailContent(
         }
     }
 
+    val totalStudents = allSubmissions.size
+    val gradedCount = allSubmissions.count { it.status == "graded" }
+    val pendingCount = allSubmissions.count { it.status == "submitted" }
+    val submittedOrGradedCount = gradedCount + pendingCount
+    val unsubmittedCount = allSubmissions.count { it.status == "unsubmitted" }
+
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-        // ── STATS OVERVIEW ──
-        val gradedCount = allSubmissions.count { it.status == "graded" }
-        val totalCount = allSubmissions.size
-        val pendingCount = totalCount - gradedCount
-        val progress = if (totalCount > 0) gradedCount.toFloat() / totalCount else 0f
-
-        if (totalCount > 0) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(
-                        Brush.linearGradient(
-                            colors = listOf(CosmicNavy, NeonBlue.copy(alpha = 0.08f))
-                        )
-                    )
-                    .border(1.dp, NeonBlue.copy(alpha = 0.25f), RoundedCornerShape(18.dp))
-                    .padding(16.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            "Rekap Penilaian Tugas",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextPrimary
-                        )
-                        Text(
-                            "$gradedCount / $totalCount Dinilai",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonBlue
-                        )
-                    }
-
-                    // Progress bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(CircleShape)
-                            .background(NeonBlue.copy(alpha = 0.1f))
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth(progress)
-                                .height(8.dp)
-                                .clip(CircleShape)
-                                .background(
-                                    Brush.horizontalGradient(listOf(NeonBlue, NeonSuccess))
-                                )
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        StatBadge("✅ Sudah Dinilai", gradedCount.toString(), NeonSuccess, Modifier.weight(1f))
-                        StatBadge("⏳ Belum Dinilai", pendingCount.toString(), NeonWarning, Modifier.weight(1f))
-                        StatBadge("📊 Nilai Maks", "${assignment.maxScore}", NeonBlue, Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-
-        // ── METADATA CARD ──
+        // ── METADATA & OVERVIEW CARD ──
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -131,8 +74,11 @@ fun TeacherAssignmentDetailContent(
                 .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
                 .padding(14.dp)
         ) {
-            Column {
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     assignment.dueAt?.let { dueIso ->
                         EducationalDateBadge(dateIso = dueIso, showTime = true, accentColor = NeonBlue)
                     }
@@ -149,109 +95,523 @@ fun TeacherAssignmentDetailContent(
                             Text("Maks: ${assignment.maxScore} Poin", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                         }
                     }
-                }
-
-                if (assignment.description?.isNotBlank() == true) {
-                    Spacer(Modifier.height(14.dp))
-                    HorizontalDivider(color = GlassBorder, thickness = 1.dp)
-                    Spacer(Modifier.height(14.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Description, null, tint = NeonBlue, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text("Deskripsi Tugas", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    if (assignment.questions.isNotEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(NeonBlue.copy(alpha = 0.1f))
+                                .border(1.dp, NeonBlue.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.MenuBook, null, tint = NeonBlue, modifier = Modifier.size(13.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("${assignment.questions.size} Butir Soal", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonBlue)
+                            }
+                        }
                     }
-                    Spacer(Modifier.height(6.dp))
-                    Text(assignment.description!!, fontSize = 12.sp, color = TextSecondary, lineHeight = 18.sp)
                 }
             }
         }
 
-        // ── SUCCESS BANNER ──
-        if (gradeSuccess) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NeonSuccess.copy(alpha = 0.12f))
-                    .border(1.dp, NeonSuccess.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CheckCircle, null, tint = NeonSuccess, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("✅ Nilai berhasil disimpan!", fontSize = 13.sp, color = NeonSuccess, fontWeight = FontWeight.Bold)
-                }
-            }
-        }
-
-        // ── ERROR BANNER ──
-        if (!gradeError.isNullOrBlank()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(NeonError.copy(alpha = 0.12f))
-                    .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                    .clickable { onDismissGradeError() }
-                    .padding(12.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Error, null, tint = NeonError, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(gradeError, fontSize = 12.sp, color = NeonError)
-                }
-            }
-        }
-
-        // ── SUBMISSION ROSTER ──
+        // ── SEGMENTED NAVIGATION TABS (Butir Soal & Petunjuk vs Pengumpulan Siswa) ──
         Row(
-            modifier = Modifier.padding(start = 4.dp, top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(14.dp))
+                .background(CosmicNavy)
+                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                .padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            Text(
-                "Pengumpulan Siswa",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black,
-                color = TextPrimary
-            )
-            Spacer(Modifier.width(8.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(NeonBlue.copy(alpha = 0.1f))
-                    .padding(horizontal = 6.dp, vertical = 2.dp)
-            ) {
-                Text("Ketuk untuk menilai", fontSize = 9.sp, color = NeonBlue, fontWeight = FontWeight.Bold)
-            }
-        }
+            val isTab0 = selectedTab == 0
+            val isTab1 = selectedTab == 1
 
-        if (allSubmissions.isEmpty()) {
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(CosmicNavy)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                    .padding(24.dp),
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isTab0) NeonBlue.copy(alpha = 0.18f) else Color.Transparent)
+                    .clickable { selectedTab = 0 }
+                    .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text("📭", fontSize = 32.sp)
-                    Text("Belum ada siswa yang mengumpulkan.", fontSize = 13.sp, color = TextTertiary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.MenuBook,
+                        contentDescription = null,
+                        tint = if (isTab0) NeonBlue else TextSecondary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "📋 Butir Soal (${assignment.questions.size})",
+                        fontSize = 12.sp,
+                        fontWeight = if (isTab0) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isTab0) NeonBlue else TextSecondary
+                    )
                 }
             }
-        } else {
-            allSubmissions.forEach { submission ->
-                TeacherSubmissionRow(
-                    submission = submission,
-                    maxScore = assignment.maxScore,
-                    onClick = { gradingSubmission = submission }
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isTab1) NeonBlue.copy(alpha = 0.18f) else Color.Transparent)
+                    .clickable { selectedTab = 1 }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.AssignmentTurnedIn,
+                        contentDescription = null,
+                        tint = if (isTab1) NeonBlue else TextSecondary,
+                        modifier = Modifier.size(15.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "📥 Koreksi Siswa ($submittedOrGradedCount/$totalStudents)",
+                        fontSize = 12.sp,
+                        fontWeight = if (isTab1) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isTab1) NeonBlue else TextSecondary
+                    )
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // TAB 0: BUTIR SOAL & PETUNJUK PENGERJAAN
+        // ════════════════════════════════════════════════════════════════════════
+        if (selectedTab == 0) {
+            // Petunjuk Pengerjaan & Deskripsi
+            if (assignment.instructions?.isNotBlank() == true || assignment.description?.isNotBlank() == true) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CosmicNavy)
+                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                        .padding(14.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Description, null, tint = NeonBlue, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text("Petunjuk & Deskripsi Tugas", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        }
+                        if (assignment.instructions?.isNotBlank() == true) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(NeonBlue.copy(alpha = 0.08f))
+                                    .border(1.dp, NeonBlue.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+                                    .padding(10.dp)
+                            ) {
+                                Text(
+                                    assignment.instructions!!,
+                                    fontSize = 12.sp,
+                                    color = TextPrimary,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+                        if (assignment.description?.isNotBlank() == true && assignment.description != assignment.instructions) {
+                            Text(
+                                assignment.description!!,
+                                fontSize = 12.sp,
+                                color = TextSecondary,
+                                lineHeight = 18.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            // Questions List
+            if (assignment.questions.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(CosmicNavy)
+                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text("📝", fontSize = 32.sp)
+                        Text(
+                            "Tugas Berbasis Instruksi / Pengumpulan Dokumen",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            "Tugas ini tidak menggunakan butir soal pilihan ganda maupun esai. Siswa mengumpulkan lembar pengerjaan berupa file atau uraian teks langsung.",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    "Daftar Butir Soal (${assignment.questions.size} Soal):",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Black,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(start = 4.dp)
                 )
+
+                assignment.questions.forEachIndexed { qIdx, q ->
+                    val isPg = q.questionType.uppercase().contains("CHOICE") || q.questionType.uppercase() == "PG"
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(CosmicNavy)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                            .padding(14.dp)
+                    ) {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            // Question Card Header
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(NeonBlue.copy(alpha = 0.2f))
+                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            "Soal #${q.orderIndex ?: (qIdx + 1)}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = NeonBlue
+                                        )
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(6.dp))
+                                            .background(if (isPg) NeonBlue.copy(alpha = 0.1f) else NeonWarning.copy(alpha = 0.1f))
+                                            .padding(horizontal = 7.dp, vertical = 3.dp)
+                                    ) {
+                                        Text(
+                                            if (isPg) "🔘 Pilihan Ganda (PG)" else "📝 Soal Uraian / Esai",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = if (isPg) NeonBlue else NeonWarning
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    "⭐ ${q.points ?: 10} Poin",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = NeonSuccess
+                                )
+                            }
+
+                            // Question Text
+                            Text(
+                                text = q.questionText,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                lineHeight = 19.sp
+                            )
+
+                            // Choices for PG or Essay explanation
+                            if (isPg) {
+                                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    q.choices.forEachIndexed { cIdx, choice ->
+                                        val choiceLetter = ('A' + (choice.orderIndex?.minus(1) ?: cIdx)).toString()
+                                        val isCorrect = choice.isCorrect == true
+
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(if (isCorrect) NeonSuccess.copy(alpha = 0.1f) else CosmicBlack)
+                                                .border(
+                                                    1.dp,
+                                                    if (isCorrect) NeonSuccess.copy(alpha = 0.6f) else GlassBorder,
+                                                    RoundedCornerShape(10.dp)
+                                                )
+                                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(24.dp)
+                                                        .clip(CircleShape)
+                                                        .background(if (isCorrect) NeonSuccess else NeonBlue.copy(alpha = 0.15f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        choiceLetter,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = if (isCorrect) CosmicBlack else TextPrimary
+                                                    )
+                                                }
+                                                Spacer(Modifier.width(10.dp))
+                                                Text(
+                                                    choice.choiceText,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
+                                                    color = if (isCorrect) NeonSuccess else TextSecondary,
+                                                    modifier = Modifier.weight(1f)
+                                                )
+                                                if (isCorrect) {
+                                                    Spacer(Modifier.width(6.dp))
+                                                    Text(
+                                                        "✓ Kunci Benar",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = NeonSuccess
+                                                    )
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(NeonWarning.copy(alpha = 0.08f))
+                                        .border(1.dp, NeonWarning.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                                        .padding(10.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Info, null, tint = NeonWarning, modifier = Modifier.size(14.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            "Siswa akan menjawab soal ini secara deskriptif / uraian teks di HP mereka. Guru mengoreksi dan memberikan nilai secara objektif.",
+                                            fontSize = 11.sp,
+                                            color = TextSecondary,
+                                            lineHeight = 16.sp
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════
+        // TAB 1: PENGUMPULAN & KOREKSI SISWA
+        // ════════════════════════════════════════════════════════════════════════
+        if (selectedTab == 1) {
+            // ── REKAP PENILAIAN ──
+            if (totalStudents > 0) {
+                val progress = if (totalStudents > 0) gradedCount.toFloat() / totalStudents else 0f
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(18.dp))
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(CosmicNavy, NeonBlue.copy(alpha = 0.08f))
+                            )
+                        )
+                        .border(1.dp, NeonBlue.copy(alpha = 0.25f), RoundedCornerShape(18.dp))
+                        .padding(14.dp)
+                ) {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Rekap Progres Penilaian Rombel",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                color = TextPrimary
+                            )
+                            Text(
+                                "$gradedCount / $totalStudents Dinilai",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonBlue
+                            )
+                        }
+
+                        // Progress bar
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(8.dp)
+                                .clip(CircleShape)
+                                .background(NeonBlue.copy(alpha = 0.1f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(progress)
+                                    .height(8.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.horizontalGradient(listOf(NeonBlue, NeonSuccess))
+                                    )
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            StatBadge("📥 Kumpul", submittedOrGradedCount.toString(), NeonBlue, Modifier.weight(1f))
+                            StatBadge("⏳ Perlu Nilai", pendingCount.toString(), NeonWarning, Modifier.weight(1f))
+                            StatBadge("✅ Dinilai", gradedCount.toString(), NeonSuccess, Modifier.weight(1f))
+                            StatBadge("⚠️ Belum Kumpul", unsubmittedCount.toString(), TextTertiary, Modifier.weight(1f))
+                        }
+                    }
+                }
+            }
+
+            // ── SUCCESS & ERROR BANNERS ──
+            if (gradeSuccess) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(NeonSuccess.copy(alpha = 0.12f))
+                        .border(1.dp, NeonSuccess.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.CheckCircle, null, tint = NeonSuccess, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text("✅ Nilai & feedback berhasil disimpan ke siswa!", fontSize = 13.sp, color = NeonSuccess, fontWeight = FontWeight.Bold)
+                    }
+                }
+            }
+
+            if (!gradeError.isNullOrBlank()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(NeonError.copy(alpha = 0.12f))
+                        .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .clickable { onDismissGradeError() }
+                        .padding(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.Error, null, tint = NeonError, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(gradeError, fontSize = 12.sp, color = NeonError)
+                    }
+                }
+            }
+
+            // ── FILTER CHIPS ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                FilterTabChip(
+                    label = "Semua ($totalStudents)",
+                    isSelected = submissionFilter == "ALL",
+                    onClick = { submissionFilter = "ALL" },
+                    modifier = Modifier.weight(1f)
+                )
+                FilterTabChip(
+                    label = "Perlu Nilai ($pendingCount)",
+                    isSelected = submissionFilter == "PENDING",
+                    onClick = { submissionFilter = "PENDING" },
+                    accentColor = NeonWarning,
+                    modifier = Modifier.weight(1.1f)
+                )
+                FilterTabChip(
+                    label = "Dinilai ($gradedCount)",
+                    isSelected = submissionFilter == "GRADED",
+                    onClick = { submissionFilter = "GRADED" },
+                    accentColor = NeonSuccess,
+                    modifier = Modifier.weight(1f)
+                )
+                FilterTabChip(
+                    label = "Belum ($unsubmittedCount)",
+                    isSelected = submissionFilter == "UNSUBMITTED",
+                    onClick = { submissionFilter = "UNSUBMITTED" },
+                    accentColor = TextTertiary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Filtered Submissions
+            val displayedSubmissions = allSubmissions.filter { sub ->
+                when (submissionFilter) {
+                    "PENDING" -> sub.status == "submitted"
+                    "GRADED" -> sub.status == "graded"
+                    "UNSUBMITTED" -> sub.status == "unsubmitted"
+                    else -> true
+                }
+            }
+
+            if (displayedSubmissions.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(20.dp))
+                        .background(CosmicNavy)
+                        .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(if (submissionFilter == "UNSUBMITTED") "🎉" else "📭", fontSize = 32.sp)
+                        Text(
+                            when (submissionFilter) {
+                                "PENDING" -> "Tidak ada pengumpulan yang menunggu penilaian."
+                                "GRADED" -> "Belum ada pengumpulan yang dinilai."
+                                "UNSUBMITTED" -> "Semua siswa dalam kelas telah mengumpulkan tugas!"
+                                else -> "Belum ada siswa yang mengumpulkan."
+                            },
+                            fontSize = 13.sp,
+                            color = TextTertiary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                displayedSubmissions.forEach { submission ->
+                    TeacherSubmissionRow(
+                        submission = submission,
+                        maxScore = assignment.maxScore,
+                        onClick = {
+                            if (submission.status == "unsubmitted") {
+                                unsubmittedStudentDialog = submission
+                            } else {
+                                gradingSubmission = submission
+                            }
+                        }
+                    )
+                }
             }
         }
     }
 
-    // ── GRADING DIALOG ──
+    // ── GRADING DIALOG FOR SUBMITTED STUDENTS ──
     gradingSubmission?.let { sub ->
         GradingDialog(
             submission = sub,
@@ -264,6 +624,74 @@ fun TeacherAssignmentDetailContent(
             }
         )
     }
+
+    // ── DIALOG FOR UNSUBMITTED STUDENTS ──
+    unsubmittedStudentDialog?.let { sub ->
+        AlertDialog(
+            onDismissRequest = { unsubmittedStudentDialog = null },
+            title = {
+                Text(
+                    sub.studentName ?: "Informasi Siswa",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        "NISN: ${sub.studentNisn ?: "-"}",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                    Text(
+                        "Siswa ini belum mengumpulkan tugas. Siswa dapat mengerjakan tugas ini melalui aplikasi School OS Siswa.",
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        lineHeight = 17.sp
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { unsubmittedStudentDialog = null }) {
+                    Text("Tutup", color = NeonBlue, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = CosmicNavy,
+            shape = RoundedCornerShape(16.dp)
+        )
+    }
+}
+
+@Composable
+private fun FilterTabChip(
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    accentColor: Color = NeonBlue,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (isSelected) accentColor.copy(alpha = 0.2f) else CosmicNavy)
+            .border(
+                1.dp,
+                if (isSelected) accentColor.copy(alpha = 0.6f) else GlassBorder,
+                RoundedCornerShape(8.dp)
+            )
+            .clickable(onClick = onClick)
+            .padding(vertical = 7.dp, horizontal = 2.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+            color = if (isSelected) accentColor else TextTertiary,
+            maxLines = 1
+        )
+    }
 }
 
 @Composable
@@ -273,11 +701,11 @@ private fun StatBadge(label: String, value: String, color: Color, modifier: Modi
             .clip(RoundedCornerShape(10.dp))
             .background(color.copy(alpha = 0.08f))
             .border(1.dp, color.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
-            .padding(vertical = 8.dp, horizontal = 4.dp),
+            .padding(vertical = 8.dp, horizontal = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, fontSize = 18.sp, fontWeight = FontWeight.Black, color = color)
+            Text(value, fontSize = 16.sp, fontWeight = FontWeight.Black, color = color)
             Text(label, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = TextTertiary, maxLines = 1)
         }
     }
@@ -289,8 +717,13 @@ private fun TeacherSubmissionRow(
     maxScore: Int,
     onClick: () -> Unit,
 ) {
+    val isUnsubmitted = submission.status == "unsubmitted"
     val isGraded = submission.status == "graded"
-    val accentColor = if (isGraded) NeonSuccess else NeonWarning
+    val accentColor = when {
+        isGraded -> NeonSuccess
+        isUnsubmitted -> TextTertiary
+        else -> NeonWarning
+    }
 
     Box(
         modifier = Modifier
@@ -298,7 +731,7 @@ private fun TeacherSubmissionRow(
             .shadow(3.dp, RoundedCornerShape(16.dp), spotColor = accentColor.copy(alpha = 0.1f))
             .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
-            .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
+            .border(1.dp, if (isUnsubmitted) GlassBorder else accentColor.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
             .clickable(onClick = onClick)
             .padding(14.dp)
     ) {
@@ -315,11 +748,16 @@ private fun TeacherSubmissionRow(
                     .border(1.dp, accentColor.copy(alpha = 0.3f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                if (isGraded) {
-                    Icon(Icons.Default.CheckCircle, null, tint = accentColor, modifier = Modifier.size(22.dp))
-                } else {
-                    Icon(Icons.Default.Person, null, tint = accentColor, modifier = Modifier.size(22.dp))
-                }
+                Icon(
+                    when {
+                        isGraded -> Icons.Default.CheckCircle
+                        isUnsubmitted -> Icons.Default.HourglassEmpty
+                        else -> Icons.Default.AssignmentTurnedIn
+                    },
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(20.dp)
+                )
             }
 
             Spacer(Modifier.width(12.dp))
@@ -336,13 +774,22 @@ private fun TeacherSubmissionRow(
                     Text("NISN: ${submission.studentNisn}", fontSize = 10.sp, color = TextTertiary)
                 }
                 Spacer(Modifier.height(2.dp))
-                Text(
-                    "Kumpul: ${submission.submittedAt.take(10)}",
-                    fontSize = 10.sp,
-                    color = TextTertiary
-                )
+                if (isUnsubmitted) {
+                    Text(
+                        "Belum Mengumpulkan",
+                        fontSize = 10.sp,
+                        color = TextTertiary,
+                        fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
+                    )
+                } else {
+                    Text(
+                        "Kumpul: ${submission.submittedAt.take(10)}",
+                        fontSize = 10.sp,
+                        color = TextTertiary
+                    )
+                }
                 val subContent = submission.content
-                if (!subContent.isNullOrBlank()) {
+                if (!subContent.isNullOrBlank() && !isUnsubmitted) {
                     Spacer(Modifier.height(3.dp))
                     Text(
                         subContent.take(50) + if (subContent.length > 50) "..." else "",
@@ -356,38 +803,54 @@ private fun TeacherSubmissionRow(
             Spacer(Modifier.width(8.dp))
 
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                if (isGraded) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(SuccessBg)
-                            .border(1.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            "${submission.score}/${maxScore}",
-                            color = NeonSuccess,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black
-                        )
+                when {
+                    isGraded -> {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(SuccessBg)
+                                .border(1.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text(
+                                "${submission.score ?: 0}/${maxScore}",
+                                color = NeonSuccess,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
                     }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(NeonWarning.copy(alpha = 0.1f))
-                            .border(1.dp, NeonWarning.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text("NILAI", color = NeonWarning, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    isUnsubmitted -> {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(CosmicBlack)
+                                .border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("BELUM KUMPUL", color = TextTertiary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                    else -> {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(NeonWarning.copy(alpha = 0.15f))
+                                .border(1.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("KOREKSI", color = NeonWarning, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                        }
                     }
                 }
-                Icon(
-                    if (isGraded) Icons.Default.Edit else Icons.Default.Grade,
-                    null,
-                    tint = accentColor.copy(alpha = 0.7f),
-                    modifier = Modifier.size(14.dp)
-                )
+                if (!isUnsubmitted) {
+                    Icon(
+                        if (isGraded) Icons.Default.Edit else Icons.Default.Grade,
+                        null,
+                        tint = accentColor.copy(alpha = 0.7f),
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
             }
         }
     }
@@ -402,7 +865,7 @@ private fun GradingDialog(
     onDismiss: () -> Unit,
     onGrade: (score: Int, feedback: String?) -> Unit,
 ) {
-    var scoreInput by remember { mutableStateOf((submission.score ?: 0).toFloat()) }
+    var scoreInput by remember { mutableStateOf((submission.score ?: maxScore).toFloat()) }
     var feedbackInput by remember { mutableStateOf(submission.feedback ?: "") }
 
     Dialog(
@@ -420,7 +883,7 @@ private fun GradingDialog(
             Column(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
-                    .padding(14.dp),
+                    .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header
@@ -442,13 +905,13 @@ private fun GradingDialog(
                         Spacer(Modifier.width(12.dp))
                         Column {
                             Text(
-                                "Beri Nilai",
-                                fontSize = 16.sp,
+                                "Lembar Koreksi Siswa",
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Black,
                                 color = TextPrimary
                             )
                             val displayName = submission.studentName ?: "ID: ${submission.studentId.take(8)}"
-                            Text(displayName, fontSize = 10.sp, color = TextTertiary)
+                            Text("$displayName (${submission.studentNisn ?: "-"})", fontSize = 11.sp, color = TextTertiary)
                         }
                     }
                     IconButton(onClick = { if (!isGrading) onDismiss() }) {
@@ -462,17 +925,18 @@ private fun GradingDialog(
                 if (submission.answers.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
-                            "JAWABAN PER SOAL",
+                            "JAWABAN BUTIR SOAL (${submission.answers.size} SOAL)",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
                             color = NeonBlue,
                             letterSpacing = 1.sp
                         )
                         submission.answers.forEachIndexed { idx, answer ->
+                            val isPg = answer.questionType.uppercase().contains("CHOICE") || answer.questionType.uppercase() == "PG"
                             val answerBg = when {
-                                answer.questionType.uppercase() == "MULTIPLE_CHOICE" && answer.isCorrect == true -> NeonSuccess
-                                answer.questionType.uppercase() == "MULTIPLE_CHOICE" && answer.isCorrect == false -> NeonError
-                                else -> NeonInfo
+                                isPg && answer.isCorrect == true -> NeonSuccess
+                                isPg && answer.isCorrect == false -> NeonError
+                                else -> NeonWarning
                             }
                             Box(
                                 modifier = Modifier
@@ -495,30 +959,43 @@ private fun GradingDialog(
                                             modifier = Modifier.weight(1f)
                                         )
                                         Text(
-                                            "${answer.pointsEarned}/${answer.maxPoints}",
+                                            "${answer.pointsEarned}/${answer.maxPoints} Poin",
                                             fontSize = 11.sp,
                                             fontWeight = FontWeight.Black,
                                             color = answerBg
                                         )
                                     }
-                                    if (answer.questionType.uppercase() == "MULTIPLE_CHOICE") {
+                                    if (isPg) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             val icon = if (answer.isCorrect == true) Icons.Default.CheckCircle else Icons.Default.Cancel
                                             Icon(icon, null, tint = answerBg, modifier = Modifier.size(12.dp))
                                             Spacer(Modifier.width(4.dp))
                                             Text(
-                                                answer.chosenChoiceText ?: "-",
+                                                "Jawaban Siswa: ${answer.chosenChoiceText ?: "-"}",
                                                 fontSize = 11.sp,
-                                                color = answerBg
+                                                color = answerBg,
+                                                fontWeight = FontWeight.Bold
                                             )
                                         }
                                     } else {
-                                        Text(
-                                            answer.textAnswer ?: "-",
-                                            fontSize = 11.sp,
-                                            color = TextSecondary,
-                                            lineHeight = 16.sp
-                                        )
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(CosmicBlack)
+                                                .padding(8.dp)
+                                        ) {
+                                            Column {
+                                                Text("Jawaban Uraian Siswa:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextTertiary)
+                                                Spacer(Modifier.height(2.dp))
+                                                Text(
+                                                    answer.textAnswer ?: "-",
+                                                    fontSize = 11.sp,
+                                                    color = TextPrimary,
+                                                    lineHeight = 16.sp
+                                                )
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -527,12 +1004,12 @@ private fun GradingDialog(
                     HorizontalDivider(color = GlassBorder)
                 }
 
-                // Legacy free-text answer preview
+                // Free-text answer preview
                 val dialogContent = submission.content
                 if (!dialogContent.isNullOrBlank()) {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
-                            "JAWABAN SISWA",
+                            "CATATAN / TEKS PENGUMPULAN SISWA",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
                             color = NeonBlue,
@@ -555,18 +1032,19 @@ private fun GradingDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.Attachment, null, tint = NeonBlue, modifier = Modifier.size(14.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Ada lampiran file", fontSize = 11.sp, color = NeonBlue)
+                        Text("Siswa melampirkan file dokumen", fontSize = 11.sp, color = NeonBlue)
                     }
                 }
 
-                // Score Slider
+                // Score Slider & Quick Select
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            "NILAI",
+                            "NILAI AKHIR TUGAS",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black,
                             color = TextTertiary,
@@ -587,10 +1065,10 @@ private fun GradingDialog(
                         }
                     }
                     Slider(
-                        value = scoreInput,
+                        value = scoreInput.coerceIn(0f, maxScore.toFloat()),
                         onValueChange = { scoreInput = it },
                         valueRange = 0f..maxScore.toFloat(),
-                        steps = maxScore - 1,
+                        steps = if (maxScore > 1) maxScore - 1 else 0,
                         colors = SliderDefaults.colors(
                             thumbColor = NeonBlue,
                             activeTrackColor = NeonBlue,
@@ -618,7 +1096,7 @@ private fun GradingDialog(
                     OutlinedTextField(
                         value = feedbackInput,
                         onValueChange = { feedbackInput = it },
-                        placeholder = { Text("Tuliskan feedback untuk siswa...", fontSize = 11.sp, color = TextTertiary) },
+                        placeholder = { Text("Tuliskan evaluasi atau catatan koreksi untuk siswa...", fontSize = 11.sp, color = TextTertiary) },
                         modifier = Modifier.fillMaxWidth().height(90.dp),
                         maxLines = 4,
                         shape = RoundedCornerShape(12.dp),

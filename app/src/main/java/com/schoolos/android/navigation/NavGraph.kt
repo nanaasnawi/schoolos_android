@@ -356,6 +356,7 @@ fun NavGraph(
                     onAttemptStarted = { attemptId ->
                         navController.navigate(Screen.QuizAttempt.createRoute(quizId, attemptId))
                     },
+                    onCreateQuiz = { navController.navigate(Screen.QuizBuilder.route) },
                 )
             }
             composable(

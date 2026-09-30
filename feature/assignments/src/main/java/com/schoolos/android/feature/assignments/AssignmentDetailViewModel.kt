@@ -87,10 +87,12 @@ class AssignmentDetailViewModel @Inject constructor(
                     null
                 } else {
                     submissions.firstOrNull { sub ->
-                        (!sub.studentUserId.isNullOrBlank() && sub.studentUserId == studentUserId) ||
-                        (sub.studentId.isNotBlank() && (sub.studentId == studentId || sub.studentId == studentUserId)) ||
-                        (!sub.studentNisn.isNullOrBlank() && studentNisn.isNotBlank() && sub.studentNisn == studentNisn) ||
-                        (!sub.studentName.isNullOrBlank() && studentName.isNotBlank() && sub.studentName.equals(studentName, ignoreCase = true))
+                        sub.status != "unsubmitted" && (
+                            (!sub.studentUserId.isNullOrBlank() && sub.studentUserId == studentUserId) ||
+                            (sub.studentId.isNotBlank() && (sub.studentId == studentId || sub.studentId == studentUserId)) ||
+                            (!sub.studentNisn.isNullOrBlank() && studentNisn.isNotBlank() && sub.studentNisn == studentNisn) ||
+                            (!sub.studentName.isNullOrBlank() && studentName.isNotBlank() && sub.studentName.equals(studentName, ignoreCase = true))
+                        )
                     }
                 }
                 _state.value = _state.value.copy(
