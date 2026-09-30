@@ -62,7 +62,9 @@ import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.StatusChip
+import com.schoolos.android.core.auth.isTeacherRole
 import com.schoolos.android.core.designsystem.StudentNeon
+import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
@@ -71,9 +73,11 @@ import com.schoolos.android.core.designsystem.TextTertiary
 fun QuizDetailScreen(
     onBack: (() -> Unit) = {},
     onAttemptStarted: (String) -> Unit = {},
+    onCreateQuiz: (() -> Unit) = {},
     viewModel: QuizDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
+    val isTeacher = isTeacherRole(state.userRole)
 
     LaunchedEffect(state.attempt) {
         state.attempt?.let { onAttemptStarted(it.id) }
@@ -84,7 +88,10 @@ fun QuizDetailScreen(
         topBar = {
             ExecutiveTopBar(
                 title = state.quiz?.title ?: "Detail Kuis CBT",
-                subtitle = state.quiz?.let { "Kuis CBT • ${it.subjectName ?: "Evaluasi Mandiri"}" } ?: "Evaluasi Siswa",
+                subtitle = state.quiz?.let {
+                    if (isTeacher) "Mode Guru • Manajemen & Monitoring Kuis"
+                    else "Kuis CBT • ${it.subjectName ?: "Evaluasi Mandiri"}"
+                } ?: "Evaluasi Siswa",
                 onBack = onBack,
                 actions = {
                     state.quiz?.let { q ->
@@ -120,7 +127,8 @@ fun QuizDetailScreen(
                         CosmicQuizHeroCard(
                             title = q.title,
                             subjectName = q.subjectName ?: "CBT Evaluasi",
-                            maxScore = q.maxScore
+                            maxScore = q.maxScore,
+                            isTeacher = isTeacher,
                         )
 
                         // ── 2. METRICS ROW (Soal, Waktu, Poin) ────────────────
@@ -174,8 +182,12 @@ fun QuizDetailScreen(
                             }
                         }
 
-                        // ── 4. TATA TERTIB & PANDUAN PENGERJAAN ────────────────
-                        CbtRulesCard()
+                        // ── 4. TATA TERTIB / PANDUAN GURU ─────────────────────
+                        if (isTeacher) {
+                            TeacherCbtGuideCard()
+                        } else {
+                            CbtRulesCard()
+                        }
 
                         // ── 5. ERROR ALERT (Stylized if start fails) ───────────
                         if (state.startError != null) {
@@ -206,56 +218,99 @@ fun QuizDetailScreen(
                         }
 
                         // ── 6. PRIMARY ACTION BUTTON ──────────────────────────
-                        Button(
-                            onClick = viewModel::startAttempt,
-                            enabled = !state.isStarting && isAvailable,
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = Color.Transparent,
-                                disabledContainerColor = Color.Transparent
-                            ),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(52.dp)
-                                .clip(RoundedCornerShape(14.dp))
-                                .background(
-                                    if (isAvailable && !state.isStarting) {
-                                        Brush.horizontalGradient(
-                                            listOf(StudentNeon, Color(0xFF00B4D8))
-                                        )
-                                    } else {
-                                        Brush.horizontalGradient(
-                                            listOf(CosmicSurface2, CosmicSurface)
-                                        )
-                                    }
-                                )
-                                .border(
-                                    width = 1.dp,
-                                    color = if (isAvailable && !state.isStarting) GlassBorder2 else GlassBorder,
-                                    shape = RoundedCornerShape(14.dp)
-                                )
-                        ) {
-                            if (state.isStarting) {
-                                CircularProgressIndicator(
-                                    color = Color.White,
-                                    strokeWidth = 2.dp,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Text(
-                                    "Menyiapkan Soal...",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color.White
-                                )
-                            } else {
-                                Text(
-                                    if (isAvailable) "MULAI KERJAKAN" else "KUIS BELUM TERSEDIA",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (isAvailable) Color.White else TextTertiary,
-                                    letterSpacing = 0.5.sp
-                                )
+                        if (isTeacher) {
+                            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                Button(
+                                    onClick = onBack,
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = CosmicSurface2,
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(50.dp)
+                                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                                ) {
+                                    Text(
+                                        "KEMBALI KE DAFTAR KUIS",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+
+                                Button(
+                                    onClick = onCreateQuiz,
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = TeacherNeon,
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(50.dp)
+                                ) {
+                                    Text(
+                                        "+ BUAT KUIS BARU",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = CosmicBlack,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
+                            }
+                        } else {
+                            Button(
+                                onClick = viewModel::startAttempt,
+                                enabled = !state.isStarting && isAvailable,
+                                shape = RoundedCornerShape(14.dp),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = Color.Transparent,
+                                    disabledContainerColor = Color.Transparent
+                                ),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isAvailable && !state.isStarting) {
+                                            Brush.horizontalGradient(
+                                                listOf(StudentNeon, Color(0xFF00B4D8))
+                                            )
+                                        } else {
+                                            Brush.horizontalGradient(
+                                                listOf(CosmicSurface2, CosmicSurface)
+                                            )
+                                        }
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isAvailable && !state.isStarting) GlassBorder2 else GlassBorder,
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                            ) {
+                                if (state.isStarting) {
+                                    CircularProgressIndicator(
+                                        color = Color.White,
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Spacer(Modifier.width(10.dp))
+                                    Text(
+                                        "Menyiapkan Soal...",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                } else {
+                                    Text(
+                                        if (isAvailable) "MULAI KERJAKAN" else "KUIS BELUM TERSEDIA",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Black,
+                                        color = if (isAvailable) Color.White else TextTertiary,
+                                        letterSpacing = 0.5.sp
+                                    )
+                                }
                             }
                         }
 
@@ -268,10 +323,43 @@ fun QuizDetailScreen(
 }
 
 @Composable
+private fun TeacherCbtGuideCard() {
+    GlassCard(cornerRadius = 14.dp) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = null,
+                    tint = TeacherNeon,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = "Mode Pendidik / Guru Pengampu",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TeacherNeon
+                )
+            }
+            Text(
+                text = "Kuis ini diterbitkan untuk dikerjakan secara mandiri oleh peserta didik di kelas. Guru memantau kehadiran, rekonsiliasi nilai, dan analisis butir soal secara komprehensif melalui Web Portal CBT.",
+                fontSize = 12.sp,
+                color = TextSecondary,
+                lineHeight = 18.sp
+            )
+        }
+    }
+}
+
+@Composable
 private fun CosmicQuizHeroCard(
     title: String,
     subjectName: String,
     maxScore: Int,
+    isTeacher: Boolean = false,
 ) {
     Box(
         modifier = Modifier
@@ -291,18 +379,21 @@ private fun CosmicQuizHeroCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Potensi XP Badge
+                // Potensi XP / Role Badge
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(20.dp))
-                        .background(AccentNeonAmber.copy(alpha = 0.15f))
-                        .border(0.5.dp, AccentNeonAmber.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
+                        .background(if (isTeacher) TeacherNeon.copy(alpha = 0.15f) else AccentNeonAmber.copy(alpha = 0.15f))
+                        .border(0.5.dp, if (isTeacher) TeacherNeon.copy(alpha = 0.4f) else AccentNeonAmber.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = "⭐ Potensi ${maxScore * 5} XP",
-                        color = AccentNeonAmber,
+                        text = if (isTeacher) "Pendidik / Guru Pengampu" else "⭐ Potensi ${maxScore * 5} XP",
+                        color = if (isTeacher) TeacherNeon else AccentNeonAmber,
                         fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
                         fontWeight = FontWeight.Bold
                     )
                 }

@@ -19,12 +19,14 @@ data class QuizDetailUiState(
     val isStarting: Boolean = false,
     val attempt: QuizAttempt? = null,
     val startError: String? = null,
+    val userRole: String = "student",
 )
 
 @HiltViewModel
 class QuizDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuizRepository,
+    private val authManager: com.schoolos.android.core.auth.AuthManager,
 ) : ViewModel() {
 
     private val quizId: String = savedStateHandle["id"] ?: ""
@@ -33,6 +35,11 @@ class QuizDetailViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            authManager.authState.collect { auth ->
+                _state.value = _state.value.copy(userRole = auth.role ?: "student")
+            }
+        }
         load()
     }
 
