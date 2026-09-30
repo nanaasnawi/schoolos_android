@@ -153,6 +153,26 @@ fun StudentSessionDetailContent(
                     )
                 } else {
                     attendance.forEach { att ->
+                        val statusColor = when (att.status.lowercase()) {
+                            "present" -> NeonSuccess
+                            "late" -> Color(0xFFFFA040)
+                            "excused" -> NeonWarning
+                            "sick" -> NeonBlue
+                            else -> NeonError
+                        }
+                        val statusIcon = when (att.status.lowercase()) {
+                            "present" -> Icons.Default.CheckCircle
+                            "late" -> Icons.Default.Schedule
+                            else -> Icons.Default.Schedule
+                        }
+                        val statusLabel = when (att.status.lowercase()) {
+                            "present" -> "Hadir Tepat Waktu"
+                            "late" -> "Terlambat"
+                            "excused" -> "Izin"
+                            "sick" -> "Sakit"
+                            "absent" -> "Alpa (Tidak Hadir)"
+                            else -> att.status.replaceFirstChar { it.uppercase() }
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -161,22 +181,19 @@ fun StudentSessionDetailContent(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        if (att.status == "present") NeonSuccess.copy(alpha = 0.12f)
-                                        else NeonError.copy(alpha = 0.12f),
-                                    ),
+                                    .background(statusColor.copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(
-                                    if (att.status == "present") Icons.Default.CheckCircle else Icons.Default.Schedule,
+                                    statusIcon,
                                     null,
-                                    tint = if (att.status == "present") NeonSuccess else NeonError,
+                                    tint = statusColor,
                                     modifier = Modifier.size(20.dp),
                                 )
                             }
                             Spacer(Modifier.width(12.dp))
                             Text(
-                                if (att.status == "present") "Hadir Tepat Waktu" else "Alpa / Terlambat",
+                                statusLabel,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 color = TextSecondary,

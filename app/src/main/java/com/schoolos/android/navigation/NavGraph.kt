@@ -83,12 +83,24 @@ fun NavGraph(
         }
     }
 
-    // Auto-redirect if maintenance activates while user is logged in / using app
+    // Auto-redirect if maintenance activates / deactivates while user is using app
     LaunchedEffect(isMaintenance) {
+        val currentRoute = navController.currentBackStackEntry?.destination?.route
         if (isMaintenance) {
-            val currentRoute = navController.currentBackStackEntry?.destination?.route
             if (currentRoute != Screen.Maintenance.route) {
                 navController.navigate(Screen.Maintenance.route) {
+                    launchSingleTop = true
+                }
+            }
+        } else {
+            if (currentRoute == Screen.Maintenance.route) {
+                val targetRoute = if (authManager.isLoggedIn) {
+                    Screen.Home.route
+                } else {
+                    Screen.Auth.route
+                }
+                navController.navigate(targetRoute) {
+                    popUpTo(navController.graph.id) { inclusive = true }
                     launchSingleTop = true
                 }
             }
@@ -131,14 +143,17 @@ fun NavGraph(
                 MaintenanceScreen(
                     maintenanceManager = maintenanceManager,
                     onMaintenanceResolved = {
-                        if (authManager.isLoggedIn) {
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Maintenance.route) { inclusive = true }
-                            }
+                        val targetRoute = if (authManager.isLoggedIn) {
+                            Screen.Home.route
                         } else {
-                            navController.navigate(Screen.Auth.route) {
-                                popUpTo(Screen.Maintenance.route) { inclusive = true }
-                            }
+                            Screen.Auth.route
+                        }
+
+                        navController.navigate(targetRoute) {
+                            // Sapu bersih seluruh backstack sampai ke root navigation graph
+                            popUpTo(navController.graph.id) { inclusive = true }
+                            // Mencegah double navigation kalau callback ter-trigger 2x
+                            launchSingleTop = true
                         }
                     }
                 )

@@ -61,6 +61,10 @@ object CoreModule {
 
     @Provides
     @Singleton
+    fun provideSessionAttendanceDao(db: AppDatabase): com.schoolos.android.core.database.dao.SessionAttendanceDao = db.sessionAttendanceDao()
+
+    @Provides
+    @Singleton
     fun provideSettingsManager(@ApplicationContext context: Context): SettingsManager {
         return SettingsManager(context)
     }

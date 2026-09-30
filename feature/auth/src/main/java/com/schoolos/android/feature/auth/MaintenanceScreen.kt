@@ -1,7 +1,5 @@
 package com.schoolos.android.feature.auth
 
-import android.webkit.WebView
-import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
@@ -60,6 +58,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import com.schoolos.android.feature.auth.R
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.CosmicSurface
@@ -158,51 +157,31 @@ fun MaintenanceScreen(
             // ── Animated SVG Illustration (phone-maintenance-animate.svg) ───
             AndroidView(
                 factory = { ctx ->
-                    WebView(ctx).apply {
-                        webViewClient = WebViewClient()
+                    android.webkit.WebView(ctx).apply {
+                        layoutParams = android.view.ViewGroup.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT,
+                            android.view.ViewGroup.LayoutParams.MATCH_PARENT
+                        )
+                        webViewClient = object : android.webkit.WebViewClient() {
+                            override fun onReceivedError(
+                                view: android.webkit.WebView?,
+                                errorCode: Int,
+                                description: String?,
+                                failingUrl: String?
+                            ) {
+                                android.util.Log.e("MaintenanceScreen", "WebView error: $description ($errorCode)")
+                            }
+                        }
                         settings.javaScriptEnabled = true
                         settings.domStorageEnabled = true
+                        settings.allowFileAccess = true
+                        settings.allowContentAccess = true
+                        settings.allowFileAccessFromFileURLs = true
+                        settings.allowUniversalAccessFromFileURLs = true
                         settings.loadWithOverviewMode = true
                         settings.useWideViewPort = true
                         setBackgroundColor(android.graphics.Color.TRANSPARENT)
-                        isOpaque = false
-                        val html = """
-                            <!DOCTYPE html>
-                            <html>
-                            <head>
-                              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                              <style>
-                                * { margin: 0; padding: 0; box-sizing: border-box; }
-                                html, body {
-                                  background: transparent;
-                                  display: flex;
-                                  align-items: center;
-                                  justify-content: center;
-                                  width: 100%;
-                                  height: 100%;
-                                  overflow: hidden;
-                                }
-                                img {
-                                  width: 100%;
-                                  max-width: 320px;
-                                  height: auto;
-                                  display: block;
-                                }
-                              </style>
-                            </head>
-                            <body>
-                              <img src="file:///android_res/raw/phone_maintenance_animate.svg"
-                                   alt="Maintenance" />
-                            </body>
-                            </html>
-                        """.trimIndent()
-                        loadDataWithBaseURL(
-                            "file:///android_res/raw/",
-                            html,
-                            "text/html",
-                            "UTF-8",
-                            null
-                        )
+                        loadUrl("file:///android_asset/phone_maintenance.html")
                     }
                 },
                 modifier = Modifier

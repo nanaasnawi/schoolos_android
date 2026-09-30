@@ -16,6 +16,7 @@ import javax.inject.Singleton
 class SessionRepositoryImpl @Inject constructor(
     private val api: SchoolOsApi,
     private val sessionDao: SessionDao,
+    private val attendanceDao: com.schoolos.android.core.database.dao.SessionAttendanceDao,
 ) : SessionRepository {
 
     override suspend fun getSessions(classId: String?): Result<List<LearningSession>> = runCatching {
@@ -64,9 +65,23 @@ class SessionRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getAttendance(sessionId: String): Result<List<SessionAttendance>> = runCatching {
-        val response = api.getSessionAttendance(sessionId)
-        response.data?.map { it.toDomain() }
-            ?: throw Exception(response.error?.message ?: "Gagal memuat presensi sesi.")
+        try {
+            val response = api.getSessionAttendance(sessionId)
+            val attendances = response.data?.map { it.toDomain() }
+            if (attendances != null) {
+                attendanceDao.clearSessionAttendance(sessionId)
+                attendanceDao.insertAll(attendances.map { it.toEntity() })
+                return@runCatching attendances
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("SessionRepo", "Remote getAttendance failed, falling back to cache: ${e.message}")
+        }
+        val cached = attendanceDao.getAttendanceBySession(sessionId).map { it.entityToDomain() }
+        if (cached.isNotEmpty()) {
+            cached
+        } else {
+            emptyList()
+        }
     }
 
     override suspend fun recordAttendance(
@@ -88,6 +103,33 @@ class SessionRepositoryImpl @Inject constructor(
             idempotencyKey = idempotencyKey,
         )
         val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal mencatat presensi kehadiran.")
-        dto.toDomain()
+        val domain = dto.toDomain()
+        attendanceDao.insert(domain.toEntity())
+        domain
+    }
+
+    override suspend fun recordAttendanceBulk(
+        sessionId: String,
+        items: List<com.schoolos.android.domain.repository.RecordAttendanceItem>,
+    ): Result<List<SessionAttendance>> = runCatching {
+        val idempotencyKey = java.util.UUID.randomUUID().toString()
+        val request = items.map { item ->
+            com.schoolos.android.data.remote.dto.RecordAttendanceRequestDto(
+                studentId = item.studentId,
+                status = item.status,
+                checkedInAt = item.checkedInAt ?: java.time.Instant.now().toString(),
+                notes = item.notes,
+            )
+        }
+        val response = api.recordAttendanceBulk(
+            id = sessionId,
+            request = request,
+            idempotencyKey = idempotencyKey,
+        )
+        val dtoList = response.data ?: throw Exception(response.error?.message ?: "Gagal mencatat presensi massal.")
+        val domainList = dtoList.map { it.toDomain() }
+        attendanceDao.insertAll(domainList.map { it.toEntity() })
+        domainList
     }
 }
+

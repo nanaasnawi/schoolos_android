@@ -8,4 +8,12 @@ interface SessionRepository {
     suspend fun getSession(id: String): Result<LearningSession>
     suspend fun getAttendance(sessionId: String): Result<List<SessionAttendance>>
     suspend fun recordAttendance(sessionId: String, studentId: String, status: String, notes: String? = null): Result<SessionAttendance>
+    suspend fun recordAttendanceBulk(sessionId: String, items: List<RecordAttendanceItem>): Result<List<SessionAttendance>>
 }
+
+data class RecordAttendanceItem(
+    val studentId: String,
+    val status: String,
+    val checkedInAt: String? = null,
+    val notes: String? = null,
+)

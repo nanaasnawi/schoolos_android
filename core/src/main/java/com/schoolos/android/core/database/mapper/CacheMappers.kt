@@ -158,3 +158,22 @@ fun com.schoolos.android.core.database.entity.GradeEntity.toDomain() = com.schoo
     weightPercentage = weightPercentage,
     calculatedAt = calculatedAt,
 )
+
+fun com.schoolos.android.domain.model.SessionAttendance.toEntity() = com.schoolos.android.core.database.entity.SessionAttendanceEntity(
+    id = id,
+    sessionId = sessionId,
+    studentId = studentId,
+    status = status,
+    checkedInAt = checkedInAt,
+    notes = notes,
+)
+
+fun com.schoolos.android.core.database.entity.SessionAttendanceEntity.toDomain() = com.schoolos.android.domain.model.SessionAttendance(
+    id = id,
+    sessionId = sessionId,
+    studentId = studentId,
+    status = status,
+    checkedInAt = checkedInAt,
+    notes = notes,
+)
+
