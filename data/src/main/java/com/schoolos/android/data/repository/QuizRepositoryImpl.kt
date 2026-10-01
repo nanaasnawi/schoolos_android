@@ -21,6 +21,9 @@ import com.schoolos.android.domain.repository.QuizRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -92,8 +95,62 @@ class QuizRepositoryImpl @Inject constructor(
     }
 
     override suspend fun getQuestions(quizId: String): Result<List<QuizQuestion>> = runCatching {
-        val response = api.getQuizQuestions(quizId)
-        response.data?.map { it.dtoToDomain() } ?: throw Exception(response.error?.message ?: "Gagal memuat soal kuis.")
+        val isOnline = try { networkMonitor.isOnline.first() } catch (_: Exception) { true }
+        if (isOnline) {
+            try {
+                val response = api.getQuizQuestions(quizId)
+                val questions = response.data?.map { it.dtoToDomain() }
+                if (questions != null) {
+                    val entities = questions.map { q ->
+                        val choicesDtos = q.choices.map {
+                            com.schoolos.android.data.remote.dto.QuizChoiceDto(
+                                id = it.id,
+                                choiceText = it.choiceText,
+                                orderIndex = it.orderIndex,
+                            )
+                        }
+                        com.schoolos.android.core.database.entity.QuizQuestionEntity(
+                            id = q.id,
+                            quizId = quizId,
+                            questionText = q.questionText,
+                            questionType = q.questionType,
+                            points = q.points,
+                            orderIndex = q.orderIndex,
+                            imageUrl = q.imageUrl,
+                            choicesJson = Json.encodeToString(choicesDtos),
+                        )
+                    }
+                    try {
+                        quizDao.deleteQuestionsForQuiz(quizId)
+                        quizDao.insertQuestions(entities)
+                    } catch (_: Exception) {}
+                    return@runCatching questions
+                }
+            } catch (_: Exception) {
+                // fall through to cache
+            }
+        }
+        val cached = quizDao.getQuestionsForQuiz(quizId)
+        if (cached.isNotEmpty()) {
+            cached.map { entity ->
+                val choicesDtos: List<com.schoolos.android.data.remote.dto.QuizChoiceDto> = try {
+                    Json.decodeFromString<List<com.schoolos.android.data.remote.dto.QuizChoiceDto>>(entity.choicesJson)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+                QuizQuestion(
+                    id = entity.id,
+                    questionText = entity.questionText,
+                    questionType = entity.questionType,
+                    points = entity.points,
+                    orderIndex = entity.orderIndex,
+                    imageUrl = entity.imageUrl,
+                    choices = choicesDtos.map { it.dtoToDomain() },
+                )
+            }
+        } else {
+            throw Exception("Gagal memuat butir soal kuis. Periksa koneksi internet Anda.")
+        }
     }
 
     override suspend fun addQuestion(
@@ -160,5 +217,10 @@ class QuizRepositoryImpl @Inject constructor(
     override suspend fun getQuizAttempts(quizId: String): Result<List<QuizAttempt>> = runCatching {
         val response = api.getQuizAttempts(quizId)
         response.data?.map { it.dtoToDomain() } ?: emptyList()
+    }
+
+    override suspend fun getQuizAttempt(quizId: String, attemptId: String): Result<QuizAttempt> = runCatching {
+        val response = api.getQuizAttempt(quizId, attemptId)
+        response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal memuat hasil kuis.")
     }
 }

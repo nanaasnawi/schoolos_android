@@ -131,4 +131,8 @@ class QuizAttemptViewModel @Inject constructor(
                 }
         }
     }
+
+    fun clearSubmitError() {
+        _state.value = _state.value.copy(submitError = null)
+    }
 }

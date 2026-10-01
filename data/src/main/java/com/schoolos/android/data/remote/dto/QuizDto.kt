@@ -23,6 +23,20 @@ data class QuizDto(
 )
 
 @Serializable
+data class AttemptAnswerDetailDto(
+    @SerialName("question_id") val questionId: String,
+    @SerialName("question_text") val questionText: String? = null,
+    @SerialName("question_type") val questionType: String? = null,
+    @SerialName("max_points") val maxPoints: Int = 0,
+    @SerialName("chosen_choice_id") val chosenChoiceId: String? = null,
+    @SerialName("chosen_choice_text") val chosenChoiceText: String? = null,
+    @SerialName("is_correct") val isCorrect: Boolean? = null,
+    @SerialName("text_answer") val textAnswer: String? = null,
+    @SerialName("points_earned") val pointsEarned: Int = 0,
+    @SerialName("teacher_feedback") val teacherFeedback: String? = null,
+)
+
+@Serializable
 data class QuizAttemptDto(
     val id: String,
     @SerialName("quiz_id") val quizId: String,
@@ -36,8 +50,9 @@ data class QuizAttemptDto(
     val status: String = "in_progress",
     @SerialName("student_name") val studentName: String? = null,
     @SerialName("student_nisn") val studentNisn: String? = null,
-    @SerialName("created_at") val createdAt: String,
-    @SerialName("updated_at") val updatedAt: String,
+    @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("updated_at") val updatedAt: String? = null,
+    val answers: List<AttemptAnswerDetailDto> = emptyList(),
 )
 
 @Serializable
