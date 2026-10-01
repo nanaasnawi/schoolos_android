@@ -1,5 +1,6 @@
 package com.schoolos.android.data.mapper
 
+import com.schoolos.android.data.remote.dto.AttemptAnswerDetailDto
 import com.schoolos.android.data.remote.dto.QuizAttemptDto
 import com.schoolos.android.data.remote.dto.QuizChoiceDto
 import com.schoolos.android.data.remote.dto.QuizDto
@@ -24,6 +25,19 @@ fun QuizDto.toDomain() = Quiz(
     subjectName = subjectName,
 )
 
+fun AttemptAnswerDetailDto.toDomain() = com.schoolos.android.domain.model.AttemptAnswerDetail(
+    questionId = questionId,
+    questionText = questionText,
+    questionType = questionType,
+    maxPoints = maxPoints,
+    chosenChoiceId = chosenChoiceId,
+    chosenChoiceText = chosenChoiceText,
+    isCorrect = isCorrect,
+    textAnswer = textAnswer,
+    pointsEarned = pointsEarned,
+    teacherFeedback = teacherFeedback,
+)
+
 fun QuizAttemptDto.toDomain() = QuizAttempt(
     id = id,
     quizId = quizId,
@@ -37,8 +51,9 @@ fun QuizAttemptDto.toDomain() = QuizAttempt(
     status = status,
     studentName = studentName,
     studentNisn = studentNisn,
-    createdAt = createdAt,
-    updatedAt = updatedAt,
+    createdAt = createdAt ?: "",
+    updatedAt = updatedAt ?: "",
+    answers = answers.map { it.toDomain() },
 )
 
 fun QuizQuestionDto.toDomain() = QuizQuestion(

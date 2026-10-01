@@ -80,7 +80,10 @@ fun QuizDetailScreen(
     val isTeacher = isTeacherRole(state.userRole)
 
     LaunchedEffect(state.attempt) {
-        state.attempt?.let { onAttemptStarted(it.id) }
+        state.attempt?.let { attempt ->
+            viewModel.dismissAttempt()
+            onAttemptStarted(attempt.id)
+        }
     }
 
     Scaffold(

@@ -408,6 +408,45 @@ fun QuizAttemptScreen(
             shape = RoundedCornerShape(24.dp),
         )
     }
+
+    // ── SUBMIT ERROR DIALOG WITH RETRY ───────────────────────────────────────
+    if (state.submitError != null) {
+        AlertDialog(
+            onDismissRequest = { viewModel.clearSubmitError() },
+            title = {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                    Text("⚠️", fontSize = 36.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Pengumpulan Gagal", fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                }
+            },
+            text = {
+                Text(
+                    state.submitError ?: "Terjadi kendala jaringan saat mengirimkan jawaban Anda. Jawaban Anda tetap tersimpan di perangkat.",
+                    textAlign = TextAlign.Center,
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        viewModel.clearSubmitError()
+                        viewModel.submit()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF7C3AED)),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text("Coba Kirim Ulang", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { viewModel.clearSubmitError() }) {
+                    Text("Tutup", color = TextSecondary)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+        )
+    }
 }
 
 @Composable

@@ -23,10 +23,12 @@ class QuizResultViewModel @Inject constructor(
     private val repository: QuizRepository,
 ) : ViewModel() {
 
-    private val attemptId: String = savedStateHandle["attemptId"] ?: ""
-    private val quizId: String = savedStateHandle["quizId"] ?: ""
-    private val score: Int = savedStateHandle["score"] ?: 0
-    private val totalPoints: Int = savedStateHandle["totalPoints"] ?: 100
+    private val attemptId: String = savedStateHandle.get<String>("attemptId") ?: ""
+    private val quizId: String = savedStateHandle.get<String>("quizId") ?: ""
+    private val score: Int = savedStateHandle.get<Int>("score")
+        ?: (savedStateHandle.get<String>("score")?.toIntOrNull() ?: 0)
+    private val totalPoints: Int = savedStateHandle.get<Int>("totalPoints")
+        ?: (savedStateHandle.get<String>("totalPoints")?.toIntOrNull() ?: 100)
 
     private val _state = MutableStateFlow(
         QuizResultUiState(
@@ -38,6 +40,7 @@ class QuizResultViewModel @Inject constructor(
                 completedAt = null,
                 score = score,
                 totalPoints = if (totalPoints > 0) totalPoints else 100,
+                percentage = if (totalPoints > 0) (score * 100) / totalPoints else 0,
                 status = "completed",
                 createdAt = "",
                 updatedAt = "",
@@ -53,14 +56,21 @@ class QuizResultViewModel @Inject constructor(
     private fun loadResult() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            repository.getQuiz(quizId)
-                .onSuccess {
-                    _state.value = _state.value.copy(isLoading = false)
-                }
-                .onFailure {
-                    // Keep the attempt from arguments even if getQuiz fails
-                    _state.value = _state.value.copy(isLoading = false)
-                }
+            if (quizId.isNotBlank() && attemptId.isNotBlank()) {
+                repository.getQuizAttempt(quizId, attemptId)
+                    .onSuccess { fullAttempt ->
+                        _state.value = _state.value.copy(
+                            isLoading = false,
+                            attempt = fullAttempt,
+                        )
+                    }
+                    .onFailure {
+                        // Keep initial attempt from arguments if remote load fails
+                        _state.value = _state.value.copy(isLoading = false)
+                    }
+            } else {
+                _state.value = _state.value.copy(isLoading = false)
+            }
         }
     }
 }

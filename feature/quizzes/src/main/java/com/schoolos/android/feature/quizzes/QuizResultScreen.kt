@@ -196,6 +196,11 @@ fun QuizResultScreen(
                     Spacer(Modifier.height(24.dp))
 
                     // Stats breakdown
+                    val attempt = state.attempt
+                    val hasAnswers = attempt?.answers?.isNotEmpty() == true
+                    val correctCount = if (hasAnswers) attempt!!.correctCount else (pct * 10).toInt()
+                    val incorrectCount = if (hasAnswers) attempt!!.incorrectCount else (10 - correctCount).coerceAtLeast(0)
+
                     Box(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(20.dp))
@@ -205,16 +210,16 @@ fun QuizResultScreen(
                     ) {
                         Column {
                             Text(
-                                "Ringkasan Jawaban",
+                                "Ringkasan Hasil Evaluasi",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 14.sp,
                                 color = TextPrimary,
                             )
                             Spacer(Modifier.height(14.dp))
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                StatItem("✅", "Benar", "${(pct * (state.attempt?.totalPoints ?: 10).toInt()).toInt()}", NeonSuccess)
-                                StatItem("❌", "Salah", "${maxScore - score}", NeonError)
-                                StatItem("⏱", "Skor", "$score", StudentNeon)
+                                StatItem("✅", "Benar", "$correctCount", NeonSuccess)
+                                StatItem("❌", "Salah", "$incorrectCount", NeonError)
+                                StatItem("⏱", "Nilai", "$score", StudentNeon)
                             }
                         }
                     }
@@ -236,6 +241,94 @@ fun QuizResultScreen(
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Medium,
                         )
+                    }
+
+                    // Detailed Answer Review List (if available)
+                    if (hasAnswers) {
+                        Spacer(Modifier.height(20.dp))
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Text(
+                                "Rincian Jawaban Soal",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 15.sp,
+                                color = TextPrimary,
+                                modifier = Modifier.padding(start = 4.dp),
+                            )
+
+                            attempt!!.answers.forEachIndexed { idx, ans ->
+                                val isCorrect = ans.isCorrect == true
+                                val badgeColor = if (isCorrect) NeonSuccess else NeonError
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(16.dp))
+                                        .background(CosmicNavy)
+                                        .border(1.dp, badgeColor.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
+                                        .padding(14.dp)
+                                ) {
+                                    Column {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Text(
+                                                "Soal ${idx + 1}",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = TextSecondary,
+                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = badgeColor.copy(alpha = 0.12f),
+                                            ) {
+                                                Text(
+                                                    if (isCorrect) "+${ans.pointsEarned} pts (Benar)" else "0 pts (Salah)",
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    color = badgeColor,
+                                                    fontWeight = FontWeight.Bold,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                )
+                                            }
+                                        }
+
+                                        val qText = ans.questionText
+                                        if (!qText.isNullOrBlank()) {
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                qText,
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                color = TextPrimary,
+                                                fontWeight = FontWeight.Medium,
+                                            )
+                                        }
+
+                                        val answerText = ans.chosenChoiceText ?: ans.textAnswer
+                                        if (!answerText.isNullOrBlank()) {
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                "Jawaban kamu: $answerText",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = if (isCorrect) NeonSuccess else TextTertiary,
+                                            )
+                                        }
+
+                                        val feedback = ans.teacherFeedback
+                                        if (!feedback.isNullOrBlank()) {
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                "Catatan Guru: $feedback",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = NeonWarning,
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
 
                     Spacer(Modifier.height(32.dp))
