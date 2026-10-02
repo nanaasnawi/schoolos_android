@@ -54,7 +54,36 @@ class QuizListViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true, error = null)
             repository.getQuizzes(classId)
                 .onSuccess { quizzes ->
-                    val filtered = subjectFilter?.let { filter -> quizzes.filter { q -> matchesSubject(q.subjectName, filter) } } ?: quizzes
+                    val role = _state.value.userRole.lowercase()
+                    val isStudent = role != "teacher" && role != "guru"
+
+                    val updatedQuizzes = if (isStudent) {
+                        quizzes.map { quiz ->
+                            if (quiz.studentHasCompleted || quiz.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded")) {
+                                quiz.copy(studentHasCompleted = true)
+                            } else {
+                                val attemptsResult = repository.getQuizAttempts(quiz.id).getOrNull()
+                                val hasCompleted = attemptsResult?.any {
+                                    it.status.lowercase() in listOf("completed", "submitted", "graded")
+                                } == true || (attemptsResult != null && attemptsResult.isNotEmpty() && attemptsResult.size >= quiz.maxAttempts)
+                                if (hasCompleted) {
+                                    quiz.copy(
+                                        studentHasCompleted = true,
+                                        studentAttemptStatus = "completed",
+                                        studentAttemptsCount = attemptsResult?.size ?: 1,
+                                        studentLastAttemptId = attemptsResult?.firstOrNull()?.id,
+                                        studentLastScore = attemptsResult?.firstOrNull()?.score,
+                                    )
+                                } else {
+                                    quiz
+                                }
+                            }
+                        }
+                    } else {
+                        quizzes
+                    }
+
+                    val filtered = subjectFilter?.let { filter -> updatedQuizzes.filter { q -> matchesSubject(q.subjectName, filter) } } ?: updatedQuizzes
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,

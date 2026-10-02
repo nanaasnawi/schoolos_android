@@ -17,9 +17,15 @@ data class QuizDto(
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
+    @SerialName("max_attempts") val maxAttempts: Int = 1,
     @SerialName("class_name") val className: String? = null,
     @SerialName("subject_name") val subjectName: String? = null,
     @SerialName("teacher_name") val teacherName: String? = null,
+    @SerialName("student_attempt_status") val studentAttemptStatus: String? = null,
+    @SerialName("student_attempts_count") val studentAttemptsCount: Int? = null,
+    @SerialName("student_has_completed") val studentHasCompleted: Boolean? = null,
+    @SerialName("student_last_score") val studentLastScore: Int? = null,
+    @SerialName("student_last_attempt_id") val studentLastAttemptId: String? = null,
 )
 
 @Serializable

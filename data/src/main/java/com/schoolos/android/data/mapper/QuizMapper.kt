@@ -23,6 +23,12 @@ fun QuizDto.toDomain() = Quiz(
     createdAt = createdAt,
     updatedAt = updatedAt,
     subjectName = subjectName,
+    maxAttempts = maxAttempts,
+    studentAttemptStatus = studentAttemptStatus,
+    studentAttemptsCount = studentAttemptsCount ?: 0,
+    studentHasCompleted = studentHasCompleted ?: (studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded")),
+    studentLastScore = studentLastScore,
+    studentLastAttemptId = studentLastAttemptId,
 )
 
 fun AttemptAnswerDetailDto.toDomain() = com.schoolos.android.domain.model.AttemptAnswerDetail(

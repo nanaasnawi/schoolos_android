@@ -179,22 +179,63 @@ class QuizRepositoryImpl @Inject constructor(
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal menambahkan butir soal kuis.")
     }
 
-    override suspend fun publishQuiz(id: String): Result<Quiz> = runCatching {
-        val response = api.publishQuiz(id)
-        response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal menerbitkan kuis.")
+    private fun parseHttpError(e: Throwable, defaultMessage: String): Exception {
+        if (e is retrofit2.HttpException) {
+            val errorBody = try { e.response()?.errorBody()?.string() } catch (_: Exception) { null }
+            val parsedMsg = try {
+                if (!errorBody.isNullOrBlank()) {
+                    val json = Json { ignoreUnknownKeys = true }
+                    val apiResp = json.decodeFromString<com.schoolos.android.data.remote.dto.ApiResponse<kotlinx.serialization.json.JsonElement>>(errorBody)
+                    apiResp.error?.message
+                } else null
+            } catch (_: Exception) {
+                null
+            }
+            val message = when {
+                parsedMsg?.contains("status 'draft'", ignoreCase = true) == true ->
+                    "Kuis ini masih berupa draf dan belum dipublikasikan oleh guru."
+                parsedMsg?.contains("Maximum attempt limit", ignoreCase = true) == true ->
+                    "Anda telah mencapai batas maksimal pengerjaan untuk kuis ini."
+                parsedMsg?.contains("not opened yet", ignoreCase = true) == true ->
+                    "Kuis belum dibuka untuk dikerjakan."
+                parsedMsg?.contains("expired", ignoreCase = true) == true ->
+                    "Batas waktu pengerjaan kuis telah berakhir."
+                parsedMsg?.contains("bukan untuk kelas Anda", ignoreCase = true) == true ||
+                parsedMsg?.contains("Unauthorized", ignoreCase = true) == true ||
+                e.code() == 401 || e.code() == 403 ->
+                    parsedMsg ?: "Anda tidak memiliki izin untuk mengakses kuis ini."
+                !parsedMsg.isNullOrBlank() -> parsedMsg
+                e.code() == 400 -> "Permintaan tidak valid (Bad Request)."
+                e.code() == 404 -> "Kuis tidak ditemukan."
+                else -> defaultMessage
+            }
+            return Exception(message, e)
+        }
+        return Exception(e.message ?: defaultMessage, e)
     }
 
-    override suspend fun startAttempt(quizId: String): Result<QuizAttempt> = runCatching {
+    override suspend fun publishQuiz(id: String): Result<Quiz> = try {
+        val response = api.publishQuiz(id)
+        val domain = response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal menerbitkan kuis.")
+        Result.success(domain)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal menerbitkan kuis."))
+    }
+
+    override suspend fun startAttempt(quizId: String): Result<QuizAttempt> = try {
         val studentId = authManager.getStudentId() ?: throw Exception("Sesi pengguna tidak valid.")
         val response = api.startAttempt(quizId, StartAttemptRequest(studentId = studentId))
-        response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal memulai pengerjaan kuis CBT.")
+        val domain = response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal memulai pengerjaan kuis CBT.")
+        Result.success(domain)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal memulai pengerjaan kuis CBT."))
     }
 
     override suspend fun submitAttempt(
         quizId: String,
         attemptId: String,
         answers: List<AnswerInput>
-    ): Result<QuizAttempt> = runCatching {
+    ): Result<QuizAttempt> = try {
         val request = SubmitAttemptRequest(
             answers = answers.map {
                 SubmitAnswerRequest(
@@ -211,7 +252,10 @@ class QuizRepositoryImpl @Inject constructor(
             request = request,
             idempotencyKey = idempotencyKey,
         )
-        response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal mengumpulkan jawaban kuis.")
+        val domain = response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal mengumpulkan jawaban kuis.")
+        Result.success(domain)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal mengumpulkan jawaban kuis."))
     }
 
     override suspend fun getQuizAttempts(quizId: String): Result<List<QuizAttempt>> = runCatching {
