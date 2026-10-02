@@ -736,10 +736,12 @@ fun LoadingState(modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        repeat(4) {
+        ShimmerHeroHeader()
+        ShimmerFilterChips()
+        repeat(3) {
             ShimmerCard()
         }
     }
