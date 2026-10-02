@@ -321,22 +321,34 @@ fun HomeScreen(
                 // ── 2. STREAMLINED LIVE SPOTLIGHT HERO ───────────────────────────
                 item {
                     val hasLiveSession = state.nextSessionIsLive
-                    val spotlightSubject = if (state.nextSessionSubject != "-" && state.nextSessionSubject.isNotBlank() && !isUuid(state.nextSessionSubject)) state.nextSessionSubject 
-                        else if (state.activeSessionSubject != "-" && state.activeSessionSubject.isNotBlank() && !isUuid(state.activeSessionSubject)) state.activeSessionSubject 
-                        else if (hasLiveSession) "Sesi Pembelajaran Aktif"
-                        else if (isTeacher && state.todaySessions.isNotEmpty()) "Jadwal: ${state.todaySessions.first().subjectName ?: "Sesi Mengajar"}"
-                        else if (isTeacher) "Portal Akademik Guru"
-                        else "Tidak Ada Sesi Aktif"
+                    val spotlightSubject = when {
+                        hasLiveSession && state.nextSessionSubject != "-" && state.nextSessionSubject.isNotBlank() && !isUuid(state.nextSessionSubject) ->
+                            state.nextSessionSubject
+                        hasLiveSession && state.activeSessionSubject != "-" && state.activeSessionSubject.isNotBlank() && !isUuid(state.activeSessionSubject) ->
+                            state.activeSessionSubject
+                        hasLiveSession ->
+                            "Sesi Pembelajaran Aktif"
+                        isTeacher && state.todaySessions.isNotEmpty() ->
+                            "Jadwal: ${state.todaySessions.first().subjectName ?: "Sesi Mengajar"}"
+                        else ->
+                            "Tidak Ada Sesi Aktif"
+                    }
 
                     val spotlightRoom = when {
-                        state.nextSessionRoom != "-" && state.nextSessionRoom.isNotBlank() && !isUuid(state.nextSessionRoom) ->
+                        hasLiveSession && state.nextSessionRoom != "-" && state.nextSessionRoom.isNotBlank() && !isUuid(state.nextSessionRoom) ->
                             formatClassOrRoom(state.nextSessionRoom)
-                        state.activeSessionClass != "-" && state.activeSessionClass.isNotBlank() && !isUuid(state.activeSessionClass) ->
+                        hasLiveSession && state.activeSessionClass != "-" && state.activeSessionClass.isNotBlank() && !isUuid(state.activeSessionClass) ->
                             formatClassOrRoom(state.activeSessionClass)
-                        state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass) ->
+                        hasLiveSession && state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass) ->
                             formatClassOrRoom(state.homeroomClass)
-                        isTeacher -> "Ruang Pengajar"
-                        else -> "Ruang Kelas"
+                        state.todaySessions.isNotEmpty() && state.nextSessionSubject != "-" && state.nextSessionSubject.isNotBlank() && !isUuid(state.nextSessionSubject) ->
+                            "Sesi berikutnya: ${state.nextSessionSubject}"
+                        state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass) ->
+                            "${formatClassOrRoom(state.homeroomClass)} • Tidak ada jadwal hari ini"
+                        isTeacher ->
+                            "Tidak ada jadwal mengajar hari ini"
+                        else ->
+                            "Tidak ada jadwal kelas hari ini"
                     }
 
                     Box(
@@ -424,7 +436,7 @@ fun HomeScreen(
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )
-                                    if (state.nextSessionTime != "-") {
+                                    if (state.nextSessionTime != "-" && !spotlightRoom.contains("•")) {
                                         Text(
                                             text = " • ${state.nextSessionTime}",
                                             color = TextTertiary,

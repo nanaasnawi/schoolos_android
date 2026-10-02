@@ -292,11 +292,9 @@ class HomeViewModel @Inject constructor(
                 "-"
             }
 
-            val activeTeacherSession = liveSession ?: sessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
+            val activeTeacherSession = liveSession ?: todaySessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
             val activeSubj = if (activeTeacherSession != null) {
                 cleanSubjectName(activeTeacherSession.lessonId, activeTeacherSession.subjectName, activeTeacherSession.notes)
-            } else if (subjectList.isNotEmpty()) {
-                subjectList.first().name
             } else {
                 "-"
             }
@@ -305,8 +303,6 @@ class HomeViewModel @Inject constructor(
                 cleanClassName(activeTeacherSession.classId, activeTeacherSession.className)
             } else if (homeroom.isNotBlank() && !isUuid(homeroom)) {
                 homeroom
-            } else if (classList.isNotEmpty()) {
-                classList.first().name
             } else {
                 "-"
             }

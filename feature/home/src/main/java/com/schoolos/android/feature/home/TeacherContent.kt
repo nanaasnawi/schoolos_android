@@ -154,9 +154,9 @@ fun LazyListScope.teacherContent(
         activeClass.isNotBlank() && activeClass != "-" && !isUuid(activeClass) -> activeClass
         isHomeroom && teacherClasses.isNotEmpty() && !isUuid(teacherClasses.first().name) -> teacherClasses.first().name
         teacherClasses.isNotEmpty() && !isUuid(teacherClasses.first().name) -> teacherClasses.first().name
-        else -> "PAKET A5"
+        else -> "-"
     }
-    val displayClass = formatClassName(rawClass)
+    val displayClass = formatClassName(rawClass, if (isHomeroom) "Wali Kelas" else "Kelas Pengampu")
 
     // ── 1. EXECUTIVE METRICS COCKPIT (2x2 Grid) ──────────────────────────────────
     item {
