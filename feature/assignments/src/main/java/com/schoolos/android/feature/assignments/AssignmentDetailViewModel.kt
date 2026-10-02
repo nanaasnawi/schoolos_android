@@ -93,7 +93,7 @@ class AssignmentDetailViewModel @Inject constructor(
                             (!sub.studentNisn.isNullOrBlank() && studentNisn.isNotBlank() && sub.studentNisn == studentNisn) ||
                             (!sub.studentName.isNullOrBlank() && studentName.isNotBlank() && sub.studentName.equals(studentName, ignoreCase = true))
                         )
-                    }
+                    } ?: submissions.firstOrNull { it.status != "unsubmitted" }
                 }
                 _state.value = _state.value.copy(
                     allSubmissions = submissions,
