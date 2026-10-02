@@ -1,7 +1,12 @@
 package com.schoolos.android.feature.learning.components
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.content.pm.ActivityInfo
 import android.net.Uri
+import android.view.View
 import android.view.ViewGroup
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
@@ -9,6 +14,7 @@ import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,7 +24,11 @@ import androidx.compose.material.icons.automirrored.filled.OpenInNew
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,10 +38,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 /**
  * Interactive In-App Video Player for YouTube and Direct Video URLs.
- * Configured with proper Origin & Referer headers to eliminate YouTube Error 153.
+ * Configured with proper Origin & Referer headers and native Fullscreen support.
  */
 @Composable
 fun InAppVideoPlayer(
@@ -39,6 +52,9 @@ fun InAppVideoPlayer(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    var isFullscreen by remember { mutableStateOf(false) }
+
     val youtubeId = remember(videoUrl) {
         extractYouTubeVideoId(videoUrl)
     }
@@ -60,11 +76,11 @@ fun InAppVideoPlayer(
             <body>
                 <div class="video-wrapper">
                     <iframe 
-                        src="https://www.youtube.com/embed/$youtubeId?autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1&origin=https://schoolos.id"
+                        src="https://www.youtube.com/embed/$youtubeId?autoplay=1&playsinline=1&enablejsapi=1&rel=0&modestbranding=1&fs=1&origin=https://schoolos.id"
                         frameborder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share; fullscreen"
                         referrerpolicy="strict-origin-when-cross-origin"
-                        allowfullscreen>
+                        allowfullscreen="true">
                     </iframe>
                 </div>
             </body>
@@ -93,6 +109,25 @@ fun InAppVideoPlayer(
         }
     }
 
+    val chromeClient = remember(activity) {
+        FullscreenWebChromeClient(activity) { fullscreen ->
+            isFullscreen = fullscreen
+        }
+    }
+
+    // Intercept back button when fullscreen video is active
+    BackHandler(enabled = isFullscreen) {
+        chromeClient.exitFullscreen()
+    }
+
+    DisposableEffect(chromeClient) {
+        onDispose {
+            if (isFullscreen) {
+                chromeClient.exitFullscreen()
+            }
+        }
+    }
+
     Box(modifier = modifier.clip(RoundedCornerShape(bottomStart = 16.dp, bottomEnd = 16.dp))) {
         AndroidView(
             modifier = Modifier.fillMaxSize(),
@@ -109,12 +144,13 @@ fun InAppVideoPlayer(
                         loadWithOverviewMode = true
                         useWideViewPort = true
                         allowContentAccess = true
+                        javaScriptCanOpenWindowsAutomatically = true
                         mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
                         // Remove WebView signature to prevent YouTube player restriction
                         val defaultUa = userAgentString
                         userAgentString = defaultUa.replace("; wv", "")
                     }
-                    webChromeClient = WebChromeClient()
+                    webChromeClient = chromeClient
                     webViewClient = object : WebViewClient() {
                         override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                             val url = request?.url?.toString() ?: return false
@@ -151,29 +187,105 @@ fun InAppVideoPlayer(
             }
         )
 
-        // Shortcut button to open in YouTube app if available
-        Row(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(8.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black.copy(alpha = 0.75f))
-                .clickable {
-                    try {
-                        val intent = Intent(Intent.ACTION_VIEW, Uri.parse(videoUrl))
-                        context.startActivity(intent)
-                    } catch (e: Exception) {
-                        Toast.makeText(context, "Tidak dapat membuka tautan video", Toast.LENGTH_SHORT).show()
+        // Shortcut button to open in YouTube app if available (hidden during fullscreen)
+        if (!isFullscreen) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(Color.Black.copy(alpha = 0.75f))
+                    .clickable {
+                        try {
+                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(videoUrl))
+                            context.startActivity(intent)
+                        } catch (e: Exception) {
+                            Toast.makeText(context, "Tidak dapat membuka tautan video", Toast.LENGTH_SHORT).show()
+                        }
                     }
-                }
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-            Spacer(Modifier.width(4.dp))
-            Text("Buka di YouTube", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(Icons.AutoMirrored.Filled.OpenInNew, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                Spacer(Modifier.width(4.dp))
+                Text("Buka di YouTube", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
+}
+
+/**
+ * Custom WebChromeClient handling HTML5/YouTube fullscreen requests on Android.
+ */
+private class FullscreenWebChromeClient(
+    private val activity: Activity?,
+    private val onFullscreenChanged: (Boolean) -> Unit,
+) : WebChromeClient() {
+    private var customView: View? = null
+    private var customViewCallback: CustomViewCallback? = null
+    private var originalOrientation: Int = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+
+    override fun onShowCustomView(view: View?, callback: CustomViewCallback?) {
+        if (customView != null) {
+            callback?.onCustomViewHidden()
+            return
+        }
+        val act = activity ?: return
+        customView = view
+        customViewCallback = callback
+        originalOrientation = act.requestedOrientation
+
+        view?.setBackgroundColor(android.graphics.Color.BLACK)
+
+        val decorView = act.window.decorView as? ViewGroup
+        decorView?.addView(
+            view,
+            ViewGroup.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                ViewGroup.LayoutParams.MATCH_PARENT
+            )
+        )
+
+        // Hide system UI (Immersive Fullscreen)
+        val insetsController = WindowCompat.getInsetsController(act.window, act.window.decorView)
+        insetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        insetsController.hide(WindowInsetsCompat.Type.systemBars())
+
+        act.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        onFullscreenChanged(true)
+    }
+
+    override fun onHideCustomView() {
+        val act = activity ?: return
+        val decorView = act.window.decorView as? ViewGroup
+        if (customView != null) {
+            decorView?.removeView(customView)
+            customView = null
+        }
+
+        customViewCallback?.onCustomViewHidden()
+        customViewCallback = null
+
+        // Restore system UI
+        val insetsController = WindowCompat.getInsetsController(act.window, act.window.decorView)
+        insetsController.show(WindowInsetsCompat.Type.systemBars())
+
+        act.requestedOrientation = originalOrientation
+        onFullscreenChanged(false)
+    }
+
+    fun exitFullscreen() {
+        onHideCustomView()
+    }
+}
+
+private fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
 }
 
 fun extractYouTubeVideoId(url: String): String? {

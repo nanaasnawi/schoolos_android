@@ -80,6 +80,19 @@ fun AssignmentListScreen(
     var selectedTab by remember { mutableStateOf("Semua") }
     var speedDialExpanded by remember { mutableStateOf(false) }
 
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
     val isParent  = com.schoolos.android.core.auth.isParentRole(state.userRole)
     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
 
