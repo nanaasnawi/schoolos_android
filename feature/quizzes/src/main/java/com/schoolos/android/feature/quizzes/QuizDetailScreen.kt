@@ -20,6 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Info
@@ -74,6 +76,7 @@ fun QuizDetailScreen(
     onBack: (() -> Unit) = {},
     onAttemptStarted: (String) -> Unit = {},
     onCreateQuiz: (() -> Unit) = {},
+    onViewResult: ((attemptId: String, score: Int, totalPoints: Int) -> Unit) = { _, _, _ -> },
     viewModel: QuizDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -116,7 +119,8 @@ fun QuizDetailScreen(
                 }
                 state.quiz != null -> {
                     val q = state.quiz!!
-                    val isAvailable = q.status.lowercase() in listOf("active", "open", "published", "draft")
+                    val isDraft = q.status.lowercase() == "draft"
+                    val isAvailable = q.status.lowercase() in listOf("active", "open", "published")
                     val timeLimit = q.timeLimitMinutes
 
                     Column(
@@ -192,8 +196,53 @@ fun QuizDetailScreen(
                             CbtRulesCard()
                         }
 
-                        // ── 5. ERROR ALERT (Stylized if start fails) ───────────
-                        if (state.startError != null) {
+                        // ── 5. COMPLETION OR ERROR ALERT ──────────────────────
+                        val isAlreadyDone = state.hasCompleted ||
+                                (state.quiz?.studentHasCompleted == true) ||
+                                (state.startError?.contains("batas maksimal", ignoreCase = true) == true) ||
+                                (state.startError?.contains("Maximum attempt limit", ignoreCase = true) == true)
+
+                        if (isAlreadyDone) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(NeonSuccess.copy(alpha = 0.12f))
+                                    .border(1.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = NeonSuccess,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Kuis Telah Selesai Dikerjakan",
+                                        color = NeonSuccess,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                    )
+                                    val scoreVal = state.completedAttempt?.score ?: state.quiz?.studentLastScore
+                                    if (scoreVal != null) {
+                                        Text(
+                                            text = "Skor Anda: $scoreVal poin.",
+                                            color = TextPrimary,
+                                            fontSize = 12.sp,
+                                        )
+                                    } else {
+                                        Text(
+                                            text = "Anda telah mencapai batas maksimal pengerjaan untuk kuis ini.",
+                                            color = TextSecondary,
+                                            fontSize = 12.sp,
+                                        )
+                                    }
+                                }
+                            }
+                        } else if (state.startError != null) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -223,6 +272,50 @@ fun QuizDetailScreen(
                         // ── 6. PRIMARY ACTION BUTTON ──────────────────────────
                         if (isTeacher) {
                             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                if (isDraft) {
+                                    Button(
+                                        onClick = viewModel::publishQuiz,
+                                        enabled = !state.isPublishing,
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = TeacherNeon,
+                                        ),
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(52.dp)
+                                    ) {
+                                        if (state.isPublishing) {
+                                            CircularProgressIndicator(
+                                                color = CosmicBlack,
+                                                strokeWidth = 2.dp,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                "Menerbitkan Kuis...",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = CosmicBlack
+                                            )
+                                        } else {
+                                            Icon(
+                                                Icons.Default.Check,
+                                                contentDescription = null,
+                                                tint = CosmicBlack,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                            Spacer(Modifier.width(6.dp))
+                                            Text(
+                                                "PUBLIKASIKAN KUIS CBT",
+                                                fontSize = 13.sp,
+                                                fontWeight = FontWeight.Black,
+                                                color = CosmicBlack,
+                                                letterSpacing = 0.5.sp
+                                            )
+                                        }
+                                    }
+                                }
+
                                 Button(
                                     onClick = onBack,
                                     shape = RoundedCornerShape(14.dp),
@@ -247,72 +340,130 @@ fun QuizDetailScreen(
                                     onClick = onCreateQuiz,
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = TeacherNeon,
+                                        containerColor = if (isDraft) CosmicSurface2 else TeacherNeon,
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(50.dp)
+                                        .then(
+                                            if (isDraft) Modifier.border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                                            else Modifier
+                                        )
                                 ) {
                                     Text(
                                         "+ BUAT KUIS BARU",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Black,
-                                        color = CosmicBlack,
+                                        color = if (isDraft) TextPrimary else CosmicBlack,
                                         letterSpacing = 0.5.sp
                                     )
                                 }
                             }
                         } else {
-                            Button(
-                                onClick = viewModel::startAttempt,
-                                enabled = !state.isStarting && isAvailable,
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.Transparent,
-                                    disabledContainerColor = Color.Transparent
-                                ),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp)
-                                    .clip(RoundedCornerShape(14.dp))
-                                    .background(
-                                        if (isAvailable && !state.isStarting) {
-                                            Brush.horizontalGradient(
-                                                listOf(StudentNeon, Color(0xFF00B4D8))
-                                            )
-                                        } else {
-                                            Brush.horizontalGradient(
-                                                listOf(CosmicSurface2, CosmicSurface)
-                                            )
+                            val resultAttemptId = state.completedAttempt?.id ?: state.quiz?.studentLastAttemptId
+                            val canViewResult = isAlreadyDone && resultAttemptId != null
+
+                            if (isAlreadyDone) {
+                                Button(
+                                    onClick = {
+                                        if (resultAttemptId != null) {
+                                            val score = state.completedAttempt?.score ?: state.quiz?.studentLastScore ?: 0
+                                            val totalPoints = state.completedAttempt?.totalPoints ?: state.quiz?.maxScore ?: 100
+                                            onViewResult(resultAttemptId, score, totalPoints)
                                         }
-                                    )
-                                    .border(
-                                        width = 1.dp,
-                                        color = if (isAvailable && !state.isStarting) GlassBorder2 else GlassBorder,
-                                        shape = RoundedCornerShape(14.dp)
-                                    )
-                            ) {
-                                if (state.isStarting) {
-                                    CircularProgressIndicator(
-                                        color = Color.White,
-                                        strokeWidth = 2.dp,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(Modifier.width(10.dp))
-                                    Text(
-                                        "Menyiapkan Soal...",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = Color.White
-                                    )
-                                } else {
-                                    Text(
-                                        if (isAvailable) "MULAI KERJAKAN" else "KUIS BELUM TERSEDIA",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = if (isAvailable) Color.White else TextTertiary,
-                                        letterSpacing = 0.5.sp
-                                    )
+                                    },
+                                    enabled = canViewResult,
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = if (canViewResult) CosmicSurface2 else CosmicSurface,
+                                        disabledContainerColor = CosmicSurface2.copy(alpha = 0.6f)
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(52.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (canViewResult) NeonSuccess.copy(alpha = 0.45f) else GlassBorder,
+                                            shape = RoundedCornerShape(14.dp)
+                                        )
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = if (canViewResult) NeonSuccess else TextTertiary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = if (canViewResult) "LIHAT HASIL EVALUASI" else "SUDAH DIKERJAKAN",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = if (canViewResult) Color.White else TextTertiary,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                    }
+                                }
+                            } else {
+                                Button(
+                                    onClick = viewModel::startAttempt,
+                                    enabled = !state.isStarting && isAvailable,
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = Color.Transparent,
+                                        disabledContainerColor = Color.Transparent
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(52.dp)
+                                        .clip(RoundedCornerShape(14.dp))
+                                        .background(
+                                            if (isAvailable && !state.isStarting) {
+                                                Brush.horizontalGradient(
+                                                    listOf(StudentNeon, Color(0xFF00B4D8))
+                                                )
+                                            } else {
+                                                Brush.horizontalGradient(
+                                                    listOf(CosmicSurface2, CosmicSurface)
+                                                )
+                                            }
+                                        )
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (isAvailable && !state.isStarting) GlassBorder2 else GlassBorder,
+                                            shape = RoundedCornerShape(14.dp)
+                                        )
+                                ) {
+                                    if (state.isStarting) {
+                                        CircularProgressIndicator(
+                                            color = Color.White,
+                                            strokeWidth = 2.dp,
+                                            modifier = Modifier.size(22.dp)
+                                        )
+                                        Spacer(Modifier.width(10.dp))
+                                        Text(
+                                            "Menyiapkan Soal...",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White
+                                        )
+                                    } else {
+                                        Text(
+                                            text = when {
+                                                isAvailable -> "MULAI KERJAKAN"
+                                                isDraft -> "KUIS MASIH DRAF"
+                                                else -> "KUIS BELUM TERSEDIA"
+                                            },
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Black,
+                                            color = if (isAvailable) Color.White else TextTertiary,
+                                            letterSpacing = 0.5.sp
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -390,8 +541,9 @@ private fun CosmicQuizHeroCard(
                         .border(0.5.dp, if (isTeacher) TeacherNeon.copy(alpha = 0.4f) else AccentNeonAmber.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp)
                 ) {
+                    val potentialXp = if (maxScore > 0) maxScore * 5 else 100
                     Text(
-                        text = if (isTeacher) "Pendidik / Guru Pengampu" else "⭐ Potensi ${maxScore * 5} XP",
+                        text = if (isTeacher) "Pendidik / Guru Pengampu" else "⭐ Potensi $potentialXp XP",
                         color = if (isTeacher) TeacherNeon else AccentNeonAmber,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold

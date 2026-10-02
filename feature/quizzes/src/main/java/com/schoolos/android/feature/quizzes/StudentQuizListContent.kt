@@ -285,8 +285,15 @@ private fun StudentQuizCard(
                         }
                     }
 
-                    // Max score
-                    if (quiz.maxScore > 0) {
+                    // Score display
+                    if (isDone && quiz.studentLastScore != null) {
+                        Text(
+                            text = "Nilai: ${quiz.studentLastScore}/${quiz.maxScore} poin",
+                            color = NeonSuccess,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    } else if (quiz.maxScore > 0) {
                         Text(
                             text = "${quiz.maxScore} poin",
                             color = TextTertiary,

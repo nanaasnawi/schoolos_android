@@ -39,8 +39,27 @@ fun QuizListScreen(
     val role = state.userRole.lowercase()
     val isTeacher = role == "teacher" || role == "guru"
 
-    val doneQuizzes = state.quizzes.filter { it.status.lowercase() in listOf("closed", "archived", "graded", "submitted", "completed") }
-    val activeQuizzes = state.quizzes.filter { it !in doneQuizzes }
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                viewModel.refresh()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
+
+    val doneQuizzes = state.quizzes.filter {
+        it.studentHasCompleted ||
+        it.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded") ||
+        it.status.lowercase() in listOf("closed", "archived", "graded", "submitted", "completed")
+    }
+    val activeQuizzes = state.quizzes.filter {
+        it !in doneQuizzes && (isTeacher || it.status.lowercase() in listOf("active", "open", "published"))
+    }
 
     Scaffold(
         containerColor = CosmicBlack,

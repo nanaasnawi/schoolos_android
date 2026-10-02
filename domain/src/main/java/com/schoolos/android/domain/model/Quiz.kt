@@ -13,4 +13,10 @@ data class Quiz(
     val createdAt: String,
     val updatedAt: String,
     val subjectName: String? = null,
+    val maxAttempts: Int = 1,
+    val studentAttemptStatus: String? = null,
+    val studentAttemptsCount: Int = 0,
+    val studentHasCompleted: Boolean = false,
+    val studentLastScore: Int? = null,
+    val studentLastAttemptId: String? = null,
 )
