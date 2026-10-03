@@ -25,6 +25,7 @@ import com.schoolos.android.core.network.MaintenanceManager
 import com.schoolos.android.core.notification.SystemNotificationHelper
 import com.schoolos.android.feature.notifications.NotificationSyncManager
 import com.schoolos.android.navigation.NavGraph
+import com.schoolos.android.update.InAppUpdateHelper
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -37,6 +38,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var maintenanceManager: MaintenanceManager
     @Inject lateinit var chatManager: com.schoolos.android.core.chat.ChatManager
 
+    private lateinit var inAppUpdateHelper: InAppUpdateHelper
     private var pendingNavigationRoute by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -97,6 +99,10 @@ class MainActivity : ComponentActivity() {
             maintenanceManager.checkServerStatus()
         }
 
+        // Check for Google Play In-App Updates
+        inAppUpdateHelper = InAppUpdateHelper(this)
+        inAppUpdateHelper.checkForAppUpdate()
+
         // Load saved theme preference (default = LIGHT)
         val prefs = getSharedPreferences("school_os_prefs", Context.MODE_PRIVATE)
 
@@ -125,6 +131,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (::inAppUpdateHelper.isInitialized) {
+            inAppUpdateHelper.onResume()
         }
     }
 
