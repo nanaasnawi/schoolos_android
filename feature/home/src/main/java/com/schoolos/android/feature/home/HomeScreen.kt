@@ -505,6 +505,7 @@ fun HomeScreen(
                             materialsCount           = state.teacherMaterialsCount,
                             scheduleCount            = state.teacherScheduleCount,
                             attendanceRate           = state.teacherAttendanceRate,
+                            quizzesCount             = state.teacherQuizzesCount,
                         )
                     }
                     isParent -> parentContent(

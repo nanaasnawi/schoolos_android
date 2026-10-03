@@ -18,6 +18,7 @@ data class LearningMaterial(
     val classId: String? = null,
     val startPage: Int? = null,
     val endPage: Int? = null,
+    val createdAt: String? = null,
 )
 
 enum class MaterialType {

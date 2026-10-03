@@ -167,6 +167,7 @@ fun InAppVideoPlayer(
                         }
                     }
                     setBackgroundColor(android.graphics.Color.BLACK)
+                    tag = videoUrl
                     loadDataWithBaseURL(
                         "https://schoolos.id",
                         htmlContent,
@@ -177,13 +178,16 @@ fun InAppVideoPlayer(
                 }
             },
             update = { webView ->
-                webView.loadDataWithBaseURL(
-                    "https://schoolos.id",
-                    htmlContent,
-                    "text/html",
-                    "UTF-8",
-                    null
-                )
+                if (webView.tag != videoUrl) {
+                    webView.tag = videoUrl
+                    webView.loadDataWithBaseURL(
+                        "https://schoolos.id",
+                        htmlContent,
+                        "text/html",
+                        "UTF-8",
+                        null
+                    )
+                }
             }
         )
 

@@ -691,12 +691,14 @@ fun LearningMaterialDetailScreen(
             EditMaterialDialog(
                 material = material,
                 onDismiss = { showEditDialog = false },
-                onSave = { updatedTitle, updatedDesc, updatedUrl ->
+                onSave = { updatedTitle, updatedDesc, updatedUrl, updatedStart, updatedEnd ->
                     viewModel.updateMaterial(
                         id = material.id,
                         title = updatedTitle,
                         description = updatedDesc,
                         mediaUrl = updatedUrl,
+                        startPage = updatedStart,
+                        endPage = updatedEnd,
                     ) { success, err ->
                         if (success) {
                             showEditDialog = false
@@ -779,12 +781,26 @@ fun LearningMaterialDetailScreen(
 private fun EditMaterialDialog(
     material: LearningMaterial,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String, mediaUrl: String?) -> Unit,
+    onSave: (title: String, description: String, mediaUrl: String?, startPage: Int?, endPage: Int?) -> Unit,
 ) {
     var title by remember { mutableStateOf(material.title) }
     var description by remember { mutableStateOf(material.description ?: "") }
     var mediaUrl by remember { mutableStateOf(material.mediaUrl ?: "") }
+    var startPageStr by remember { mutableStateOf(material.startPage?.toString() ?: "") }
+    var endPageStr by remember { mutableStateOf(material.endPage?.toString() ?: "") }
+    var showPdfReaderPreview by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
+
+    if (showPdfReaderPreview && mediaUrl.isNotBlank()) {
+        BookReaderDialog(
+            title = title.ifBlank { "Pratinjau Buku" },
+            pdfUrl = mediaUrl,
+            subject = material.subject,
+            startPage = startPageStr.toIntOrNull(),
+            endPage = endPageStr.toIntOrNull(),
+            onDismiss = { showPdfReaderPreview = false }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -833,7 +849,7 @@ private fun EditMaterialDialog(
                     label = { Text("Deskripsi / Petunjuk", fontSize = 12.sp) },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp),
+                        .height(100.dp),
                     maxLines = 4,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -858,6 +874,74 @@ private fun EditMaterialDialog(
                         unfocusedTextColor = TextPrimary
                     )
                 )
+
+                // Editable Book / PDF Page Range
+                Surface(
+                    color = CosmicSurface2,
+                    shape = RoundedCornerShape(12.dp),
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Rentang Halaman Buku / Modul:", color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            if (mediaUrl.isNotBlank()) {
+                                OutlinedButton(
+                                    onClick = { showPdfReaderPreview = true },
+                                    shape = RoundedCornerShape(8.dp),
+                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                    modifier = Modifier.height(28.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
+                                    border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.5f))
+                                ) {
+                                    Icon(Icons.Default.Visibility, null, modifier = Modifier.size(12.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Buka Isi Buku", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            OutlinedTextField(
+                                value = startPageStr,
+                                onValueChange = { startPageStr = it.filter { ch -> ch.isDigit() } },
+                                label = { Text("Hal. Mulai", fontSize = 10.sp) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = TeacherNeon,
+                                    unfocusedBorderColor = GlassBorder,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                )
+                            )
+                            OutlinedTextField(
+                                value = endPageStr,
+                                onValueChange = { endPageStr = it.filter { ch -> ch.isDigit() } },
+                                label = { Text("Hal. Selesai", fontSize = 10.sp) },
+                                modifier = Modifier.weight(1f),
+                                singleLine = true,
+                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                shape = RoundedCornerShape(8.dp),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = TeacherNeon,
+                                    unfocusedBorderColor = GlassBorder,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                )
+                            )
+                        }
+                    }
+                }
             }
         },
         confirmButton = {
@@ -865,7 +949,13 @@ private fun EditMaterialDialog(
                 onClick = {
                     if (title.isNotBlank()) {
                         isSaving = true
-                        onSave(title.trim(), description.trim(), mediaUrl.trim().ifBlank { null })
+                        onSave(
+                            title.trim(),
+                            description.trim(),
+                            mediaUrl.trim().ifBlank { null },
+                            startPageStr.toIntOrNull(),
+                            endPageStr.toIntOrNull()
+                        )
                     }
                 },
                 enabled = title.isNotBlank() && !isSaving,

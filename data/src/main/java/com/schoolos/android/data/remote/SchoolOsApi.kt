@@ -301,6 +301,8 @@ data class UpdateMaterialRequestDto(
     @kotlinx.serialization.SerialName("storage_key") val storageKey: String? = null,
     @kotlinx.serialization.SerialName("external_url") val externalUrl: String? = null,
     val visibility: String? = null,
+    @kotlinx.serialization.SerialName("start_page") val startPage: Int? = null,
+    @kotlinx.serialization.SerialName("end_page") val endPage: Int? = null,
 )
 
 @kotlinx.serialization.Serializable

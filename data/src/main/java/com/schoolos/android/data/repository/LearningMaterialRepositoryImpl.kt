@@ -51,12 +51,14 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     classId = dto.classId,
                     startPage = dto.startPage,
                     endPage = dto.endPage,
+                    createdAt = dto.createdAt,
                 )
             } ?: emptyList()
 
             if (materials.isNotEmpty()) {
                 materialDao.clearAll()
-                val entities = materials.map { m ->
+                val now = System.currentTimeMillis()
+                val entities = materials.mapIndexed { idx, m ->
                     LearningMaterialEntity(
                         id = m.id,
                         title = m.title,
@@ -75,6 +77,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                         classId = m.classId,
                         startPage = m.startPage,
                         endPage = m.endPage,
+                        createdAt = m.createdAt,
+                        cachedAt = now - (idx * 1000L),
                     )
                 }
                 materialDao.insertAll(entities)
@@ -106,6 +110,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 classId = entity.classId,
                 startPage = entity.startPage,
                 endPage = entity.endPage,
+                createdAt = entity.createdAt,
             )
         }
     }
@@ -320,13 +325,17 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         title: String?,
         description: String?,
         mediaUrl: String?,
-        storageKey: String?
+        storageKey: String?,
+        startPage: Int?,
+        endPage: Int?
     ): Result<LearningMaterial> = runCatching {
         val request = com.schoolos.android.data.remote.UpdateMaterialRequestDto(
             title = title,
             description = description,
             externalUrl = mediaUrl,
             storageKey = storageKey,
+            startPage = startPage,
+            endPage = endPage,
         )
         val response = api.updateMaterial(id, request)
         val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal memperbarui materi.")
@@ -345,7 +354,10 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             mediaUrl = dto.externalUrl,
             thumbnailUrl = dto.imagePreviewUrl,
             subject = dto.subjectName ?: "Materi Pelajaran",
-            size = dto.storageKey ?: "Modul Digital"
+            size = dto.storageKey ?: "Modul Digital",
+            startPage = dto.startPage ?: startPage,
+            endPage = dto.endPage ?: endPage,
+            createdAt = dto.createdAt,
         )
     }
 
