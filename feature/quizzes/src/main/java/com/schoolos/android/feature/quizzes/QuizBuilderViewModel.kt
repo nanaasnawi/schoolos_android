@@ -18,7 +18,9 @@ data class QuestionSummary(
     val text: String,
     val type: String, // "MULTIPLE_CHOICE" or "ESSAY"
     val points: Int,
-    val choicesCount: Int
+    val choicesCount: Int,
+    val choices: List<String> = emptyList(),
+    val correctIndex: Int = 0,
 )
 
 data class QuizBuilderUiState(
@@ -26,6 +28,10 @@ data class QuizBuilderUiState(
     val quizCreated: Boolean = false,
     val createdQuizId: String? = null,
     val createdQuizTitle: String = "",
+    val className: String = "",
+    val subjectName: String = "",
+    val timeLimitMinutes: Int = 30,
+    val passingScore: Int = 70,
     val error: String? = null,
     val currentStep: Int = 1, // 1: Info, 2: Questions
     val questionsList: List<QuestionSummary> = emptyList(),
@@ -69,6 +75,8 @@ class QuizBuilderViewModel @Inject constructor(
         passingScore: Int,
         maxScore: Int,
         classId: String?,
+        className: String = "",
+        subjectName: String = "",
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -85,6 +93,10 @@ class QuizBuilderViewModel @Inject constructor(
                     quizCreated = true,
                     createdQuizId = quiz.id,
                     createdQuizTitle = title,
+                    className = className,
+                    subjectName = subjectName,
+                    timeLimitMinutes = timeLimit ?: 30,
+                    passingScore = passingScore,
                     currentStep = 2
                 )
             }.onFailure { e ->
@@ -128,7 +140,9 @@ class QuizBuilderViewModel @Inject constructor(
                     text = questionText,
                     type = questionType,
                     points = points,
-                    choicesCount = if (questionType == "MULTIPLE_CHOICE") choices.size else 0
+                    choicesCount = if (questionType == "MULTIPLE_CHOICE") choices.size else 0,
+                    choices = if (questionType == "MULTIPLE_CHOICE") choices else emptyList(),
+                    correctIndex = correctOptionIndex(correctIndex, choices.size)
                 )
                 val updatedList = _state.value.questionsList + newSummary
                 val newTotalPoints = updatedList.sumOf { it.points }
@@ -142,6 +156,10 @@ class QuizBuilderViewModel @Inject constructor(
                 _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Gagal menambahkan butir soal kuis.")
             }
         }
+    }
+
+    private fun correctOptionIndex(index: Int, size: Int): Int {
+        return if (size > 0 && index in 0 until size) index else 0
     }
 
     fun publishCreatedQuiz(onComplete: () -> Unit = {}) {

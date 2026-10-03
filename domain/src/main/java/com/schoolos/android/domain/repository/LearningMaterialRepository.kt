@@ -36,7 +36,9 @@ interface LearningMaterialRepository {
         title: String?,
         description: String?,
         mediaUrl: String? = null,
-        storageKey: String? = null
+        storageKey: String? = null,
+        startPage: Int? = null,
+        endPage: Int? = null
     ): Result<LearningMaterial>
     suspend fun deleteMaterial(id: String): Result<Unit>
 }

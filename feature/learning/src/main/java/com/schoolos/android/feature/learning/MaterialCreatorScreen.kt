@@ -43,6 +43,7 @@ import coil.compose.SubcomposeAsyncImage
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.LibraryBook
 import com.schoolos.android.domain.model.MaterialType
+import androidx.compose.ui.window.Dialog
 
 private fun queryFileName(context: android.content.Context, uri: Uri): String? {
     var result: String? = null
@@ -123,6 +124,64 @@ fun MaterialCreatorScreen(
     var selectedBook by remember { mutableStateOf<LibraryBook?>(null) }
     var startPageInput by remember { mutableStateOf("1") }
     var endPageInput by remember { mutableStateOf("10") }
+    var showPrePublishDialog by remember { mutableStateOf(false) }
+    var previewingSelectedBook by remember { mutableStateOf(false) }
+
+    if (previewingSelectedBook && selectedBook != null && !selectedBook!!.fileUrl.isNullOrBlank()) {
+        BookReaderDialog(
+            title = selectedBook!!.title,
+            pdfUrl = selectedBook!!.fileUrl ?: "",
+            subject = selectedBook!!.subjectName ?: selectedSubject,
+            startPage = startPageInput.toIntOrNull(),
+            endPage = endPageInput.toIntOrNull(),
+            onDismiss = { previewingSelectedBook = false }
+        )
+    }
+
+    if (showPrePublishDialog) {
+        val targetClassId = state.availableClasses.find { it.name == selectedClass }?.id ?: selectedClass
+        val targetSubjectId = state.availableSubjects.find { it.name == selectedSubject }?.id
+        val startP = startPageInput.toIntOrNull() ?: 1
+        val endP = endPageInput.toIntOrNull() ?: minOf(startP + 10, selectedBook?.totalPages ?: 100)
+
+        PrePublishMaterialReviewDialog(
+            title = title.trim(),
+            description = description.trim(),
+            selectedType = selectedType,
+            mediaUrl = mediaUrl.trim(),
+            contentBody = contentBody.trim(),
+            selectedClass = selectedClass,
+            selectedSubject = selectedSubject,
+            selectedBook = selectedBook,
+            startPage = startP.toString(),
+            endPage = endP.toString(),
+            isLoading = state.isLoading,
+            onDismiss = { showPrePublishDialog = false },
+            onConfirmPublish = {
+                if (selectedBook != null) {
+                    viewModel.assignReadingBook(
+                        book = selectedBook!!,
+                        startPage = startP,
+                        endPage = endP,
+                        instructions = description.trim().ifBlank { null },
+                        classId = targetClassId,
+                        subjectId = targetSubjectId
+                    )
+                } else {
+                    val fullDesc = "$selectedSubject • $selectedClass • $description"
+                    viewModel.createMaterial(
+                        title = title.trim(),
+                        description = fullDesc.trim(),
+                        materialType = selectedType,
+                        mediaUrl = mediaUrl.trim().ifBlank { null },
+                        contentBody = if (selectedType == MaterialType.ARTICLE) contentBody.trim() else null,
+                        subject = selectedSubject,
+                        classId = targetClassId
+                    )
+                }
+            }
+        )
+    }
 
     val documentPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
@@ -254,35 +313,11 @@ fun MaterialCreatorScreen(
                                 Toast.makeText(context, "Judul materi tidak boleh kosong!", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-                            val targetClassId = state.availableClasses.find { it.name == selectedClass }?.id ?: selectedClass
-                            if (selectedBook != null) {
-                                val startP = startPageInput.toIntOrNull() ?: 1
-                                val endP = endPageInput.toIntOrNull() ?: minOf(startP + 10, selectedBook!!.totalPages)
-                                val targetSubjectId = state.availableSubjects.find { it.name == selectedSubject }?.id
-                                viewModel.assignReadingBook(
-                                    book = selectedBook!!,
-                                    startPage = startP,
-                                    endPage = endP,
-                                    instructions = description.trim().ifBlank { null },
-                                    classId = targetClassId,
-                                    subjectId = targetSubjectId
-                                )
+                            if ((selectedType == MaterialType.DOCUMENT || selectedType == MaterialType.IMAGE) && selectedBook == null && mediaUrl.isBlank()) {
+                                Toast.makeText(context, "Silakan pilih berkas dari perangkat atau pilih buku perpustakaan!", Toast.LENGTH_SHORT).show()
                                 return@Button
                             }
-                            if ((selectedType == MaterialType.DOCUMENT || selectedType == MaterialType.IMAGE) && mediaUrl.isBlank()) {
-                                Toast.makeText(context, "Silakan pilih berkas dari perangkat terlebih dahulu!", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-                            val fullDesc = "$selectedSubject • $selectedClass • $description"
-                            viewModel.createMaterial(
-                                title = title.trim(),
-                                description = fullDesc.trim(),
-                                materialType = selectedType,
-                                mediaUrl = mediaUrl.trim().ifBlank { null },
-                                contentBody = if (selectedType == MaterialType.ARTICLE) contentBody.trim() else null,
-                                subject = selectedSubject,
-                                classId = targetClassId
-                            )
+                            showPrePublishDialog = true
                         },
                         enabled = title.isNotBlank() && !state.isLoading && !state.isUploadingFile,
                         shape = RoundedCornerShape(12.dp),
@@ -297,9 +332,9 @@ fun MaterialCreatorScreen(
                         if (state.isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Terbitkan Modul", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Pratinjau & Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -532,6 +567,21 @@ fun MaterialCreatorScreen(
                                             fontSize = 10.sp,
                                             color = TextSecondary
                                         )
+                                    }
+                                    if (!selectedBook!!.fileUrl.isNullOrBlank()) {
+                                        OutlinedButton(
+                                            onClick = { previewingSelectedBook = true },
+                                            shape = RoundedCornerShape(8.dp),
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                            modifier = Modifier.height(28.dp),
+                                            colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldGlow),
+                                            border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.6f))
+                                        ) {
+                                            Icon(Icons.Default.Visibility, null, modifier = Modifier.size(12.dp))
+                                            Spacer(Modifier.width(4.dp))
+                                            Text("Baca Buku", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Spacer(Modifier.width(4.dp))
                                     }
                                     IconButton(
                                         onClick = { selectedBook = null },
@@ -1156,6 +1206,18 @@ private fun LibraryBookCatalogSheetContent(
     var expandedBookId by remember { mutableStateOf<String?>(null) }
     var tempStartPage by remember { mutableStateOf("1") }
     var tempEndPage by remember { mutableStateOf("10") }
+    var previewingBook by remember { mutableStateOf<LibraryBook?>(null) }
+
+    if (previewingBook != null && !previewingBook!!.fileUrl.isNullOrBlank()) {
+        BookReaderDialog(
+            title = previewingBook!!.title,
+            pdfUrl = previewingBook!!.fileUrl ?: "",
+            subject = previewingBook!!.subjectName ?: "Buku SIBI",
+            startPage = tempStartPage.toIntOrNull(),
+            endPage = tempEndPage.toIntOrNull(),
+            onDismiss = { previewingBook = null }
+        )
+    }
 
     val filtered = remember(books, searchQuery) {
         if (searchQuery.isBlank()) books
@@ -1324,6 +1386,19 @@ private fun LibraryBookCatalogSheetContent(
 
                             if (isExpanded) {
                                 HorizontalDivider(color = GlassBorder)
+                                if (!book.fileUrl.isNullOrBlank()) {
+                                    OutlinedButton(
+                                        onClick = { previewingBook = book },
+                                        modifier = Modifier.fillMaxWidth().height(38.dp),
+                                        shape = RoundedCornerShape(10.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldGlow),
+                                        border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.6f))
+                                    ) {
+                                        Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(6.dp))
+                                        Text("Buka & Baca Isi Buku SIBI Ini", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                    }
+                                }
                                 Text(
                                     text = "Tentukan Halaman Bacaan Siswa:",
                                     fontWeight = FontWeight.Bold,
@@ -1385,5 +1460,274 @@ private fun LibraryBookCatalogSheetContent(
             }
         }
         Spacer(Modifier.height(16.dp))
+    }
+}
+
+@Composable
+private fun PrePublishMaterialReviewDialog(
+    title: String,
+    description: String,
+    selectedType: MaterialType,
+    mediaUrl: String,
+    contentBody: String,
+    selectedClass: String,
+    selectedSubject: String,
+    selectedBook: LibraryBook?,
+    startPage: String,
+    endPage: String,
+    isLoading: Boolean,
+    onDismiss: () -> Unit,
+    onConfirmPublish: () -> Unit,
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp),
+            shape = RoundedCornerShape(24.dp),
+            color = CosmicNavy,
+            border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.5f))
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(20.dp)
+            ) {
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(EmeraldGlow.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Visibility, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text("Pratinjau Tampilan Siswa", color = TextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp)
+                            Text("Realtime tampilan modul sebelum diterbitkan", color = TextSecondary, fontSize = 11.sp)
+                        }
+                    }
+                    IconButton(onClick = onDismiss, enabled = !isLoading) {
+                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextPrimary)
+                    }
+                }
+
+                Spacer(Modifier.height(14.dp))
+
+                // Scrollable Simulated Student View
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Target Rombel & Subject Banner
+                    Surface(
+                        color = CosmicSurface2,
+                        shape = RoundedCornerShape(14.dp),
+                        border = BorderStroke(0.5.dp, GlassBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🎯", fontSize = 18.sp)
+                            Column {
+                                Text("Akan Diterbitkan Untuk:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                                Text(
+                                    text = "Kelas $selectedClass • $selectedSubject",
+                                    color = EmeraldGlow,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
+
+                    // Student Material Card Simulator
+                    Surface(
+                        color = CosmicBlack,
+                        shape = RoundedCornerShape(18.dp),
+                        border = BorderStroke(1.dp, GlassBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            // Badge Row
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Surface(
+                                    color = EmeraldGlow.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = when (selectedType) {
+                                            MaterialType.VIDEO -> "VIDEO PEMBELAJARAN"
+                                            MaterialType.DOCUMENT -> if (selectedBook != null) "BUKU SIBI KEMENDIKBUD" else "MODUL PDF"
+                                            MaterialType.IMAGE -> "INFOGRAFIS / GAMBAR"
+                                            MaterialType.ARTICLE -> "ARTIKEL BACAAN"
+                                        },
+                                        color = EmeraldGlow,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                    )
+                                }
+
+                                Text("Status: Segera Terbit", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
+
+                            // Title & Description
+                            Text(
+                                text = title.ifBlank { "(Tanpa Judul)" },
+                                color = TextPrimary,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 22.sp
+                            )
+
+                            if (description.isNotBlank()) {
+                                Text(
+                                    text = description,
+                                    color = TextSecondary,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
+                                )
+                            }
+
+                            HorizontalDivider(color = GlassBorder)
+
+                            // Media preview
+                            if (selectedBook != null) {
+                                Surface(
+                                    color = CosmicSurface2,
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.4f)),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
+                                        Text("📕", fontSize = 24.sp)
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(selectedBook.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                            Text(
+                                                "Siswa membaca Hal. $startPage s/d $endPage",
+                                                color = EmeraldGlow,
+                                                fontWeight = FontWeight.SemiBold,
+                                                fontSize = 11.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            } else if (selectedType == MaterialType.VIDEO && mediaUrl.isNotBlank()) {
+                                Surface(
+                                    color = CosmicSurface2,
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(0.5.dp, GlassBorder),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text("▶️", fontSize = 16.sp)
+                                            Text("Tautan Video Pembelajaran:", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                                        }
+                                        Text(mediaUrl, color = NeonBlue, fontSize = 11.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    }
+                                }
+                            } else if (selectedType == MaterialType.ARTICLE && contentBody.isNotBlank()) {
+                                Surface(
+                                    color = CosmicSurface2,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Text(
+                                        contentBody,
+                                        color = TextSecondary,
+                                        fontSize = 12.sp,
+                                        lineHeight = 18.sp,
+                                        modifier = Modifier.padding(12.dp)
+                                    )
+                                }
+                            } else if (mediaUrl.isNotBlank()) {
+                                Surface(
+                                    color = CosmicSurface2,
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth()
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Text("📎", fontSize = 18.sp)
+                                        Text("Berkas Lampiran Digital Tersedia", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(16.dp))
+
+                // Action Footer
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        enabled = !isLoading,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                        border = BorderStroke(1.dp, GlassBorder)
+                    ) {
+                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Koreksi / Edit", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                    }
+
+                    Button(
+                        onClick = onConfirmPublish,
+                        enabled = !isLoading,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1.3f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow)
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                        } else {
+                            Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Terbitkan Sekarang", fontWeight = FontWeight.Black, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -124,7 +124,11 @@ class LearningViewModel @Inject constructor(
     }
 
     private fun mapMaterials(list: List<com.schoolos.android.domain.model.LearningMaterial>): List<MaterialItem> {
-        return list.mapIndexed { idx, m ->
+        val sortedList = list.sortedWith(
+            compareByDescending<com.schoolos.android.domain.model.LearningMaterial> { it.createdAt ?: "" }
+                .thenByDescending { it.id }
+        )
+        return sortedList.mapIndexed { idx, m ->
             val color = when (idx % 4) {
                 0 -> NeonBlue
                 1 -> TeacherNeon
@@ -312,11 +316,20 @@ class LearningViewModel @Inject constructor(
         title: String?,
         description: String?,
         mediaUrl: String? = null,
+        startPage: Int? = null,
+        endPage: Int? = null,
         onResult: (Boolean, String?) -> Unit = { _, _ -> }
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
-            repository.updateMaterial(id, title, description, mediaUrl)
+            repository.updateMaterial(
+                id = id,
+                title = title,
+                description = description,
+                mediaUrl = mediaUrl,
+                startPage = startPage,
+                endPage = endPage
+            )
                 .onSuccess { updated ->
                     selectedMaterial.value = updated
                     loadMaterials()

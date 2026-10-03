@@ -124,8 +124,8 @@ class AssignmentListViewModel @Inject constructor(
         }
 
         return Grouped(
-            active = active.sortedBy { it.dueAt },
-            dueSoon = dueSoon.sortedBy { it.dueAt },
+            active = active.sortedByDescending { it.createdAt },
+            dueSoon = dueSoon.sortedByDescending { it.createdAt },
             completed = completed.sortedByDescending { it.updatedAt },
         )
     }

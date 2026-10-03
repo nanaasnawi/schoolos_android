@@ -22,5 +22,6 @@ data class LearningMaterialEntity(
     val classId: String? = null,
     val startPage: Int? = null,
     val endPage: Int? = null,
+    val createdAt: String? = null,
     val cachedAt: Long = System.currentTimeMillis(),
 )

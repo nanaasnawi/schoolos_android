@@ -24,6 +24,7 @@ import com.schoolos.android.domain.repository.GradeRepository
 import com.schoolos.android.domain.repository.LearningMaterialRepository
 import com.schoolos.android.domain.repository.NotificationRepository
 import com.schoolos.android.domain.repository.ProgressRepository
+import com.schoolos.android.domain.repository.QuizRepository
 import com.schoolos.android.domain.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.coroutineScope
@@ -60,6 +61,7 @@ data class HomeUiState(
     val teacherScheduleCount: String = "0",
     val teacherAttendanceRate: String = "-",
     val teacherPendingCount: String = "0",
+    val teacherQuizzesCount: String = "0",
     val teacherMaterialsCount: String = "0",
     val teacherAssignments: List<Assignment> = emptyList(),
     val teacherAnnouncements: List<Notification> = emptyList(),
@@ -96,6 +98,7 @@ class HomeViewModel @Inject constructor(
     private val assignmentRepository: AssignmentRepository,
     private val achievementRepository: AchievementRepository,
     private val sessionRepository: SessionRepository,
+    private val quizRepository: QuizRepository,
     private val learningMaterialRepository: LearningMaterialRepository,
     private val readingHistoryManager: ReadingHistoryManager,
 ) : ViewModel() {
@@ -466,12 +469,16 @@ class HomeViewModel @Inject constructor(
             learningMaterialRepository.getMaterials().onSuccess { materials ->
                 _state.update { it.copy(teacherMaterialsCount = materials.size.toString()) }
             }
+            quizRepository.getQuizzes(classId = "").onSuccess { quizzes ->
+                _state.update { it.copy(teacherQuizzesCount = quizzes.size.toString()) }
+            }
             academicRepository.getClasses().onSuccess { classes ->
                 val myClasses = if (homeroom.isNotBlank() && !isUuid(homeroom)) {
-                    val filtered = classes.filter { it.name.equals(homeroom, ignoreCase = true) }
-                    if (filtered.isNotEmpty()) filtered else classes.take(1)
+                    val hr = classes.filter { it.name.equals(homeroom, ignoreCase = true) }
+                    val others = classes.filterNot { it.name.equals(homeroom, ignoreCase = true) }
+                    hr + others
                 } else {
-                    classes.take(1)
+                    classes
                 }
                 _state.update { current ->
                     val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-" || isUuid(current.activeSessionClass)) {

@@ -149,6 +149,7 @@ fun LazyListScope.teacherContent(
     materialsCount: String = "0",
     scheduleCount: String = "0",
     attendanceRate: String = "-",
+    quizzesCount: String = "0",
 ) {
     val rawClass = when {
         activeClass.isNotBlank() && activeClass != "-" && !isUuid(activeClass) -> activeClass
@@ -176,12 +177,12 @@ fun LazyListScope.teacherContent(
                 )
 
                 TeacherKpiCard(
-                    title = "Presensi Rombel",
-                    value = if (attendanceRate.isNotBlank() && attendanceRate != "-") attendanceRate else "100%",
-                    subtitle = "Kehadiran siswa",
-                    icon = Icons.Default.CheckCircle,
+                    title = "List Ujian & CBT",
+                    value = if (quizzesCount.isNotBlank()) "$quizzesCount Ujian" else "0 Ujian",
+                    subtitle = "Daftar kuis & evaluasi",
+                    icon = Icons.AutoMirrored.Filled.Assignment,
                     accentColor = NeonSuccess,
-                    onClick = { if (rawClass.isNotBlank()) onNavigateToRombelStudents(rawClass) },
+                    onClick = onNavigateToQuizzes,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -215,6 +216,26 @@ fun LazyListScope.teacherContent(
 
     // ── 2. CLASS COMMAND HERO (WALI KELAS / KELAS PENGAMPU) ─────────────────────
     item {
+        val heroTitle = if (teacherClasses.size > 1) {
+            teacherClasses.joinToString(", ") { formatClassName(it.name) }
+        } else {
+            displayClass
+        }
+        val heroBadge = if (isHomeroom && teacherClasses.size > 1) {
+            "WALI KELAS & PENGAMPU (${teacherClasses.size} KELAS)"
+        } else if (teacherClasses.size > 1) {
+            "GURU PENGAMPU (${teacherClasses.size} KELAS)"
+        } else if (isHomeroom) {
+            "WALI KELAS"
+        } else {
+            "KELAS PENGAMPU"
+        }
+        val heroSubtitle = if (teacherClasses.size > 1) {
+            "Rekap seluruh siswa diampu (${teacherClasses.size} rombel), kehadiran presensi harian & pantauan"
+        } else {
+            "Rekap data siswa, kehadiran presensi harian, dan pantauan kelas"
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -222,7 +243,7 @@ fun LazyListScope.teacherContent(
                 .background(CosmicNavy)
                 .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
                 .clickable {
-                    if (rawClass.isNotBlank()) onNavigateToRombelStudents(rawClass)
+                    onNavigateToRombelStudents(if (teacherClasses.size > 1) "ALL" else rawClass)
                 }
                 .padding(14.dp),
         ) {
@@ -245,7 +266,7 @@ fun LazyListScope.teacherContent(
                             .padding(horizontal = 7.dp, vertical = 2.dp),
                     ) {
                         Text(
-                            text = if (isHomeroom) "WALI KELAS" else "KELAS PENGAMPU",
+                            text = heroBadge,
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = badgeFg,
@@ -297,19 +318,19 @@ fun LazyListScope.teacherContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = displayClass,
-                            fontSize = 16.sp,
+                            text = heroTitle,
+                            fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "Rekap data siswa, kehadiran presensi harian, dan pantauan kelas",
+                            text = heroSubtitle,
                             fontSize = 11.sp,
                             color = TextSecondary,
-                            maxLines = 1,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -321,6 +342,23 @@ fun LazyListScope.teacherContent(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
+                        item {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(CosmicSurface2)
+                                    .border(0.5.dp, GlassBorder2, RoundedCornerShape(6.dp))
+                                    .clickable { onNavigateToRombelStudents("ALL") }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                            ) {
+                                Text(
+                                    text = "Semua Kelas (${teacherClasses.size})",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TeacherNeon,
+                                )
+                            }
+                        }
                         items(teacherClasses) { cls ->
                             val isSelected = cls.name.equals(rawClass, ignoreCase = true)
                             Box(
