@@ -514,7 +514,7 @@ class HomeViewModel @Inject constructor(
                 }
                 _state.update { current ->
                     val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-" || isUuid(current.activeSessionClass)) {
-                        if (homeroom.isNotBlank() && !isUuid(homeroom)) homeroom else (myClasses.firstOrNull()?.name ?: "PAKET A4")
+                        if (homeroom.isNotBlank() && !isUuid(homeroom)) homeroom else (myClasses.firstOrNull()?.name ?: "")
                     } else current.activeSessionClass
                     current.copy(teacherClasses = myClasses, activeSessionClass = activeCls)
                 }
