@@ -1036,6 +1036,38 @@ private fun GradingDialog(
                     }
                 }
 
+                // No recorded answers at all — e.g. submissions made while the server failed to
+                // persist PG/essay answers. Tell the teacher explicitly instead of an empty sheet.
+                if (submission.answers.isEmpty() && dialogContent.isNullOrBlank() && submission.fileUrl.isNullOrBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(NeonWarning.copy(alpha = 0.08f))
+                            .border(1.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .padding(12.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.Top) {
+                            Icon(Icons.Default.Warning, null, tint = NeonWarning, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text(
+                                    "Jawaban siswa tidak tercatat",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = NeonWarning
+                                )
+                                Text(
+                                    "Lembar ini dikumpulkan tanpa jawaban PG/esai yang tersimpan di server. Minta siswa mengerjakan & mengumpulkan ulang tugas ini.",
+                                    fontSize = 11.sp,
+                                    color = TextSecondary,
+                                    lineHeight = 16.sp
+                                )
+                            }
+                        }
+                    }
+                }
+
                 // Score Slider & Quick Select
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Row(
