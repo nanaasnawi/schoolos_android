@@ -26,8 +26,8 @@ android {
         applicationId = "com.schoolos.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.0.3"
+        versionCode = 5
+        versionName = "1.0.4"
     }
 
     buildTypes {
@@ -107,6 +107,8 @@ dependencies {
     implementation(libs.timber)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
+    implementation(libs.play.app.update)
+    implementation(libs.play.app.update.ktx)
 
     debugImplementation(libs.compose.ui.tooling)
 }
