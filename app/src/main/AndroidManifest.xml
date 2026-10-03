@@ -104,6 +104,13 @@
             </intent-filter>
         </receiver>
         <receiver
+            android:name="com.schoolos.android.core.notification.TeacherScheduleAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.schoolos.android.ACTION_TEACHER_SCHEDULE_REMINDER" />
+            </intent-filter>
+        </receiver>
+        <receiver
             android:name=".notification.BootReceiver"
             android:exported="false"
             android:directBootAware="true">
