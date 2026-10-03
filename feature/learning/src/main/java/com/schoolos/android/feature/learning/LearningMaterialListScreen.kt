@@ -33,6 +33,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.schoolos.android.core.common.formatPublishTimestamp
 import com.schoolos.android.core.designsystem.*
 
 @Composable
@@ -654,6 +655,29 @@ private fun ModernMaterialCard(
                                 color = TextTertiary,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Normal,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    if (!item.createdAt.isNullOrBlank()) {
+                        Spacer(Modifier.height(3.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = "Diterbitkan: ${formatPublishTimestamp(item.createdAt)}",
+                                color = TextTertiary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.schoolos.android.core.common.formatPublishTimestamp
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.LearningMaterial
 import com.schoolos.android.domain.model.MaterialType
@@ -463,6 +464,24 @@ fun LearningMaterialDetailScreen(
                                         Icon(Icons.Default.Verified, null, tint = NeonBlue, modifier = Modifier.size(14.dp))
                                     }
                                     Text("Pengampu • $className", color = TextTertiary, fontSize = 11.sp)
+                                    if (!material.createdAt.isNullOrBlank()) {
+                                        Spacer(Modifier.height(3.dp))
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Icon(
+                                                imageVector = Icons.Default.Schedule,
+                                                contentDescription = null,
+                                                tint = TextTertiary,
+                                                modifier = Modifier.size(11.dp)
+                                            )
+                                            Spacer(Modifier.width(4.dp))
+                                            Text(
+                                                text = "Diterbitkan: ${formatPublishTimestamp(material.createdAt)}",
+                                                color = TextTertiary,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
+                                    }
                                 }
                             }
 

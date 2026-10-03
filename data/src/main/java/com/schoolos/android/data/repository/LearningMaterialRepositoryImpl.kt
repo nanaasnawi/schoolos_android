@@ -51,7 +51,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     classId = dto.classId,
                     startPage = dto.startPage,
                     endPage = dto.endPage,
-                    createdAt = dto.createdAt,
+                    createdAt = dto.publishedAt ?: dto.createdAt,
                 )
             } ?: emptyList()
 
@@ -148,6 +148,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 classId = dto.classId,
                 startPage = dto.startPage,
                 endPage = dto.endPage,
+                createdAt = dto.publishedAt ?: dto.createdAt,
             )
 
             materialDao.insert(
@@ -169,6 +170,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     classId = domain.classId,
                     startPage = domain.startPage,
                     endPage = domain.endPage,
+                    createdAt = domain.createdAt,
                 )
             )
 
@@ -239,7 +241,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             mediaUrl = dto.externalUrl ?: mediaUrl,
             thumbnailUrl = dto.imagePreviewUrl,
             subject = subject,
-            size = dto.storageKey ?: "Modul Digital"
+            size = dto.storageKey ?: "Modul Digital",
+            createdAt = dto.publishedAt ?: dto.createdAt ?: java.time.Instant.now().toString(),
         )
     }
 

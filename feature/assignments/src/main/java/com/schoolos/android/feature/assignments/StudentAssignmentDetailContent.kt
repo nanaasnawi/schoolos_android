@@ -75,6 +75,7 @@ import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
+import com.schoolos.android.core.common.formatPublishTimestamp
 import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.AssignmentQuestion
@@ -123,6 +124,7 @@ fun StudentAssignmentDetailContent(
 
         // ── 2. TIMELINE STRIP (Due Date + Submission Time) ───────────────────
         TimelineCard(
+            createdAt = assignment.createdAt,
             dueAt = assignment.dueAt,
             submission = submission,
             dueInfo = dueInfo,
@@ -463,6 +465,27 @@ private fun AssignmentStatusCard(
                     )
                 }
             }
+
+            if (assignment.createdAt.isNotBlank()) {
+                HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Schedule,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(12.dp)
+                    )
+                    Text(
+                        text = "Diterbitkan: ${formatPublishTimestamp(assignment.createdAt)}",
+                        fontSize = 11.sp,
+                        color = TextTertiary,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
         }
     }
 }
@@ -470,11 +493,12 @@ private fun AssignmentStatusCard(
 // ── TIMELINE CARD (Due + Submission time) ────────────────────────────────────
 @Composable
 private fun TimelineCard(
+    createdAt: String?,
     dueAt: String?,
     submission: AssignmentSubmission?,
     dueInfo: DueInfo?,
 ) {
-    if (dueAt.isNullOrBlank() && submission == null) return
+    if (createdAt.isNullOrBlank() && dueAt.isNullOrBlank() && submission == null) return
 
     Box(
         modifier = Modifier
@@ -504,13 +528,24 @@ private fun TimelineCard(
 
             Spacer(Modifier.height(14.dp))
 
+            // Published date row
+            if (!createdAt.isNullOrBlank()) {
+                TimelineItem(
+                    icon = Icons.Default.Schedule,
+                    accentColor = TeacherNeon,
+                    title = "Diterbitkan Guru",
+                    subtitle = formatPublishTimestamp(createdAt),
+                    isLast = dueAt.isNullOrBlank() && submission == null
+                )
+            }
+
             // Due date row
             if (!dueAt.isNullOrBlank() && dueInfo != null) {
                 TimelineItem(
                     icon = Icons.Default.Schedule,
                     accentColor = dueInfo.color,
                     title = dueInfo.label,
-                    subtitle = "Tenggat: ${formatDateShort(dueAt)}",
+                    subtitle = "Tenggat: ${formatPublishTimestamp(dueAt)}",
                     isLast = submission == null
                 )
             }
