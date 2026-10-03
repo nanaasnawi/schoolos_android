@@ -126,6 +126,8 @@ class HomeViewModel @Inject constructor(
     private var currentAuth = AuthState()
     private var cachedClassMap: Map<String, String> = emptyMap()
     private var cachedSubjectMap: Map<String, String> = emptyMap()
+    private var teacherScheduledClassIds: Set<String> = emptySet()
+    private var teacherScheduledClassNames: Set<String> = emptySet()
 
     init {
         observeAuthState()
@@ -278,6 +280,9 @@ class HomeViewModel @Inject constructor(
                     if (it.status.equals("active", ignoreCase = true)) 0 else 1
                 }.thenBy { it.scheduledAt ?: it.startedAt ?: "" }
             )
+
+            teacherScheduledClassIds = sessions.mapNotNull { it.classId }.filter { it.isNotBlank() }.toSet()
+            teacherScheduledClassNames = sessions.mapNotNull { it.className }.filter { it.isNotBlank() && !isUuid(it) }.toSet()
 
             // Resolve class & subject name maps so UUIDs are NEVER passed to UI
             val classList = academicRepository.getClasses().getOrNull() ?: emptyList()
@@ -505,12 +510,23 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(teacherQuizzesCount = quizzes.size.toString()) }
             }
             academicRepository.getClasses().onSuccess { classes ->
-                val myClasses = if (homeroom.isNotBlank() && !isUuid(homeroom)) {
-                    val hr = classes.filter { it.name.equals(homeroom, ignoreCase = true) }
-                    val others = classes.filterNot { it.name.equals(homeroom, ignoreCase = true) }
-                    hr + others
+                val scopedClasses = if (classes.size > 2 && (homeroom.isNotBlank() || teacherScheduledClassNames.isNotEmpty() || teacherScheduledClassIds.isNotEmpty())) {
+                    val matching = classes.filter { c ->
+                        (homeroom.isNotBlank() && c.name.equals(homeroom, ignoreCase = true)) ||
+                        teacherScheduledClassNames.any { s -> s.equals(c.name, ignoreCase = true) } ||
+                        teacherScheduledClassIds.contains(c.id)
+                    }
+                    if (matching.isNotEmpty()) matching else classes
                 } else {
                     classes
+                }
+
+                val myClasses = if (homeroom.isNotBlank() && !isUuid(homeroom)) {
+                    val hr = scopedClasses.filter { it.name.equals(homeroom, ignoreCase = true) }
+                    val others = scopedClasses.filterNot { it.name.equals(homeroom, ignoreCase = true) }
+                    hr + others
+                } else {
+                    scopedClasses
                 }
                 _state.update { current ->
                     val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-" || isUuid(current.activeSessionClass)) {
