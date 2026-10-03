@@ -133,37 +133,41 @@ object TeacherScheduleReminderManager {
         scheduledTime: String,
         reminderType: String
     ) {
-        if (isAlreadyNotified(context, sessionId, reminderType)) {
-            Timber.d("Teacher reminder already notified today: %s (%s)", sessionId, reminderType)
-            return
+        try {
+            if (isAlreadyNotified(context, sessionId, reminderType)) {
+                Timber.d("Teacher reminder already notified today: %s (%s)", sessionId, reminderType)
+                return
+            }
+
+            val title = if (reminderType == TYPE_1_HOUR_BEFORE) {
+                "⏰ 1 Jam Lagi: Jadwal Mengajar $subjectName"
+            } else {
+                "🚨 Waktunya Mengajar: $subjectName • $className"
+            }
+
+            val message = if (reminderType == TYPE_1_HOUR_BEFORE) {
+                "Jadwal mengajar kelas $className dimulai pukul $scheduledTime. Jangan lupa siapkan dan isi materi pembelajaran, tugas, atau kuis untuk murid Anda!"
+            } else {
+                "Jam mata pelajaran telah dimulai! Pastikan materi ajar, penugasan, atau kuis sudah diterbitkan ke murid."
+            }
+
+            val notifId = (sessionId + "_" + reminderType).hashCode() and 0x7FFFFFFF
+
+            SystemNotificationHelper.showNotification(
+                context = context,
+                notificationId = notifId,
+                title = title,
+                message = message,
+                navigateTo = if (reminderType == TYPE_1_HOUR_BEFORE) "learning" else "sessions",
+                channelId = SystemNotificationHelper.CHANNEL_LEARNING_ID,
+                category = "TEACHER_SCHEDULE_REMINDER"
+            )
+
+            markAsNotified(context, sessionId, reminderType)
+            Timber.i("Teacher schedule notification posted: %s - %s", title, message)
+        } catch (t: Throwable) {
+            Timber.w(t, "Failed to show reminder notification safely: %s", t.message)
         }
-
-        val title = if (reminderType == TYPE_1_HOUR_BEFORE) {
-            "⏰ 1 Jam Lagi: Jadwal Mengajar $subjectName"
-        } else {
-            "🚨 Waktunya Mengajar: $subjectName • $className"
-        }
-
-        val message = if (reminderType == TYPE_1_HOUR_BEFORE) {
-            "Jadwal mengajar kelas $className dimulai pukul $scheduledTime. Jangan lupa siapkan dan isi materi pembelajaran, tugas, atau kuis untuk murid Anda!"
-        } else {
-            "Jam mata pelajaran telah dimulai! Pastikan materi ajar, penugasan, atau kuis sudah diterbitkan ke murid."
-        }
-
-        val notifId = (sessionId + "_" + reminderType).hashCode() and 0x7FFFFFFF
-
-        SystemNotificationHelper.showNotification(
-            context = context,
-            notificationId = notifId,
-            title = title,
-            message = message,
-            navigateTo = if (reminderType == TYPE_1_HOUR_BEFORE) "learning" else "sessions",
-            channelId = SystemNotificationHelper.CHANNEL_LEARNING_ID,
-            category = "TEACHER_SCHEDULE_REMINDER"
-        )
-
-        markAsNotified(context, sessionId, reminderType)
-        Timber.i("Teacher schedule notification posted: %s - %s", title, message)
     }
 
     /**
@@ -171,84 +175,84 @@ object TeacherScheduleReminderManager {
      */
     fun scheduleReminders(context: Context, sessions: List<LearningSession>) {
         if (sessions.isEmpty()) return
-        val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
-        val now = System.currentTimeMillis()
+        try {
+            val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
+            val now = System.currentTimeMillis()
 
-        for (session in sessions) {
-            val scheduledMs = parseEpochMs(session.scheduledAt ?: session.startedAt) ?: continue
-            val subject = session.subjectName?.takeIf { it.isNotBlank() && !it.contains("-") } ?: "Mata Pelajaran"
-            val className = session.className?.takeIf { it.isNotBlank() && !it.contains("-") } ?: (session.room ?: "Kelas")
-            val timeStr = formatHourMinute(scheduledMs)
+            for (session in sessions) {
+                val scheduledMs = parseEpochMs(session.scheduledAt ?: session.startedAt) ?: continue
+                val subject = session.subjectName?.takeIf { it.isNotBlank() && !it.contains("-") } ?: "Mata Pelajaran"
+                val className = session.className?.takeIf { it.isNotBlank() && !it.contains("-") } ?: (session.room ?: "Kelas")
+                val timeStr = formatHourMinute(scheduledMs)
 
-            // 1. One Hour Before (scheduledMs - 60 mins)
-            val oneHourBeforeMs = scheduledMs - 60 * 60 * 1000L
-            if (oneHourBeforeMs > now) {
-                // Future: Schedule AlarmManager alarm
-                val intent = Intent(context, TeacherScheduleAlarmReceiver::class.java).apply {
-                    action = TeacherScheduleAlarmReceiver.ACTION_REMINDER
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_SESSION_ID, session.id)
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_SUBJECT_NAME, subject)
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_CLASS_NAME, className)
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_SCHEDULED_TIME, timeStr)
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_REMINDER_TYPE, TYPE_1_HOUR_BEFORE)
-                }
-                val pi = PendingIntent.getBroadcast(
-                    context,
-                    (session.id + "_1h").hashCode(),
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, oneHourBeforeMs, pi)
-                    } else {
-                        am.setExact(AlarmManager.RTC_WAKEUP, oneHourBeforeMs, pi)
+                // 1. One Hour Before (scheduledMs - 60 mins)
+                val oneHourBeforeMs = scheduledMs - 60 * 60 * 1000L
+                if (oneHourBeforeMs > now) {
+                    val intent = Intent(context, TeacherScheduleAlarmReceiver::class.java).apply {
+                        action = TeacherScheduleAlarmReceiver.ACTION_REMINDER
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SESSION_ID, session.id)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SUBJECT_NAME, subject)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_CLASS_NAME, className)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SCHEDULED_TIME, timeStr)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_REMINDER_TYPE, TYPE_1_HOUR_BEFORE)
                     }
-                    Timber.d("Scheduled 1-hour teacher reminder for %s at %s", subject, oneHourBeforeMs)
-                } catch (e: Exception) {
-                    Timber.w(e, "Failed to schedule 1-hour alarm for session %s", session.id)
+                    val pi = PendingIntent.getBroadcast(
+                        context,
+                        (session.id + "_1h").hashCode(),
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, oneHourBeforeMs, pi)
+                        } else {
+                            am.setExact(AlarmManager.RTC_WAKEUP, oneHourBeforeMs, pi)
+                        }
+                        Timber.d("Scheduled 1-hour teacher reminder for %s at %s", subject, oneHourBeforeMs)
+                    } catch (e: Exception) {
+                        Timber.w(e, "Failed to schedule 1-hour alarm for session %s", session.id)
+                    }
+                } else if (now in oneHourBeforeMs until scheduledMs) {
+                    if (!isAlreadyNotified(context, session.id, TYPE_1_HOUR_BEFORE)) {
+                        showReminderNotification(context, session.id, subject, className, timeStr, TYPE_1_HOUR_BEFORE)
+                    }
                 }
-            } else if (now in oneHourBeforeMs until scheduledMs) {
-                // Current time is within 1 hour before class start: notify immediately if not yet notified
-                if (!isAlreadyNotified(context, session.id, TYPE_1_HOUR_BEFORE)) {
-                    showReminderNotification(context, session.id, subject, className, timeStr, TYPE_1_HOUR_BEFORE)
+
+                // 2. Class Start Time (scheduledMs)
+                val startMs = scheduledMs
+                if (startMs > now) {
+                    val intent = Intent(context, TeacherScheduleAlarmReceiver::class.java).apply {
+                        action = TeacherScheduleAlarmReceiver.ACTION_REMINDER
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SESSION_ID, session.id)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SUBJECT_NAME, subject)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_CLASS_NAME, className)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SCHEDULED_TIME, timeStr)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_REMINDER_TYPE, TYPE_CLASS_START)
+                    }
+                    val pi = PendingIntent.getBroadcast(
+                        context,
+                        (session.id + "_start").hashCode(),
+                        intent,
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+                    )
+                    try {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, startMs, pi)
+                        } else {
+                            am.setExact(AlarmManager.RTC_WAKEUP, startMs, pi)
+                        }
+                        Timber.d("Scheduled class-start teacher reminder for %s at %s", subject, startMs)
+                    } catch (e: Exception) {
+                        Timber.w(e, "Failed to schedule class-start alarm for session %s", session.id)
+                    }
+                } else if (session.status.equals("active", ignoreCase = true) || (now in startMs until (startMs + 2 * 3600_000L))) {
+                    if (!isAlreadyNotified(context, session.id, TYPE_CLASS_START)) {
+                        showReminderNotification(context, session.id, subject, className, timeStr, TYPE_CLASS_START)
+                    }
                 }
             }
-
-            // 2. Class Start Time (scheduledMs)
-            val startMs = scheduledMs
-            if (startMs > now) {
-                // Future: Schedule AlarmManager alarm
-                val intent = Intent(context, TeacherScheduleAlarmReceiver::class.java).apply {
-                    action = TeacherScheduleAlarmReceiver.ACTION_REMINDER
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_SESSION_ID, session.id)
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_SUBJECT_NAME, subject)
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_CLASS_NAME, className)
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_SCHEDULED_TIME, timeStr)
-                    putExtra(TeacherScheduleAlarmReceiver.EXTRA_REMINDER_TYPE, TYPE_CLASS_START)
-                }
-                val pi = PendingIntent.getBroadcast(
-                    context,
-                    (session.id + "_start").hashCode(),
-                    intent,
-                    PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                )
-                try {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, startMs, pi)
-                    } else {
-                        am.setExact(AlarmManager.RTC_WAKEUP, startMs, pi)
-                    }
-                    Timber.d("Scheduled class-start teacher reminder for %s at %s", subject, startMs)
-                } catch (e: Exception) {
-                    Timber.w(e, "Failed to schedule class-start alarm for session %s", session.id)
-                }
-            } else if (session.status.equals("active", ignoreCase = true) || (now in startMs until (startMs + 2 * 3600_000L))) {
-                // Class is starting now or active: notify immediately if not yet notified
-                if (!isAlreadyNotified(context, session.id, TYPE_CLASS_START)) {
-                    showReminderNotification(context, session.id, subject, className, timeStr, TYPE_CLASS_START)
-                }
-            }
+        } catch (t: Throwable) {
+            Timber.w(t, "Teacher schedule reminders check failed safely: %s", t.message)
         }
     }
 }

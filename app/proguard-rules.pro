@@ -48,6 +48,7 @@
 
 # Coroutines
 -dontwarn kotlinx.coroutines.**
+-keep class kotlinx.coroutines.** { *; }
 
 # Google Play Core & In-App Updates
 -keep class com.google.android.play.core.appupdate.** { *; }
@@ -57,4 +58,52 @@
 -keep class com.google.android.play.core.common.** { *; }
 -keep class com.google.android.play.core.tasks.** { *; }
 -dontwarn com.google.android.play.core.**
--keep class com.schoolos.android.update.** { *; }
+
+# Firebase
+-keep class com.google.firebase.** { *; }
+-dontwarn com.google.firebase.**
+
+# Dagger Core & Hilt Protection
+-keep class dagger.** { *; }
+-keep interface dagger.** { *; }
+-keep class dagger.hilt.** { *; }
+-keep interface dagger.hilt.** { *; }
+-keep class hilt_aggregated_deps.** { *; }
+-dontwarn dagger.**
+-dontwarn dagger.hilt.**
+
+# Javax & Jakarta Inject
+-keep class javax.inject.** { *; }
+-keep interface javax.inject.** { *; }
+-keep class jakarta.inject.** { *; }
+-keep interface jakarta.inject.** { *; }
+
+# ViewModels and Hilt Modules - Never Strip or Inline
+-keep class * extends androidx.lifecycle.ViewModel {
+    @javax.inject.Inject <init>(...);
+    <init>(...);
+}
+-keep class * extends androidx.lifecycle.AndroidViewModel {
+    <init>(...);
+}
+-keep class **_HiltModules* { *; }
+-keep class **_Factory { *; }
+-keep class * implements dagger.internal.Factory { *; }
+-keep class * extends dagger.hilt.android.lifecycle.HiltViewModel { *; }
+-keep @dagger.hilt.android.lifecycle.HiltViewModel class * {
+    @javax.inject.Inject <init>(...);
+    <init>(...);
+}
+
+# AndroidX Navigation & Lifecycle Compose
+-keep class androidx.navigation.** { *; }
+-keep interface androidx.navigation.** { *; }
+-keep class androidx.hilt.navigation.** { *; }
+-keep class androidx.hilt.navigation.compose.** { *; }
+-keep class androidx.lifecycle.** { *; }
+-keep interface androidx.lifecycle.** { *; }
+-keep class androidx.compose.runtime.** { *; }
+
+# Keep ALL School OS Application Classes & Members from being stripped
+-keep class com.schoolos.android.** { *; }
+-keepclassmembers class com.schoolos.android.** { *; }
