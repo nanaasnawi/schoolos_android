@@ -48,3 +48,13 @@
 
 # Coroutines
 -dontwarn kotlinx.coroutines.**
+
+# Google Play Core & In-App Updates
+-keep class com.google.android.play.core.appupdate.** { *; }
+-keep interface com.google.android.play.core.appupdate.** { *; }
+-keep class com.google.android.play.core.install.** { *; }
+-keep interface com.google.android.play.core.install.** { *; }
+-keep class com.google.android.play.core.common.** { *; }
+-keep class com.google.android.play.core.tasks.** { *; }
+-dontwarn com.google.android.play.core.**
+-keep class com.schoolos.android.update.** { *; }

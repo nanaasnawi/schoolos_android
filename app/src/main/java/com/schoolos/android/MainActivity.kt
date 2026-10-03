@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
     @Inject lateinit var maintenanceManager: MaintenanceManager
     @Inject lateinit var chatManager: com.schoolos.android.core.chat.ChatManager
 
-    private lateinit var inAppUpdateHelper: InAppUpdateHelper
+    private var inAppUpdateHelper: InAppUpdateHelper? = null
     private var pendingNavigationRoute by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -99,9 +99,13 @@ class MainActivity : ComponentActivity() {
             maintenanceManager.checkServerStatus()
         }
 
-        // Check for Google Play In-App Updates
-        inAppUpdateHelper = InAppUpdateHelper(this)
-        inAppUpdateHelper.checkForAppUpdate()
+        // Check for Google Play In-App Updates safely
+        try {
+            inAppUpdateHelper = InAppUpdateHelper(this)
+            inAppUpdateHelper?.checkForAppUpdate()
+        } catch (t: Throwable) {
+            timber.log.Timber.w(t, "In-app update check skipped: %s", t.message)
+        }
 
         // Load saved theme preference (default = LIGHT)
         val prefs = getSharedPreferences("school_os_prefs", Context.MODE_PRIVATE)
@@ -136,8 +140,10 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
-        if (::inAppUpdateHelper.isInitialized) {
-            inAppUpdateHelper.onResume()
+        try {
+            inAppUpdateHelper?.onResume()
+        } catch (t: Throwable) {
+            timber.log.Timber.w(t, "In-app update onResume skipped: %s", t.message)
         }
     }
 
