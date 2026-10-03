@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.common.formatPublishTimestamp
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.Quiz
 
@@ -229,6 +231,29 @@ private fun TeacherQuizCard(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                    }
+
+                    if (quiz.createdAt.isNotBlank()) {
+                        Spacer(Modifier.height(3.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = "Diterbitkan: ${formatPublishTimestamp(quiz.createdAt)}",
+                                fontSize = 10.sp,
+                                color = TextTertiary,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
             }

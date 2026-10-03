@@ -550,8 +550,12 @@ fun EducationalDateBadge(
     modifier: Modifier = Modifier,
     showTime: Boolean = true,
     accentColor: Color = NeonBlue,
+    labelPrefix: String? = null,
 ) {
-    val dateText = dateIso?.let { formatEducationalDate(it, showTime) } ?: "Tanpa Tenggat"
+    val dateText = dateIso?.let {
+        val formatted = formatEducationalDate(it, showTime)
+        if (labelPrefix != null) "$labelPrefix$formatted" else formatted
+    } ?: "Tanpa Tenggat"
 
     Box(
         modifier = modifier
@@ -682,13 +686,22 @@ fun CustomBackButton(
 }
 
 private fun formatEducationalDate(iso: String, showTime: Boolean): String {
-    return try {
-        val instant = Instant.parse(iso)
-        val pattern = if (showTime) "EEE, dd MMM yyyy • HH:mm" else "EEE, dd MMM yyyy"
-        val formatter = DateTimeFormatter.ofPattern(pattern).withZone(ZoneId.systemDefault())
-        formatter.format(instant)
-    } catch (_: Exception) {
-        iso
+    return if (showTime) {
+        com.schoolos.android.core.common.formatPublishTimestamp(iso)
+    } else {
+        try {
+            val trimmed = iso.trim()
+            val zone = java.time.ZoneId.of("Asia/Jakarta")
+            val instant = when {
+                trimmed.endsWith("Z") || trimmed.contains("+") -> java.time.OffsetDateTime.parse(trimmed).toInstant()
+                trimmed.contains("T") -> java.time.LocalDateTime.parse(trimmed.substringBefore(".")).atZone(zone).toInstant()
+                else -> java.time.Instant.parse(trimmed)
+            }
+            val formatter = java.time.format.DateTimeFormatter.ofPattern("EEE, dd MMM yyyy", java.util.Locale("id", "ID"))
+            instant.atZone(zone).format(formatter)
+        } catch (_: Exception) {
+            iso
+        }
     }
 }
 

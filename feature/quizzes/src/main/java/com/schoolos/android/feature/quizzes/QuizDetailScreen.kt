@@ -25,7 +25,9 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
+import com.schoolos.android.core.common.formatPublishTimestamp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -136,6 +138,7 @@ fun QuizDetailScreen(
                             subjectName = q.subjectName ?: "CBT Evaluasi",
                             maxScore = q.maxScore,
                             isTeacher = isTeacher,
+                            createdAt = q.createdAt,
                         )
 
                         // ── 2. METRICS ROW (Soal, Waktu, Poin) ────────────────
@@ -514,6 +517,7 @@ private fun CosmicQuizHeroCard(
     subjectName: String,
     maxScore: Int,
     isTeacher: Boolean = false,
+    createdAt: String = "",
 ) {
     Box(
         modifier = Modifier
@@ -568,20 +572,46 @@ private fun CosmicQuizHeroCard(
             )
 
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(NeonSuccess)
-                )
-                Text(
-                    text = "CBT Online Terstandarisasi",
-                    fontSize = 11.sp,
-                    color = TextSecondary
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(NeonSuccess)
+                    )
+                    Text(
+                        text = "CBT Online Terstandarisasi",
+                        fontSize = 11.sp,
+                        color = TextSecondary
+                    )
+                }
+
+                if (createdAt.isNotBlank()) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = TextTertiary,
+                            modifier = Modifier.size(11.dp)
+                        )
+                        Text(
+                            text = "Diterbitkan: ${formatPublishTimestamp(createdAt)}",
+                            fontSize = 10.sp,
+                            color = TextTertiary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
         }
     }

@@ -663,6 +663,15 @@ fun LazyListScope.teacherContent(
                                 color = TextTertiary,
                             )
                         }
+
+                        if (assignment.createdAt.isNotBlank()) {
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = "Diterbitkan: ${com.schoolos.android.core.common.formatPublishTimestamp(assignment.createdAt)}",
+                                fontSize = 10.sp,
+                                color = TextTertiary
+                            )
+                        }
                     }
 
                     Spacer(Modifier.width(8.dp))

@@ -33,6 +33,7 @@ data class MaterialItem(
     val endPage: Int? = null,
     val mediaUrl: String? = null,
     val thumbnailUrl: String? = null,
+    val createdAt: String? = null,
 )
 
 data class LearningUiState(
@@ -158,6 +159,7 @@ class LearningViewModel @Inject constructor(
                 endPage = m.endPage,
                 mediaUrl = m.mediaUrl,
                 thumbnailUrl = m.thumbnailUrl,
+                createdAt = m.createdAt,
             )
         }
     }

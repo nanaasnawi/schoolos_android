@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.common.formatPublishTimestamp
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.Assignment
 
@@ -250,6 +251,29 @@ private fun StudentAssignmentCard(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
+                    }
+
+                    if (assignment.createdAt.isNotBlank()) {
+                        Spacer(Modifier.height(3.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Schedule,
+                                contentDescription = null,
+                                tint = TextTertiary,
+                                modifier = Modifier.size(11.dp)
+                            )
+                            Text(
+                                text = "Diterbitkan: ${formatPublishTimestamp(assignment.createdAt)}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextTertiary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
 

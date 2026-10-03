@@ -79,8 +79,21 @@ fun TeacherAssignmentDetailContent(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    if (assignment.createdAt.isNotBlank()) {
+                        EducationalDateBadge(
+                            dateIso = assignment.createdAt,
+                            showTime = true,
+                            accentColor = TeacherNeon,
+                            labelPrefix = "Diterbitkan: "
+                        )
+                    }
                     assignment.dueAt?.let { dueIso ->
-                        EducationalDateBadge(dateIso = dueIso, showTime = true, accentColor = NeonBlue)
+                        EducationalDateBadge(
+                            dateIso = dueIso,
+                            showTime = true,
+                            accentColor = NeonBlue,
+                            labelPrefix = "Tenggat: "
+                        )
                     }
                     Box(
                         modifier = Modifier
