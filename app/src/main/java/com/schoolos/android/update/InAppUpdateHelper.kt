@@ -13,9 +13,9 @@ import com.google.android.play.core.install.model.UpdateAvailability
 import timber.log.Timber
 
 /**
- * Helper to manage Google Play In-App Updates.
- * Automatically checks Google Play Store for new version availability,
- * prompts the user with official Google Play update UI, and enforces update completion.
+ * Fail-safe helper to manage Google Play In-App Updates.
+ * Designed to NEVER crash the application under any circumstances
+ * (e.g. sideloaded builds, missing Play Services, ProGuard minification).
  */
 class InAppUpdateHelper(private val activity: Activity) {
 
@@ -29,78 +29,95 @@ class InAppUpdateHelper(private val activity: Activity) {
                     addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                 }
                 context.startActivity(intent)
-            } catch (_: Exception) {
-                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")).apply {
-                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                }
-                context.startActivity(intent)
+            } catch (_: Throwable) {
+                try {
+                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=$packageName")).apply {
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+                    context.startActivity(intent)
+                } catch (_: Throwable) {}
             }
         }
     }
 
-    private val appUpdateManager: AppUpdateManager = AppUpdateManagerFactory.create(activity)
+    private var appUpdateManager: AppUpdateManager? = null
+
+    init {
+        try {
+            appUpdateManager = AppUpdateManagerFactory.create(activity)
+            Timber.d("AppUpdateManager initialized successfully")
+        } catch (t: Throwable) {
+            Timber.w(t, "AppUpdateManagerFactory could not be initialized: %s", t.message)
+            appUpdateManager = null
+        }
+    }
 
     /**
      * Checks if an update is available on Google Play Store.
-     * If available, triggers the IMMEDIATE (force update) flow so the user is required to update.
+     * Triggers the update flow safely.
      */
     fun checkForAppUpdate() {
-        val appUpdateInfoTask = appUpdateManager.appUpdateInfo
+        val manager = appUpdateManager ?: return
+        try {
+            manager.appUpdateInfo
+                .addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
+                    try {
+                        val availability = appUpdateInfo.updateAvailability()
+                        Timber.i("Google Play UpdateAvailability: %d, availableVersionCode: %d", availability, appUpdateInfo.availableVersionCode())
 
-        appUpdateInfoTask.addOnSuccessListener { appUpdateInfo: AppUpdateInfo ->
-            val availability = appUpdateInfo.updateAvailability()
-            Timber.i("Google Play UpdateAvailability: %d, availableVersionCode: %d", availability, appUpdateInfo.availableVersionCode())
-
-            if (availability == UpdateAvailability.UPDATE_AVAILABLE
-                && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
-            ) {
-                try {
-                    appUpdateManager.startUpdateFlowForResult(
-                        appUpdateInfo,
-                        activity,
-                        AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE),
-                        UPDATE_REQUEST_CODE
-                    )
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to start Google Play Immediate Update flow")
+                        if (availability == UpdateAvailability.UPDATE_AVAILABLE
+                            && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)
+                        ) {
+                            manager.startUpdateFlowForResult(
+                                appUpdateInfo,
+                                activity,
+                                AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE),
+                                UPDATE_REQUEST_CODE
+                            )
+                        } else if (availability == UpdateAvailability.UPDATE_AVAILABLE
+                            && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)
+                        ) {
+                            manager.startUpdateFlowForResult(
+                                appUpdateInfo,
+                                activity,
+                                AppUpdateOptions.defaultOptions(AppUpdateType.FLEXIBLE),
+                                UPDATE_REQUEST_CODE
+                            )
+                        }
+                    } catch (t: Throwable) {
+                        Timber.w(t, "Failed during in-app update trigger: %s", t.message)
+                    }
                 }
-            } else if (availability == UpdateAvailability.UPDATE_AVAILABLE
-                && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)
-            ) {
-                try {
-                    appUpdateManager.startUpdateFlowForResult(
-                        appUpdateInfo,
-                        activity,
-                        AppUpdateOptions.defaultOptions(AppUpdateType.FLEXIBLE),
-                        UPDATE_REQUEST_CODE
-                    )
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to start Google Play Flexible Update flow")
+                .addOnFailureListener { e ->
+                    Timber.d("In-app update check failed or not running via Google Play: %s", e.message)
                 }
-            }
-        }.addOnFailureListener { e ->
-            Timber.d("In-app update check failed or not running via Google Play: %s", e.message)
+        } catch (t: Throwable) {
+            Timber.w(t, "checkForAppUpdate failed safely: %s", t.message)
         }
     }
 
     /**
-     * Call on Activity onResume() to resume in-progress immediate updates
-     * preventing users from circumventing the update by leaving and returning.
+     * Resumes an in-progress immediate update if present.
      */
     fun onResume() {
-        appUpdateManager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
-            if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+        val manager = appUpdateManager ?: return
+        try {
+            manager.appUpdateInfo.addOnSuccessListener { appUpdateInfo ->
                 try {
-                    appUpdateManager.startUpdateFlowForResult(
-                        appUpdateInfo,
-                        activity,
-                        AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE),
-                        UPDATE_REQUEST_CODE
-                    )
-                } catch (e: Exception) {
-                    Timber.e(e, "Failed to resume developer triggered in-app update")
+                    if (appUpdateInfo.updateAvailability() == UpdateAvailability.DEVELOPER_TRIGGERED_UPDATE_IN_PROGRESS) {
+                        manager.startUpdateFlowForResult(
+                            appUpdateInfo,
+                            activity,
+                            AppUpdateOptions.defaultOptions(AppUpdateType.IMMEDIATE),
+                            UPDATE_REQUEST_CODE
+                        )
+                    }
+                } catch (t: Throwable) {
+                    Timber.w(t, "Failed to resume developer triggered in-app update: %s", t.message)
                 }
             }
+        } catch (t: Throwable) {
+            Timber.w(t, "onResume update check failed safely: %s", t.message)
         }
     }
 }
