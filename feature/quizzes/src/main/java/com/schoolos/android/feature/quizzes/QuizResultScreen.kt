@@ -60,7 +60,7 @@ import com.schoolos.android.core.designsystem.AnimatedScoreCircle
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.LoadingState
+import com.schoolos.android.core.designsystem.ShimmerBox
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
@@ -100,7 +100,7 @@ fun QuizResultScreen(
     val state by viewModel.state.collectAsState()
 
     when {
-        state.isLoading -> LoadingState()
+        state.isLoading -> QuizResultShimmer()
         else -> {
             val score    = state.attempt?.score ?: 0
             val maxScore = state.attempt?.totalPoints?.let { if (it > 0) it else 100 } ?: 100
@@ -362,6 +362,126 @@ private fun StatItem(emoji: String, label: String, value: String, color: Color) 
         Spacer(Modifier.height(4.dp))
         Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = color)
         Text(label, fontSize = 11.sp, color = TextTertiary)
+    }
+}
+
+/**
+ * Skeleton for the quiz / CBT result page. Mirrors the real layout (reaction emoji,
+ * headline, score ring, grade badge, summary card, quote, answer review, CTA) so the
+ * result fades in without layout jump instead of showing a bare spinner.
+ */
+@Composable
+private fun QuizResultShimmer() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(CosmicBlack)
+            .statusBarsPadding()
+            .navigationBarsPadding()
+            .verticalScroll(rememberScrollState(), enabled = false)
+            .padding(horizontal = 14.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Spacer(Modifier.height(32.dp))
+        // Reaction emoji
+        ShimmerBox(Modifier.size(76.dp), CircleShape)
+        Spacer(Modifier.height(12.dp))
+        // Headline + subtitle
+        ShimmerBox(Modifier.width(170.dp).height(24.dp), RoundedCornerShape(6.dp))
+        Spacer(Modifier.height(8.dp))
+        ShimmerBox(Modifier.width(190.dp).height(12.dp), RoundedCornerShape(4.dp))
+
+        Spacer(Modifier.height(28.dp))
+        // Score ring: shimmering ring with a hollow centre
+        Box(contentAlignment = Alignment.Center) {
+            ShimmerBox(Modifier.size(140.dp), CircleShape)
+            Box(
+                modifier = Modifier
+                    .size(116.dp)
+                    .clip(CircleShape)
+                    .background(CosmicBlack),
+                contentAlignment = Alignment.Center,
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    ShimmerBox(Modifier.width(56.dp).height(28.dp), RoundedCornerShape(6.dp))
+                    Spacer(Modifier.height(6.dp))
+                    ShimmerBox(Modifier.width(36.dp).height(10.dp), RoundedCornerShape(3.dp))
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        // Grade badge
+        ShimmerBox(Modifier.width(220.dp).height(44.dp), RoundedCornerShape(14.dp))
+
+        Spacer(Modifier.height(24.dp))
+        // Summary card
+        ResultSkeletonCard {
+            ShimmerBox(Modifier.width(170.dp).height(14.dp), RoundedCornerShape(4.dp))
+            Spacer(Modifier.height(16.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                repeat(3) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        ShimmerBox(Modifier.size(24.dp), CircleShape)
+                        Spacer(Modifier.height(6.dp))
+                        ShimmerBox(Modifier.width(32.dp).height(22.dp), RoundedCornerShape(5.dp))
+                        Spacer(Modifier.height(4.dp))
+                        ShimmerBox(Modifier.width(40.dp).height(10.dp), RoundedCornerShape(3.dp))
+                    }
+                }
+            }
+        }
+
+        Spacer(Modifier.height(16.dp))
+        // Motivational quote
+        ShimmerBox(Modifier.fillMaxWidth().height(62.dp), RoundedCornerShape(20.dp))
+
+        Spacer(Modifier.height(20.dp))
+        // Answer review header + items
+        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            ShimmerBox(
+                Modifier.padding(start = 4.dp).width(150.dp).height(15.dp),
+                RoundedCornerShape(4.dp),
+            )
+            repeat(3) {
+                ResultSkeletonCard(cornerRadius = 16.dp) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        ShimmerBox(Modifier.width(56.dp).height(13.dp), RoundedCornerShape(4.dp))
+                        ShimmerBox(Modifier.width(96.dp).height(22.dp), RoundedCornerShape(8.dp))
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    ShimmerBox(Modifier.fillMaxWidth(0.9f).height(13.dp), RoundedCornerShape(4.dp))
+                    Spacer(Modifier.height(6.dp))
+                    ShimmerBox(Modifier.fillMaxWidth(0.55f).height(11.dp), RoundedCornerShape(4.dp))
+                }
+            }
+        }
+
+        Spacer(Modifier.height(32.dp))
+        // CTA button
+        ShimmerBox(Modifier.fillMaxWidth().height(52.dp), RoundedCornerShape(14.dp))
+        Spacer(Modifier.height(32.dp))
+    }
+}
+
+@Composable
+private fun ResultSkeletonCard(
+    cornerRadius: androidx.compose.ui.unit.Dp = 20.dp,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(CosmicNavy)
+            .border(1.dp, GlassBorder2, RoundedCornerShape(cornerRadius))
+            .padding(14.dp),
+    ) {
+        Column { content() }
     }
 }
 

@@ -158,6 +158,16 @@ class AssignmentRepositoryImpl @Inject constructor(
             val domain = response.data?.dtoToDomain()
             if (domain != null) return@runCatching domain
         } catch (e: Exception) {
+            // The offline queue only stores content/fileUrl, so queueing a submission that
+            // carries PG/essay answers would silently drop them. Likewise, an HTTP error means
+            // the server is reachable but rejected the request — retrying blindly hides it.
+            if (e is retrofit2.HttpException || answerDtos.isNotEmpty()) {
+                android.util.Log.w("AssignmentRepo", "Submit failed, not queueing offline: ${e.message}")
+                throw Exception(
+                    if (e is retrofit2.HttpException) "Server gagal menyimpan jawaban (HTTP ${e.code()}). Silakan coba lagi."
+                    else "Koneksi terputus. Jawaban belum terkirim, silakan coba lagi saat online."
+                )
+            }
             android.util.Log.w("AssignmentRepo", "Network submit failed, queueing offline: ${e.message}")
             val queueId = syncManager.queueSubmission(
                 assignmentId = assignmentId,
