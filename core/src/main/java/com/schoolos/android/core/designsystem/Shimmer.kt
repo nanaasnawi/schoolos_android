@@ -22,6 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,25 +32,42 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 
 /**
  * High-performance Luminous Shimmer Brush.
  * Provides a dynamic specular sweep with balanced contrast across dark and light themes.
+ *
+ * The sweep is computed in screen space: pass the placeholder's position in root as
+ * [origin] so that every placeholder on screen shares one continuous highlight band.
  */
 @Composable
 fun ShimmerBrush(
-    targetValue: Float = 1600f,
+    targetValue: Float? = null,
     showShimmer: Boolean = true,
+    origin: Offset = Offset.Zero,
 ): Brush {
     if (!showShimmer) return Brush.verticalGradient(listOf(Color.Transparent, Color.Transparent))
 
+    val bandWidth = 520f
+    val config = LocalConfiguration.current
+    val (screenWidthPx, screenHeightPx) = with(LocalDensity.current) {
+        config.screenWidthDp.dp.toPx() to config.screenHeightDp.dp.toPx()
+    }
+    // The band is angled, so placeholders lower on screen are reached later; extend the sweep
+    // by the vertical component so the band fully clears the bottom-right corner too.
+    val endValue = targetValue ?: (screenWidthPx + screenHeightPx * 0.35f + bandWidth)
+
     val transition = rememberInfiniteTransition(label = "shimmer_transition")
     val translateAnim by transition.animateFloat(
-        initialValue = -500f,
-        targetValue = targetValue,
+        initialValue = -bandWidth,
+        targetValue = endValue,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 1300, easing = FastOutSlowInEasing),
             repeatMode = RepeatMode.Restart,
         ),
         label = "shimmer_translate",
@@ -56,32 +76,30 @@ fun ShimmerBrush(
     val isDark = LocalIsDarkTheme.current
     val shimmerColors = if (isDark) {
         listOf(
-            Color(0xFF181A22),
-            Color(0xFF222634),
-            Color(0xFF333A4E),
-            Color(0xFF48536F), // Luminous crest
-            Color(0xFF333A4E),
-            Color(0xFF222634),
-            Color(0xFF181A22),
+            Color(0xFF1C1F2A),
+            Color(0xFF1C1F2A),
+            Color(0xFF2A3042),
+            Color(0xFF3D4760), // Luminous crest
+            Color(0xFF2A3042),
+            Color(0xFF1C1F2A),
+            Color(0xFF1C1F2A),
         )
     } else {
         listOf(
             Color(0xFFE2E8F0),
-            Color(0xFFCBD5E1),
             Color(0xFFE2E8F0),
+            Color(0xFFEDF1F6),
             Color(0xFFFFFFFF), // Crisp specular gleam
+            Color(0xFFEDF1F6),
             Color(0xFFE2E8F0),
-            Color(0xFFCBD5E1),
             Color(0xFFE2E8F0),
         )
     }
 
-    // Angled 20-degree light sweep
-    return Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset(translateAnim, translateAnim * 0.35f),
-        end = Offset(translateAnim + 400f, (translateAnim + 400f) * 0.35f),
-    )
+    // Angled ~20-degree light sweep, expressed in screen space then shifted into local space.
+    val start = Offset(translateAnim, translateAnim * 0.35f) - origin
+    val end = Offset(translateAnim + bandWidth, (translateAnim + bandWidth) * 0.35f) - origin
+    return Brush.linearGradient(colors = shimmerColors, start = start, end = end)
 }
 
 /**
@@ -92,10 +110,12 @@ fun ShimmerBox(
     modifier: Modifier = Modifier,
     shape: Shape = RoundedCornerShape(8.dp),
 ) {
+    var origin by remember { mutableStateOf(Offset.Zero) }
     Box(
         modifier = modifier
+            .onGloballyPositioned { origin = it.positionInRoot() }
             .clip(shape)
-            .background(ShimmerBrush())
+            .background(ShimmerBrush(origin = origin))
     )
 }
 

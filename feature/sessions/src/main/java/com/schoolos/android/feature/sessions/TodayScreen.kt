@@ -66,6 +66,7 @@ import com.schoolos.android.core.designsystem.NeonBlueDark
 import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.PullRefreshContainer
+import com.schoolos.android.core.designsystem.ShimmerBox
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
@@ -707,48 +708,21 @@ private fun ScheduleFilterChips(
 }
 
 // ── SKELETON SHIMMER FOR JADWAL PELAJARAN ─────────────────────────────────────
+// Mirrors the real layout (top bar → hero banner → calendar strip → filter chips →
+// timeline cards) so content swaps in without layout jump. Uses the design-system
+// ShimmerBox, whose highlight is a single screen-space sweep across all placeholders.
 
 @Composable
 private fun TodayScreenShimmer() {
-    val infiniteTransition = rememberInfiniteTransition(label = "shimmer")
-    val shimmerAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.25f,
-        targetValue = 0.55f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 900, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "shimmer_alpha"
-    )
-    val shimmerColor = CosmicNavy.copy(alpha = shimmerAlpha)
-    val bgColor = CosmicDark.copy(alpha = 0.6f)
-
-    @Composable
-    fun ShimmerBox(modifier: Modifier) {
-        Box(
-            modifier = modifier
-                .clip(RoundedCornerShape(8.dp))
-                .background(bgColor)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-        ) {
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .background(shimmerColor)
-            )
-        }
-    }
-
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(CosmicBlack)
             .statusBarsPadding()
             .padding(horizontal = 16.dp)
             .padding(top = 6.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // ── 1. TOP BAR SKELETON ──────────────────────────────────────
+        // ── 1. TOP BAR ───────────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -757,59 +731,42 @@ private fun TodayScreenShimmer() {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                ShimmerBox(Modifier.width(140.dp).height(18.dp))
-                ShimmerBox(Modifier.width(80.dp).height(12.dp))
+                ShimmerBox(Modifier.width(150.dp).height(18.dp), RoundedCornerShape(5.dp))
+                ShimmerBox(Modifier.width(90.dp).height(12.dp), RoundedCornerShape(4.dp))
             }
-            ShimmerBox(Modifier.width(64.dp).height(28.dp))
         }
 
-        // ── 2. HERO BANNER SKELETON ──────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                .padding(16.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                // Top row: date + badge
+        // ── 2. HERO BANNER ───────────────────────────────────────────
+        SkeletonSurface(cornerRadius = 12.dp) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    ShimmerBox(Modifier.width(160.dp).height(11.dp))
-                    ShimmerBox(Modifier.width(70.dp).height(11.dp))
+                    ShimmerBox(Modifier.width(150.dp).height(11.dp), RoundedCornerShape(4.dp))
+                    ShimmerBox(Modifier.width(64.dp).height(11.dp), RoundedCornerShape(4.dp))
                 }
-                // 3 metric mini cards
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     repeat(3) {
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(58.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(bgColor)
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-                        ) {
-                            Box(modifier = Modifier.matchParentSize().background(shimmerColor))
-                        }
+                        ShimmerBox(
+                            Modifier.weight(1f).height(58.dp),
+                            RoundedCornerShape(8.dp)
+                        )
                     }
                 }
-                // Progress label + bar
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                    ShimmerBox(Modifier.width(90.dp).height(10.dp))
-                    ShimmerBox(Modifier.width(60.dp).height(10.dp))
+                    ShimmerBox(Modifier.width(90.dp).height(10.dp), RoundedCornerShape(3.dp))
+                    ShimmerBox(Modifier.width(64.dp).height(10.dp), RoundedCornerShape(3.dp))
                 }
-                ShimmerBox(Modifier.fillMaxWidth().height(4.dp))
+                ShimmerBox(Modifier.fillMaxWidth().height(4.dp), RoundedCornerShape(2.dp))
             }
         }
 
-        // ── 3. CALENDAR STRIP SKELETON (6 day bubbles) ───────────────
+        // ── 3. WEEKLY CALENDAR STRIP ────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -821,68 +778,81 @@ private fun TodayScreenShimmer() {
                     verticalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.weight(1f)
                 ) {
-                    ShimmerBox(Modifier.width(28.dp).height(10.dp))
-                    ShimmerBox(
-                        Modifier
-                            .defaultMinSize(minWidth = 34.dp)
-                            .height(32.dp)
-                            .clip(RoundedCornerShape(9.dp))
-                    )
-                    Box(
-                        modifier = Modifier
-                            .size(4.dp)
-                            .clip(CircleShape)
-                            .background(GlassBorder)
-                    )
+                    ShimmerBox(Modifier.width(24.dp).height(9.dp), RoundedCornerShape(3.dp))
+                    ShimmerBox(Modifier.width(36.dp).height(32.dp), RoundedCornerShape(9.dp))
+                    Spacer(Modifier.height(4.dp))
                 }
             }
         }
 
-        // ── 4. FILTER CHIPS SKELETON ─────────────────────────────────
+        // ── 4. FILTER CHIPS ─────────────────────────────────────────
         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            repeat(4) {
-                ShimmerBox(Modifier.width(78.dp).height(30.dp))
+            listOf(64.dp, 96.dp, 88.dp, 70.dp).forEach { w ->
+                ShimmerBox(Modifier.width(w).height(30.dp), RoundedCornerShape(8.dp))
             }
         }
 
-        // ── 5. SESSION CARD SKELETONS (3 cards) ──────────────────────
+        // ── 5. SECTION HEADER ───────────────────────────────────────
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            ShimmerBox(Modifier.width(170.dp).height(15.dp), RoundedCornerShape(4.dp))
+            ShimmerBox(Modifier.width(96.dp).height(20.dp), RoundedCornerShape(8.dp))
+        }
+
+        // ── 6. TIMELINE SESSION CARDS ───────────────────────────────
         repeat(3) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(88.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                    .padding(14.dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Top
             ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically
+                // Time rail (start hour · status node · end hour)
+                Column(
+                    modifier = Modifier.width(48.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    // Left color bar
-                    Box(
-                        modifier = Modifier
-                            .width(3.dp)
-                            .fillMaxHeight()
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(bgColor)
-                    ) { Box(modifier = Modifier.matchParentSize().background(shimmerColor)) }
-                    Spacer(Modifier.width(12.dp))
-                    // Text lines
-                    Column(
-                        modifier = Modifier.weight(1f),
-                        verticalArrangement = Arrangement.spacedBy(7.dp)
-                    ) {
-                        ShimmerBox(Modifier.fillMaxWidth(0.65f).height(13.dp))
-                        ShimmerBox(Modifier.fillMaxWidth(0.45f).height(10.dp))
-                        ShimmerBox(Modifier.fillMaxWidth(0.30f).height(10.dp))
+                    ShimmerBox(Modifier.width(34.dp).height(12.dp), RoundedCornerShape(3.dp))
+                    ShimmerBox(Modifier.size(16.dp), CircleShape)
+                    ShimmerBox(Modifier.width(28.dp).height(10.dp), RoundedCornerShape(3.dp))
+                }
+                Spacer(Modifier.width(8.dp))
+                SkeletonSurface(cornerRadius = 12.dp, modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        ShimmerBox(Modifier.size(40.dp), RoundedCornerShape(10.dp))
+                        Spacer(Modifier.width(12.dp))
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(7.dp)
+                        ) {
+                            ShimmerBox(Modifier.fillMaxWidth(0.75f).height(13.dp), RoundedCornerShape(4.dp))
+                            ShimmerBox(Modifier.fillMaxWidth(0.5f).height(10.dp), RoundedCornerShape(3.dp))
+                            ShimmerBox(Modifier.fillMaxWidth(0.35f).height(10.dp), RoundedCornerShape(3.dp))
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        ShimmerBox(Modifier.width(52.dp).height(20.dp), RoundedCornerShape(6.dp))
                     }
-                    Spacer(Modifier.width(10.dp))
-                    // Badge
-                    ShimmerBox(Modifier.width(52.dp).height(20.dp))
                 }
             }
         }
     }
+}
+
+/** Static card container used behind skeleton placeholders (matches real card chrome). */
+@Composable
+private fun SkeletonSurface(
+    cornerRadius: androidx.compose.ui.unit.Dp,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(cornerRadius))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(cornerRadius))
+            .padding(14.dp)
+    ) { content() }
 }
