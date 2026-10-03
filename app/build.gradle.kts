@@ -110,3 +110,15 @@ dependencies {
 
     debugImplementation(libs.compose.ui.tooling)
 }
+
+val packageReleaseNativeDebugSymbols = tasks.register<Zip>("packageReleaseNativeDebugSymbols") {
+    description = "Packages native debug symbols into a zip file for Google Play Console"
+    dependsOn("mergeReleaseNativeLibs")
+    from(layout.buildDirectory.dir("intermediates/merged_native_libs/release/mergeReleaseNativeLibs/out/lib"))
+    archiveFileName.set("native-debug-symbols.zip")
+    destinationDirectory.set(layout.buildDirectory.dir("outputs/native-debug-symbols/release"))
+}
+
+tasks.matching { it.name == "bundleRelease" }.configureEach {
+    finalizedBy(packageReleaseNativeDebugSymbols)
+}
