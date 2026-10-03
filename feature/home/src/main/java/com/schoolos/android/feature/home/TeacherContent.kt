@@ -50,6 +50,7 @@ import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.GlassBorder2
 import com.schoolos.android.core.designsystem.NeonBlue
+import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.TeacherNeon
@@ -150,6 +151,7 @@ fun LazyListScope.teacherContent(
     scheduleCount: String = "0",
     attendanceRate: String = "-",
     quizzesCount: String = "0",
+    urgentTeachingSession: UrgentTeachingSession? = null,
 ) {
     val rawClass = when {
         activeClass.isNotBlank() && activeClass != "-" && !isUuid(activeClass) -> activeClass
@@ -158,6 +160,18 @@ fun LazyListScope.teacherContent(
         else -> "-"
     }
     val displayClass = formatClassName(rawClass, if (isHomeroom) "Wali Kelas" else "Kelas Pengampu")
+
+    // ── 0. URGENT TEACHING SCHEDULE ALERT ALARM BANNER ──────────────────────────
+    if (urgentTeachingSession != null) {
+        item {
+            TeacherScheduleAlertCard(
+                urgentSession = urgentTeachingSession,
+                onAddMaterial = onNavigateToLearning,
+                onCreateAssignment = onNavigateToAssignmentCreator,
+                onCreateQuiz = onNavigateToQuizBuilder,
+            )
+        }
+    }
 
     // ── 1. EXECUTIVE METRICS COCKPIT (2x2 Grid) ──────────────────────────────────
     item {
@@ -1037,3 +1051,164 @@ private fun TeacherSectionHeader(
         }
     }
 }
+
+@Composable
+private fun TeacherScheduleAlertCard(
+    urgentSession: UrgentTeachingSession,
+    onAddMaterial: () -> Unit,
+    onCreateAssignment: () -> Unit,
+    onCreateQuiz: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val isLive = urgentSession.isLive
+    val cardBorder = if (isLive) NeonError.copy(alpha = 0.7f) else NeonWarning.copy(alpha = 0.6f)
+    val cardBg = CosmicNavy
+    val headerColor = if (isLive) NeonError else NeonWarning
+    val headerBg = if (isLive) NeonError.copy(alpha = 0.15f) else NeonWarning.copy(alpha = 0.15f)
+    val headerTitle = if (isLive) {
+        "🚨 ALARM: KELAS SEDANG BERLANGSUNG!"
+    } else {
+        "⏰ PERINGATAN: ${urgentSession.minutesUntilStart} MENIT MENUJU JADWAL"
+    }
+    val descriptionText = if (isLive) {
+        "Jam pelajaran telah dimulai! Segera isi & terbitkan materi ajar, penugasan, atau kuis evaluasi untuk murid Anda sekarang."
+    } else {
+        "Jadwal mengajar dimulai pukul ${urgentSession.scheduledTimeStr}. Jangan lupa siapkan dan isi materi pelajaran, tugas, atau kuis sebelum kelas dimulai!"
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(cardBg)
+            .border(1.2.dp, cardBorder, RoundedCornerShape(14.dp))
+            .padding(14.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Top Badge & Schedule Time
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(headerBg)
+                        .border(0.5.dp, cardBorder, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        text = headerTitle,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = headerColor,
+                        letterSpacing = 0.3.sp,
+                    )
+                }
+
+                Text(
+                    text = urgentSession.scheduledTimeStr,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (isLive) NeonError else NeonWarning,
+                )
+            }
+
+            // Subject and Class Name
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = urgentSession.subjectName,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = urgentSession.className,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            // Description / Warning message
+            Text(
+                text = descriptionText,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
+                color = TextTertiary,
+            )
+
+            // 3 Quick Action Buttons
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                AlertActionButton(
+                    label = "+ Materi",
+                    accentColor = NeonWarning,
+                    icon = Icons.Default.Book,
+                    onClick = onAddMaterial,
+                    modifier = Modifier.weight(1f),
+                )
+                AlertActionButton(
+                    label = "+ Tugas",
+                    accentColor = TeacherNeon,
+                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    onClick = onCreateAssignment,
+                    modifier = Modifier.weight(1f),
+                )
+                AlertActionButton(
+                    label = "+ Kuis",
+                    accentColor = NeonBlue,
+                    icon = Icons.Default.Quiz,
+                    onClick = onCreateQuiz,
+                    modifier = Modifier.weight(1f),
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun AlertActionButton(
+    label: String,
+    accentColor: Color,
+    icon: ImageVector,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(accentColor.copy(alpha = 0.12f))
+            .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 7.dp, horizontal = 4.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(13.dp),
+            )
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = accentColor,
+                maxLines = 1,
+            )
+        }
+    }
+}
+

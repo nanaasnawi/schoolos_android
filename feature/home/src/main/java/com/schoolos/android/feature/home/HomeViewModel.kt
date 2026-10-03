@@ -1,9 +1,11 @@
 package com.schoolos.android.feature.home
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.auth.AuthState
+import com.schoolos.android.core.notification.TeacherScheduleReminderManager
 import com.schoolos.android.core.reading.ReadingHistoryManager
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
@@ -27,6 +29,7 @@ import com.schoolos.android.domain.repository.ProgressRepository
 import com.schoolos.android.domain.repository.QuizRepository
 import com.schoolos.android.domain.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,6 +44,16 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 import java.util.Locale
 import javax.inject.Inject
+
+data class UrgentTeachingSession(
+    val sessionId: String,
+    val subjectName: String,
+    val className: String,
+    val scheduledTimeStr: String,
+    val minutesUntilStart: Long,
+    val isLive: Boolean,
+    val isOneHourWarning: Boolean,
+)
 
 data class HomeUiState(
     val userName: String = "",
@@ -69,6 +82,7 @@ data class HomeUiState(
     val activeSessionClass: String = "-",
     val homeroomClass: String = "",
     val todaySessions: List<LearningSession> = emptyList(),
+    val urgentTeachingSession: UrgentTeachingSession? = null,
     val nextSessionSubject: String = "-",
     val nextSessionRoom: String = "-",
     val nextSessionTime: String = "-",
@@ -89,6 +103,7 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
+    @ApplicationContext private val context: Context,
     private val authRepository: AuthRepository,
     private val authManager: AuthManager,
     private val notificationRepository: NotificationRepository,
@@ -109,10 +124,33 @@ class HomeViewModel @Inject constructor(
     private var lastSyncTimestamp: Long = 0L
     private var isSyncInProgress: Boolean = false
     private var currentAuth = AuthState()
+    private var cachedClassMap: Map<String, String> = emptyMap()
+    private var cachedSubjectMap: Map<String, String> = emptyMap()
 
     init {
         observeAuthState()
         observeNotifications()
+        startTeacherUrgentTicker()
+    }
+
+    private fun startTeacherUrgentTicker() {
+        viewModelScope.launch {
+            while (isActive) {
+                delay(30_000L)
+                if (currentAuth.isTeacher && _state.value.todaySessions.isNotEmpty()) {
+                    TeacherScheduleReminderManager.scheduleReminders(context, _state.value.todaySessions)
+                    val updatedUrgent = evaluateUrgentSession(
+                        _state.value.todaySessions,
+                        cachedClassMap,
+                        cachedSubjectMap,
+                        currentAuth.className ?: ""
+                    )
+                    if (_state.value.urgentTeachingSession != updatedUrgent) {
+                        _state.update { it.copy(urgentTeachingSession = updatedUrgent) }
+                    }
+                }
+            }
+        }
     }
 
     private fun observeNotifications() {
@@ -246,23 +284,16 @@ class HomeViewModel @Inject constructor(
             val classMap = classList.associate { it.id to it.name }
             val subjectList = academicRepository.getSubjects().getOrNull() ?: emptyList()
             val subjectMap = subjectList.associate { it.id to it.name }
+            cachedClassMap = classMap
+            cachedSubjectMap = subjectMap
 
-            fun cleanClassName(cid: String?, cname: String?): String {
-                if (!cname.isNullOrBlank() && !isUuid(cname)) return cname
-                val mapped = cid?.let { classMap[it] }
-                if (!mapped.isNullOrBlank() && !isUuid(mapped)) return mapped
-                if (homeroom.isNotBlank() && !isUuid(homeroom)) return homeroom
-                return ""
+            if (isTeacher && todaySessions.isNotEmpty()) {
+                TeacherScheduleReminderManager.scheduleReminders(context, todaySessions)
             }
 
-            fun cleanSubjectName(lid: String?, sname: String?, notes: String?): String {
-                if (!sname.isNullOrBlank() && !isUuid(sname)) return sname
-                val mapped = lid?.let { subjectMap[it] }
-                if (!mapped.isNullOrBlank()) return mapped
-                val notePart = notes?.substringBefore(" • ")?.trim()
-                if (!notePart.isNullOrBlank() && !isUuid(notePart)) return notePart
-                return "Pelajaran"
-            }
+            val urgentSession = if (isTeacher) {
+                evaluateUrgentSession(todaySessions, classMap, subjectMap, homeroom)
+            } else null
 
             // Real-time active session check: must actually have status == "active"
             val liveSession = todaySessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
@@ -275,13 +306,13 @@ class HomeViewModel @Inject constructor(
             val displaySession = liveSession ?: upcomingSession
 
             val nextSubj = if (displaySession != null) {
-                cleanSubjectName(displaySession.lessonId, displaySession.subjectName, displaySession.notes)
+                cleanSubjectName(displaySession.lessonId, displaySession.subjectName, displaySession.notes, subjectMap)
             } else {
                 "-"
             }
 
             val nextRm = if (displaySession != null) {
-                val cls = cleanClassName(displaySession.classId, displaySession.className)
+                val cls = cleanClassName(displaySession.classId, displaySession.className, classMap, homeroom)
                 if (cls.isNotBlank()) cls else (displaySession.room ?: "Ruang Kelas")
             } else {
                 "-"
@@ -297,13 +328,13 @@ class HomeViewModel @Inject constructor(
 
             val activeTeacherSession = liveSession ?: todaySessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
             val activeSubj = if (activeTeacherSession != null) {
-                cleanSubjectName(activeTeacherSession.lessonId, activeTeacherSession.subjectName, activeTeacherSession.notes)
+                cleanSubjectName(activeTeacherSession.lessonId, activeTeacherSession.subjectName, activeTeacherSession.notes, subjectMap)
             } else {
                 "-"
             }
 
             val activeClass = if (activeTeacherSession != null) {
-                cleanClassName(activeTeacherSession.classId, activeTeacherSession.className)
+                cleanClassName(activeTeacherSession.classId, activeTeacherSession.className, classMap, homeroom)
             } else if (homeroom.isNotBlank() && !isUuid(homeroom)) {
                 homeroom
             } else {
@@ -330,6 +361,7 @@ class HomeViewModel @Inject constructor(
             _state.update { current ->
                 current.copy(
                     todaySessions = todaySessions,
+                    urgentTeachingSession = urgentSession,
                     nextSessionSubject = nextSubj,
                     nextSessionRoom = nextRm,
                     nextSessionTime = timeText,
@@ -509,6 +541,89 @@ class HomeViewModel @Inject constructor(
         isSyncInProgress = false
     }
 }
+
+    private fun cleanClassName(cid: String?, cname: String?, classMap: Map<String, String>, homeroom: String): String {
+        if (!cname.isNullOrBlank() && !isUuid(cname)) return cname
+        val mapped = cid?.let { classMap[it] }
+        if (!mapped.isNullOrBlank() && !isUuid(mapped)) return mapped
+        if (homeroom.isNotBlank() && !isUuid(homeroom)) return homeroom
+        return ""
+    }
+
+    private fun cleanSubjectName(lid: String?, sname: String?, notes: String?, subjectMap: Map<String, String>): String {
+        if (!sname.isNullOrBlank() && !isUuid(sname)) return sname
+        val mapped = lid?.let { subjectMap[it] }
+        if (!mapped.isNullOrBlank()) return mapped
+        val notePart = notes?.substringBefore(" • ")?.trim()
+        if (!notePart.isNullOrBlank() && !isUuid(notePart)) return notePart
+        return "Pelajaran"
+    }
+
+    private fun evaluateUrgentSession(
+        sessions: List<LearningSession>,
+        classMap: Map<String, String>,
+        subjectMap: Map<String, String>,
+        homeroom: String
+    ): UrgentTeachingSession? {
+        if (sessions.isEmpty()) return null
+        val now = System.currentTimeMillis()
+
+        // 1. Live or current session (status == "active" or now is within startMs until startMs + 2 hours)
+        val liveOrCurrent = sessions.firstOrNull { s ->
+            if (s.status.equals("active", ignoreCase = true)) return@firstOrNull true
+            val startMs = TeacherScheduleReminderManager.parseEpochMs(s.scheduledAt ?: s.startedAt)
+            if (startMs != null && now >= startMs && now < (startMs + 2 * 3600_000L) && !s.status.equals("completed", ignoreCase = true)) {
+                return@firstOrNull true
+            }
+            false
+        }
+
+        if (liveOrCurrent != null) {
+            val startMs = TeacherScheduleReminderManager.parseEpochMs(liveOrCurrent.scheduledAt ?: liveOrCurrent.startedAt) ?: now
+            val subj = cleanSubjectName(liveOrCurrent.lessonId, liveOrCurrent.subjectName, liveOrCurrent.notes, subjectMap)
+            val cls = cleanClassName(liveOrCurrent.classId, liveOrCurrent.className, classMap, homeroom).ifBlank { liveOrCurrent.room ?: "Kelas" }
+            val timeStr = TeacherScheduleReminderManager.formatHourMinute(startMs)
+            return UrgentTeachingSession(
+                sessionId = liveOrCurrent.id,
+                subjectName = subj,
+                className = cls,
+                scheduledTimeStr = timeStr,
+                minutesUntilStart = 0L,
+                isLive = true,
+                isOneHourWarning = false,
+            )
+        }
+
+        // 2. Upcoming session starting within 60 minutes
+        val upcoming1h = sessions.filter { s ->
+            !s.status.equals("completed", ignoreCase = true)
+        }.mapNotNull { s ->
+            val startMs = TeacherScheduleReminderManager.parseEpochMs(s.scheduledAt ?: s.startedAt) ?: return@mapNotNull null
+            val diffMs = startMs - now
+            val mins = diffMs / (60 * 1000L)
+            if (mins in 0..60) Pair(s, mins) else null
+        }.minByOrNull { it.second }
+
+        if (upcoming1h != null) {
+            val session = upcoming1h.first
+            val mins = upcoming1h.second
+            val startMs = TeacherScheduleReminderManager.parseEpochMs(session.scheduledAt ?: session.startedAt) ?: now
+            val subj = cleanSubjectName(session.lessonId, session.subjectName, session.notes, subjectMap)
+            val cls = cleanClassName(session.classId, session.className, classMap, homeroom).ifBlank { session.room ?: "Kelas" }
+            val timeStr = TeacherScheduleReminderManager.formatHourMinute(startMs)
+            return UrgentTeachingSession(
+                sessionId = session.id,
+                subjectName = subj,
+                className = cls,
+                scheduledTimeStr = timeStr,
+                minutesUntilStart = mins,
+                isLive = false,
+                isOneHourWarning = true,
+            )
+        }
+
+        return null
+    }
 
     private fun parseDate(iso: String): LocalDate? {
         return try {
