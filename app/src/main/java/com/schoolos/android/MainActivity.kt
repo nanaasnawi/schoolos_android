@@ -47,17 +47,23 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
 
         // Create Android Notification Channel
-        SystemNotificationHelper.createNotificationChannel(this)
+        try {
+            SystemNotificationHelper.createNotificationChannel(this)
+        } catch (_: Throwable) {}
 
         // Request POST_NOTIFICATIONS permission on Android 13+
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+                }
             }
-        }
+        } catch (_: Throwable) {}
 
         // Start background notification & maintenance sync listener
-        notificationSyncManager.start()
+        try {
+            notificationSyncManager.start()
+        } catch (_: Throwable) {}
 
         // Dismiss any old persistent notification & delete service channel
         try {

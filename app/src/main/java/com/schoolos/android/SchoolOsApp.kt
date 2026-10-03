@@ -9,18 +9,31 @@ import timber.log.Timber
 class SchoolOsApp : Application() {
     override fun onCreate() {
         super.onCreate()
-        com.schoolos.android.core.common.BuildConfig.API_BASE_URL = BuildConfig.API_BASE_URL
-        if (BuildConfig.DEBUG) {
+        try {
+            com.schoolos.android.core.common.BuildConfig.API_BASE_URL = BuildConfig.API_BASE_URL
+        } catch (_: Throwable) {}
+        try {
             Timber.plant(Timber.DebugTree())
+        } catch (_: Throwable) {}
+
+        // Global uncaught exception logger
+        val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
+            try {
+                Timber.e(throwable, "FATAL UNCAUGHT EXCEPTION in %s: %s", thread.name, throwable.message)
+            } catch (_: Throwable) {}
+            defaultHandler?.uncaughtException(thread, throwable)
         }
 
         // Initialize high-priority notification channel early so Google Play Services & FCM can use it even when killed/standby
-        SystemNotificationHelper.createNotificationChannel(this)
+        try {
+            SystemNotificationHelper.createNotificationChannel(this)
+        } catch (_: Throwable) {}
 
         // Subscribe to all FCM topics early
         try {
             com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
 
         // Clean up any old persistent service notification & channel
         try {
@@ -29,11 +42,11 @@ class SchoolOsApp : Application() {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 nm?.deleteNotificationChannel("school_os_service_channel")
             }
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
 
         // Schedule silent background alarm polling (no sticky notification bar icon!)
         try {
             com.schoolos.android.notification.NotificationPollReceiver.schedule(this)
-        } catch (_: Exception) {}
+        } catch (_: Throwable) {}
     }
 }
