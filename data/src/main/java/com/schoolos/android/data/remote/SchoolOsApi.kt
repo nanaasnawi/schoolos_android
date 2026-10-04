@@ -1,5 +1,6 @@
 package com.schoolos.android.data.remote
 
+import okhttp3.MultipartBody
 import com.schoolos.android.data.remote.dto.*
 import retrofit2.http.*
 
@@ -18,6 +19,12 @@ interface SchoolOsApi {
     @POST("auth/change-password")
     suspend fun changePassword(@Body request: ChangePasswordRequestDto): ApiResponse<Map<String, String>>
 
+    @PUT("auth/profile")
+    suspend fun updateProfile(@Body request: UpdateProfileRequestDto): ApiResponse<Map<String, String>>
+
+    @Multipart
+    @POST("auth/avatar")
+    suspend fun uploadAvatar(@Part avatar: MultipartBody.Part): ApiResponse<UploadAvatarResponse>
 
     // Public school info — no token required, used on login screen
     @GET("schools/info")

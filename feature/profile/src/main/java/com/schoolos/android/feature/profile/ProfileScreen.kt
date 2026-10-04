@@ -1,5 +1,9 @@
 package com.schoolos.android.feature.profile
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -51,6 +55,33 @@ fun ProfileScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
     val user = state.user
+    val isUploadingPhoto by viewModel.isUploadingPhoto.collectAsState()
+
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            try {
+                val inputStream = context.contentResolver.openInputStream(uri)
+                val bytes = inputStream?.readBytes()
+                inputStream?.close()
+                if (bytes != null && bytes.isNotEmpty()) {
+                    val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                    val ext = if (mimeType.contains("png")) "png" else if (mimeType.contains("webp")) "webp" else "jpg"
+                    val filename = "photo_${System.currentTimeMillis()}.$ext"
+                    viewModel.uploadProfilePhoto(bytes, filename, mimeType) { success, err ->
+                        if (success) {
+                            Toast.makeText(context, "✅ Foto profil berhasil disimpan ke database!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Gagal membaca berkas gambar: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 
     var showLogoutDialog by remember { mutableStateOf(false) }
 
@@ -102,6 +133,8 @@ fun ProfileScreen(
                 isParent = isParent,
                 displayContact = displayContact,
                 className = state.className,
+                isUploading = isUploadingPhoto,
+                onAvatarClick = { photoPickerLauncher.launch("image/*") },
             )
 
             // 2. Parent-specific Connected Child Card

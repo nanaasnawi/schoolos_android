@@ -54,6 +54,7 @@ data class AuthState(
     val classId: String? = null,
     val childName: String? = null,
     val childId: String? = null,
+    val avatarUrl: String? = null,
 ) {
     val isParent: Boolean get() = isParentRole(role)
     val isTeacher: Boolean get() = isTeacherRole(role)
@@ -77,6 +78,7 @@ class AuthManager @Inject constructor(
         private val KEY_CLASS_ID = stringPreferencesKey("user_class_id")
         private val KEY_CHILD_NAME = stringPreferencesKey("user_child_name")
         private val KEY_CHILD_ID = stringPreferencesKey("user_child_id")
+        private val KEY_AVATAR_URL = stringPreferencesKey("user_avatar_url")
         private val KEY_IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
         private val KEY_SCHOOL_NAME = stringPreferencesKey("school_name")
         private val KEY_SCHOOL_LOGO_URL = stringPreferencesKey("school_logo_url")
@@ -97,6 +99,7 @@ class AuthManager @Inject constructor(
             classId = prefs[KEY_CLASS_ID],
             childName = prefs[KEY_CHILD_NAME],
             childId = prefs[KEY_CHILD_ID],
+            avatarUrl = prefs[KEY_AVATAR_URL],
             isLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false,
             schoolName = prefs[KEY_SCHOOL_NAME],
             schoolLogoUrl = prefs[KEY_SCHOOL_LOGO_URL],
@@ -166,6 +169,7 @@ class AuthManager @Inject constructor(
         classId: String? = null,
         childName: String? = null,
         childId: String? = null,
+        avatarUrl: String? = null,
     ) {
         cachedAccessToken = accessToken
         cachedRefreshToken = refreshToken
@@ -183,6 +187,7 @@ class AuthManager @Inject constructor(
             if (!classId.isNullOrBlank()) prefs[KEY_CLASS_ID] = classId
             if (!childName.isNullOrBlank()) prefs[KEY_CHILD_NAME] = childName
             if (!childId.isNullOrBlank()) prefs[KEY_CHILD_ID] = childId
+            if (!avatarUrl.isNullOrBlank()) prefs[KEY_AVATAR_URL] = avatarUrl
             prefs[KEY_IS_LOGGED_IN] = true
         }
     }
@@ -196,6 +201,7 @@ class AuthManager @Inject constructor(
         classId: String? = null,
         childName: String? = null,
         childId: String? = null,
+        avatarUrl: String? = null,
     ) {
         context.dataStore.edit { prefs ->
             if (name.isNotBlank()) prefs[KEY_NAME] = name
@@ -206,6 +212,17 @@ class AuthManager @Inject constructor(
             if (!classId.isNullOrBlank()) prefs[KEY_CLASS_ID] = classId
             if (!childName.isNullOrBlank()) prefs[KEY_CHILD_NAME] = childName
             if (!childId.isNullOrBlank()) prefs[KEY_CHILD_ID] = childId
+            if (!avatarUrl.isNullOrBlank()) prefs[KEY_AVATAR_URL] = avatarUrl
+        }
+    }
+
+    suspend fun updateUserAvatar(avatarUrl: String) {
+        context.dataStore.edit { prefs ->
+            if (avatarUrl.isNotBlank()) {
+                prefs[KEY_AVATAR_URL] = avatarUrl
+            } else {
+                prefs.remove(KEY_AVATAR_URL)
+            }
         }
     }
 

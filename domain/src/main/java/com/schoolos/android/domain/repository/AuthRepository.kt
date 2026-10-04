@@ -12,5 +12,7 @@ interface AuthRepository {
     suspend fun getCurrentUser(): Result<User>
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
     suspend fun getSchoolContactInfo(): Result<SchoolContactInfo>
+    suspend fun uploadAvatar(bytes: ByteArray, filename: String, mimeType: String): Result<String>
+    suspend fun updateProfile(fullName: String?, avatarUrl: String?): Result<Unit>
 }
 
