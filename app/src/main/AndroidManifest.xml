@@ -20,7 +20,8 @@
 
     <application
         android:name=".SchoolOsApp"
-        android:allowBackup="true"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:label="@string/app_name"
@@ -87,8 +88,7 @@
         <!-- Firebase Cloud Messaging Service for Real-time Background Push -->
         <service
             android:name=".notification.SchoolOsFirebaseMessagingService"
-            android:exported="false"
-            android:directBootAware="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
@@ -97,8 +97,7 @@
         <!-- Fallback polling saat Doze menahan FCM / setelah reboot -->
         <receiver
             android:name=".notification.NotificationPollReceiver"
-            android:exported="false"
-            android:directBootAware="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.schoolos.android.ACTION_POLL_NOTIFICATIONS" />
             </intent-filter>
@@ -112,11 +111,9 @@
         </receiver>
         <receiver
             android:name=".notification.BootReceiver"
-            android:exported="false"
-            android:directBootAware="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>

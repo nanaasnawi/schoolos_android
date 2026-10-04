@@ -19,7 +19,10 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "auth_prefs",
+    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { androidx.datastore.preferences.core.emptyPreferences() },
+)
 
 fun isParentRole(role: String?): Boolean {
     if (role.isNullOrBlank()) return false
