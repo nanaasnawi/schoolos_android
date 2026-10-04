@@ -14,7 +14,10 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings_prefs")
+private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
+    name = "settings_prefs",
+    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { androidx.datastore.preferences.core.emptyPreferences() },
+)
 
 data class Settings(
     val isDarkMode: Boolean = false,

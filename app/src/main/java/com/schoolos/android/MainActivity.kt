@@ -102,7 +102,11 @@ class MainActivity : ComponentActivity() {
 
         // Initial check for system maintenance mode
         lifecycleScope.launch {
-            maintenanceManager.checkServerStatus()
+            try {
+                maintenanceManager.checkServerStatus()
+            } catch (t: Throwable) {
+                timber.log.Timber.w(t, "Maintenance check failed: %s", t.message)
+            }
         }
 
         // Check for Google Play In-App Updates safely
