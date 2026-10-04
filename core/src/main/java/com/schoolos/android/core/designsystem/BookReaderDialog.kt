@@ -4,6 +4,7 @@ import android.content.Intent
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -258,58 +259,77 @@ fun BookReaderDialog(
             },
             bottomBar = {
                 if (pages.isNotEmpty()) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        color = Color(0xFF0F172A).copy(alpha = 0.96f),
+                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
+                        shadowElevation = 12.dp
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (currentPageIndex > 0) NeonBlue else Color.White.copy(alpha = 0.12f))
-                                .clickable(enabled = currentPageIndex > 0) {
-                                    if (currentPageIndex > 0) {
-                                        currentPageIndex--
-                                        scale = 1f; offsetX = 0f; offsetY = 0f
-                                        onPageChanged(pages[currentPageIndex].pageNumber)
-                                    }
-                                }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                .fillMaxWidth()
+                                .windowInsetsPadding(WindowInsets.navigationBars)
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                                .padding(bottom = 6.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Default.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(4.dp))
-                                Text("Sebelumnya", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Box(
+                                modifier = Modifier
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (currentPageIndex > 0) NeonBlue else Color.White.copy(alpha = 0.10f))
+                                    .clickable(enabled = currentPageIndex > 0) {
+                                        if (currentPageIndex > 0) {
+                                            currentPageIndex--
+                                            scale = 1f; offsetX = 0f; offsetY = 0f
+                                            onPageChanged(pages[currentPageIndex].pageNumber)
+                                        }
+                                    }
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Sebelumnya", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                }
                             }
-                        }
 
-                        Text(
-                            text = "${currentPageIndex + 1} / ${pages.size}",
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(Color.White.copy(alpha = 0.12f))
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
+                            ) {
+                                Text(
+                                    text = "${currentPageIndex + 1} / ${pages.size}",
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
 
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (currentPageIndex < pages.size - 1) NeonBlue else Color.White.copy(alpha = 0.12f))
-                                .clickable(enabled = currentPageIndex < pages.size - 1) {
-                                    if (currentPageIndex < pages.size - 1) {
-                                        currentPageIndex++
-                                        scale = 1f; offsetX = 0f; offsetY = 0f
-                                        onPageChanged(pages[currentPageIndex].pageNumber)
+                            Box(
+                                modifier = Modifier
+                                    .height(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(if (currentPageIndex < pages.size - 1) NeonBlue else Color.White.copy(alpha = 0.10f))
+                                    .clickable(enabled = currentPageIndex < pages.size - 1) {
+                                        if (currentPageIndex < pages.size - 1) {
+                                            currentPageIndex++
+                                            scale = 1f; offsetX = 0f; offsetY = 0f
+                                            onPageChanged(pages[currentPageIndex].pageNumber)
+                                        }
                                     }
+                                    .padding(horizontal = 16.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text("Selanjutnya", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    Spacer(Modifier.width(4.dp))
+                                    Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(18.dp))
                                 }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Berikutnya", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.width(4.dp))
-                                Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(16.dp))
                             }
                         }
                     }

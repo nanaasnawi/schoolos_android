@@ -1,5 +1,8 @@
 package com.schoolos.android.data.repository
 
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.data.remote.dto.LoginRequest
@@ -33,6 +36,7 @@ class AuthRepositoryImpl @Inject constructor(
             className = data.className,
             childName = data.childName,
             childId = data.childId,
+            avatarUrl = data.avatarUrl,
         )
 
         if (!data.schoolName.isNullOrBlank()) {
@@ -48,7 +52,7 @@ class AuthRepositoryImpl @Inject constructor(
             }
         }
 
-        User(id = data.userId, name = data.name, email = data.email, role = data.role)
+        User(id = data.userId, name = data.name, email = data.email, role = data.role, avatarUrl = data.avatarUrl)
     }
 
     override suspend fun loginWithQr(token: String): Result<User> = runCatching {
@@ -69,6 +73,7 @@ class AuthRepositoryImpl @Inject constructor(
             className = data.className,
             childName = data.childName,
             childId = data.childId,
+            avatarUrl = data.avatarUrl,
         )
 
         if (!data.schoolName.isNullOrBlank()) {
@@ -84,7 +89,7 @@ class AuthRepositoryImpl @Inject constructor(
             }
         }
 
-        User(id = data.userId, name = data.name, email = data.email, role = data.role)
+        User(id = data.userId, name = data.name, email = data.email, role = data.role, avatarUrl = data.avatarUrl)
     }
 
     override suspend fun logout() {
@@ -121,6 +126,7 @@ class AuthRepositoryImpl @Inject constructor(
             className = data.className,
             childName = data.childName,
             childId = data.childId,
+            avatarUrl = data.avatarUrl,
         )
 
         var schoolName = data.schoolName
@@ -139,7 +145,7 @@ class AuthRepositoryImpl @Inject constructor(
             authManager.saveSchoolProfile(name = schoolName, logoUrl = schoolLogo)
         }
 
-        User(id = data.id, name = data.fullName, email = data.email, role = data.role)
+        User(id = data.id, name = data.fullName, email = data.email, role = data.role, avatarUrl = data.avatarUrl)
     }
 
     override suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit> = runCatching {
@@ -168,5 +174,34 @@ class AuthRepositoryImpl @Inject constructor(
             accreditation = data.accreditation?.takeIf { it.isNotBlank() },
             website = data.dapodikUrl?.takeIf { it.isNotBlank() },
         )
+    }
+
+    override suspend fun uploadAvatar(
+        bytes: ByteArray,
+        filename: String,
+        mimeType: String
+    ): Result<String> = runCatching {
+        val mediaType = mimeType.toMediaTypeOrNull()
+        val requestBody = bytes.toRequestBody(mediaType)
+        val part = MultipartBody.Part.createFormData("avatar", filename, requestBody)
+        val response = api.uploadAvatar(part)
+        val data = response.data ?: throw Exception(response.error?.message ?: "Gagal mengunggah foto profil.")
+        authManager.updateUserAvatar(data.avatarUrl)
+        data.avatarUrl
+    }
+
+    override suspend fun updateProfile(fullName: String?, avatarUrl: String?): Result<Unit> = runCatching {
+        val response = api.updateProfile(
+            com.schoolos.android.data.remote.dto.UpdateProfileRequestDto(
+                fullName = fullName,
+                avatarUrl = avatarUrl,
+            )
+        )
+        if (!response.success) {
+            throw Exception(response.error?.message ?: "Gagal memperbarui profil.")
+        }
+        if (!avatarUrl.isNullOrBlank()) {
+            authManager.updateUserAvatar(avatarUrl)
+        }
     }
 }

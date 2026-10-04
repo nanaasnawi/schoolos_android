@@ -69,6 +69,7 @@ class ProfileViewModel @Inject constructor(
                         name = authState.name ?: "",
                         email = authState.email ?: "",
                         role = authState.role ?: "",
+                        avatarUrl = authState.avatarUrl,
                     ) else null,
                     schoolName = authState.schoolName ?: "",
                     schoolLogoUrl = authState.schoolLogoUrl,
@@ -115,6 +116,26 @@ class ProfileViewModel @Inject constructor(
 
     suspend fun changePassword(current: String, newPass: String): Result<Unit> {
         return authRepository.changePassword(current, newPass)
+    }
+
+    val isUploadingPhoto = MutableStateFlow(false)
+
+    fun uploadProfilePhoto(bytes: ByteArray, filename: String, mimeType: String, onComplete: (Boolean, String?) -> Unit) {
+        viewModelScope.launch {
+            isUploadingPhoto.value = true
+            authRepository.uploadAvatar(bytes, filename, mimeType)
+                .onSuccess { newAvatarUrl ->
+                    isUploadingPhoto.value = false
+                    _state.value = _state.value.copy(
+                        user = _state.value.user?.copy(avatarUrl = newAvatarUrl)
+                    )
+                    onComplete(true, null)
+                }
+                .onFailure { error ->
+                    isUploadingPhoto.value = false
+                    onComplete(false, error.localizedMessage ?: "Gagal mengunggah foto profil.")
+                }
+        }
     }
 
     fun logout() {
