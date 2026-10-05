@@ -56,9 +56,11 @@ data class UrgentTeachingSession(
 )
 
 data class HomeUiState(
+    val isLoading: Boolean = true,
     val userName: String = "",
     val userRole: String = "student",
     val userEmail: String = "",
+    val userAvatarUrl: String? = null,
     val schoolName: String = "",
     val schoolLogoUrl: String? = null,
     val unreadCount: Int = 0,
@@ -98,6 +100,7 @@ data class HomeUiState(
     val teacherSubjects: List<AcademicSubject> = emptyList(),
     val activeReadingHistory: List<BookReadingItem> = emptyList(),
     val recommendedSibiBook: LibraryBook? = null,
+    val totalStudentsCount: String = "0",
     val isRefreshing: Boolean = false,
 )
 
@@ -116,6 +119,7 @@ class HomeViewModel @Inject constructor(
     private val quizRepository: QuizRepository,
     private val learningMaterialRepository: LearningMaterialRepository,
     private val readingHistoryManager: ReadingHistoryManager,
+    private val firebaseRtdbManager: com.schoolos.android.core.firebase.FirebaseRealtimeDatabaseManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -123,6 +127,7 @@ class HomeViewModel @Inject constructor(
 
     private var lastSyncTimestamp: Long = 0L
     private var isSyncInProgress: Boolean = false
+    private var hasLoadedInitialData: Boolean = false
     private var currentAuth = AuthState()
     private var cachedClassMap: Map<String, String> = emptyMap()
     private var cachedSubjectMap: Map<String, String> = emptyMap()
@@ -132,7 +137,16 @@ class HomeViewModel @Inject constructor(
     init {
         observeAuthState()
         observeNotifications()
+        observeRealtimeData()
         startTeacherUrgentTicker()
+    }
+
+    private fun observeRealtimeData() {
+        viewModelScope.launch {
+            firebaseRtdbManager.observeAllInquiries().collect {
+                refreshUnreadCount()
+            }
+        }
     }
 
     private fun startTeacherUrgentTicker() {
@@ -190,20 +204,25 @@ class HomeViewModel @Inject constructor(
                 val cId = auth.childId ?: ""
 
                 _state.update { current ->
+                    val effectiveClass = current.activeSessionClass.takeIf { it.isNotBlank() && it != "-" && !isUuid(it) }
+                        ?: homeroom.takeIf { it.isNotBlank() && !isUuid(it) }
+                        ?: "-"
                     current.copy(
                         userName = name,
                         userRole = role,
                         userEmail = auth.email ?: "",
+                        userAvatarUrl = auth.avatarUrl,
                         schoolName = auth.schoolName ?: "",
                         schoolLogoUrl = auth.schoolLogoUrl,
                         homeroomClass = homeroom,
+                        activeSessionClass = effectiveClass,
                         childName = child,
                         childId = cId,
                     )
                 }
 
-                if (auth.isLoggedIn && (authChanged || System.currentTimeMillis() - lastSyncTimestamp > 60_000L)) {
-                    syncData(silent = true)
+                if (auth.isLoggedIn) {
+                    syncData(silent = hasLoadedInitialData && !isDataEmpty(), force = authChanged)
                 }
             }
         }
@@ -214,25 +233,38 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    private fun isDataEmpty(): Boolean {
+        val current = _state.value
+        return current.todaySessions.isEmpty() &&
+            current.teacherAssignments.isEmpty() &&
+            current.topGradeSubjects.isEmpty() &&
+            current.studentProgress == null &&
+            current.activeReadingHistory.isEmpty() &&
+            current.recommendedSibiBook == null
+    }
+
     /**
      * Public manual or swipe-to-refresh method called by HomeScreen.
      */
     fun refresh(isPullRefresh: Boolean = false) {
         if (isPullRefresh) {
             _state.update { it.copy(isRefreshing = true) }
+        } else if (!hasLoadedInitialData || isDataEmpty()) {
+            _state.update { it.copy(isLoading = true) }
         }
         refreshUnreadCount()
         viewModelScope.launch {
             try {
                 withTimeoutOrNull(15000L) {
-                    syncData(silent = !isPullRefresh, force = isPullRefresh)
+                    syncData(
+                        silent = !isPullRefresh && hasLoadedInitialData && !isDataEmpty(),
+                        force = isPullRefresh || isDataEmpty()
+                    )
                 }
             } catch (e: Exception) {
                 timber.log.Timber.e(e, "Error refreshing home data")
             } finally {
-                if (isPullRefresh) {
-                    _state.update { it.copy(isRefreshing = false) }
-                }
+                _state.update { it.copy(isRefreshing = false, isLoading = false) }
             }
         }
     }
@@ -255,8 +287,12 @@ class HomeViewModel @Inject constructor(
 
     private suspend fun syncData(silent: Boolean, force: Boolean = false) {
         if (isSyncInProgress && !force) return
-        if (!force && System.currentTimeMillis() - lastSyncTimestamp < 15_000L) return
+        val emptyData = isDataEmpty()
+        if (!force && hasLoadedInitialData && !emptyData && System.currentTimeMillis() - lastSyncTimestamp < 15_000L) return
         isSyncInProgress = true
+        if (!silent || emptyData) {
+            _state.update { it.copy(isLoading = true) }
+        }
         try {
             lastSyncTimestamp = System.currentTimeMillis()
             val auth = currentAuth
@@ -265,8 +301,13 @@ class HomeViewModel @Inject constructor(
             val isStudent = auth.isStudent
             val homeroom = auth.className ?: ""
 
+            val targetClassId = when {
+                isStudent || isParent -> auth.classId?.takeIf { it.isNotBlank() }
+                else -> null
+            }
+
             // 1. Real-time Learning Sessions Sync (Filtered to Today's Agenda)
-        sessionRepository.getSessions("").onSuccess { sessions ->
+            sessionRepository.getSessions(targetClassId).onSuccess { sessions ->
             val today = LocalDate.now()
             val todaySessions = sessions.filter { s ->
                 // Active sessions are always relevant today
@@ -492,6 +533,10 @@ class HomeViewModel @Inject constructor(
                 }
             }
         } else if (isTeacher) {
+            // Fetch total registered students across school from Railway PostgreSQL
+            academicRepository.getClassStudents("ALL").onSuccess { students ->
+                _state.update { it.copy(totalStudentsCount = students.size.toString()) }
+            }
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
                 _state.update { it.copy(
                     teacherPendingCount = assignments.size.toString(),
@@ -510,29 +555,27 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(teacherQuizzesCount = quizzes.size.toString()) }
             }
             academicRepository.getClasses().onSuccess { classes ->
-                val scopedClasses = if (classes.size > 2 && (homeroom.isNotBlank() || teacherScheduledClassNames.isNotEmpty() || teacherScheduledClassIds.isNotEmpty())) {
-                    val matching = classes.filter { c ->
-                        (homeroom.isNotBlank() && c.name.equals(homeroom, ignoreCase = true)) ||
-                        teacherScheduledClassNames.any { s -> s.equals(c.name, ignoreCase = true) } ||
-                        teacherScheduledClassIds.contains(c.id)
-                    }
-                    if (matching.isNotEmpty()) matching else classes
-                } else {
-                    classes
+                val validClasses = classes.filter { !isUuid(it.name) }
+                val teacherUserId = currentAuth.userId ?: ""
+
+                // Find explicit homeroom class matching the teacher's userId or auth homeroom name
+                val matchedHomeroomClass = validClasses.find { c ->
+                    (teacherUserId.isNotBlank() && c.homeroomTeacherId == teacherUserId) ||
+                    (homeroom.isNotBlank() && c.name.equals(homeroom, ignoreCase = true))
                 }
 
-                val myClasses = if (homeroom.isNotBlank() && !isUuid(homeroom)) {
-                    val hr = scopedClasses.filter { it.name.equals(homeroom, ignoreCase = true) }
-                    val others = scopedClasses.filterNot { it.name.equals(homeroom, ignoreCase = true) }
-                    hr + others
-                } else {
-                    scopedClasses
-                }
+                val resolvedHomeroom = matchedHomeroomClass?.name ?: homeroom
+
                 _state.update { current ->
-                    val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-" || isUuid(current.activeSessionClass)) {
-                        if (homeroom.isNotBlank() && !isUuid(homeroom)) homeroom else (myClasses.firstOrNull()?.name ?: "")
-                    } else current.activeSessionClass
-                    current.copy(teacherClasses = myClasses, activeSessionClass = activeCls)
+                    val activeCls = resolvedHomeroom.takeIf { it.isNotBlank() && !isUuid(it) }
+                        ?: current.activeSessionClass.takeIf { it.isNotBlank() && it != "-" && !isUuid(it) }
+                        ?: validClasses.firstOrNull()?.name
+                        ?: "-"
+                    current.copy(
+                        teacherClasses = validClasses,
+                        homeroomClass = resolvedHomeroom,
+                        activeSessionClass = activeCls
+                    )
                 }
             }
             academicRepository.getSubjects().onSuccess { subjects ->
@@ -554,6 +597,8 @@ class HomeViewModel @Inject constructor(
             }
         }
     } finally {
+        hasLoadedInitialData = true
+        _state.update { it.copy(isLoading = false) }
         isSyncInProgress = false
     }
 }

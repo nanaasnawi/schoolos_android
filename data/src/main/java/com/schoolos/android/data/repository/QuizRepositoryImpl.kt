@@ -37,15 +37,17 @@ class QuizRepositoryImpl @Inject constructor(
 
     override suspend fun getQuizzes(classId: String): Result<List<Quiz>> = runCatching {
         try {
-            val response = api.getQuizzes(classId)
-            val quizzes = response.data?.map { it.dtoToDomain() }
-            if (quizzes != null) {
-                if (classId.isBlank() && quizzes.isNotEmpty()) {
+            val response = api.getQuizzes(classId.ifBlank { null })
+            val quizzes = response.data?.map { it.dtoToDomain() } ?: emptyList()
+            try {
+                if (classId.isBlank()) {
                     quizDao.clearAll()
                 }
-                quizDao.insertAll(quizzes.map { it.toEntity() })
-                return@runCatching quizzes
-            }
+                if (quizzes.isNotEmpty()) {
+                    quizDao.insertAll(quizzes.map { it.toEntity() })
+                }
+            } catch (_: Exception) {}
+            return@runCatching quizzes
         } catch (e: Exception) {
             android.util.Log.w("QuizRepo", "Remote fetch quizzes failed, falling back to cache: ${e.message}")
         }

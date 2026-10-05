@@ -28,6 +28,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import coil.compose.AsyncImage
@@ -117,74 +118,85 @@ fun ProfileHeaderCard(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                // Avatar circle with photo upload support
+                // Avatar container with photo upload support & unclipped camera badge
+                val fullAvatarUrl = if (!user?.avatarUrl.isNullOrBlank()) {
+                    val raw = user.avatarUrl!!
+                    if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true) || raw.startsWith("data:", ignoreCase = true)) {
+                        raw
+                    } else {
+                        val host = serverBaseUrl.ifBlank { com.schoolos.android.core.common.BuildConfig.API_BASE_URL }.substringBefore("/api/").trimEnd('/')
+                        val path = if (raw.startsWith("/")) raw else "/$raw"
+                        "$host$path"
+                    }
+                } else null
+
                 Box(
                     modifier = Modifier
-                        .size(56.dp)
-                        .clip(CircleShape)
-                        .background(roleNeon.copy(alpha = 0.12f))
-                        .border(1.5.dp, roleNeon.copy(alpha = 0.40f), CircleShape)
+                        .size(76.dp)
                         .clickable(enabled = !isUploading) { onAvatarClick() },
                     contentAlignment = Alignment.Center,
                 ) {
-                    val fullAvatarUrl = if (!user?.avatarUrl.isNullOrBlank()) {
-                        val raw = user.avatarUrl!!
-                        if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true) || raw.startsWith("data:", ignoreCase = true)) {
-                            raw
+                    // Avatar Circle
+                    Box(
+                        modifier = Modifier
+                            .size(72.dp)
+                            .align(Alignment.TopStart)
+                            .clip(CircleShape)
+                            .background(roleNeon.copy(alpha = 0.12f))
+                            .border(2.dp, roleNeon.copy(alpha = 0.50f), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (!fullAvatarUrl.isNullOrBlank()) {
+                            AsyncImage(
+                                model = fullAvatarUrl,
+                                contentDescription = "Foto Profil",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                            )
                         } else {
-                            val host = serverBaseUrl.ifBlank { com.schoolos.android.core.common.BuildConfig.API_BASE_URL }.substringBefore("/api/").trimEnd('/')
-                            val path = if (raw.startsWith("/")) raw else "/$raw"
-                            "$host$path"
-                        }
-                    } else null
-
-                    if (!fullAvatarUrl.isNullOrBlank()) {
-                        AsyncImage(
-                            model = fullAvatarUrl,
-                            contentDescription = "Foto Profil",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = avatarIcon,
-                            contentDescription = "Avatar",
-                            tint = roleNeon,
-                            modifier = Modifier.size(28.dp),
-                        )
-                    }
-
-                    if (isUploading) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.5f)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(24.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp,
+                            Icon(
+                                imageVector = avatarIcon,
+                                contentDescription = "Avatar",
+                                tint = roleNeon,
+                                modifier = Modifier.size(36.dp),
                             )
                         }
-                    } else {
-                        // Badge kamera di pojok bawah avatar
+
+                        if (isUploading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Black.copy(alpha = 0.5f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(28.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.5.dp,
+                                )
+                            }
+                        }
+                    }
+
+                    // Badge kamera mengambang utuh (tidak terpotong clip circle)
+                    if (!isUploading) {
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
-                                .size(20.dp)
+                                .size(26.dp)
+                                .shadow(4.dp, CircleShape)
                                 .clip(CircleShape)
                                 .background(Color(0xFF0F172A))
-                                .border(1.dp, roleNeon, CircleShape),
+                                .border(1.5.dp, roleNeon, CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CameraAlt,
                                 contentDescription = "Ubah Foto",
                                 tint = roleNeon,
-                                modifier = Modifier.size(11.dp),
+                                modifier = Modifier.size(13.dp),
                             )
                         }
                     }
@@ -213,7 +225,7 @@ fun ProfileHeaderCard(
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = "Ketuk foto untuk mengganti",
+                        text = "Ketuk foto untuk lihat / ganti",
                         fontSize = 10.sp,
                         color = roleNeon.copy(alpha = 0.85f),
                         fontWeight = FontWeight.Medium,

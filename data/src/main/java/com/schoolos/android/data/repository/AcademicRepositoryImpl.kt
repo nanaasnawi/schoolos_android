@@ -21,6 +21,7 @@ class AcademicRepositoryImpl @Inject constructor(
                 id = dto.id,
                 name = dto.name,
                 gradeLevelId = dto.gradeLevelId,
+                homeroomTeacherId = dto.homeroomTeacherId,
             )
         }
     }
@@ -46,8 +47,10 @@ class AcademicRepositoryImpl @Inject constructor(
         }
         val response = if (isUuid) {
             api.getClassStudents(classId = trimmed)
+        } else if (trimmed.equals("ALL", ignoreCase = true) || trimmed.isBlank()) {
+            api.getClassStudents(className = null, classId = null)
         } else {
-            api.getClassStudents(className = trimmed.ifBlank { null })
+            api.getClassStudents(className = trimmed)
         }
         if (!response.success) {
             throw Exception(response.error?.message ?: "Gagal memuat daftar murid")

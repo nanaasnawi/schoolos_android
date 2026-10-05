@@ -13,6 +13,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,13 +23,21 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.HelpOutline
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil.compose.AsyncImage
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -421,4 +432,259 @@ fun ProfileLogoutDialog(
             }
         },
     )
+}
+
+@Composable
+fun ProfileAvatarActionDialog(
+    hasCustomPhoto: Boolean,
+    onViewPhoto: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onPickGallery: () -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismissRequest,
+        containerColor = CosmicNavy,
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(NeonBlue.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Default.CameraAlt, null, tint = NeonBlue, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(10.dp))
+                Text("Foto Profil", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+            }
+        },
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                if (hasCustomPhoto) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CosmicBlack)
+                            .border(1.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .clickable {
+                                onDismissRequest()
+                                onViewPhoto()
+                            }
+                            .padding(14.dp),
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonBlue.copy(alpha = 0.15f)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(Icons.Default.ZoomIn, null, tint = NeonBlue, modifier = Modifier.size(20.dp))
+                            }
+                            Spacer(Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Lihat Foto Profil", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
+                                Text("Perbesar dan lihat tampilan foto", color = TextSecondary, fontSize = 11.sp)
+                            }
+                            Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CosmicBlack)
+                        .border(1.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .clickable {
+                            onDismissRequest()
+                            onTakePhoto()
+                        }
+                        .padding(14.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(NeonSuccess.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.CameraAlt, null, tint = NeonSuccess, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Ambil Foto via Kamera", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
+                            Text("Potret langsung menggunakan kamera HP", color = TextSecondary, fontSize = 11.sp)
+                        }
+                        Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CosmicBlack)
+                        .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                        .clickable {
+                            onDismissRequest()
+                            onPickGallery()
+                        }
+                        .padding(14.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(TextSecondary.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Default.Image, null, tint = TextPrimary, modifier = Modifier.size(20.dp))
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text("Pilih dari Galeri", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
+                            Text("Pilih gambar yang tersimpan di HP", color = TextSecondary, fontSize = 11.sp)
+                        }
+                        Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
+                    }
+                }
+            }
+        },
+        confirmButton = {},
+        dismissButton = {
+            TextButton(onClick = onDismissRequest) {
+                Text("Batal", color = TextSecondary, fontSize = 13.sp)
+            }
+        },
+    )
+}
+
+@Composable
+fun ProfileAvatarPreviewDialog(
+    avatarUrl: String?,
+    userName: String?,
+    serverBaseUrl: String = "",
+    onChangePhotoClick: () -> Unit = {},
+    onDismissRequest: () -> Unit,
+) {
+    val fullAvatarUrl = if (!avatarUrl.isNullOrBlank()) {
+        val raw = avatarUrl
+        if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true) || raw.startsWith("data:", ignoreCase = true)) {
+            raw
+        } else {
+            val host = serverBaseUrl.ifBlank { com.schoolos.android.core.common.BuildConfig.API_BASE_URL }.substringBefore("/api/").trimEnd('/')
+            val path = if (raw.startsWith("/")) raw else "/$raw"
+            "$host$path"
+        }
+    } else null
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.95f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            // Top Bar with Name and Close Action
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.TopCenter)
+                    .padding(horizontal = 20.dp, vertical = 28.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column {
+                    Text(
+                        text = userName?.ifBlank { "Foto Profil" } ?: "Foto Profil",
+                        color = Color.White,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                    Text(
+                        text = "Foto Profil Pengguna",
+                        color = TextTertiary,
+                        fontSize = 12.sp,
+                    )
+                }
+
+                IconButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.15f)),
+                ) {
+                    Icon(Icons.Default.Close, "Tutup", tint = Color.White)
+                }
+            }
+
+            // Full-screen Centered Photo Area
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.88f)
+                    .aspectRatio(1f)
+                    .clip(CircleShape)
+                    .border(3.dp, NeonBlue, CircleShape)
+                    .background(CosmicNavy),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (!fullAvatarUrl.isNullOrBlank()) {
+                    AsyncImage(
+                        model = fullAvatarUrl,
+                        contentDescription = "Foto Profil $userName",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize(),
+                    )
+                } else {
+                    Icon(
+                        imageVector = Icons.Default.Image,
+                        contentDescription = null,
+                        tint = NeonBlue,
+                        modifier = Modifier.size(90.dp),
+                    )
+                }
+            }
+
+            // Bottom Floating Camera Action Button
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(32.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape)
+                        .background(NeonBlue)
+                        .clickable {
+                            onDismissRequest()
+                            onChangePhotoClick()
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CameraAlt,
+                        contentDescription = "Ganti Foto",
+                        tint = CosmicBlack,
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
+            }
+        }
+    }
 }

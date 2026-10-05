@@ -55,34 +55,36 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 )
             } ?: emptyList()
 
-            if (materials.isNotEmpty()) {
+            try {
                 materialDao.clearAll()
-                val now = System.currentTimeMillis()
-                val entities = materials.mapIndexed { idx, m ->
-                    LearningMaterialEntity(
-                        id = m.id,
-                        title = m.title,
-                        description = m.description,
-                        materialType = m.materialType.name,
-                        contentBody = m.contentBody,
-                        mediaUrl = m.mediaUrl,
-                        thumbnailUrl = m.thumbnailUrl,
-                        subject = m.subject,
-                        size = m.size,
-                        isCompleted = m.isCompleted,
-                        completedCount = m.completedCount,
-                        teacherName = m.teacherName,
-                        teacherId = m.teacherId,
-                        className = m.className,
-                        classId = m.classId,
-                        startPage = m.startPage,
-                        endPage = m.endPage,
-                        createdAt = m.createdAt,
-                        cachedAt = now - (idx * 1000L),
-                    )
+                if (materials.isNotEmpty()) {
+                    val now = System.currentTimeMillis()
+                    val entities = materials.mapIndexed { idx, m ->
+                        LearningMaterialEntity(
+                            id = m.id,
+                            title = m.title,
+                            description = m.description,
+                            materialType = m.materialType.name,
+                            contentBody = m.contentBody,
+                            mediaUrl = m.mediaUrl,
+                            thumbnailUrl = m.thumbnailUrl,
+                            subject = m.subject,
+                            size = m.size,
+                            isCompleted = m.isCompleted,
+                            completedCount = m.completedCount,
+                            teacherName = m.teacherName,
+                            teacherId = m.teacherId,
+                            className = m.className,
+                            classId = m.classId,
+                            startPage = m.startPage,
+                            endPage = m.endPage,
+                            createdAt = m.createdAt,
+                            cachedAt = now - (idx * 1000L),
+                        )
+                    }
+                    materialDao.insertAll(entities)
                 }
-                materialDao.insertAll(entities)
-            }
+            } catch (_: Exception) {}
             return@runCatching materials
         } catch (e: Exception) {
             Timber.w(e, "Remote fetch materials failed, fallback to local Room database cache")

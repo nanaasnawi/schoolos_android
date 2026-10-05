@@ -25,9 +25,15 @@ android {
     defaultConfig {
         applicationId = "com.schoolos.android"
         minSdk = 26
-        targetSdk = 36
-        versionCode = 8
-        versionName = "1.0.7"
+        targetSdk = 35
+        versionCode = 13
+        versionName = "1.1.2"
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
     }
 
     buildTypes {
@@ -38,7 +44,7 @@ android {
             buildConfigField("String", "API_BASE_URL", "\"$prodServerUrl\"")
             isMinifyEnabled = true
             isShrinkResources = true
-            proguardFiles(getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             ndk {
                 debugSymbolLevel = "FULL"
             }

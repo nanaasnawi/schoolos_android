@@ -31,6 +31,7 @@ class QuizListViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     private val classId = ""
+    private var hasLoadedInitialData: Boolean = false
 
     /** Optional subject filter passed via navigation (e.g. from a session detail). */
     private var subjectFilter: String? = savedStateHandle.get<String>("subjectId")?.takeIf { it.isNotBlank() }
@@ -44,16 +45,23 @@ class QuizListViewModel @Inject constructor(
         load()
     }
 
-    fun refresh() {
-        _state.value = _state.value.copy(isRefreshing = true)
+    fun refresh(isPullRefresh: Boolean = false) {
+        if (!isPullRefresh && hasLoadedInitialData) return
+        if (isPullRefresh) {
+            _state.value = _state.value.copy(isRefreshing = true)
+        }
         load()
     }
 
     private fun load() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.value = _state.value.copy(
+                isLoading = !hasLoadedInitialData && _state.value.quizzes.isEmpty(),
+                error = null
+            )
             repository.getQuizzes(classId)
                 .onSuccess { quizzes ->
+                    hasLoadedInitialData = true
                     val role = _state.value.userRole.lowercase()
                     val isStudent = role != "teacher" && role != "guru"
 
@@ -92,6 +100,7 @@ class QuizListViewModel @Inject constructor(
                     )
                 }
                 .onFailure { e ->
+                    hasLoadedInitialData = true
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,

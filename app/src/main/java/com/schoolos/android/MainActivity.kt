@@ -41,6 +41,12 @@ class MainActivity : ComponentActivity() {
     private var inAppUpdateHelper: InAppUpdateHelper? = null
     private var pendingNavigationRoute by mutableStateOf<String?>(null)
 
+    private val notificationPermissionLauncher = registerForActivityResult(
+        androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        timber.log.Timber.d("POST_NOTIFICATIONS permission granted: %b", isGranted)
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         extractNavigationTarget(intent)
@@ -51,14 +57,16 @@ class MainActivity : ComponentActivity() {
             SystemNotificationHelper.createNotificationChannel(this)
         } catch (_: Throwable) {}
 
-        // Request POST_NOTIFICATIONS permission on Android 13+
+        // Request POST_NOTIFICATIONS permission on Android 13+ safely via ActivityResultContract
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }
             }
-        } catch (_: Throwable) {}
+        } catch (t: Throwable) {
+            timber.log.Timber.w(t, "Failed to request notification permission safely")
+        }
 
         // Start background notification & maintenance sync listener
         try {
@@ -102,11 +110,7 @@ class MainActivity : ComponentActivity() {
 
         // Initial check for system maintenance mode
         lifecycleScope.launch {
-            try {
-                maintenanceManager.checkServerStatus()
-            } catch (t: Throwable) {
-                timber.log.Timber.w(t, "Maintenance check failed: %s", t.message)
-            }
+            maintenanceManager.checkServerStatus()
         }
 
         // Check for Google Play In-App Updates safely
@@ -117,17 +121,24 @@ class MainActivity : ComponentActivity() {
             timber.log.Timber.w(t, "In-app update check skipped: %s", t.message)
         }
 
-        // Load saved theme preference (default = LIGHT)
+        // Load saved theme preference (default = system theme)
         val prefs = getSharedPreferences("school_os_prefs", Context.MODE_PRIVATE)
 
         setContent {
-            var isDarkTheme by remember {
-                mutableStateOf(prefs.getBoolean("dark_theme", false))
+            val systemIsDark = androidx.compose.foundation.isSystemInDarkTheme()
+
+            var customThemePref by remember {
+                mutableStateOf<Boolean?>(
+                    if (prefs.contains("dark_theme")) prefs.getBoolean("dark_theme", false) else null
+                )
             }
 
+            val isDarkTheme = customThemePref ?: systemIsDark
+
             val toggleTheme: () -> Unit = {
-                isDarkTheme = !isDarkTheme
-                prefs.edit().putBoolean("dark_theme", isDarkTheme).apply()
+                val nextMode = !isDarkTheme
+                customThemePref = nextMode
+                prefs.edit().putBoolean("dark_theme", nextMode).apply()
             }
 
             CompositionLocalProvider(

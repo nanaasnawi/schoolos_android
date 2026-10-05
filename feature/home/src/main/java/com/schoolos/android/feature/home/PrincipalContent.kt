@@ -69,6 +69,7 @@ fun LazyListScope.principalContent(
     onNavigateToLearning: () -> Unit = {},
     onNavigateToRombelStudents: (String) -> Unit = {},
     schoolClasses: List<AcademicClass> = emptyList(),
+    totalStudentsCount: String = "0",
     todaySessions: List<LearningSession> = emptyList(),
     teacherAssignments: List<Assignment> = emptyList(),
     teacherAnnouncements: List<Notification> = emptyList(),
@@ -87,7 +88,7 @@ fun LazyListScope.principalContent(
                 PrincipalKpiCard(
                     title = "Data Rombel",
                     value = if (schoolClasses.isNotEmpty()) "${schoolClasses.size} Kelas" else "13 Rombel",
-                    subtitle = "Seluruh rombel sekolah",
+                    subtitle = if (totalStudentsCount.isNotBlank() && totalStudentsCount != "0") "$totalStudentsCount Total Siswa" else "Seluruh rombel sekolah",
                     icon = Icons.Default.Class,
                     accentColor = TeacherNeon,
                     onClick = { onNavigateToRombelStudents("ALL") },

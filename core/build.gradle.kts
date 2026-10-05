@@ -69,6 +69,10 @@ dependencies {
     // Domain
     implementation(project(":domain"))
 
+    // Firebase
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.database)
+
     // Core
     implementation(libs.core.ktx)
     implementation(libs.timber)

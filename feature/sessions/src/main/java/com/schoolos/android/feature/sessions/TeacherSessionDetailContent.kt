@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -17,9 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -48,7 +51,7 @@ fun TeacherSessionDetailContent(
         attendance.mapIndexed { idx, it ->
             StudentAttendanceUiItem(
                 studentId = it.studentId,
-                studentName = "Siswa ${idx + 1}",
+                studentName = "Siswa (${it.studentId.take(8)})",
                 nisn = null,
                 status = it.status,
                 checkedInAt = it.checkedInAt,
@@ -73,12 +76,12 @@ fun TeacherSessionDetailContent(
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(20.dp))
                 .background(
-                    Brush.linearGradient(
-                        colors = listOf(accentColor.copy(alpha = 0.15f), accentColor.copy(alpha = 0.05f)),
+                    Brush.verticalGradient(
+                        colors = listOf(accentColor.copy(alpha = 0.18f), CosmicNavy),
                     )
                 )
-                .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                .padding(12.dp)
+                .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                .padding(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 // Period badge row
@@ -91,7 +94,7 @@ fun TeacherSessionDetailContent(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .background(accentColor.copy(alpha = 0.15f))
-                            .border(1.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                            .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                             .padding(horizontal = 12.dp, vertical = 6.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -106,7 +109,7 @@ fun TeacherSessionDetailContent(
                         }
                     }
                     Text(
-                        session.scheduledAt?.let {
+                        text = session.scheduledAt?.let {
                             try {
                                 val instant = java.time.Instant.parse(it)
                                 val zdt = instant.atZone(java.time.ZoneId.of("Asia/Jakarta"))
@@ -137,13 +140,13 @@ fun TeacherSessionDetailContent(
 
                 // Attendance progress bar
                 if (totalCount > 0) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(6.dp)
                                 .clip(CircleShape)
-                                .background(accentColor.copy(alpha = 0.1f)),
+                                .background(accentColor.copy(alpha = 0.12f)),
                         ) {
                             Box(
                                 modifier = Modifier
@@ -158,6 +161,7 @@ fun TeacherSessionDetailContent(
                         Text(
                             "$presentCount dari $totalCount siswa hadir",
                             fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
                             color = TextTertiary,
                         )
                     }
@@ -167,11 +171,16 @@ fun TeacherSessionDetailContent(
 
         // ── RESOURCE HUB ──
         SectionTitle("KELOLA SUMBER DAYA KELAS")
-        GlassCard(cornerRadius = 16.dp) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .padding(12.dp)
+        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(12.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 ResourceAction(
@@ -214,11 +223,11 @@ fun TeacherSessionDetailContent(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
-                        .background(accentColor.copy(alpha = 0.1f))
-                        .border(1.dp, accentColor.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                        .background(accentColor.copy(alpha = 0.12f))
+                        .border(0.5.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
                         .padding(horizontal = 10.dp, vertical = 4.dp),
                 ) {
-                    Text("$totalCount Siswa", color = accentColor, fontSize = 9.sp, fontWeight = FontWeight.ExtraBold)
+                    Text("$totalCount Siswa", color = accentColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -232,16 +241,16 @@ fun TeacherSessionDetailContent(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(NeonSuccess.copy(alpha = 0.12f))
-                        .border(1.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                        .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                         .clickable(enabled = !isBulkSaving) { onMarkAllPresent() }
-                        .padding(vertical = 8.dp, horizontal = 10.dp),
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         Icon(
                             Icons.Default.DoneAll,
@@ -252,7 +261,7 @@ fun TeacherSessionDetailContent(
                         Text(
                             "Hadir Semua",
                             color = NeonSuccess,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -262,19 +271,19 @@ fun TeacherSessionDetailContent(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(10.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(accentColor.copy(alpha = 0.15f))
-                        .border(1.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                        .border(0.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
                         .clickable(enabled = !isBulkSaving) { onSaveAll() }
-                        .padding(vertical = 8.dp, horizontal = 10.dp),
+                        .padding(vertical = 10.dp, horizontal = 12.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         if (isBulkSaving) {
-                            androidx.compose.material3.CircularProgressIndicator(
+                            CircularProgressIndicator(
                                 modifier = Modifier.size(14.dp),
                                 color = accentColor,
                                 strokeWidth = 2.dp,
@@ -290,7 +299,7 @@ fun TeacherSessionDetailContent(
                         Text(
                             if (isBulkSaving) "Menyimpan..." else "Simpan Presensi",
                             color = accentColor,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                         )
                     }
@@ -298,8 +307,15 @@ fun TeacherSessionDetailContent(
             }
         }
 
-        GlassCard(cornerRadius = 16.dp) {
-            Column(modifier = Modifier.padding(12.dp)) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .padding(14.dp)
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 if (effectiveStudents.isEmpty()) {
                     EmptyStateContent(
                         message = "Data presensi belum tersedia",
@@ -310,7 +326,7 @@ fun TeacherSessionDetailContent(
                         if (idx > 0) {
                             HorizontalDivider(
                                 color = GlassBorder,
-                                thickness = 1.dp,
+                                thickness = 0.5.dp,
                                 modifier = Modifier.padding(vertical = 4.dp),
                             )
                         }
@@ -324,22 +340,22 @@ fun TeacherSessionDetailContent(
                             else -> TextTertiary
                         }
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             val initial = student.studentName.firstOrNull()?.uppercase() ?: "${idx + 1}"
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
                                     .background(statusColor.copy(alpha = 0.12f))
-                                    .border(1.dp, statusColor.copy(alpha = 0.3f), CircleShape),
+                                    .border(1.dp, statusColor.copy(alpha = 0.35f), CircleShape),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Text(
                                     initial,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.ExtraBold,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Black,
                                     color = statusColor,
                                 )
                             }
@@ -350,6 +366,7 @@ fun TeacherSessionDetailContent(
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary,
+                                    maxLines = 1,
                                 )
                                 val subText = student.nisn?.let { "NISN: $it" } ?: "ID: ${student.studentId.take(8)}"
                                 Text(
@@ -358,6 +375,7 @@ fun TeacherSessionDetailContent(
                                     color = TextTertiary,
                                 )
                             }
+
                             // Tombol status: H=Hadir, I=Izin, S=Sakit, T=Terlambat, A=Alpa
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 AttendanceStatusButton(
@@ -408,16 +426,16 @@ private fun AttendanceStatusButton(
 ) {
     Box(
         modifier = Modifier
-            .size(28.dp)
-            .clip(RoundedCornerShape(6.dp))
+            .size(30.dp)
+            .clip(RoundedCornerShape(8.dp))
             .background(if (selected) color else color.copy(alpha = 0.08f))
-            .border(1.dp, if (selected) color else color.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+            .border(1.dp, if (selected) color else color.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
     ) {
         Text(
             text = label,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Black,
             color = if (selected) Color.Black else color,
         )
@@ -432,7 +450,7 @@ private fun SectionTitle(title: String) {
         fontWeight = FontWeight.ExtraBold,
         color = TextTertiary,
         letterSpacing = 1.sp,
-        modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
     )
 }
 
@@ -442,13 +460,13 @@ private fun AttendanceMiniCard(label: String, value: String, color: Color, modif
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .background(color.copy(alpha = 0.08f))
-            .border(1.dp, color.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = color)
-            Text(label, fontSize = 7.sp, fontWeight = FontWeight.Bold, color = TextTertiary)
+            Text(label, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = TextTertiary)
         }
     }
 }
@@ -464,30 +482,30 @@ private fun ResourceAction(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(color.copy(alpha = 0.08f))
-            .border(1.dp, color.copy(alpha = 0.2f), RoundedCornerShape(14.dp))
+            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 8.dp),
+            .padding(vertical = 12.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(40.dp)
+                .size(36.dp)
                 .clip(CircleShape)
                 .background(color.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center,
         ) {
             if (iconRes != null) {
                 Icon(
-                    painter = androidx.compose.ui.res.painterResource(id = iconRes),
+                    painter = painterResource(id = iconRes),
                     contentDescription = null,
                     tint = color,
-                    modifier = Modifier.size(20.dp),
+                    modifier = Modifier.size(18.dp),
                 )
             } else if (icon != null) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
+                Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
             }
         }
         Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
@@ -497,13 +515,13 @@ private fun ResourceAction(
 @Composable
 private fun EmptyStateContent(message: String, subtitle: String) {
     Column(
-        modifier = Modifier.fillMaxWidth().padding(14.dp),
+        modifier = Modifier.fillMaxWidth().padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Box(
             modifier = Modifier
-                .size(56.dp)
+                .size(52.dp)
                 .clip(CircleShape)
                 .background(NeonBlueBg)
                 .border(1.dp, NeonBlue.copy(alpha = 0.2f), CircleShape),

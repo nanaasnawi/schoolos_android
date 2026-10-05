@@ -13,10 +13,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -226,6 +228,102 @@ fun ShimmerHeroHeader(
             // Progress bar skeleton
             ShimmerBox(modifier = Modifier.fillMaxWidth().height(6.dp), shape = RoundedCornerShape(3.dp))
         }
+    }
+}
+
+/**
+ * Dedicated Bento Shimmer Skeleton for HomeScreen initial loading state.
+ */
+@Composable
+fun HomeShimmerSkeleton(
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxSize()
+            .statusBarsPadding()
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        // 1. Top Bar Shimmer
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                ShimmerBox(modifier = Modifier.size(42.dp), shape = RoundedCornerShape(10.dp))
+                Spacer(Modifier.width(10.dp))
+                Column {
+                    ShimmerBox(modifier = Modifier.width(120.dp).height(14.dp), shape = RoundedCornerShape(4.dp))
+                    Spacer(Modifier.height(4.dp))
+                    ShimmerBox(modifier = Modifier.width(160.dp).height(11.dp), shape = RoundedCornerShape(4.dp))
+                }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ShimmerBox(modifier = Modifier.size(42.dp), shape = CircleShape)
+                ShimmerBox(modifier = Modifier.size(42.dp), shape = CircleShape)
+            }
+        }
+
+        // 2. Hero Spotlight Card Shimmer
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                .padding(16.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ShimmerBox(modifier = Modifier.width(100.dp).height(12.dp), shape = RoundedCornerShape(4.dp))
+                    ShimmerBox(modifier = Modifier.width(80.dp).height(14.dp), shape = RoundedCornerShape(6.dp))
+                }
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.65f).height(18.dp), shape = RoundedCornerShape(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ShimmerBox(modifier = Modifier.width(140.dp).height(12.dp), shape = RoundedCornerShape(4.dp))
+                    ShimmerBox(modifier = Modifier.width(70.dp).height(24.dp), shape = RoundedCornerShape(6.dp))
+                }
+            }
+        }
+
+        // 3. Bento Grid Shimmer (2x2 Grid)
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ShimmerBox(modifier = Modifier.weight(1f).height(108.dp), shape = RoundedCornerShape(14.dp))
+            ShimmerBox(modifier = Modifier.weight(1f).height(108.dp), shape = RoundedCornerShape(14.dp))
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ShimmerBox(modifier = Modifier.weight(1f).height(108.dp), shape = RoundedCornerShape(14.dp))
+            ShimmerBox(modifier = Modifier.weight(1f).height(108.dp), shape = RoundedCornerShape(14.dp))
+        }
+
+        // 4. Schedule Section Header & Card Shimmers
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            ShimmerBox(modifier = Modifier.width(130.dp).height(16.dp), shape = RoundedCornerShape(4.dp))
+            ShimmerBox(modifier = Modifier.width(70.dp).height(14.dp), shape = RoundedCornerShape(4.dp))
+        }
+
+        ShimmerCard()
+        ShimmerCard()
     }
 }
 

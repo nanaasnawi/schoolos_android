@@ -51,7 +51,7 @@ class GradebookListViewModel @Inject constructor(
             val initialAuth = authManager.authState.first()
             currentClassId = initialAuth.classId ?: ""
             val homeroom = initialAuth.className?.takeIf { it.isNotBlank() } ?: ""
-            val name = initialAuth.name?.takeIf { it.isNotBlank() } ?: "Guru Pengampu"
+            val name = initialAuth.name?.takeIf { it.isNotBlank() } ?: ""
             _state.value = _state.value.copy(
                 userRole = initialAuth.role ?: "student",
                 className = homeroom,
@@ -68,7 +68,7 @@ class GradebookListViewModel @Inject constructor(
                     val newClassId = auth.classId ?: ""
                     val newHomeroom = auth.className?.takeIf { it.isNotBlank() } ?: ""
                     val newRole = auth.role ?: "student"
-                    val name = auth.name?.takeIf { it.isNotBlank() } ?: "Guru Pengampu"
+                    val name = auth.name?.takeIf { it.isNotBlank() } ?: ""
 
                     val classOrRoleChanged = hasLoadedOnce && (
                         _state.value.userRole != newRole ||

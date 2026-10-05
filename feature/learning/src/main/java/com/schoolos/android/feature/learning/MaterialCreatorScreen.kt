@@ -345,6 +345,7 @@ fun MaterialCreatorScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -1234,6 +1235,7 @@ private fun LibraryBookCatalogSheetContent(
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .navigationBarsPadding()
+            .imePadding()
     ) {
         // Header
         Row(

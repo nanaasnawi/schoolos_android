@@ -189,14 +189,17 @@ object SystemNotificationHelper {
             else -> CHANNEL_LEARNING_ID
         }
 
-        val iconRes = try {
-            val resId = context.resources.getIdentifier("ic_notification", "drawable", context.packageName)
-            if (resId != 0) resId else com.schoolos.android.core.R.drawable.ic_notification
-        } catch (_: Exception) {
-            context.applicationInfo.icon.takeIf { it != 0 } ?: android.R.drawable.ic_dialog_info
-        }
+        val iconRes = context.applicationInfo.icon.takeIf { it != 0 }
+            ?: com.schoolos.android.core.R.drawable.ic_notification
 
         val soundUri = getSoundUri(context)
+
+        val largeIconBitmap = try {
+            val launcherIconRes = context.applicationInfo.icon
+            if (launcherIconRes != 0) {
+                android.graphics.BitmapFactory.decodeResource(context.resources, launcherIconRes)
+            } else null
+        } catch (_: Exception) { null }
 
         val builder = NotificationCompat.Builder(context, effectiveChannel)
             .setSmallIcon(iconRes)
@@ -213,9 +216,14 @@ object SystemNotificationHelper {
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
 
+        if (largeIconBitmap != null) {
+            builder.setLargeIcon(largeIconBitmap)
+        }
+
         try {
+            @Suppress("MissingPermission")
             NotificationManagerCompat.from(context).notify(notifyId, builder.build())
-        } catch (e: SecurityException) {
+        } catch (_: SecurityException) {
             // Permission not granted
         }
 

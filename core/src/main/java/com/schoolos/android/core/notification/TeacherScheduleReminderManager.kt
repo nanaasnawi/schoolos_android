@@ -202,16 +202,7 @@ object TeacherScheduleReminderManager {
                         intent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, oneHourBeforeMs, pi)
-                        } else {
-                            am.setExact(AlarmManager.RTC_WAKEUP, oneHourBeforeMs, pi)
-                        }
-                        Timber.d("Scheduled 1-hour teacher reminder for %s at %s", subject, oneHourBeforeMs)
-                    } catch (e: Exception) {
-                        Timber.w(e, "Failed to schedule 1-hour alarm for session %s", session.id)
-                    }
+                    safeScheduleAlarm(am, oneHourBeforeMs, pi)
                 } else if (now in oneHourBeforeMs until scheduledMs) {
                     if (!isAlreadyNotified(context, session.id, TYPE_1_HOUR_BEFORE)) {
                         showReminderNotification(context, session.id, subject, className, timeStr, TYPE_1_HOUR_BEFORE)
@@ -235,16 +226,7 @@ object TeacherScheduleReminderManager {
                         intent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
-                    try {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, startMs, pi)
-                        } else {
-                            am.setExact(AlarmManager.RTC_WAKEUP, startMs, pi)
-                        }
-                        Timber.d("Scheduled class-start teacher reminder for %s at %s", subject, startMs)
-                    } catch (e: Exception) {
-                        Timber.w(e, "Failed to schedule class-start alarm for session %s", session.id)
-                    }
+                    safeScheduleAlarm(am, startMs, pi)
                 } else if (session.status.equals("active", ignoreCase = true) || (now in startMs until (startMs + 2 * 3600_000L))) {
                     if (!isAlreadyNotified(context, session.id, TYPE_CLASS_START)) {
                         showReminderNotification(context, session.id, subject, className, timeStr, TYPE_CLASS_START)
@@ -253,6 +235,32 @@ object TeacherScheduleReminderManager {
             }
         } catch (t: Throwable) {
             Timber.w(t, "Teacher schedule reminders check failed safely: %s", t.message)
+        }
+    }
+
+    private fun safeScheduleAlarm(am: AlarmManager, timeMs: Long, pi: PendingIntent) {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (am.canScheduleExactAlarms()) {
+                    am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeMs, pi)
+                } else {
+                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeMs, pi)
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeMs, pi)
+            } else {
+                @Suppress("DEPRECATION")
+                am.set(AlarmManager.RTC_WAKEUP, timeMs, pi)
+            }
+        } catch (e: SecurityException) {
+            Timber.w(e, "Exact alarm permission missing, falling back to allow-while-idle")
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, timeMs, pi)
+                }
+            } catch (_: Exception) {}
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to schedule alarm")
         }
     }
 }

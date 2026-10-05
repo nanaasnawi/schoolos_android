@@ -20,33 +20,33 @@ class SessionRepositoryImpl @Inject constructor(
 ) : SessionRepository {
 
     override suspend fun getSessions(classId: String?): Result<List<LearningSession>> = runCatching {
+        val cleanClassId = classId?.takeIf { it.isNotBlank() }
         try {
-            val response = api.getSessions(classId)
-            val sessions = response.data?.map { it.toDomain() }
-            if (sessions != null) {
-                if (classId.isNullOrBlank()) {
+            val response = api.getSessions(cleanClassId)
+            val sessions = response.data?.map { it.toDomain() } ?: emptyList()
+            try {
+                if (cleanClassId == null) {
                     sessionDao.clearAll()
                 }
-                sessionDao.insertAll(sessions.map { it.toEntity() })
-                return@runCatching sessions
-            }
+                if (sessions.isNotEmpty()) {
+                    sessionDao.insertAll(sessions.map { it.toEntity() })
+                }
+            } catch (_: Exception) {}
+            return@runCatching sessions
         } catch (e: Exception) {
             android.util.Log.w("SessionRepo", "Remote fetch failed, falling back to cache: ${e.message}")
         }
         val cached = try {
-            if (!classId.isNullOrBlank()) {
-                sessionDao.getSessionsByClass(classId).first()
+            if (!cleanClassId.isNullOrBlank()) {
+                val byClass = sessionDao.getSessionsByClass(cleanClassId).first()
+                if (byClass.isNotEmpty()) byClass else sessionDao.getSessions().first()
             } else {
                 sessionDao.getSessions().first()
             }
         } catch (_: Exception) {
             emptyList()
         }
-        if (cached.isNotEmpty()) {
-            cached.map { it.entityToDomain() }
-        } else {
-            emptyList()
-        }
+        cached.map { it.entityToDomain() }
     }
 
     override suspend fun getSession(id: String): Result<LearningSession> = runCatching {

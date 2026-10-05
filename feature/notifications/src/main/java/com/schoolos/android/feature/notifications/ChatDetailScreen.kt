@@ -1,6 +1,7 @@
 package com.schoolos.android.feature.notifications
 
 import android.widget.Toast
+import com.schoolos.android.core.common.BuildConfig
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -148,6 +149,18 @@ fun ChatDetailScreen(
                           else "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • Aktif"
     val roleNeon = if (isTeacherMode) StudentNeon else TeacherNeon
 
+    val rawAvatarUrl = if (isTeacherMode) thread?.studentAvatarUrl else thread?.teacherAvatarUrl
+    val fullAvatarUrl = remember(rawAvatarUrl) {
+        if (!rawAvatarUrl.isNullOrBlank()) {
+            if (rawAvatarUrl.startsWith("http://", ignoreCase = true) || rawAvatarUrl.startsWith("https://", ignoreCase = true)) {
+                rawAvatarUrl
+            } else {
+                val host = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.substringBefore("/api/").trimEnd('/')
+                "$host/${rawAvatarUrl.trimStart('/')}"
+            }
+        } else null
+    }
+
     val isPermitted = isTeacherMode || thread == null || chatManager.isThreadOwnedByCurrentStudent(thread)
     if (!isPermitted) {
         Column(
@@ -217,12 +230,23 @@ fun ChatDetailScreen(
                         .border(1.dp, roleNeon.copy(alpha = 0.30f), CircleShape),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(
-                        text = contactInitial,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = roleNeon,
-                    )
+                    if (!fullAvatarUrl.isNullOrBlank()) {
+                        coil.compose.AsyncImage(
+                            model = fullAvatarUrl,
+                            contentDescription = contactName,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(CircleShape),
+                        )
+                    } else {
+                        Text(
+                            text = contactInitial,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = roleNeon,
+                        )
+                    }
                 }
 
                 Spacer(Modifier.width(10.dp))

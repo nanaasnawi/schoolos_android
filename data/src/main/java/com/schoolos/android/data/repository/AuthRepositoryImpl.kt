@@ -128,6 +128,12 @@ class AuthRepositoryImpl @Inject constructor(
             childId = data.childId,
             avatarUrl = data.avatarUrl,
         )
+        authManager.updateUserEditableDetails(
+            email = data.email.takeIf { it.isNotBlank() },
+            phone = data.phone?.takeIf { it.isNotBlank() },
+            identifier = data.identifier?.takeIf { it.isNotBlank() },
+            about = data.about?.takeIf { it.isNotBlank() },
+        )
 
         var schoolName = data.schoolName
         var schoolLogo = data.schoolLogoUrl
@@ -190,18 +196,49 @@ class AuthRepositoryImpl @Inject constructor(
         data.avatarUrl
     }
 
-    override suspend fun updateProfile(fullName: String?, avatarUrl: String?): Result<Unit> = runCatching {
+    override suspend fun updateProfile(
+        fullName: String?,
+        avatarUrl: String?,
+        email: String?,
+        phone: String?,
+        identifier: String?,
+        about: String?,
+    ): Result<Unit> = runCatching {
         val response = api.updateProfile(
             com.schoolos.android.data.remote.dto.UpdateProfileRequestDto(
                 fullName = fullName,
                 avatarUrl = avatarUrl,
+                email = email,
+                phone = phone,
+                identifier = identifier,
+                about = about,
             )
         )
         if (!response.success) {
             throw Exception(response.error?.message ?: "Gagal memperbarui profil.")
         }
+        authManager.updateUserEditableDetails(
+            email = email,
+            phone = phone,
+            identifier = identifier,
+            about = about,
+        )
         if (!avatarUrl.isNullOrBlank()) {
             authManager.updateUserAvatar(avatarUrl)
         }
+        try {
+            getCurrentUser()
+        } catch (_: Exception) {}
+    }
+
+    override suspend fun getMyQrBadge(): Result<String> = runCatching {
+        val response = api.getMyQrBadge()
+        val data = response.data ?: throw Exception(
+            response.error?.message ?: "Gagal memuat QR Badge login."
+        )
+        if (data.rawToken.isBlank()) {
+            throw Exception("QR Badge token kosong.")
+        }
+        data.rawToken
     }
 }

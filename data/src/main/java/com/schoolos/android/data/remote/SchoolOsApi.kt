@@ -40,6 +40,9 @@ interface SchoolOsApi {
     @GET("auth/me")
     suspend fun getCurrentUser(): ApiResponse<UserDto>
 
+    @GET("auth/qr-tokens/my-badge")
+    suspend fun getMyQrBadge(): ApiResponse<QrBadgeDto>
+
     // Academic (Classes & Subjects)
     @GET("academic/classes")
     suspend fun getClasses(

@@ -142,7 +142,7 @@ fun AssignmentListScreen(
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             PullRefreshContainer(
                 isRefreshing = state.isRefreshing,
-                onRefresh = viewModel::refresh,
+                onRefresh = { viewModel.refresh(isPullRefresh = true) },
                 modifier = Modifier.fillMaxSize(),
             ) {
                 if (state.isLoading) {

@@ -1,5 +1,6 @@
 ﻿package com.schoolos.android.feature.home
 
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
@@ -38,10 +39,7 @@ import com.schoolos.android.domain.model.Achievement
 import com.schoolos.android.domain.model.ClassStudent
 import com.schoolos.android.domain.model.Progress
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// SCREEN
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun StudentDetailScreen(
     onBack: () -> Unit,
@@ -63,30 +61,30 @@ fun StudentDetailScreen(
     val isFemale = student.gender?.trim()?.uppercase() == "P"
     val genderLabel = if (isFemale) "Perempuan" else "Laki-laki"
     val genderIcon = if (isFemale) Icons.Default.Female else Icons.Default.Male
-
-    // Hero accent adapts to gender and follows MaterialTheme palette
-    val heroAccent = if (isFemale) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary
+    val heroAccent = if (isFemale) Color(0xFFEC4899) else StudentNeon
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = "Detail Siswa",
-                subtitle = if (student.className.isNotBlank()) "Kelas ${student.className}" else "Portal Guru",
+                title = "Detail Profil Siswa",
+                subtitle = if (student.className.isNotBlank()) "Kelas ${student.className} • Portal Guru" else "Portal Guru",
                 onBack = onBack,
                 actions = {
-                    IconButton(
-                        onClick = { viewModel.refresh() },
+                    Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(CosmicNavy)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                            .clickable { viewModel.refresh() },
+                        contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Refresh,
                             contentDescription = "Muat Ulang",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            tint = TextSecondary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -99,10 +97,9 @@ fun StudentDetailScreen(
                 .fillMaxSize()
                 .padding(innerPadding),
             contentPadding = PaddingValues(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-
-            // â”€â”€ HERO HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── HERO HEADER ────────────────────────────────────────────────
             item {
                 StudentHeroCard(
                     student = student,
@@ -112,7 +109,7 @@ fun StudentDetailScreen(
                 )
             }
 
-            // â”€â”€ 4 KEY METRICS â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── 4 KEY METRICS ──────────────────────────────────────────────
             item {
                 val avgGrade = progress?.overallProgress?.let { "%.0f%%".format(it) } ?: "--"
                 val quizDone = progress?.let { "${it.quizCompleted}/${it.quizTotal}" } ?: "--"
@@ -131,7 +128,7 @@ fun StudentDetailScreen(
                 )
             }
 
-            // â”€â”€ TAB ROW â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── TAB ROW ───────────────────────────────────────────────────
             item {
                 StudentTabRow(
                     tabs = tabs,
@@ -140,18 +137,17 @@ fun StudentDetailScreen(
                 )
             }
 
-            // â”€â”€ ERROR BANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── ERROR BANNER ──────────────────────────────────────────────
             if (errorMessage != null) {
                 item {
                     ErrorBanner(
                         message = errorMessage,
                         modifier = Modifier.padding(horizontal = 16.dp)
                     )
-                    Spacer(Modifier.height(12.dp))
                 }
             }
 
-            // â”€â”€ TAB CONTENT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+            // ── TAB CONTENT ───────────────────────────────────────────────
             when (selectedTab) {
                 0 -> {
                     item {
@@ -184,7 +180,6 @@ fun StudentDetailScreen(
                                 achievement = achievement,
                                 modifier = Modifier.padding(horizontal = 16.dp)
                             )
-                            Spacer(Modifier.height(8.dp))
                         }
                     }
                 }
@@ -199,16 +194,11 @@ fun StudentDetailScreen(
                     }
                 }
             }
-
-            item { Spacer(Modifier.height(16.dp)) }
         }
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// HERO CARD
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ─── HERO CARD ───────────────────────────────────────────────────────────────
 @Composable
 private fun StudentHeroCard(
     student: ClassStudent,
@@ -220,42 +210,46 @@ private fun StudentHeroCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .clip(RoundedCornerShape(20.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
-                        heroAccent.copy(alpha = 0.10f),
-                        MaterialTheme.colorScheme.background,
+                        heroAccent.copy(alpha = 0.18f),
+                        CosmicNavy,
                     )
                 )
             )
-            .padding(horizontal = 16.dp, vertical = 20.dp)
+            .border(0.5.dp, heroAccent.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+            .padding(18.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Avatar circle
+            // Avatar circle with double glowing border
             Box(
                 modifier = Modifier
-                    .size(64.dp)
+                    .size(68.dp)
                     .clip(CircleShape)
                     .background(heroAccent.copy(alpha = 0.12f))
-                    .border(2.dp, heroAccent.copy(alpha = 0.4f), CircleShape),
+                    .border(2.dp, heroAccent, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = student.fullName.firstOrNull()?.toString()?.uppercase() ?: "?",
-                    fontSize = 26.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black,
                     color = heroAccent
                 )
             }
 
-            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = student.fullName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
+                    text = student.fullName.ifBlank { "Siswa SchoolOS" },
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -263,24 +257,25 @@ private fun StudentHeroCard(
                 if (student.nisn.isNotBlank()) {
                     Text(
                         text = "NISN: ${student.nisn}",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary
                     )
                 }
 
-                // Chips row
-                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    InfoChip(
-                        label = student.className.ifBlank { "Tidak diketahui" },
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    InfoPill(
+                        label = if (student.className.isNotBlank()) "Kelas ${student.className}" else "Siswa Aktif",
                         icon = Icons.Default.Class,
-                        containerColor = MaterialTheme.colorScheme.primaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                        color = heroAccent,
                     )
-                    InfoChip(
+                    InfoPill(
                         label = genderLabel,
                         icon = genderIcon,
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                        color = TextSecondary,
                     )
                 }
             }
@@ -288,38 +283,35 @@ private fun StudentHeroCard(
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// INFO CHIP
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
 @Composable
-private fun InfoChip(
+private fun InfoPill(
     label: String,
     icon: ImageVector,
-    containerColor: Color,
-    contentColor: Color,
+    color: Color,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(50.dp),
-        color = containerColor
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 3.dp),
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = contentColor,
+                tint = color,
                 modifier = Modifier.size(11.dp)
             )
             Text(
                 text = label,
-                style = MaterialTheme.typography.labelSmall,
-                color = contentColor,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = color,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -327,10 +319,7 @@ private fun InfoChip(
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// METRICS ROW
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ─── METRICS ROW ──────────────────────────────────────────────────────────────
 @Composable
 private fun MetricsRow(
     avgGrade: String,
@@ -343,33 +332,33 @@ private fun MetricsRow(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        MetricCard(
+        MetricBentoCard(
             label = "Rata-rata",
-            value = if (isLoading) "â€¦" else avgGrade,
+            value = if (isLoading) "…" else avgGrade,
             icon = Icons.Default.Grade,
-            accentColor = MaterialTheme.colorScheme.primary,
+            accentColor = StudentNeon,
             modifier = Modifier.weight(1f)
         )
-        MetricCard(
+        MetricBentoCard(
             label = "Kuis",
-            value = if (isLoading) "â€¦" else quizDone,
+            value = if (isLoading) "…" else quizDone,
             icon = Icons.Default.Quiz,
-            accentColor = MaterialTheme.colorScheme.secondary,
+            accentColor = NeonBlue,
             modifier = Modifier.weight(1f)
         )
-        MetricCard(
+        MetricBentoCard(
             label = "Tugas",
-            value = if (isLoading) "â€¦" else assignDone,
+            value = if (isLoading) "…" else assignDone,
             icon = Icons.Default.AssignmentTurnedIn,
-            accentColor = MaterialTheme.colorScheme.tertiary,
+            accentColor = NeonSuccess,
             modifier = Modifier.weight(1f)
         )
-        MetricCard(
+        MetricBentoCard(
             label = "Hadir",
-            value = if (isLoading) "â€¦" else attendance,
+            value = if (isLoading) "…" else attendance,
             icon = Icons.Default.EventAvailable,
             accentColor = NeonWarning,
             modifier = Modifier.weight(1f)
@@ -378,52 +367,55 @@ private fun MetricsRow(
 }
 
 @Composable
-private fun MetricCard(
+private fun MetricBentoCard(
     label: String,
     value: String,
     icon: ImageVector,
     accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.height(82.dp),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    Box(
+        modifier = modifier
+            .height(86.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .padding(10.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(10.dp),
+            modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Box(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(RoundedCornerShape(8.dp))
-                    .background(accentColor.copy(alpha = 0.12f)),
+                    .background(accentColor.copy(alpha = 0.14f))
+                    .border(0.5.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
                     tint = accentColor,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(15.dp)
                 )
             }
             Column {
                 Text(
                     text = value,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Black,
+                    color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(Modifier.height(1.dp))
                 Text(
                     text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -432,10 +424,7 @@ private fun MetricCard(
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// TAB ROW
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ─── TAB ROW ─────────────────────────────────────────────────────────────────
 @Composable
 private fun StudentTabRow(
     tabs: List<String>,
@@ -443,25 +432,23 @@ private fun StudentTabRow(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.padding(top = 12.dp)) {
+    Column(modifier = modifier.padding(horizontal = 16.dp)) {
         TabRow(
             selectedTabIndex = selectedTab,
-            containerColor = MaterialTheme.colorScheme.background,
-            contentColor = MaterialTheme.colorScheme.primary,
-            divider = {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outlineVariant,
-                    thickness = 1.dp
-                )
-            },
+            containerColor = CosmicNavy,
+            contentColor = StudentNeon,
+            modifier = Modifier.clip(RoundedCornerShape(12.dp)).border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp)),
+            divider = {},
             indicator = { tabPositions ->
                 if (selectedTab < tabPositions.size) {
                     Box(
                         modifier = Modifier
                             .tabIndicatorOffset(tabPositions[selectedTab])
-                            .height(3.dp)
-                            .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
-                            .background(MaterialTheme.colorScheme.primary)
+                            .fillMaxHeight()
+                            .padding(4.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(StudentNeon.copy(alpha = 0.20f))
+                            .border(0.5.dp, StudentNeon.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                     )
                 }
             }
@@ -473,26 +460,18 @@ private fun StudentTabRow(
                 ) {
                     Text(
                         text = title,
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Normal,
-                        color = if (selectedTab == index)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(vertical = 12.dp)
+                        fontSize = 12.sp,
+                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium,
+                        color = if (selectedTab == index) StudentNeon else TextSecondary,
+                        modifier = Modifier.padding(vertical = 10.dp)
                     )
                 }
             }
         }
-
-        Spacer(Modifier.height(16.dp))
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// TAB 0 â€” ACADEMIC PROGRESS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ─── TAB 0 — ACADEMIC PROGRESS ───────────────────────────────────────────────
 @Composable
 private fun AcademicProgressTab(
     progress: Progress?,
@@ -501,18 +480,16 @@ private fun AcademicProgressTab(
 ) {
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
 
-        // Status card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        // Status Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .padding(16.dp)
         ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Header
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -521,31 +498,32 @@ private fun AcademicProgressTab(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.tertiaryContainer),
+                            .background(StudentNeon.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.TrendingUp,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                            tint = StudentNeon,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Column {
                         Text(
-                            text = "Status Akademik",
-                            style = MaterialTheme.typography.titleSmall,
-                            color = MaterialTheme.colorScheme.onSurface
+                            text = "Status Akademik Siswa",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
                         )
                         Text(
-                            text = "Perkembangan belajar siswa",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Ringkasan evaluasi belajar siswa",
+                            fontSize = 11.sp,
+                            color = TextTertiary
                         )
                     }
                 }
 
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
 
                 if (isLoading) {
                     Box(
@@ -553,64 +531,66 @@ private fun AcademicProgressTab(
                             .fillMaxWidth()
                             .height(48.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(CosmicSurface)
                     )
                 } else {
-                    // Status badge
-                    val status = progress?.academicStatus ?: "Data belum tersedia"
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.6f)
+                    val status = progress?.academicStatus ?: "Data perkembangan belum tersedia"
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(StudentNeon.copy(alpha = 0.10f))
+                            .border(0.5.dp, StudentNeon.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                            .padding(12.dp)
                     ) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Star,
                                 contentDescription = null,
-                                tint = MaterialTheme.colorScheme.tertiary,
+                                tint = StudentNeon,
                                 modifier = Modifier.size(18.dp)
                             )
                             Text(
                                 text = status,
-                                style = MaterialTheme.typography.bodyMedium,
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onSurface
+                                color = TextPrimary
                             )
                         }
                     }
 
-                    // Teacher notes
                     val notes = progress?.teacherNotes
                     if (!notes.isNullOrBlank()) {
                         Text(
-                            text = "Catatan Guru",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Catatan Evaluasi Guru",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary
                         )
                         Text(
                             text = notes,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            lineHeight = 20.sp
+                            fontSize = 12.sp,
+                            color = TextSecondary,
+                            lineHeight = 18.sp
                         )
                     }
                 }
             }
         }
 
-        // Coaching notes card
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+        // Coaching Notes Card
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .padding(16.dp)
         ) {
-            Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -619,54 +599,53 @@ private fun AcademicProgressTab(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(MaterialTheme.colorScheme.primaryContainer),
+                            .background(NeonBlue.copy(alpha = 0.15f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.Notes,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            tint = NeonBlue,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Text(
-                        text = "Catatan Pembinaan",
-                        style = MaterialTheme.typography.titleSmall,
-                        color = MaterialTheme.colorScheme.onSurface
+                        text = "Catatan Pembinaan Siswa",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
                     )
                 }
-                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+                val coachingNotes = progress?.teacherNotes?.takeIf { it.isNotBlank() }
+                    ?: "Belum ada catatan pembinaan khusus dari guru pengampu."
                 Text(
-                    text = "Siswa aktif berpartisipasi dalam diskusi kelas. Direkomendasikan untuk mengikuti program pengayaan sains.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    lineHeight = 20.sp
+                    text = coachingNotes,
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                    lineHeight = 18.sp
                 )
             }
         }
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// TAB 1 â€” LEARNING METRICS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ─── TAB 1 — LEARNING METRICS ───────────────────────────────────────────────
 @Composable
 private fun LearningMetricsTab(
     progress: Progress?,
     isLoading: Boolean,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -675,24 +654,25 @@ private fun LearningMetricsTab(
                     modifier = Modifier
                         .size(36.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer),
+                        .background(StudentNeon.copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.BarChart,
                         contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        tint = StudentNeon,
                         modifier = Modifier.size(20.dp)
                     )
                 }
                 Text(
-                    text = "Metrik Belajar",
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface
+                    text = "Metrik & Pencapaian Modul",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
                 )
             }
 
-            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
 
             if (isLoading) {
                 repeat(4) {
@@ -701,7 +681,7 @@ private fun LearningMetricsTab(
                             .fillMaxWidth()
                             .height(40.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
+                            .background(CosmicSurface)
                     )
                 }
             } else {
@@ -715,28 +695,28 @@ private fun LearningMetricsTab(
                 val sessionTotal = progress?.sessionTotal ?: 0
 
                 MetricProgressRow(
-                    title = "Modul & Materi",
+                    title = "Modul & Materi Pembelajaran",
                     current = lessonsDone,
                     total = lessonsTotal,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = StudentNeon,
                     icon = Icons.AutoMirrored.Filled.MenuBook
                 )
                 MetricProgressRow(
-                    title = "Tugas & Praktik",
+                    title = "Tugas & Praktik Lapangan",
                     current = assignDone,
                     total = assignTotal,
-                    color = MaterialTheme.colorScheme.secondary,
+                    color = NeonBlue,
                     icon = Icons.Default.Assignment
                 )
                 MetricProgressRow(
-                    title = "Kuis & Asesmen",
+                    title = "Kuis & Asesmen Mandiri",
                     current = quizDone,
                     total = quizTotal,
-                    color = MaterialTheme.colorScheme.tertiary,
+                    color = NeonSuccess,
                     icon = Icons.Default.Quiz
                 )
                 MetricProgressRow(
-                    title = "Kehadiran",
+                    title = "Kehadiran Sesi Pembelajaran",
                     current = sessionDone,
                     total = sessionTotal,
                     color = NeonWarning,
@@ -776,17 +756,18 @@ private fun MetricProgressRow(
                     imageVector = icon,
                     contentDescription = null,
                     tint = color,
-                    modifier = Modifier.size(18.dp)
+                    modifier = Modifier.size(16.dp)
                 )
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextPrimary
                 )
             }
             Text(
                 text = if (total > 0) "$current/$total (${(pct * 100).toInt()}%)" else "--",
-                style = MaterialTheme.typography.labelMedium,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = color
             )
@@ -797,55 +778,53 @@ private fun MetricProgressRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(6.dp)
-                .clip(RoundedCornerShape(3.dp)),
+                .clip(CircleShape),
             color = color,
             trackColor = color.copy(alpha = 0.12f)
         )
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// TAB 2 â€” ACHIEVEMENTS
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ─── TAB 2 — ACHIEVEMENTS ───────────────────────────────────────────────────
 @Composable
 private fun EmptyAchievementsCard(modifier: Modifier = Modifier) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .padding(28.dp),
+        contentAlignment = Alignment.Center
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(32.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(56.dp)
+                    .size(52.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                    .background(StudentNeon.copy(alpha = 0.12f)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.EmojiEvents,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(32.dp)
+                    tint = StudentNeon,
+                    modifier = Modifier.size(28.dp)
                 )
             }
             Text(
-                text = "Belum Ada Lencana",
-                style = MaterialTheme.typography.titleSmall,
-                color = MaterialTheme.colorScheme.onSurface
+                text = "Belum Ada Lencana Prestasi",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
             )
             Text(
-                text = "Lencana prestasi akan tercatat otomatis saat siswa menyelesaikan tantangan.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                text = "Lencana prestasi akan tercatat otomatis saat siswa menyelesaikan tantangan & kuis.",
+                fontSize = 11.sp,
+                color = TextTertiary,
                 textAlign = TextAlign.Center
             )
         }
@@ -857,16 +836,15 @@ private fun AchievementItem(
     achievement: Achievement,
     modifier: Modifier = Modifier,
 ) {
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .padding(14.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
@@ -874,37 +852,39 @@ private fun AchievementItem(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(MaterialTheme.colorScheme.tertiaryContainer),
+                    .background(StudentNeon.copy(alpha = 0.12f))
+                    .border(1.dp, StudentNeon.copy(alpha = 0.3f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.EmojiEvents,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
-                    modifier = Modifier.size(24.dp)
+                    tint = StudentNeon,
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = achievement.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = achievement.description,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    fontSize = 11.sp,
+                    color = TextSecondary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 if (!achievement.earnedAt.isNullOrBlank()) {
                     Text(
                         text = "Diraih: ${achievement.earnedAt}",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.tertiary,
-                        fontWeight = FontWeight.SemiBold
+                        fontSize = 10.sp,
+                        color = StudentNeon,
+                        fontWeight = FontWeight.Bold
                     )
                 }
             }
@@ -912,14 +892,11 @@ private fun AchievementItem(
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// TAB 3 â€” CONTACT
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ─── TAB 3 — CONTACT ─────────────────────────────────────────────────────────
 @Composable
 private fun ContactTab(
     student: ClassStudent,
-    context: android.content.Context,
+    context: Context,
     modifier: Modifier = Modifier,
 ) {
     val phoneRaw = student.noHp ?: ""
@@ -929,23 +906,22 @@ private fun ContactTab(
 
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(
-            text = "Informasi Kontak",
-            style = MaterialTheme.typography.titleSmall,
-            color = MaterialTheme.colorScheme.onBackground,
+            text = "Kontak & Koordinasi Orang Tua",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary,
             modifier = Modifier.padding(bottom = 2.dp)
         )
 
         // WhatsApp Card
         ContactActionCard(
             title = "WhatsApp Wali Murid",
-            subtitle = phoneRaw.ifBlank { "Nomor tidak tersedia" },
+            subtitle = phoneRaw.ifBlank { "Nomor telepon tidak tersedia" },
             icon = Icons.AutoMirrored.Filled.Chat,
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            accentColor = MaterialTheme.colorScheme.primary,
+            accentColor = NeonSuccess,
             enabled = cleanPhone.isNotBlank(),
             onClick = {
-                val message = "Halo Bapak/Ibu wali dari ${student.fullName} (${student.className}), saya dari pihak guru School OS ingin berkoordinasi."
+                val message = "Halo Bapak/Ibu wali dari ${student.fullName} (${student.className}), saya dari pihak guru School OS ingin berkoordinasi mengenai perkembangan siswa."
                 val intent = Intent(Intent.ACTION_VIEW).apply {
                     data = Uri.parse("https://api.whatsapp.com/send?phone=$waPhone&text=${Uri.encode(message)}")
                 }
@@ -956,11 +932,9 @@ private fun ContactTab(
         // Phone Call Card
         ContactActionCard(
             title = "Telepon Langsung",
-            subtitle = phoneRaw.ifBlank { "Nomor tidak tersedia" },
+            subtitle = phoneRaw.ifBlank { "Nomor telepon tidak tersedia" },
             icon = Icons.Default.Call,
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            accentColor = MaterialTheme.colorScheme.secondary,
+            accentColor = NeonBlue,
             enabled = cleanPhone.isNotBlank(),
             onClick = {
                 val intent = Intent(Intent.ACTION_DIAL).apply {
@@ -972,12 +946,10 @@ private fun ContactTab(
 
         // Email Card
         ContactActionCard(
-            title = "Email Siswa",
+            title = "Email Resmi Siswa",
             subtitle = studentEmail,
             icon = Icons.Default.Email,
-            containerColor = MaterialTheme.colorScheme.tertiaryContainer,
-            contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-            accentColor = MaterialTheme.colorScheme.tertiary,
+            accentColor = StudentNeon,
             enabled = true,
             onClick = {
                 val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -994,54 +966,53 @@ private fun ContactActionCard(
     title: String,
     subtitle: String,
     icon: ImageVector,
-    containerColor: Color,
-    contentColor: Color,
     accentColor: Color,
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val alpha = if (enabled) 1f else 0.4f
-    Card(
+    Box(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled, onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .clickable(enabled = enabled, onClick = onClick)
+            .padding(14.dp)
     ) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
+                    .size(42.dp)
                     .clip(RoundedCornerShape(12.dp))
-                    .background(containerColor.copy(alpha = alpha)),
+                    .background(accentColor.copy(alpha = 0.12f * alpha))
+                    .border(0.5.dp, accentColor.copy(alpha = 0.3f * alpha), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = icon,
                     contentDescription = null,
-                    tint = contentColor.copy(alpha = alpha),
-                    modifier = Modifier.size(22.dp)
+                    tint = accentColor.copy(alpha = alpha),
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = alpha),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary.copy(alpha = alpha),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(Modifier.height(2.dp))
                 Text(
                     text = subtitle,
-                    style = MaterialTheme.typography.bodySmall,
+                    fontSize = 11.sp,
                     color = accentColor.copy(alpha = alpha),
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
@@ -1052,45 +1023,44 @@ private fun ContactActionCard(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(18.dp)
+                    tint = TextTertiary,
+                    modifier = Modifier.size(16.dp)
                 )
             }
         }
     }
 }
 
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// ERROR BANNER
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
+// ─── ERROR BANNER ────────────────────────────────────────────────────────────
 @Composable
 private fun ErrorBanner(
     message: String,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(NeonError.copy(alpha = 0.15f))
+            .border(0.5.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+            .padding(12.dp)
     ) {
         Row(
-            modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             Icon(
                 imageVector = Icons.Default.ErrorOutline,
                 contentDescription = null,
-                tint = MaterialTheme.colorScheme.onErrorContainer,
+                tint = NeonError,
                 modifier = Modifier.size(20.dp)
             )
             Text(
                 text = message,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onErrorContainer
+                fontSize = 12.sp,
+                color = NeonError,
+                fontWeight = FontWeight.Medium
             )
         }
     }
 }
-

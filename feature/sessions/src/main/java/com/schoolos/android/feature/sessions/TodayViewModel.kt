@@ -41,6 +41,7 @@ class TodayViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     private var allSessionsCache: List<LearningSession> = emptyList()
+    private var hasLoadedInitialData: Boolean = false
 
     init {
         viewModelScope.launch {
@@ -55,8 +56,11 @@ class TodayViewModel @Inject constructor(
         load(_state.value.selectedDate)
     }
 
-    fun refresh() {
-        _state.value = _state.value.copy(isRefreshing = true)
+    fun refresh(isPullRefresh: Boolean = false) {
+        if (!isPullRefresh && hasLoadedInitialData) return
+        if (isPullRefresh) {
+            _state.value = _state.value.copy(isRefreshing = true)
+        }
         load(_state.value.selectedDate)
     }
 
@@ -76,13 +80,18 @@ class TodayViewModel @Inject constructor(
 
     private fun load(targetDate: LocalDate = LocalDate.now()) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.value = _state.value.copy(
+                isLoading = !hasLoadedInitialData && allSessionsCache.isEmpty(),
+                error = null
+            )
             repository.getSessions(_state.value.classId)
                 .onSuccess { sessions ->
+                    hasLoadedInitialData = true
                     allSessionsCache = sessions
                     filterAndGroupSessions(sessions, targetDate, _state.value.selectedFilter)
                 }
                 .onFailure { e ->
+                    hasLoadedInitialData = true
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,

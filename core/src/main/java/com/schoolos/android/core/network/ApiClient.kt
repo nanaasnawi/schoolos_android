@@ -2,9 +2,6 @@ package com.schoolos.android.core.network
 
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.common.BuildConfig
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
@@ -47,66 +44,7 @@ class DynamicHostInterceptor(
             }
         }
 
-        return try {
-            chain.proceed(primaryRequest)
-        } catch (e: Exception) {
-            // Only perform local emulator fallback during DEBUG development
-            if (!com.schoolos.android.core.common.BuildConfig.DEBUG) {
-                throw e
-            }
-
-            val isEmulator = android.os.Build.FINGERPRINT.startsWith("generic")
-                || android.os.Build.MODEL.contains("google_sdk")
-                || android.os.Build.MODEL.contains("Emulator")
-                || android.os.Build.HARDWARE.contains("goldfish")
-                || android.os.Build.HARDWARE.contains("ranchu")
-
-            val buildConfigUrl = try {
-                com.schoolos.android.core.common.BuildConfig.API_BASE_URL.toHttpUrlOrNull()
-            } catch (_: Exception) { null }
-
-            val rawCandidates = if (isEmulator) {
-                listOfNotNull(
-                    buildConfigUrl,
-                    "http://10.0.2.2:8000/api/v1/".toHttpUrlOrNull(),
-                    "http://127.0.0.1:8000/api/v1/".toHttpUrlOrNull(),
-                )
-            } else {
-                listOfNotNull(
-                    buildConfigUrl,
-                ).filter { it.host != "10.0.2.2" && it.host != "127.0.0.1" }
-            }
-
-            val currentHost = primaryRequest.url.host
-            val currentPort = primaryRequest.url.port
-            val candidateUrls = rawCandidates.distinct().filter { 
-                it.host != currentHost || it.port != currentPort 
-            }
-
-            var lastException: Exception = e
-            for (targetUrl in candidateUrls) {
-                try {
-                    val fallbackUrl = primaryRequest.url.newBuilder()
-                        .scheme(targetUrl.scheme)
-                        .host(targetUrl.host)
-                        .port(targetUrl.port)
-                        .build()
-                    val fallbackRequest = primaryRequest.newBuilder().url(fallbackUrl).build()
-                    val response = chain.proceed(fallbackRequest)
-
-                    // Fallback worked! Persist working URL asynchronously so next calls are instant
-                    CoroutineScope(Dispatchers.IO).launch {
-                        try {
-                            authManager.saveCustomServerUrl(targetUrl.toString())
-                        } catch (_: Exception) {}
-                    }
-                    return response
-                } catch (fallbackEx: Exception) {
-                    lastException = fallbackEx
-                }
-            }
-            throw lastException
-        }
+        return chain.proceed(primaryRequest)
     }
 }
 
