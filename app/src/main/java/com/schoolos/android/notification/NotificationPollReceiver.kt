@@ -26,6 +26,13 @@ class NotificationPollReceiver : BroadcastReceiver() {
 
         fun schedule(context: Context) {
             try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                    val um = context.getSystemService(android.os.UserManager::class.java)
+                    if (um != null && !um.isUserUnlocked) {
+                        Timber.w("Device is locked; skipping notification poll scheduling")
+                        return
+                    }
+                }
                 val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
                 val intent = Intent(context, NotificationPollReceiver::class.java).apply { action = ACTION_POLL }
                 val pi = PendingIntent.getBroadcast(
@@ -40,10 +47,6 @@ class NotificationPollReceiver : BroadcastReceiver() {
                     @Suppress("DEPRECATION")
                     am.setRepeating(AlarmManager.RTC_WAKEUP, first, INTERVAL_MS, pi)
                 }
-                // Inexact repeating sebagai jaring pengaman tambahan
-                try {
-                    am.setInexactRepeating(AlarmManager.RTC_WAKEUP, first + INTERVAL_MS, INTERVAL_MS, pi)
-                } catch (_: Exception) {}
                 Timber.d("Silent notification poll alarm scheduled (every 15 mins)")
             } catch (e: Exception) {
                 Timber.w(e, "Failed to schedule notification poll")

@@ -159,7 +159,6 @@ fun LazyListScope.teacherContent(
         teacherClasses.isNotEmpty() && !isUuid(teacherClasses.first().name) -> teacherClasses.first().name
         else -> "-"
     }
-    val displayClass = formatClassName(rawClass, if (isHomeroom) "Wali Kelas" else "Kelas Pengampu")
 
     // ── 0. URGENT TEACHING SCHEDULE ALERT ALARM BANNER ──────────────────────────
     if (urgentTeachingSession != null) {
@@ -230,22 +229,10 @@ fun LazyListScope.teacherContent(
 
     // ── 2. CLASS COMMAND HERO (WALI KELAS / KELAS PENGAMPU) ─────────────────────
     item {
-        val heroTitle = if (teacherClasses.size > 1) {
-            teacherClasses.joinToString(", ") { formatClassName(it.name) }
-        } else {
-            displayClass
-        }
-        val heroBadge = if (isHomeroom && teacherClasses.size > 1) {
-            "WALI KELAS & PENGAMPU (${teacherClasses.size} KELAS)"
-        } else if (teacherClasses.size > 1) {
-            "GURU PENGAMPU (${teacherClasses.size} KELAS)"
-        } else if (isHomeroom) {
-            "WALI KELAS"
-        } else {
-            "KELAS PENGAMPU"
-        }
-        val heroSubtitle = if (teacherClasses.size > 1) {
-            "Rekap seluruh siswa diampu (${teacherClasses.size} rombel), kehadiran presensi harian & pantauan"
+        val heroBadge = if (isHomeroom) "WALI KELAS" else "KELAS PENGAMPU"
+        val heroTitle = if (rawClass != "-") formatClassName(rawClass) else if (isHomeroom) "Wali Kelas" else "Kelas Pengampu"
+        val heroSubtitle = if (isHomeroom && heroTitle != "Wali Kelas") {
+            "Wali Kelas $heroTitle • Rekap data siswa, kehadiran presensi harian, dan pantauan kelas"
         } else {
             "Rekap data siswa, kehadiran presensi harian, dan pantauan kelas"
         }
@@ -347,50 +334,6 @@ fun LazyListScope.teacherContent(
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
-                    }
-                }
-
-                // Bottom: Multiple classes quick selector chips (if available)
-                if (teacherClasses.size > 1) {
-                    LazyRow(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(CosmicSurface2)
-                                    .border(0.5.dp, GlassBorder2, RoundedCornerShape(6.dp))
-                                    .clickable { onNavigateToRombelStudents("ALL") }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                            ) {
-                                Text(
-                                    text = "Semua Kelas (${teacherClasses.size})",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TeacherNeon,
-                                )
-                            }
-                        }
-                        items(teacherClasses) { cls ->
-                            val isSelected = cls.name.equals(rawClass, ignoreCase = true)
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isSelected) CosmicSurface2 else CosmicDark)
-                                    .border(0.5.dp, if (isSelected) GlassBorder2 else GlassBorder, RoundedCornerShape(6.dp))
-                                    .clickable { onNavigateToRombelStudents(cls.name) }
-                                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                            ) {
-                                Text(
-                                    text = formatClassName(cls.name),
-                                    fontSize = 10.sp,
-                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                    color = if (isSelected) TextPrimary else TextTertiary,
-                                )
-                            }
-                        }
                     }
                 }
             }

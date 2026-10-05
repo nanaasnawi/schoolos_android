@@ -13,6 +13,14 @@ interface AuthRepository {
     suspend fun changePassword(currentPassword: String, newPassword: String): Result<Unit>
     suspend fun getSchoolContactInfo(): Result<SchoolContactInfo>
     suspend fun uploadAvatar(bytes: ByteArray, filename: String, mimeType: String): Result<String>
-    suspend fun updateProfile(fullName: String?, avatarUrl: String?): Result<Unit>
+    suspend fun updateProfile(
+        fullName: String? = null,
+        avatarUrl: String? = null,
+        email: String? = null,
+        phone: String? = null,
+        identifier: String? = null,
+        about: String? = null,
+    ): Result<Unit>
+    suspend fun getMyQrBadge(): Result<String>
 }
 

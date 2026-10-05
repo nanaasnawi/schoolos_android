@@ -24,6 +24,7 @@ guava = "33.3.1-android"
 google-services = "4.4.2"
 firebase-bom = "33.7.0"
 play-app-update = "2.1.0"
+zxing = "3.5.3"
 
 
 [libraries]
@@ -85,8 +86,10 @@ camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "
 guava = { group = "com.google.guava", name = "guava", version.ref = "guava" }
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebase-bom" }
 firebase-messaging = { group = "com.google.firebase", name = "firebase-messaging-ktx" }
+firebase-database = { group = "com.google.firebase", name = "firebase-database-ktx" }
 play-app-update = { group = "com.google.android.play", name = "app-update", version.ref = "play-app-update" }
 play-app-update-ktx = { group = "com.google.android.play", name = "app-update-ktx", version.ref = "play-app-update" }
+zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
 
 
 [plugins]

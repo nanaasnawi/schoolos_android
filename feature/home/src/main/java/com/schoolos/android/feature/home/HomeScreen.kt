@@ -72,6 +72,8 @@ import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.domain.model.BookReadingItem
 import com.schoolos.android.core.designsystem.GlassBorder
+import com.schoolos.android.core.designsystem.HomeShimmerSkeleton
+import com.schoolos.android.core.designsystem.LoadingState
 import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.ParentNeon
@@ -105,14 +107,16 @@ fun HomeScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var activeReadingBook by remember { mutableStateOf<BookReadingItem?>(null) }
-    val isParent  = com.schoolos.android.core.auth.isParentRole(state.userRole)
-    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
+    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
+    val isParent    = com.schoolos.android.core.auth.isParentRole(state.userRole)
+    val isTeacher   = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
 
     val userName = if (state.userName.isNotBlank()) state.userName
                    else when {
-                       isTeacher -> "Bapak / Ibu Guru"
-                       isParent  -> "Orang Tua / Wali"
-                       else      -> "Siswa"
+                       isPrincipal -> "Bapak / Ibu Kepala Sekolah"
+                       isTeacher   -> "Bapak / Ibu Guru"
+                       isParent    -> "Orang Tua / Wali"
+                       else        -> "Siswa"
                    }
 
     val heroGradient = when {
@@ -134,9 +138,10 @@ fun HomeScreen(
     }
 
     val roleLabel = when {
-        isTeacher -> "GURU"
-        isParent  -> "WALI MURID"
-        else      -> "SISWA"
+        isPrincipal -> "KEPALA SEKOLAH"
+        isTeacher   -> "GURU"
+        isParent    -> "WALI MURID"
+        else        -> "SISWA"
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -144,6 +149,7 @@ fun HomeScreen(
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 viewModel.refreshUnreadCount()
+                viewModel.refresh(isPullRefresh = false)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -153,7 +159,7 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.refresh()
+        viewModel.refresh(isPullRefresh = false)
     }
 
     Scaffold(containerColor = CosmicBlack) { padding ->
@@ -163,10 +169,13 @@ fun HomeScreen(
             includeStatusBarPadding = true,
             modifier = Modifier.fillMaxSize(),
         ) {
-            LazyColumn(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .statusBarsPadding(),
+            if (state.isLoading) {
+                HomeShimmerSkeleton()
+            } else {
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding(),
                 contentPadding = PaddingValues(
                     start = 16.dp,
                     end = 16.dp,
@@ -298,6 +307,17 @@ fun HomeScreen(
                                 }
                             }
 
+                            val fullAvatarUrl = if (!state.userAvatarUrl.isNullOrBlank()) {
+                                val raw = state.userAvatarUrl!!
+                                if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true) || raw.startsWith("data:", ignoreCase = true)) {
+                                    raw
+                                } else {
+                                    val host = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.substringBefore("/api/").trimEnd('/')
+                                    val path = if (raw.startsWith("/")) raw else "/$raw"
+                                    "$host$path"
+                                }
+                            } else null
+
                             Box(
                                 modifier = Modifier
                                     .size(42.dp)
@@ -307,12 +327,23 @@ fun HomeScreen(
                                     .clickable(onClick = onNavigateToProfile),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(
-                                    painter = painterResource(id = CoreR.drawable.ic_modern_profile),
-                                    contentDescription = "Profil",
-                                    tint = roleAccent,
-                                    modifier = Modifier.size(20.dp),
-                                )
+                                if (!fullAvatarUrl.isNullOrBlank()) {
+                                    coil.compose.AsyncImage(
+                                        model = fullAvatarUrl,
+                                        contentDescription = "Profil",
+                                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .clip(CircleShape),
+                                    )
+                                } else {
+                                    Icon(
+                                        painter = painterResource(id = CoreR.drawable.ic_modern_profile),
+                                        contentDescription = "Profil",
+                                        tint = roleAccent,
+                                        modifier = Modifier.size(20.dp),
+                                    )
+                                }
                             }
                         }
                     }
@@ -329,7 +360,7 @@ fun HomeScreen(
                         hasLiveSession ->
                             "Sesi Pembelajaran Aktif"
                         isTeacher && state.todaySessions.isNotEmpty() ->
-                            "Jadwal: ${state.todaySessions.first().subjectName ?: "Sesi Mengajar"}"
+                            "${state.todaySessions.first().subjectName ?: "Sesi Mengajar"}"
                         else ->
                             "Tidak Ada Sesi Aktif"
                     }
@@ -342,7 +373,7 @@ fun HomeScreen(
                         hasLiveSession && state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass) ->
                             formatClassOrRoom(state.homeroomClass)
                         state.todaySessions.isNotEmpty() && state.nextSessionSubject != "-" && state.nextSessionSubject.isNotBlank() && !isUuid(state.nextSessionSubject) ->
-                            "Sesi berikutnya: ${state.nextSessionSubject}"
+                            state.nextSessionSubject
                         state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass) ->
                             "${formatClassOrRoom(state.homeroomClass)} • Tidak ada jadwal hari ini"
                         isTeacher ->
@@ -478,6 +509,28 @@ fun HomeScreen(
 
                 // ── 3. ROLE-BASED DYNAMIC CONTENT ────────────────────────────────
                 when {
+                    isPrincipal -> {
+                        principalContent(
+                            onNavigateToSessions     = onNavigateToSessions,
+                            onNavigateToSessionDetail = onNavigateToSessionDetail,
+                            onNavigateToAssignments  = onNavigateToAssignments,
+                            onNavigateToQuizzes      = onNavigateToQuizzes,
+                            onNavigateToGrades       = onNavigateToGrades,
+                            onNavigateToNotifications= onNavigateToNotifications,
+                            onNavigateToBroadcastCenter = onNavigateToBroadcastCenter,
+                            onNavigateToLearning     = onNavigateToLearning,
+                            onNavigateToRombelStudents = onNavigateToRombelStudents,
+                            schoolClasses            = state.teacherClasses,
+                            totalStudentsCount       = state.totalStudentsCount,
+                            todaySessions            = state.todaySessions,
+                            teacherAssignments       = state.teacherAssignments,
+                            teacherAnnouncements     = state.teacherAnnouncements,
+                            pendingAssignmentsCount  = state.teacherPendingCount,
+                            materialsCount           = state.teacherMaterialsCount,
+                            scheduleCount            = state.teacherScheduleCount,
+                            quizzesCount             = state.teacherQuizzesCount,
+                        )
+                    }
                     isTeacher -> {
                         val isHomeroom = state.homeroomClass.isNotBlank() && !isUuid(state.homeroomClass)
                         val teacherClass = if (isHomeroom) state.homeroomClass else state.activeSessionClass
@@ -565,6 +618,7 @@ fun HomeScreen(
                 }
             }
         }
+    }
 
         if (activeReadingBook != null) {
             BookReaderDialog(

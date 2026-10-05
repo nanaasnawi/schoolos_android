@@ -13,6 +13,15 @@ class BootReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         val action = intent?.action ?: return
         Timber.d("BootReceiver: %s", action)
+
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            val um = context.getSystemService(android.os.UserManager::class.java)
+            if (um != null && !um.isUserUnlocked) {
+                Timber.w("Device locked during boot; postponing notification initialization")
+                return
+            }
+        }
+
         try {
             SchoolOsFirebaseMessagingService.subscribeAllTopics()
         } catch (e: Exception) {

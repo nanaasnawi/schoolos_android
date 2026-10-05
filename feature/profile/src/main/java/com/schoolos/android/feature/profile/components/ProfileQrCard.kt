@@ -11,7 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.widget.Toast
-import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -33,12 +33,12 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -46,11 +46,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.feature.profile.util.QrCodeGenerator
 
 @Composable
 fun ProfileQrCard(
@@ -62,6 +62,10 @@ fun ProfileQrCard(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val tokenToUse = qrToken.ifBlank { "sch_qr_v1_guest" }
+    val qrBitmap = remember(tokenToUse) {
+        QrCodeGenerator.generateQrBitmap(tokenToUse, width = 512, height = 512)
+    }
 
     Box(
         modifier = modifier
@@ -115,7 +119,7 @@ fun ProfileQrCard(
 
             Spacer(Modifier.height(16.dp))
 
-            // QR Code Container Box
+            // ZXing Generated Real QR Code Box
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(14.dp))
@@ -124,10 +128,24 @@ fun ProfileQrCard(
                     .padding(16.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                QrCodeCanvas(
-                    data = qrToken.ifBlank { "sch_qr_v1_guest" },
-                    modifier = Modifier.size(160.dp),
-                )
+                if (qrBitmap != null) {
+                    Image(
+                        bitmap = qrBitmap.asImageBitmap(),
+                        contentDescription = "Real QR Code",
+                        modifier = Modifier.size(160.dp),
+                    )
+                } else {
+                    Box(
+                        modifier = Modifier.size(160.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "Gagal memuat QR Code",
+                            fontSize = 11.sp,
+                            color = Color.Black
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -165,7 +183,7 @@ fun ProfileQrCard(
                         userName = userName,
                         roleLabel = roleLabel,
                         schoolName = schoolName,
-                        qrToken = qrToken,
+                        qrToken = tokenToUse,
                     )
                 },
                 colors = ButtonDefaults.buttonColors(
@@ -189,103 +207,6 @@ fun ProfileQrCard(
             }
         }
     }
-}
-
-/**
- * Render a QR Code matrix onto a Compose Canvas.
- */
-@Composable
-private fun QrCodeCanvas(
-    data: String,
-    modifier: Modifier = Modifier,
-) {
-    val matrix = rememberQrMatrix(data)
-    val size = matrix.size
-
-    Canvas(modifier = modifier) {
-        val cellWidth = this.size.width / size
-        val cellHeight = this.size.height / size
-
-        for (r in 0 until size) {
-            for (c in 0 until size) {
-                if (matrix[r][c]) {
-                    drawRect(
-                        color = Color.Black,
-                        topLeft = Offset(c * cellWidth, r * cellHeight),
-                        size = Size(cellWidth, cellHeight),
-                    )
-                }
-            }
-        }
-    }
-}
-
-/**
- * Generate a deterministic QR-style module matrix for the payload.
- */
-@Composable
-private fun rememberQrMatrix(data: String): Array<BooleanArray> {
-    val size = 25
-    val matrix = Array(size) { BooleanArray(size) }
-
-    // Helper to draw 7x7 Finder Pattern
-    fun drawFinderPattern(row: Int, col: Int) {
-        for (r in 0 until 7) {
-            for (c in 0 until 7) {
-                val isOuter = r == 0 || r == 6 || c == 0 || c == 6
-                val isInner = r in 2..4 && c in 2..4
-                matrix[row + r][col + c] = isOuter || isInner
-            }
-        }
-    }
-
-    // Top-Left Finder
-    drawFinderPattern(0, 0)
-    // Top-Right Finder
-    drawFinderPattern(0, size - 7)
-    // Bottom-Left Finder
-    drawFinderPattern(size - 7, 0)
-
-    // Timing Patterns
-    for (i in 6 until size - 6) {
-        matrix[6][i] = i % 2 == 0
-        matrix[i][6] = i % 2 == 0
-    }
-
-    // Alignment Pattern (center area)
-    val alignRow = 16
-    val alignCol = 16
-    for (r in -2..2) {
-        for (c in -2..2) {
-            val isBorder = r == -2 || r == 2 || c == -2 || c == 2
-            val isCenter = r == 0 && c == 0
-            matrix[alignRow + r][alignCol + c] = isBorder || isCenter
-        }
-    }
-
-    // Deterministic payload encoding using hash
-    val bytes = data.toByteArray()
-    var bitIndex = 0
-    for (r in 0 until size) {
-        for (c in 0 until size) {
-            // Skip finder, timing, & alignment patterns
-            val isFinderTL = r < 8 && c < 8
-            val isFinderTR = r < 8 && c >= size - 8
-            val isFinderBL = r >= size - 8 && c < 8
-            val isTiming = r == 6 || c == 6
-            val isAlign = r in (alignRow - 2)..(alignRow + 2) && c in (alignCol - 2)..(alignCol + 2)
-
-            if (!isFinderTL && !isFinderTR && !isFinderBL && !isTiming && !isAlign) {
-                val byteVal = if (bytes.isNotEmpty()) bytes[bitIndex % bytes.size].toInt() else 0
-                val mask = (1 shl (bitIndex % 8))
-                val bit = (byteVal and mask) != 0
-                matrix[r][c] = bit xor ((r + c) % 3 == 0)
-                bitIndex++
-            }
-        }
-    }
-
-    return matrix
 }
 
 /**
@@ -347,26 +268,11 @@ private fun saveQrCardToGallery(
         val qrBoxRect = RectF(qrBoxLeft, qrBoxTop, qrBoxLeft + qrBoxSize, qrBoxTop + qrBoxSize)
         canvas.drawRoundRect(qrBoxRect, 24f, 24f, qrBgPaint)
 
-        // Draw QR Modules inside card bitmap
-        val size = 25
-        val matrix = generateQrMatrix(qrToken.ifBlank { "sch_qr_v1_guest" }, size)
-        val cellSize = (qrBoxSize - 60f) / size
-        val qrStartLeft = qrBoxLeft + 30f
-        val qrStartTop = qrBoxTop + 30f
-
-        val qrModPaint = Paint().apply {
-            color = AndroidColor.BLACK
-            style = Paint.Style.FILL
-        }
-
-        for (r in 0 until size) {
-            for (c in 0 until size) {
-                if (matrix[r][c]) {
-                    val left = qrStartLeft + (c * cellSize)
-                    val top = qrStartTop + (r * cellSize)
-                    canvas.drawRect(left, top, left + cellSize, top + cellSize, qrModPaint)
-                }
-            }
+        // Draw ZXing QR Bitmap directly into card
+        val qrBmp = QrCodeGenerator.generateQrBitmap(qrToken, width = 420, height = 480)
+        if (qrBmp != null) {
+            val qrDestRect = RectF(qrBoxLeft + 30f, qrBoxTop + 30f, qrBoxLeft + qrBoxSize - 30f, qrBoxTop + qrBoxSize - 30f)
+            canvas.drawBitmap(qrBmp, null, qrDestRect, null)
         }
 
         // User Name
@@ -426,59 +332,4 @@ private fun saveQrCardToGallery(
     } catch (e: Exception) {
         Toast.makeText(context, "Gagal mengunduh Kartu QR: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
     }
-}
-
-private fun generateQrMatrix(data: String, size: Int): Array<BooleanArray> {
-    val matrix = Array(size) { BooleanArray(size) }
-
-    fun drawFinderPattern(row: Int, col: Int) {
-        for (r in 0 until 7) {
-            for (c in 0 until 7) {
-                val isOuter = r == 0 || r == 6 || c == 0 || c == 6
-                val isInner = r in 2..4 && c in 2..4
-                matrix[row + r][col + c] = isOuter || isInner
-            }
-        }
-    }
-
-    drawFinderPattern(0, 0)
-    drawFinderPattern(0, size - 7)
-    drawFinderPattern(size - 7, 0)
-
-    for (i in 6 until size - 6) {
-        matrix[6][i] = i % 2 == 0
-        matrix[i][6] = i % 2 == 0
-    }
-
-    val alignRow = 16
-    val alignCol = 16
-    for (r in -2..2) {
-        for (c in -2..2) {
-            val isBorder = r == -2 || r == 2 || c == -2 || c == 2
-            val isCenter = r == 0 && c == 0
-            matrix[alignRow + r][alignCol + c] = isBorder || isCenter
-        }
-    }
-
-    val bytes = data.toByteArray()
-    var bitIndex = 0
-    for (r in 0 until size) {
-        for (c in 0 until size) {
-            val isFinderTL = r < 8 && c < 8
-            val isFinderTR = r < 8 && c >= size - 8
-            val isFinderBL = r >= size - 8 && c < 8
-            val isTiming = r == 6 || c == 6
-            val isAlign = r in (alignRow - 2)..(alignRow + 2) && c in (alignCol - 2)..(alignCol + 2)
-
-            if (!isFinderTL && !isFinderTR && !isFinderBL && !isTiming && !isAlign) {
-                val byteVal = if (bytes.isNotEmpty()) bytes[bitIndex % bytes.size].toInt() else 0
-                val mask = (1 shl (bitIndex % 8))
-                val bit = (byteVal and mask) != 0
-                matrix[r][c] = bit xor ((r + c) % 3 == 0)
-                bitIndex++
-            }
-        }
-    }
-
-    return matrix
 }

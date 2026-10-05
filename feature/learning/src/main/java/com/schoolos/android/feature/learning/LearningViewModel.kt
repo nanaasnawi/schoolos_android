@@ -63,6 +63,7 @@ class LearningViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     private var allMaterials: List<MaterialItem> = emptyList()
+    private var hasLoadedInitialData: Boolean = false
 
     /** Optional subject filter passed via navigation (e.g. from a session detail). */
     private var subjectFilter: String? = savedStateHandle.get<String>("subjectId")?.takeIf { it.isNotBlank() }
@@ -82,15 +83,20 @@ class LearningViewModel @Inject constructor(
 
     fun loadMaterials() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.value = _state.value.copy(
+                isLoading = !hasLoadedInitialData && allMaterials.isEmpty(),
+                error = null
+            )
             try {
                 kotlinx.coroutines.withTimeoutOrNull(5000L) {
                     repository.getMaterials()
                         .onSuccess { list ->
+                            hasLoadedInitialData = true
                             allMaterials = mapMaterials(list)
                             filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
                         }
                         .onFailure { err ->
+                            hasLoadedInitialData = true
                             _state.value = _state.value.copy(
                                 error = err.message ?: "Gagal memuat modul pembelajaran."
                             )
@@ -102,13 +108,17 @@ class LearningViewModel @Inject constructor(
         }
     }
 
-    fun refresh() {
+    fun refresh(isPullRefresh: Boolean = false) {
+        if (!isPullRefresh && hasLoadedInitialData) return
         viewModelScope.launch {
-            _state.value = _state.value.copy(isRefreshing = true, error = null)
+            if (isPullRefresh) {
+                _state.value = _state.value.copy(isRefreshing = true, error = null)
+            }
             try {
                 kotlinx.coroutines.withTimeoutOrNull(3500L) {
                     repository.getMaterials()
                         .onSuccess { list ->
+                            hasLoadedInitialData = true
                             allMaterials = mapMaterials(list)
                             filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
                         }

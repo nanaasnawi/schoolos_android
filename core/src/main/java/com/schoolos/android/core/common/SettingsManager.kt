@@ -14,13 +14,10 @@ import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "settings_prefs",
-    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { androidx.datastore.preferences.core.emptyPreferences() },
-)
+private val Context.settingsDataStore: DataStore<Preferences> by preferencesDataStore(name = "settings_prefs")
 
 data class Settings(
-    val isDarkMode: Boolean = false,
+    val isDarkMode: Boolean? = null,
     val language: String = "en",
 )
 
@@ -35,7 +32,7 @@ class SettingsManager @Inject constructor(
 
     val settings: Flow<Settings> = context.settingsDataStore.data.map { prefs ->
         Settings(
-            isDarkMode = prefs[KEY_DARK_MODE] ?: false,
+            isDarkMode = prefs[KEY_DARK_MODE],
             language = prefs[KEY_LANGUAGE] ?: "en",
         )
     }
@@ -52,7 +49,7 @@ class SettingsManager @Inject constructor(
         }
     }
 
-    suspend fun isDarkMode(): Boolean {
-        return context.settingsDataStore.data.first()[KEY_DARK_MODE] ?: false
+    suspend fun isDarkMode(): Boolean? {
+        return context.settingsDataStore.data.first()[KEY_DARK_MODE]
     }
 }

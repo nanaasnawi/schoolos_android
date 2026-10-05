@@ -10,6 +10,10 @@
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
+    <!-- Legacy Storage Permissions (Android 12 and lower / API 32-) -->
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+
     <uses-feature
         android:name="android.hardware.camera"
         android:required="false" />
@@ -34,7 +38,7 @@
             android:value="school_os_announcements_v4" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_icon"
-            android:resource="@drawable/ic_notification" />
+            android:resource="@mipmap/ic_launcher" />
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_color"
             android:resource="@android:color/holo_blue_dark" />
@@ -87,8 +91,7 @@
         <!-- Firebase Cloud Messaging Service for Real-time Background Push -->
         <service
             android:name=".notification.SchoolOsFirebaseMessagingService"
-            android:exported="false"
-            android:directBootAware="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
@@ -97,8 +100,7 @@
         <!-- Fallback polling saat Doze menahan FCM / setelah reboot -->
         <receiver
             android:name=".notification.NotificationPollReceiver"
-            android:exported="false"
-            android:directBootAware="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="com.schoolos.android.ACTION_POLL_NOTIFICATIONS" />
             </intent-filter>
@@ -112,11 +114,9 @@
         </receiver>
         <receiver
             android:name=".notification.BootReceiver"
-            android:exported="false"
-            android:directBootAware="true">
+            android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
-                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>

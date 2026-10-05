@@ -38,6 +38,8 @@ data class InquiryThreadDto(
     @SerialName("last_message_at") val lastMessageAt: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("message_count") val messageCount: Long = 1,
+    @SerialName("student_avatar_url") val studentAvatarUrl: String? = null,
+    @SerialName("teacher_avatar_url") val teacherAvatarUrl: String? = null,
 )
 
 @Serializable

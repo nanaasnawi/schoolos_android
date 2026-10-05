@@ -47,14 +47,16 @@ class AssignmentRepositoryImpl @Inject constructor(
         try {
             val queryClassId = classId.ifBlank { null }
             val response = api.getAssignments(queryClassId)
-            val assignments = response.data?.map { it.dtoToDomain() }
-            if (assignments != null) {
-                if (classId.isBlank() && assignments.isNotEmpty()) {
+            val assignments = response.data?.map { it.dtoToDomain() } ?: emptyList()
+            try {
+                if (classId.isBlank()) {
                     assignmentDao.clearAll()
                 }
-                assignmentDao.insertAll(assignments.map { it.toEntity() })
-                return@runCatching assignments
-            }
+                if (assignments.isNotEmpty()) {
+                    assignmentDao.insertAll(assignments.map { it.toEntity() })
+                }
+            } catch (_: Exception) {}
+            return@runCatching assignments
         } catch (e: Exception) {
             android.util.Log.w("AssignmentRepo", "Remote fetch failed, falling back to cache: ${e.message}")
         }

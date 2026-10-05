@@ -21,6 +21,9 @@ import javax.inject.Inject
 
 data class ProfileUiState(
     val user: User? = null,
+    val username: String = "",
+    val phone: String = "",
+    val about: String = "Ada di SchoolOS",
     val schoolName: String = "",
     val schoolLogoUrl: String? = null,
     val className: String = "",
@@ -30,6 +33,7 @@ data class ProfileUiState(
     val currentLanguage: String = "en",
     val appVersion: String = "",
     val loggingOut: Boolean = false,
+    val qrToken: String = "",
     // Dynamic school contact info fetched from /schools/profile
     val schoolPhone: String? = null,
     val schoolEmail: String? = null,
@@ -63,28 +67,51 @@ class ProfileViewModel @Inject constructor(
         }
         viewModelScope.launch {
             authManager.authState.collect { authState ->
+                val userId = authState.userId ?: ""
+                val tenantId = authState.tenantId ?: ""
+                val identifier = authState.identifier ?: ""
+                val token = if (userId.isNotBlank()) "sch_qr_v1_${userId}_${tenantId.ifBlank { "tenant" }}" else "sch_qr_v1_guest"
+
                 _state.value = _state.value.copy(
                     user = if (authState.isLoggedIn) User(
-                        id = authState.userId ?: "",
+                        id = userId,
                         name = authState.name ?: "",
                         email = authState.email ?: "",
                         role = authState.role ?: "",
                         avatarUrl = authState.avatarUrl,
                     ) else null,
+                    username = identifier.ifBlank { authState.name?.lowercase()?.replace(" ", "_") ?: "user" },
+                    phone = authState.phone ?: "",
+                    about = authState.about?.ifBlank { null } ?: "Ada di SchoolOS",
                     schoolName = authState.schoolName ?: "",
                     schoolLogoUrl = authState.schoolLogoUrl,
                     className = authState.className ?: "",
-                    identifier = authState.identifier ?: "",
+                    identifier = identifier,
                     childName = authState.childName ?: "",
+                    qrToken = if (_state.value.qrToken.startsWith("sch_qr_v1_") && !_state.value.qrToken.contains("_tenant")) _state.value.qrToken else token,
                 )
             }
         }
         viewModelScope.launch {
             if (authManager.isLoggedIn) {
                 authRepository.getCurrentUser()
+                loadQrBadgeToken()
             }
         }
         loadSchoolContactInfo()
+    }
+
+    private fun loadQrBadgeToken() {
+        viewModelScope.launch {
+            if (authManager.isLoggedIn) {
+                authRepository.getMyQrBadge()
+                    .onSuccess { rawToken ->
+                        if (rawToken.isNotBlank()) {
+                            _state.value = _state.value.copy(qrToken = rawToken)
+                        }
+                    }
+            }
+        }
     }
 
     private fun loadSchoolContactInfo() {
@@ -135,6 +162,38 @@ class ProfileViewModel @Inject constructor(
                     isUploadingPhoto.value = false
                     onComplete(false, error.localizedMessage ?: "Gagal mengunggah foto profil.")
                 }
+        }
+    }
+
+    fun updateEditableField(
+        fieldKey: String, // "username", "email", "phone", "about"
+        newValue: String,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            try {
+                val clean = newValue.trim()
+                val currentName = _state.value.user?.name
+
+                val res = when (fieldKey) {
+                    "username" -> authRepository.updateProfile(fullName = currentName, identifier = clean)
+                    "email" -> authRepository.updateProfile(fullName = currentName, email = clean)
+                    "phone" -> authRepository.updateProfile(fullName = currentName, phone = clean)
+                    "about" -> authRepository.updateProfile(fullName = currentName, about = clean)
+                    else -> Result.success(Unit)
+                }
+
+                res.onSuccess {
+                    try {
+                        authRepository.getCurrentUser()
+                    } catch (_: Exception) {}
+                    onComplete(true, null)
+                }.onFailure { err ->
+                    onComplete(false, err.localizedMessage ?: "Gagal memperbarui data di server.")
+                }
+            } catch (e: Exception) {
+                onComplete(false, e.localizedMessage ?: "Gagal memperbarui data.")
+            }
         }
     }
 

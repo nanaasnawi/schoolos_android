@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.notifications
 
+import com.schoolos.android.core.common.BuildConfig
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -735,6 +736,18 @@ private fun ThreadCard(
 
     val contactInitial = contactName.trim().take(1).uppercase().ifBlank { "?" }
 
+    val rawAvatarUrl = if (isTeacherMode) thread.studentAvatarUrl else thread.teacherAvatarUrl
+    val fullAvatarUrl = remember(rawAvatarUrl) {
+        if (!rawAvatarUrl.isNullOrBlank()) {
+            if (rawAvatarUrl.startsWith("http://", ignoreCase = true) || rawAvatarUrl.startsWith("https://", ignoreCase = true)) {
+                rawAvatarUrl
+            } else {
+                val host = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.substringBefore("/api/").trimEnd('/')
+                "$host/${rawAvatarUrl.trimStart('/')}"
+            }
+        } else null
+    }
+
     val avatarGradient = remember(thread.id) {
         val colorIndex = (thread.subjectName.hashCode() and 0x7FFFFFFF) % 4
         when (colorIndex) {
@@ -775,12 +788,23 @@ private fun ThreadCard(
                             .background(Brush.linearGradient(avatarGradient)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(
-                            text = contactInitial,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                        )
+                        if (!fullAvatarUrl.isNullOrBlank()) {
+                            coil.compose.AsyncImage(
+                                model = fullAvatarUrl,
+                                contentDescription = contactName,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                            )
+                        } else {
+                            Text(
+                                text = contactInitial,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                        }
                     }
 
                     if (isWaiting) {

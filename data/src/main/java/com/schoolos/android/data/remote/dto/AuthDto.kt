@@ -76,6 +76,8 @@ data class SchoolPublicInfoResponse(
 data class UserDto(
     val id: String = "",
     val email: String = "",
+    val phone: String? = null,
+    val about: String? = null,
     @SerialName("full_name") val fullName: String = "",
     val role: String = "",
     @SerialName("is_active") val isActive: Boolean = true,
@@ -92,10 +94,26 @@ data class UserDto(
 data class UpdateProfileRequestDto(
     @SerialName("full_name") val fullName: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    val email: String? = null,
+    val phone: String? = null,
+    val identifier: String? = null,
+    val about: String? = null,
 )
 
 @Serializable
 data class UploadAvatarResponse(
     @SerialName("avatar_url") val avatarUrl: String = "",
     val message: String = "",
+)
+
+@Serializable
+data class QrBadgeDto(
+    val id: String = "",
+    @SerialName("raw_token") val rawToken: String = "",
+    @SerialName("user_id") val userId: String = "",
+    @SerialName("tenant_id") val tenantId: String = "",
+    @SerialName("token_type") val tokenType: String = "BADGE",
+    val label: String = "",
+    @SerialName("expires_at") val expiresAt: String? = null,
+    @SerialName("created_at") val createdAt: String = "",
 )

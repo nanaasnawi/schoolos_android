@@ -36,6 +36,7 @@ class AssignmentListViewModel @Inject constructor(
     val state = _state.asStateFlow()
 
     private val classId = ""
+    private var hasLoadedInitialData: Boolean = false
 
     /** Optional subject filter passed via navigation (e.g. from a session detail). */
     private var subjectFilter: String? = savedStateHandle.get<String>("subjectId")?.takeIf { it.isNotBlank() }
@@ -52,16 +53,23 @@ class AssignmentListViewModel @Inject constructor(
         load()
     }
 
-    fun refresh() {
-        _state.value = _state.value.copy(isRefreshing = true)
+    fun refresh(isPullRefresh: Boolean = false) {
+        if (!isPullRefresh && hasLoadedInitialData) return
+        if (isPullRefresh) {
+            _state.value = _state.value.copy(isRefreshing = true)
+        }
         load()
     }
 
     private fun load() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.value = _state.value.copy(
+                isLoading = !hasLoadedInitialData && _state.value.active.isEmpty() && _state.value.dueSoon.isEmpty() && _state.value.completed.isEmpty(),
+                error = null
+            )
             repository.getAssignments(classId)
                 .onSuccess { assignments ->
+                    hasLoadedInitialData = true
                     val filtered = subjectFilter?.let { filter -> assignments.filter { a -> matchesSubject(a.subjectName, filter) } } ?: assignments
                     val grouped = groupAssignments(filtered)
                     _state.value = _state.value.copy(
@@ -74,6 +82,7 @@ class AssignmentListViewModel @Inject constructor(
                     )
                 }
                 .onFailure { e ->
+                    hasLoadedInitialData = true
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,

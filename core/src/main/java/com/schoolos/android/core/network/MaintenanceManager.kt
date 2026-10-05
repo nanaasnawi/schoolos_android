@@ -8,6 +8,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -19,6 +20,7 @@ import javax.inject.Singleton
 @Singleton
 class MaintenanceManager @Inject constructor(
     private val authManager: AuthManager,
+    private val firebaseRtdbManager: com.schoolos.android.core.firebase.FirebaseRealtimeDatabaseManager,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -29,6 +31,18 @@ class MaintenanceManager @Inject constructor(
         "Sistem sedang dalam peningkatan performa server terjadwal. Silakan kembali dalam beberapa menit."
     )
     val maintenanceMessage: StateFlow<String> = _maintenanceMessage.asStateFlow()
+
+    init {
+        scope.launch {
+            firebaseRtdbManager.observeSystemMaintenanceStatus().collect { active ->
+                if (active) {
+                    setMaintenance(true, "Sistem sedang dalam mode pemeliharaan berkala.")
+                } else if (_isMaintenance.value) {
+                    setMaintenance(false)
+                }
+            }
+        }
+    }
 
     fun setMaintenance(active: Boolean, message: String? = null) {
         if (!message.isNullOrBlank()) {

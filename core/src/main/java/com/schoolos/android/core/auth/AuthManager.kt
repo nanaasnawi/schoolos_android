@@ -19,10 +19,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(
-    name = "auth_prefs",
-    corruptionHandler = androidx.datastore.core.handlers.ReplaceFileCorruptionHandler { androidx.datastore.preferences.core.emptyPreferences() },
-)
+private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
 
 fun isParentRole(role: String?): Boolean {
     if (role.isNullOrBlank()) return false
@@ -41,6 +38,12 @@ fun isTeacherRole(role: String?): Boolean {
     )
 }
 
+fun isPrincipalRole(role: String?): Boolean {
+    if (role.isNullOrBlank()) return false
+    val l = role.lowercase()
+    return l.contains("principal") || l.contains("kepala") || l.contains("headmaster") || l.contains("rektor") || l.contains("direktur")
+}
+
 data class AuthState(
     val accessToken: String? = null,
     val refreshToken: String? = null,
@@ -48,6 +51,8 @@ data class AuthState(
     val tenantId: String? = null,
     val name: String? = null,
     val email: String? = null,
+    val phone: String? = null,
+    val about: String? = null,
     val role: String? = null,
     val isLoggedIn: Boolean = false,
     val schoolName: String? = null,
@@ -60,8 +65,9 @@ data class AuthState(
     val avatarUrl: String? = null,
 ) {
     val isParent: Boolean get() = isParentRole(role)
-    val isTeacher: Boolean get() = isTeacherRole(role)
-    val isStudent: Boolean get() = !isParent && !isTeacher
+    val isPrincipal: Boolean get() = isPrincipalRole(role)
+    val isTeacher: Boolean get() = isTeacherRole(role) || isPrincipal
+    val isStudent: Boolean get() = !isParent && !isTeacher && !isPrincipal
 }
 
 @Singleton
@@ -75,6 +81,8 @@ class AuthManager @Inject constructor(
         private val KEY_TENANT_ID = stringPreferencesKey("tenant_id")
         private val KEY_NAME = stringPreferencesKey("user_name")
         private val KEY_EMAIL = stringPreferencesKey("user_email")
+        private val KEY_PHONE = stringPreferencesKey("user_phone")
+        private val KEY_ABOUT = stringPreferencesKey("user_about")
         private val KEY_ROLE = stringPreferencesKey("user_role")
         private val KEY_IDENTIFIER = stringPreferencesKey("user_identifier")
         private val KEY_CLASS_NAME = stringPreferencesKey("user_class_name")
@@ -96,6 +104,8 @@ class AuthManager @Inject constructor(
             tenantId = prefs[KEY_TENANT_ID],
             name = prefs[KEY_NAME],
             email = prefs[KEY_EMAIL],
+            phone = prefs[KEY_PHONE],
+            about = prefs[KEY_ABOUT],
             role = prefs[KEY_ROLE],
             identifier = prefs[KEY_IDENTIFIER],
             className = prefs[KEY_CLASS_NAME],
@@ -139,7 +149,19 @@ class AuthManager @Inject constructor(
 
     fun getAccessTokenSync(): String? = cachedAccessToken
     fun getRefreshTokenSync(): String? = cachedRefreshToken
-    fun getCustomServerUrlSync(): String? = cachedCustomServerUrl
+    fun getCustomServerUrlSync(): String? {
+        val buildConfigUrl = com.schoolos.android.core.common.BuildConfig.API_BASE_URL
+        if (buildConfigUrl.startsWith("https://")) {
+            val saved = cachedCustomServerUrl
+            if (saved != null) {
+                val isLocalIp = saved.contains("192.168.") || saved.contains("10.0.") || saved.contains("127.0.0.1") || saved.contains("10.0.2.2")
+                if (isLocalIp) {
+                    return buildConfigUrl
+                }
+            }
+        }
+        return cachedCustomServerUrl?.ifBlank { null } ?: buildConfigUrl
+    }
 
     fun updateTokensSync(accessToken: String, refreshToken: String) {
         cachedAccessToken = accessToken
@@ -216,6 +238,20 @@ class AuthManager @Inject constructor(
             if (!childName.isNullOrBlank()) prefs[KEY_CHILD_NAME] = childName
             if (!childId.isNullOrBlank()) prefs[KEY_CHILD_ID] = childId
             if (!avatarUrl.isNullOrBlank()) prefs[KEY_AVATAR_URL] = avatarUrl
+        }
+    }
+
+    suspend fun updateUserEditableDetails(
+        email: String? = null,
+        phone: String? = null,
+        identifier: String? = null,
+        about: String? = null,
+    ) {
+        context.dataStore.edit { prefs ->
+            if (email != null) prefs[KEY_EMAIL] = email
+            if (phone != null) prefs[KEY_PHONE] = phone
+            if (identifier != null) prefs[KEY_IDENTIFIER] = identifier
+            if (about != null) prefs[KEY_ABOUT] = about
         }
     }
 

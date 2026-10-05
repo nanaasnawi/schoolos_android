@@ -64,6 +64,8 @@ data class ChatThread(
     val messages: List<ChatMessage> = emptyList(),
     val status: InquiryStatus = InquiryStatus.WAITING_REPLY,
     val lastUpdated: Long = System.currentTimeMillis(),
+    val studentAvatarUrl: String? = null,
+    val teacherAvatarUrl: String? = null,
 ) {
     val lastMessage: ChatMessage? get() = messages.lastOrNull()
     val isAwaitingReply: Boolean get() = status == InquiryStatus.WAITING_REPLY
@@ -75,15 +77,16 @@ class ChatManager @Inject constructor(
     private val apiClient: ApiClient,
     private val networkMonitor: NetworkMonitor,
     private val authManager: AuthManager,
+    private val firebaseRtdbManager: com.schoolos.android.core.firebase.FirebaseRealtimeDatabaseManager,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val api: InquiriesApi by lazy { apiClient.create() }
 
-    // Genuine real-time device network connectivity from Android OS
+    // Genuine real-time device network connectivity & Firebase Realtime Database status
     val isOnline: StateFlow<Boolean> = networkMonitor.isOnline
         .stateIn(scope, SharingStarted.Eagerly, true)
 
-    val isRealtimeConnected: StateFlow<Boolean> get() = isOnline
+    val isRealtimeConnected: StateFlow<Boolean> = firebaseRtdbManager.isConnected
 
     private var cachedAuth: AuthState? = null
     val currentAuth: AuthState? get() = cachedAuth
@@ -343,14 +346,40 @@ class ChatManager @Inject constructor(
                     messages = messages,
                     status = st,
                     lastUpdated = timestamp,
+                    studentAvatarUrl = dto.studentAvatarUrl ?: existing?.studentAvatarUrl,
+                    teacherAvatarUrl = dto.teacherAvatarUrl ?: existing?.teacherAvatarUrl,
                 )
             }
+
+            // Consolidate duplicate threads for the same student + subject / reference
+            val consolidatedThreads = updatedThreads
+                .groupBy { "${it.studentName.trim().lowercase()}_${it.subjectName.trim().lowercase()}_${it.referenceTitle.trim().lowercase()}" }
+                .map { (_, groupThreads) ->
+                    if (groupThreads.size == 1) {
+                        groupThreads.first()
+                    } else {
+                        val sortedByTime = groupThreads.sortedByDescending { it.lastUpdated }
+                        val primary = sortedByTime.first()
+                        val allMessages = groupThreads.flatMap { it.messages }
+                            .distinctBy { "${it.content.trim()}_${it.timestamp}" }
+                            .sortedBy { it.timestamp }
+
+                        val lastMsg = allMessages.lastOrNull()
+                        val latestStatus = if (lastMsg?.isFromTeacher == true) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
+
+                        primary.copy(
+                            messages = allMessages,
+                            status = latestStatus,
+                            lastUpdated = lastMsg?.timestamp ?: primary.lastUpdated
+                        )
+                    }
+                }
 
             // Keep any local threads currently pending server persistence, strictly isolated
             val pendingLocal = _threads.value.filter { it.id !in dbIds }.let { list ->
                 if (auth.isStudent) filterThreadsForUser(list, auth) else list
             }
-            val merged = pendingLocal + updatedThreads
+            val merged = (pendingLocal + consolidatedThreads).sortedByDescending { it.lastUpdated }
             _threads.value = merged
             saveToDisk(merged, auth.userId)
 
@@ -389,6 +418,11 @@ class ChatManager @Inject constructor(
                     }
 
                     val msgs = detail.messages.map { m ->
+                        val isTeacherRole = m.isFromTeacher ||
+                            m.senderRole.equals("TEACHER", ignoreCase = true) ||
+                            m.senderRole.equals("GURU", ignoreCase = true) ||
+                            m.senderRole.equals("PRINCIPAL", ignoreCase = true) ||
+                            m.senderRole.equals("KEPALA_SEKOLAH", ignoreCase = true)
                         ChatMessage(
                             id = m.id,
                             threadId = m.threadId,
@@ -397,7 +431,7 @@ class ChatManager @Inject constructor(
                             senderRole = m.senderRole,
                             content = m.content,
                             timestamp = parseIsoTimestamp(m.createdAt),
-                            isFromTeacher = m.isFromTeacher,
+                            isFromTeacher = isTeacherRole,
                         )
                     }
 
@@ -422,6 +456,8 @@ class ChatManager @Inject constructor(
                                 lastUpdated = parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt),
                                 teacherName = updatedTeacherName,
                                 teacherId = detail.thread.teacherId ?: existing.teacherId,
+                                studentAvatarUrl = detail.thread.studentAvatarUrl ?: existing.studentAvatarUrl,
+                                teacherAvatarUrl = detail.thread.teacherAvatarUrl ?: existing.teacherAvatarUrl,
                             )
                             currentList.toMutableList().apply { set(index, updated) }
                         } else {
@@ -448,11 +484,40 @@ class ChatManager @Inject constructor(
                                     messages = msgs,
                                     status = st,
                                     lastUpdated = timestamp,
+                                    studentAvatarUrl = detail.thread.studentAvatarUrl,
+                                    teacherAvatarUrl = detail.thread.teacherAvatarUrl,
                                 )
                             ) + currentList
                         }
                     }
                     saveToDisk(_threads.value, auth?.userId)
+
+                    // Start real-time Firebase RTDB listener for active thread
+                    launch {
+                        firebaseRtdbManager.observeThreadMessages(threadId).collect { rtdbMsgs ->
+                            if (rtdbMsgs.isNotEmpty()) {
+                                _threads.value = _threads.value.map { th ->
+                                    if (th.id == threadId) {
+                                        val serverMsgIds = rtdbMsgs.map { it.id }.toSet()
+                                        val localPending = th.messages.filter { it.id !in serverMsgIds && it.id.startsWith("temp-") }
+                                        val combinedMsgs = (rtdbMsgs + localPending)
+                                            .distinctBy { "${it.content.trim()}_${it.timestamp}" }
+                                            .sortedBy { it.timestamp }
+
+                                        val lastMsg = combinedMsgs.lastOrNull()
+                                        val updatedStatus = if (lastMsg?.isFromTeacher == true) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
+
+                                        th.copy(
+                                            messages = combinedMsgs,
+                                            status = updatedStatus,
+                                            lastUpdated = lastMsg?.timestamp ?: th.lastUpdated
+                                        )
+                                    } else th
+                                }
+                                saveToDisk(_threads.value, cachedAuth?.userId)
+                            }
+                        }
+                    }
 
                     // Mark as read in server persistence
                     launch {
@@ -529,6 +594,9 @@ class ChatManager @Inject constructor(
         }
         saveToDisk(_threads.value, auth?.userId)
 
+        // Push message to Firebase Realtime Database instantly!
+        firebaseRtdbManager.pushMessage(threadId, localMsg)
+
         // Persist to real database via backend API with idempotent client_message_id
         scope.launch {
             try {
@@ -573,10 +641,7 @@ class ChatManager @Inject constructor(
         referenceId: String? = null,
         initialQuestion: String,
     ): ChatThread {
-        val newThreadId = UUID.randomUUID().toString()
-        val now = System.currentTimeMillis()
         val auth = cachedAuth
-
         val effectiveStudentName = if (!auth?.name.isNullOrBlank()) auth.name!! else studentName
         val effectiveStudentId = if (!auth?.userId.isNullOrBlank()) auth.userId!! else studentId
         val effectiveTeacherName = if (teacherName.isNotBlank() && !teacherName.equals("Guru Pengampu", ignoreCase = true)) {
@@ -584,6 +649,29 @@ class ChatManager @Inject constructor(
         } else {
             "Guru Mata Pelajaran"
         }
+
+        // Reuse existing active thread if student already has a thread for this subject/reference
+        val existingThread = _threads.value.find { thread ->
+            val matchesStudent = (effectiveStudentId.isNotBlank() && thread.studentId == effectiveStudentId) ||
+                (effectiveStudentName.isNotBlank() && thread.studentName.equals(effectiveStudentName, ignoreCase = true))
+            val matchesSubject = thread.subjectName.equals(subjectName, ignoreCase = true) ||
+                thread.referenceTitle.equals(referenceTitle, ignoreCase = true)
+            matchesStudent && matchesSubject
+        }
+
+        if (existingThread != null) {
+            sendMessage(
+                threadId = existingThread.id,
+                senderId = effectiveStudentId,
+                senderName = effectiveStudentName,
+                senderRole = "STUDENT",
+                content = initialQuestion.trim(),
+            )
+            return _threads.value.firstOrNull { it.id == existingThread.id } ?: existingThread
+        }
+
+        val newThreadId = UUID.randomUUID().toString()
+        val now = System.currentTimeMillis()
 
         val initialMsg = ChatMessage(
             id = UUID.randomUUID().toString(),
@@ -613,6 +701,10 @@ class ChatManager @Inject constructor(
 
         _threads.value = listOf(newThread) + _threads.value
         saveToDisk(_threads.value, auth?.userId)
+
+        // Push thread & initial message to Firebase Realtime Database instantly!
+        firebaseRtdbManager.syncThreadMetadata(newThread)
+        firebaseRtdbManager.pushMessage(newThreadId, initialMsg)
 
         // Persist to database
         scope.launch {
