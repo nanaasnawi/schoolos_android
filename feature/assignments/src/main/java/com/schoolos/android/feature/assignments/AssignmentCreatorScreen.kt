@@ -86,6 +86,7 @@ fun AssignmentCreatorScreen(
     var selectedDueDays by remember { mutableStateOf(7) }
     var showPreview by remember { mutableStateOf(false) }
     var showPrePublishReview by remember { mutableStateOf(false) }
+    var showAiGenerateDialog by remember { mutableStateOf(false) }
 
     val totalQuestionPoints = remember(state.questions) {
         state.questions.sumOf { it.points ?: 10 }
@@ -105,6 +106,33 @@ fun AssignmentCreatorScreen(
             onSuccess()
             viewModel.resetState()
         }
+    }
+
+    if (showAiGenerateDialog) {
+        AutoGenerateAssignmentDialog(
+            isOpen = showAiGenerateDialog,
+            onDismiss = { showAiGenerateDialog = false },
+            availableSubjects = state.availableSubjects,
+            currentSubjectName = selectedSubject,
+            isGenerating = state.isGeneratingAi,
+            onGenerate = { format, subId, subName ->
+                viewModel.generateWithAi(
+                    format = format,
+                    subjectId = subId,
+                    subjectName = subName,
+                    onGenerated = { genTitle, genInstructions ->
+                        title = genTitle
+                        instructions = genInstructions
+                        selectedSubject = subName
+                        showAiGenerateDialog = false
+                        Toast.makeText(context, "✓ Berhasil menyusun tugas otomatis!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { err ->
+                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+        )
     }
 
     if (showPrePublishReview) {
@@ -219,6 +247,82 @@ fun AssignmentCreatorScreen(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // ── AI ASSIGNMENT GENERATOR CALLOUT CARD ──
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showAiGenerateDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(
+                    1.dp,
+                    Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF4F46E5)))
+                ),
+                shadowElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFF2563EB), Color(0xFF4F46E5))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "✨ Generate Tugas Otomatis (AI)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Sintesis soal PG, esai & rubrik instan dari materi terbit",
+                                fontSize = 11.sp,
+                                color = Color(0xFF94A3B8),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF1E3A8A).copy(alpha = 0.5f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3B82F6).copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = "Buka AI",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF93C5FD),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
+                    }
+                }
+            }
+
             // ── LIVE STUDENT PREVIEW CARD ──
             AnimatedVisibility(visible = showPreview) {
                 Box(

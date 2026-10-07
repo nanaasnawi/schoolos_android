@@ -195,37 +195,8 @@ class LearningViewModel @Inject constructor(
             isLoadingCompletions.value = true
             repository.getMaterialCompletions(materialId)
                 .onSuccess { completions ->
-                    var mergedCompletions = completions
-                    if (com.schoolos.android.core.auth.isTeacherRole(_state.value.userRole) || com.schoolos.android.core.auth.isPrincipalRole(_state.value.userRole)) {
-                        val className = selectedMaterial.value?.className ?: ""
-                        val classId = selectedMaterial.value?.classId ?: ""
-                        val classStudents = if (classId.isNotBlank()) {
-                            academicRepository.getClassStudents(classId).getOrNull() ?: emptyList()
-                        } else if (className.isNotBlank() && !className.equals("Semua Rombel", ignoreCase = true)) {
-                            academicRepository.getClassStudents(className).getOrNull() ?: emptyList()
-                        } else {
-                            academicRepository.getClassStudents("ALL").getOrNull() ?: emptyList()
-                        }
-                        
-                        if (classStudents.isNotEmpty()) {
-                            val completedIds = completions.map { it.studentId }.toSet()
-                            val uncompleted = classStudents.filter { s -> s.id !in completedIds }.map { s ->
-                                com.schoolos.android.domain.model.MaterialStudentCompletion(
-                                    studentId = s.id,
-                                    studentName = s.fullName,
-                                    nisn = s.nisn,
-                                    gender = s.gender,
-                                    className = s.className,
-                                    isCompleted = false,
-                                    completedAt = null,
-                                    currentPage = 0,
-                                    lastReadAt = null,
-                                )
-                            }
-                            mergedCompletions = completions + uncompleted
-                        }
-                    }
-                    materialCompletions.value = mergedCompletions
+                    // Backend directly returns the class-scoped completions roster without whole-school leakage
+                    materialCompletions.value = completions
                     isLoadingCompletions.value = false
                 }
                 .onFailure {
