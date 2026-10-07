@@ -23,4 +23,7 @@ interface NotificationDao {
 
     @Query("DELETE FROM notifications")
     suspend fun clearAll()
+
+    @Query("SELECT * FROM notifications WHERE id = :id LIMIT 1")
+    suspend fun getNotificationById(id: String): NotificationEntity?
 }

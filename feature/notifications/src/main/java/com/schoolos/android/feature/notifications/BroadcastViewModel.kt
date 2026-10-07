@@ -27,11 +27,13 @@ class BroadcastViewModel @Inject constructor(
         title: String,
         message: String,
         targetStudents: Boolean,
-        targetParents: Boolean
+        targetParents: Boolean,
+        targetTeachers: Boolean = false
     ) {
         val roles = mutableListOf<String>()
         if (targetStudents) roles.add("student")
         if (targetParents) roles.add("parent")
+        if (targetTeachers) roles.add("teacher")
         
         if (roles.isEmpty()) return
 

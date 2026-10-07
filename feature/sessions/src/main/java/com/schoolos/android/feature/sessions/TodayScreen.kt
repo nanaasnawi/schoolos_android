@@ -126,7 +126,7 @@ fun TodayScreen(
 
     PullRefreshContainer(
         isRefreshing = state.isRefreshing,
-        onRefresh = viewModel::refresh,
+        onRefresh = { viewModel.refresh(isPullRefresh = true) },
         modifier = Modifier.fillMaxSize(),
     ) {
         Box(modifier = Modifier.fillMaxSize()) {

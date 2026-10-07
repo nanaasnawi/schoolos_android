@@ -29,6 +29,7 @@ interface QuizRepository {
     suspend fun submitAttempt(quizId: String, attemptId: String, answers: List<AnswerInput>): Result<QuizAttempt>
     suspend fun getQuizAttempts(quizId: String): Result<List<QuizAttempt>>
     suspend fun getQuizAttempt(quizId: String, attemptId: String): Result<QuizAttempt>
+    suspend fun gradeAttempt(quizId: String, attemptId: String, score: Int, feedback: String?): Result<QuizAttempt>
 }
 
 data class ChoiceInput(

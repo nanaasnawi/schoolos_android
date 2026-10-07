@@ -13,6 +13,8 @@ data class Quiz(
     val createdAt: String,
     val updatedAt: String,
     val subjectName: String? = null,
+    val classId: String? = null,
+    val className: String? = null,
     val maxAttempts: Int = 1,
     val studentAttemptStatus: String? = null,
     val studentAttemptsCount: Int = 0,

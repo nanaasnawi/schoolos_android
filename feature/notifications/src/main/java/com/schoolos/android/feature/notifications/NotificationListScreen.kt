@@ -101,7 +101,6 @@ fun NotificationListScreen(
     val child = if (state.childName.isNotBlank()) state.childName else "Anak"
 
     var selectedFilter by remember { mutableStateOf("Semua") }
-    var selectedNotificationForDetail by remember { mutableStateOf<Notification?>(null) }
 
     val filterOptions = listOf("Semua", "Tugas & Kuis", "Nilai Akademik", "Materi & Kelas", "Pengumuman")
 
@@ -264,7 +263,7 @@ fun NotificationListScreen(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .padding(top = 40.dp),
-                                    contentAlignment = Alignment.Center
+                                        contentAlignment = Alignment.Center
                                 ) {
                                     EmptyState(
                                         message = if (selectedFilter != "Semua") "Tidak ada notifikasi dalam kategori $selectedFilter"
@@ -281,7 +280,7 @@ fun NotificationListScreen(
                                     notification = notification,
                                     onClick = {
                                         viewModel.markRead(notification.id)
-                                        selectedNotificationForDetail = notification
+                                        onNotificationClick(notification)
                                     },
                                 )
                             }
@@ -290,18 +289,6 @@ fun NotificationListScreen(
                 }
             }
         }
-    }
-
-    // ── INTERACTIVE NOTIFICATION DETAIL DIALOG ────────────────────────────────
-    selectedNotificationForDetail?.let { notif ->
-        NotificationDetailDialog(
-            notification = notif,
-            onDismiss = { selectedNotificationForDetail = null },
-            onOpenRelated = {
-                selectedNotificationForDetail = null
-                onNotificationClick(notif)
-            }
-        )
     }
 }
 
@@ -504,128 +491,7 @@ private fun CosmicNotificationCard(notification: Notification, onClick: () -> Un
     }
 }
 
-@Composable
-private fun NotificationDetailDialog(
-    notification: Notification,
-    onDismiss: () -> Unit,
-    onOpenRelated: () -> Unit,
-) {
-    val accentColor = colorForType(notification.notificationType)
-    val icon = iconForType(notification.notificationType)
-    val category = labelForType(notification.notificationType)
 
-    Dialog(onDismissRequest = onDismiss) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
-                .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(24.dp))
-                .padding(14.dp)
-        ) {
-            Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(accentColor.copy(alpha = 0.15f))
-                                .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(icon, null, tint = accentColor, modifier = Modifier.size(20.dp))
-                        }
-                        Spacer(Modifier.width(10.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(accentColor.copy(alpha = 0.15f))
-                                .padding(horizontal = 8.dp, vertical = 3.dp)
-                        ) {
-                            Text(category, fontSize = 10.sp, fontWeight = FontWeight.Black, color = accentColor)
-                        }
-                    }
-
-                    IconButton(
-                        onClick = onDismiss,
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(CosmicSurface)
-                    ) {
-                        Icon(Icons.Default.Close, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                Text(
-                    notification.title,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-
-                Spacer(Modifier.height(6.dp))
-
-                Text(
-                    formatFullDate(notification.createdAt),
-                    fontSize = 11.sp,
-                    color = TextTertiary,
-                    fontWeight = FontWeight.Medium
-                )
-
-                Spacer(Modifier.height(14.dp))
-                HorizontalDivider(color = GlassBorder, thickness = 0.8.dp)
-                Spacer(Modifier.height(14.dp))
-
-                Text(
-                    notification.body.ifBlank { "Tidak ada rincian tambahan untuk notifikasi ini." },
-                    fontSize = 13.sp,
-                    color = TextSecondary,
-                    lineHeight = 20.sp
-                )
-
-                Spacer(Modifier.height(24.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CosmicSurface)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
-                            .clickable(onClick = onDismiss)
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Tutup", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    }
-
-                    Spacer(Modifier.width(10.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Brush.horizontalGradient(listOf(StudentNeon, NeonBlue)))
-                            .clickable(onClick = onOpenRelated)
-                            .padding(horizontal = 18.dp, vertical = 10.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Buka Terkait", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                    }
-                }
-            }
-        }
-    }
-}
 
 private fun labelForType(type: String): String = when {
     type.contains("assignment") || type.contains("tugas") -> "TUGAS"
@@ -683,7 +549,7 @@ private fun formatFullDate(iso: String): String {
     return try {
         val instant = Instant.parse(iso)
         val zdt = ZonedDateTime.ofInstant(instant, ZoneId.of("Asia/Jakarta"))
-        zdt.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy • HH:mm 'WIB'", Locale("id", "ID")))
+        zdt.format(DateTimeFormatter.ofPattern("EEEE, dd MMMM yyyy • HH:mm 'WIB'", Locale.forLanguageTag("id-ID")))
     } catch (_: Exception) {
         iso
     }

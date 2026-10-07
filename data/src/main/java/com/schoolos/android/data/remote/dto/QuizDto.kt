@@ -18,6 +18,7 @@ data class QuizDto(
     @SerialName("created_at") val createdAt: String,
     @SerialName("updated_at") val updatedAt: String,
     @SerialName("max_attempts") val maxAttempts: Int = 1,
+    @SerialName("class_id") val classId: String? = null,
     @SerialName("class_name") val className: String? = null,
     @SerialName("subject_name") val subjectName: String? = null,
     @SerialName("teacher_name") val teacherName: String? = null,
@@ -90,3 +91,10 @@ data class SubmitAnswerRequest(
     @SerialName("chosen_choice_id") val chosenChoiceId: String? = null,
     @SerialName("text_answer") val textAnswer: String? = null,
 )
+
+@Serializable
+data class GradeQuizAttemptRequest(
+    val score: Int? = null,
+    val feedback: String? = null,
+)
+
