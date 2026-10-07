@@ -191,7 +191,7 @@ class LearningViewModel @Inject constructor(
             repository.getMaterialCompletions(materialId)
                 .onSuccess { completions ->
                     var mergedCompletions = completions
-                    if (_state.value.userRole.equals("teacher", true) || _state.value.userRole.equals("guru", true) || _state.value.userRole.equals("principal", true)) {
+                    if (com.schoolos.android.core.auth.isTeacherRole(_state.value.userRole) || com.schoolos.android.core.auth.isPrincipalRole(_state.value.userRole)) {
                         val className = selectedMaterial.value?.className ?: ""
                         val classId = selectedMaterial.value?.classId ?: ""
                         val classStudents = if (classId.isNotBlank()) {

@@ -40,7 +40,8 @@ fun GradebookListScreen(
     val state by viewModel.state.collectAsState()
     var selectedFilter by remember { mutableStateOf("Semua Mapel") }
 
-    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
+    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
+    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
 
     val filteredSubjects = remember(state.subjects, selectedFilter) {
         when (selectedFilter) {
@@ -77,8 +78,10 @@ fun GradebookListScreen(
         containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = "Buku Nilai",
-                subtitle = if (isTeacher && state.className.isNotBlank()) "Wali Kelas • Kelas ${state.className}" else "Rekapitulasi Nilai Akademik",
+                title = if (isPrincipal) "Leger Nilai Sekolah" else "Buku Nilai",
+                subtitle = if (isPrincipal) "Monitoring capaian KKM seluruh rombel"
+                    else if (isTeacher && state.className.isNotBlank()) "Wali Kelas • Kelas ${state.className}"
+                    else "Rekapitulasi Nilai Akademik",
                 onBack = onBack,
             )
         }

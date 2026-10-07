@@ -62,8 +62,8 @@ class QuizListViewModel @Inject constructor(
             repository.getQuizzes(classId)
                 .onSuccess { quizzes ->
                     hasLoadedInitialData = true
-                    val role = _state.value.userRole.lowercase()
-                    val isStudent = role != "teacher" && role != "guru"
+                    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(_state.value.userRole) || com.schoolos.android.core.auth.isPrincipalRole(_state.value.userRole)
+                    val isStudent = !isTeacher
 
                     val updatedQuizzes = if (isStudent) {
                         quizzes.map { quiz ->

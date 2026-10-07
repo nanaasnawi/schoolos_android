@@ -76,6 +76,7 @@ import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.StatusChip
+import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
@@ -92,7 +93,8 @@ fun QuizDetailScreen(
     viewModel: QuizDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val isTeacher = isTeacherRole(state.userRole)
+    val isPrincipal = isPrincipalRole(state.userRole)
+    val isTeacher = isTeacherRole(state.userRole) || isPrincipal
     var selectedFilter by remember { mutableStateOf("Semua") }
     var attemptToGrade by remember { mutableStateOf<com.schoolos.android.domain.model.QuizAttempt?>(null) }
 
@@ -122,7 +124,8 @@ fun QuizDetailScreen(
             ExecutiveTopBar(
                 title = state.quiz?.title ?: "Detail Kuis CBT",
                 subtitle = state.quiz?.let {
-                    if (isTeacher) "Mode Guru • Manajemen & Monitoring Kuis"
+                    if (isPrincipal) "Mode Kepala Sekolah • Monitoring Pelaksanaan CBT & Hasil Siswa"
+                    else if (isTeacher) "Mode Guru • Manajemen & Monitoring Kuis"
                     else "Kuis CBT • ${it.subjectName ?: "Evaluasi Mandiri"}"
                 } ?: "Evaluasi Siswa",
                 onBack = onBack,

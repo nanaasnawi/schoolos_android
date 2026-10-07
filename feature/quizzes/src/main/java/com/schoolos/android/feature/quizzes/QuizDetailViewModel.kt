@@ -57,8 +57,8 @@ class QuizDetailViewModel @Inject constructor(
                             quiz.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded")
                     var completedAttempt: QuizAttempt? = null
 
-                    val role = _state.value.userRole.lowercase()
-                    val isStudent = role != "teacher" && role != "guru"
+                    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(_state.value.userRole) || com.schoolos.android.core.auth.isPrincipalRole(_state.value.userRole)
+                    val isStudent = !isTeacher
 
                     var allAttempts: List<QuizAttempt> = emptyList()
 
@@ -72,7 +72,7 @@ class QuizDetailViewModel @Inject constructor(
                                 hasCompleted = true
                             }
                         }
-                    } else if (role == "teacher" || role == "guru" || role == "principal") {
+                    } else if (isTeacher) {
                         val attemptsResult = repository.getQuizAttempts(quizId).getOrNull() ?: emptyList()
                         var mergedAttempts = attemptsResult
                         val className = quiz.className ?: ""

@@ -72,6 +72,8 @@ import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.auth.isPrincipalRole
+import com.schoolos.android.core.auth.isTeacherRole
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -94,8 +96,8 @@ fun TodayScreen(
     val state by viewModel.state.collectAsState()
     val idLocale = remember { Locale("id", "ID") }
 
-    val role = state.userRole.lowercase()
-    val isTeacher = role == "teacher" || role == "guru"
+    val isPrincipal = isPrincipalRole(state.userRole)
+    val isTeacher = isTeacherRole(state.userRole) || isPrincipal
     val accentColor = if (isTeacher) TeacherNeon else StudentNeon
 
     // Generate weekly calendar days (Monday to Saturday, or including Sunday if viewed on Sunday)
@@ -145,8 +147,8 @@ fun TodayScreen(
                     // ── 1. QUIET TOP BAR ─────────────────────────────────────────
                     item {
                         ScreenTopNavigation(
-                            title = if (isTeacher) "Agenda Mengajar" else "Jadwal Pelajaran",
-                            subtitle = if (state.className.isNotBlank()) "Kelas ${state.className}" else null,
+                            title = if (isPrincipal) "Monitoring Agenda Sekolah" else if (isTeacher) "Agenda Mengajar" else "Jadwal Pelajaran",
+                            subtitle = if (isPrincipal) "Pengawasan sesi & tatap muka seluruh kelas" else if (state.className.isNotBlank()) "Kelas ${state.className}" else null,
                             isViewingToday = isViewingToday,
                             onBack = onBack,
                             onJumpToToday = { viewModel.onDateSelected(LocalDate.now()) },

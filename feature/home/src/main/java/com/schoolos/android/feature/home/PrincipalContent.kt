@@ -358,6 +358,63 @@ fun LazyListScope.principalContent(
         }
     }
 
+    // ── 5. MONITORING PENUGASAN & PR SISWA SEKOLAH ────────────────────────────
+    if (teacherAssignments.isNotEmpty()) {
+        item {
+            PrincipalSectionHeader(
+                title = "Monitoring Penugasan & PR Siswa",
+                subtitle = "Rekapitulasi penugasan aktif dari seluruh guru",
+                count = teacherAssignments.size,
+                actionLabel = "Lihat Semua",
+                onActionClick = onNavigateToAssignments,
+            )
+        }
+
+        items(teacherAssignments.take(3), key = { "assign-${it.id}" }) { assignment ->
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .clickable { onNavigateToAssignments() }
+                    .padding(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = assignment.title.ifBlank { "Tugas Siswa" },
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "${assignment.subjectName ?: "Mata Pelajaran"} • ${formatClassName(assignment.className, "Semua Rombel")}",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(14.dp),
+                    )
+                }
+            }
+        }
+    }
+
     item {
         Spacer(Modifier.height(16.dp))
     }

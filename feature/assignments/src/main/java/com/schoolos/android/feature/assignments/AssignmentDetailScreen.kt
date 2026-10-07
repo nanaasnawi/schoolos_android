@@ -96,10 +96,12 @@ fun AssignmentDetailScreen(
             when {
                 state.assignment != null -> {
                     val a = state.assignment!!
-                    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
+                    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
+                    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
                     ExecutiveTopBar(
                         title = a.title,
                         subtitle = when {
+                            isPrincipal -> "Monitoring Penugasan • ${a.subjectName ?: "Mata Pelajaran"}"
                             isTeacher -> "Tugas & Penilaian • ${a.subjectName ?: "Mata Pelajaran"}"
                             else -> "Detail Tugas • ${a.subjectName ?: "Mata Pelajaran"}"
                         },
@@ -136,7 +138,8 @@ fun AssignmentDetailScreen(
                 state.error != null -> ErrorState(message = state.error!!, onRetry = viewModel::load)
                 state.assignment != null -> {
                     val a = state.assignment!!
-                    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
+                    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
+                    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
                     val isParent = com.schoolos.android.core.auth.isParentRole(state.userRole)
 
                     LazyColumn(

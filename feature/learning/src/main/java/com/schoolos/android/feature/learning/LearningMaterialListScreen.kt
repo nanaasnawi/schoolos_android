@@ -46,15 +46,19 @@ fun LearningMaterialListScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val materials = state.materials
-    val role = state.userRole.lowercase()
-    val isTeacher = role in listOf("teacher", "guru")
+    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
+    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
 
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = "Modul Pembelajaran",
-                subtitle = if (isTeacher) "Bahan ajar & modul kelas" else "Bahan bacaan & video",
+                title = if (isPrincipal) "Modul Pembelajaran Sekolah" else "Modul Pembelajaran",
+                subtitle = when {
+                    isPrincipal -> "Pemantauan bahan ajar seluruh guru & rombel"
+                    isTeacher -> "Bahan ajar & modul kelas"
+                    else -> "Bahan bacaan & video"
+                },
                 onBack = onBack,
             )
         },

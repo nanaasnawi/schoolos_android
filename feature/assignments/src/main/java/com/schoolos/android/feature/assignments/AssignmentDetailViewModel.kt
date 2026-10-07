@@ -76,7 +76,7 @@ class AssignmentDetailViewModel @Inject constructor(
 
     private suspend fun loadSubmissions() {
         val auth = authManager.authState.first()
-        val isTeacher = com.schoolos.android.core.auth.isTeacherRole(auth.role)
+        val isTeacher = com.schoolos.android.core.auth.isTeacherRole(auth.role) || com.schoolos.android.core.auth.isPrincipalRole(auth.role)
         val studentId = auth.childId ?: auth.userId ?: ""
         val studentUserId = auth.userId ?: ""
         val studentName = auth.name ?: ""

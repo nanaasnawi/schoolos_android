@@ -36,8 +36,8 @@ fun QuizListScreen(
     viewModel: QuizListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val role = state.userRole.lowercase()
-    val isTeacher = role == "teacher" || role == "guru"
+    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
+    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -65,8 +65,12 @@ fun QuizListScreen(
         containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = "Kuis & Evaluasi",
-                subtitle = if (isTeacher) "Kelola & pantau kuis kelas" else "Kerjakan kuis & pantau hasil belajar",
+                title = if (isPrincipal) "Monitoring Kuis & CBT" else "Kuis & Evaluasi",
+                subtitle = when {
+                    isPrincipal -> "Pemantauan pelaksanaan kuis & ujian CBT sekolah"
+                    isTeacher -> "Kelola & pantau kuis kelas"
+                    else -> "Kerjakan kuis & pantau hasil belajar"
+                },
                 onBack = onBack,
                 actions = {
                     Box(
@@ -77,7 +81,11 @@ fun QuizListScreen(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = if (isTeacher) "GURU" else "SISWA",
+                            text = when {
+                                isPrincipal -> "KEPALA SEKOLAH"
+                                isTeacher -> "GURU"
+                                else -> "SISWA"
+                            },
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isTeacher) TeacherNeon else StudentNeon,

@@ -73,9 +73,10 @@ fun LearningMaterialDetailScreen(
     val material = materialState!!
     val isCompleted = material.isCompleted
 
-    // Role-aware UX: teachers distribute materials, students consume them
+    // Role-aware UX: teachers/principals supervise & monitor materials, students consume them
     val learningState by viewModel.state.collectAsState()
-    val isTeacher = learningState.userRole.lowercase() in listOf("teacher", "guru")
+    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(learningState.userRole)
+    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(learningState.userRole) || isPrincipal
     val materialCompletions by viewModel.materialCompletions.collectAsState()
     val isLoadingCompletions by viewModel.isLoadingCompletions.collectAsState()
 
@@ -88,8 +89,8 @@ fun LearningMaterialDetailScreen(
         containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = "Isi Modul Pembelajaran",
-                subtitle = material.subject,
+                title = if (isPrincipal) "Monitoring Modul Ajar" else "Isi Modul Pembelajaran",
+                subtitle = if (isPrincipal) "Supervisi Keterbacaan • ${material.subject}" else material.subject,
                 onBack = onBack,
                 actions = {
                     Box(
