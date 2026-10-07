@@ -8,6 +8,7 @@ import com.schoolos.android.domain.model.AssignmentChoice
 import com.schoolos.android.domain.model.AssignmentQuestion
 import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.AssignmentRepository
+import com.schoolos.android.domain.repository.CurriculumGeneratorRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,7 @@ import javax.inject.Inject
 
 data class AssignmentCreatorUiState(
     val isLoading: Boolean = false,
+    val isGeneratingAi: Boolean = false,
     val success: Boolean = false,
     val error: String? = null,
     val availableClasses: List<AcademicClass> = emptyList(),
@@ -52,6 +54,7 @@ private fun defaultEssayQuestion(order: Int) = AssignmentQuestion(
 class AssignmentCreatorViewModel @Inject constructor(
     private val repository: AssignmentRepository,
     private val academicRepository: AcademicRepository,
+    private val generatorRepository: CurriculumGeneratorRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AssignmentCreatorUiState())
@@ -59,6 +62,53 @@ class AssignmentCreatorViewModel @Inject constructor(
 
     init {
         loadAcademicData()
+    }
+
+    fun generateWithAi(
+        format: String,
+        subjectId: String,
+        subjectName: String,
+        onGenerated: (title: String, instructions: String) -> Unit,
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isGeneratingAi = true, error = null)
+            val apiType = if (format == "HOMEWORK_PR") "ASSIGNMENT_HOMEWORK" else "ASSIGNMENT_STRUCTURED"
+            generatorRepository.generateCurriculum(
+                type = apiType,
+                subjectId = subjectId,
+                subjectName = subjectName,
+                sourceMode = "LATEST_PUBLISHED"
+            ).onSuccess { result ->
+                val convertedQuestions = result.questions.mapIndexed { idx, q ->
+                    AssignmentQuestion(
+                        id = null,
+                        questionText = q.questionText,
+                        questionType = q.questionType,
+                        points = q.points,
+                        orderIndex = idx + 1,
+                        choices = q.choices.mapIndexed { cIdx, c ->
+                            AssignmentChoice(
+                                id = null,
+                                choiceText = c.choiceText,
+                                isCorrect = c.isCorrect,
+                                orderIndex = cIdx + 1
+                            )
+                        }
+                    )
+                }
+
+                _state.value = _state.value.copy(
+                    isGeneratingAi = false,
+                    assignmentFormat = format,
+                    questions = if (convertedQuestions.isNotEmpty()) convertedQuestions else listOf(defaultMultipleChoiceQuestion(1))
+                )
+                onGenerated(result.title, result.instructions ?: "")
+            }.onFailure { err ->
+                _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
+                onError(err.message ?: "Gagal membuat tugas otomatis")
+            }
+        }
     }
 
     fun loadAcademicData() {

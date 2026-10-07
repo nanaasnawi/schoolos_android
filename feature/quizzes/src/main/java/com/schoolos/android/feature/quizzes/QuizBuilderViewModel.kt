@@ -25,6 +25,7 @@ data class QuestionSummary(
 
 data class QuizBuilderUiState(
     val isLoading: Boolean = false,
+    val isGeneratingAi: Boolean = false,
     val quizCreated: Boolean = false,
     val createdQuizId: String? = null,
     val createdQuizTitle: String = "",
@@ -45,6 +46,7 @@ data class QuizBuilderUiState(
 class QuizBuilderViewModel @Inject constructor(
     private val repository: QuizRepository,
     private val academicRepository: AcademicRepository,
+    private val generatorRepository: com.schoolos.android.domain.repository.CurriculumGeneratorRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(QuizBuilderUiState())
@@ -52,6 +54,94 @@ class QuizBuilderViewModel @Inject constructor(
 
     init {
         loadAcademicData()
+    }
+
+    fun generateQuizWithAi(
+        type: String,
+        subjectId: String,
+        subjectName: String,
+        classId: String?,
+        className: String,
+        onSuccessCallback: () -> Unit = {},
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isGeneratingAi = true, error = null)
+            generatorRepository.generateCurriculum(
+                type = type,
+                subjectId = subjectId,
+                subjectName = subjectName,
+                sourceMode = if (type == "EXAM_MONTHLY") "PAST_MONTH" else "LATEST_PUBLISHED"
+            ).onSuccess { generated ->
+                val totalComputedScore = generated.questions.sumOf { it.points }.let { if (it > 0) it else 100 }
+                repository.createQuiz(
+                    title = generated.title,
+                    description = generated.description ?: "Kuis Otomatis • $subjectName • $className",
+                    classId = classId ?: "",
+                    timeLimitMinutes = generated.timeLimitMinutes,
+                    passingScore = generated.passingScore,
+                    maxScore = totalComputedScore
+                ).onSuccess { createdQuiz ->
+                    val summaries = ArrayList<QuestionSummary>()
+                    for (q in generated.questions) {
+                        val choicesInputs = if (q.questionType == "MULTIPLE_CHOICE") {
+                            q.choices.mapIndexed { idx, c ->
+                                ChoiceInput(
+                                    choiceText = c.choiceText,
+                                    orderIndex = idx + 1,
+                                    isCorrect = c.isCorrect
+                                )
+                            }
+                        } else {
+                            emptyList()
+                        }
+                        val correctIdx = q.choices.indexOfFirst { it.isCorrect }.let { if (it >= 0) it else 0 }
+
+                        repository.addQuestion(
+                            quizId = createdQuiz.id,
+                            questionText = q.questionText,
+                            questionType = if (q.questionType == "MULTIPLE_CHOICE") "multiple_choice" else "essay",
+                            points = q.points,
+                            imageUrl = null,
+                            choices = choicesInputs
+                        )
+
+                        summaries.add(
+                            QuestionSummary(
+                                number = summaries.size + 1,
+                                text = q.questionText,
+                                type = q.questionType,
+                                points = q.points,
+                                choicesCount = q.choices.size,
+                                choices = q.choices.map { it.choiceText },
+                                correctIndex = correctIdx
+                            )
+                        )
+                    }
+
+                    _state.value = _state.value.copy(
+                        isGeneratingAi = false,
+                        quizCreated = true,
+                        createdQuizId = createdQuiz.id,
+                        createdQuizTitle = generated.title,
+                        className = className,
+                        subjectName = subjectName,
+                        timeLimitMinutes = generated.timeLimitMinutes,
+                        passingScore = generated.passingScore,
+                        questionsList = summaries,
+                        totalPoints = summaries.sumOf { it.points },
+                        currentStep = 2
+                    )
+                    onSuccessCallback()
+                }.onFailure { err ->
+                    _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
+                    onError(err.message ?: "Gagal membuat draft kuis di server")
+                }
+            }.onFailure { err ->
+                _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
+                onError(err.message ?: "Gagal memproses soal otomatis")
+            }
+        }
     }
 
     fun loadAcademicData() {

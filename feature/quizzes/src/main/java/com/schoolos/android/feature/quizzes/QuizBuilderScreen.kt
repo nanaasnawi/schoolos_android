@@ -129,6 +129,35 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
     var title by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var selectedDuration by remember { mutableStateOf(30) }
+    var showAiGenerateDialog by remember { mutableStateOf(false) }
+
+    if (showAiGenerateDialog) {
+        AutoGenerateQuizDialog(
+            isOpen = showAiGenerateDialog,
+            onDismiss = { showAiGenerateDialog = false },
+            availableSubjects = state.availableSubjects,
+            availableClasses = state.availableClasses,
+            currentSubjectName = selectedSubject,
+            currentClassName = selectedClass,
+            isGenerating = state.isGeneratingAi,
+            onGenerate = { type, subId, subName, clsId, clsName ->
+                viewModel.generateQuizWithAi(
+                    type = type,
+                    subjectId = subId,
+                    subjectName = subName,
+                    classId = clsId,
+                    className = clsName,
+                    onSuccessCallback = {
+                        showAiGenerateDialog = false
+                        Toast.makeText(context, "✓ Berhasil menyusun paket kuis CBT!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { err ->
+                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
+                    }
+                )
+            }
+        )
+    }
 
     Column(
         modifier = Modifier
@@ -137,6 +166,82 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
+        // ── AI QUIZ GENERATOR CALLOUT CARD ──
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showAiGenerateDialog = true },
+            shape = RoundedCornerShape(16.dp),
+            color = CosmicNavy,
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                Brush.horizontalGradient(listOf(Color(0xFFD97706), Color(0xFFEA580C)))
+            ),
+            shadowElevation = 6.dp
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                Brush.linearGradient(
+                                    listOf(Color(0xFFD97706), Color(0xFFEA580C))
+                                )
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "✨ Generate Kuis / Ujian Otomatis (AI)",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "Generate bank soal CBT otomatis dari materi kurikulum",
+                            fontSize = 11.sp,
+                            color = Color(0xFF94A3B8),
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFF78350F).copy(alpha = 0.5f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD97706).copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        text = "Buka AI",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFFDE68A),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
+                }
+            }
+        }
+
         // ── SASARAN ROMBEL & MAPEL ──
         Box(
             modifier = Modifier

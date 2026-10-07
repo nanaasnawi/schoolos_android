@@ -28,4 +28,5 @@ object DataModule {
     @Provides @Singleton fun provideNotificationRepository(impl: NotificationRepositoryImpl): NotificationRepository = impl
     @Provides @Singleton fun provideLearningMaterialRepository(impl: LearningMaterialRepositoryImpl): LearningMaterialRepository = impl
     @Provides @Singleton fun provideAcademicRepository(impl: AcademicRepositoryImpl): AcademicRepository = impl
+    @Provides @Singleton fun provideCurriculumGeneratorRepository(impl: CurriculumGeneratorRepositoryImpl): CurriculumGeneratorRepository = impl
 }
