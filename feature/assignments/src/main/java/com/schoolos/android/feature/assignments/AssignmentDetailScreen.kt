@@ -233,6 +233,12 @@ fun AssignmentDetailScreen(
             },
         )
     }
+
+    val xpReward by viewModel.xpRewardEvent.collectAsState()
+    com.schoolos.android.core.designsystem.XpCelebrationDialog(
+        reward = xpReward,
+        onDismiss = { viewModel.clearXpReward() },
+    )
 }
 
 // ── ASSIGNMENT INFO STRIP ─────────────────────────────────────────────────────

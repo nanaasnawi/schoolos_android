@@ -975,6 +975,13 @@ fun LearningMaterialDetailScreen(
                 onDismiss = { showCompletionsSheet = false }
             )
         }
+
+        // ── XP CELEBRATION & CONFETTI (Gamifikasi) ──
+        val xpReward by viewModel.xpRewardEvent.collectAsState()
+        XpCelebrationDialog(
+            reward = xpReward,
+            onDismiss = { viewModel.clearXpReward() },
+        )
     }
 }
 

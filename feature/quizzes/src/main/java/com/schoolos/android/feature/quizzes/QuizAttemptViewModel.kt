@@ -41,6 +41,11 @@ class QuizAttemptViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(QuizAttemptUiState())
     val state = _state.asStateFlow()
+    val xpRewardEvent = MutableStateFlow<com.schoolos.android.core.designsystem.XpRewardData?>(null)
+
+    fun clearXpReward() {
+        xpRewardEvent.value = null
+    }
 
     init {
         loadQuestions()
@@ -125,6 +130,17 @@ class QuizAttemptViewModel @Inject constructor(
             repository.submitAttempt(quizId, attemptId, answerInputs)
                 .onSuccess { attempt ->
                     _state.value = _state.value.copy(isSubmitting = false, submitSuccess = true, resultAttempt = attempt)
+
+                    val currentTotal = 250
+                    val level = kotlin.math.floor(kotlin.math.sqrt(currentTotal / 50.0)).toInt() + 1
+                    xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
+                        xpEarned = 100,
+                        newTotalXp = currentTotal,
+                        level = level,
+                        title = "Ujian / Kuis Selesai! 🏆",
+                        description = "Luar biasa! Menyelesaikan evaluasi CBT memberi Anda +100 XP.",
+                        actionType = "COMPLETE_QUIZ",
+                    )
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(isSubmitting = false, submitError = e.message ?: "Failed to submit")

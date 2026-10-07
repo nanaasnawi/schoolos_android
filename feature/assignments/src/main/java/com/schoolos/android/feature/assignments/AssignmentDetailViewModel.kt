@@ -42,6 +42,11 @@ class AssignmentDetailViewModel @Inject constructor(
 
     private val _state = MutableStateFlow(AssignmentDetailUiState())
     val state = _state.asStateFlow()
+    val xpRewardEvent = MutableStateFlow<com.schoolos.android.core.designsystem.XpRewardData?>(null)
+
+    fun clearXpReward() {
+        xpRewardEvent.value = null
+    }
 
     init {
         viewModelScope.launch {
@@ -174,6 +179,17 @@ class AssignmentDetailViewModel @Inject constructor(
                 .onSuccess { submission ->
                     _state.value = _state.value.copy(isSubmitting = false, submitSuccess = true, submission = submission)
                     loadSubmissions()
+
+                    val currentTotal = 150
+                    val level = kotlin.math.floor(kotlin.math.sqrt(currentTotal / 50.0)).toInt() + 1
+                    xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
+                        xpEarned = 50,
+                        newTotalXp = currentTotal,
+                        level = level,
+                        title = "Tugas Berhasil Dikumpulkan! 📝",
+                        description = "Kerja hebat! Pengumpulan tugas mandiri / PR memberi Anda +50 XP.",
+                        actionType = "SUBMIT_ASSIGNMENT",
+                    )
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(isSubmitting = false, submitError = e.message ?: "Failed to submit")
