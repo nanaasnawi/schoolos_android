@@ -142,8 +142,8 @@ class MaterialCreatorViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             _state.value = _state.value.copy(isSearchingYoutube = true, youtubeSearchError = null)
             try {
-                // Gunakan YouTube API Key dari konfigurasi resmi
-                val apiKey = "AIzaSyDOPhowqK1I3toqkpIhCQXUNikPqzd2IZI"
+                // Gunakan YouTube API Key dari local.properties via BuildConfig
+                val apiKey = BuildConfig.YOUTUBE_API_KEY
                 if (apiKey.isBlank()) {
                     _state.value = _state.value.copy(
                         isSearchingYoutube = false,

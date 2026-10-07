@@ -51,6 +51,8 @@ import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.core.designsystem.subjectGradient
 import com.schoolos.android.core.designsystem.subjectIcon
+import com.schoolos.android.core.auth.isPrincipalRole
+import com.schoolos.android.core.auth.isTeacherRole
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -61,8 +63,8 @@ fun GradeDetailScreen(
     val state by viewModel.state.collectAsState()
 
     val detail = state.detail
-    val role = state.userRole.lowercase()
-    val isTeacher = role == "teacher" || role == "guru"
+    val isPrincipal = isPrincipalRole(state.userRole)
+    val isTeacher = isTeacherRole(state.userRole) || isPrincipal
     val subjectName = detail?.summary?.subjectName ?: "Detail Akademik"
 
     Scaffold(
@@ -70,10 +72,22 @@ fun GradeDetailScreen(
         topBar = {
             ExecutiveTopBar(
                 title = subjectName,
-                subtitle = if (isTeacher) "Laporan Nilai • ${DapodikPeriod.getFullPeriodLabel()}" else "Detail Nilai • ${DapodikPeriod.getFullPeriodLabel()}",
+                subtitle = if (isPrincipal) "Leger Nilai & Capaian KKM • ${DapodikPeriod.getFullPeriodLabel()}"
+                    else if (isTeacher) "Laporan Nilai • ${DapodikPeriod.getFullPeriodLabel()}"
+                    else "Detail Nilai • ${DapodikPeriod.getFullPeriodLabel()}",
                 onBack = onBack,
                 actions = {
-                    if (isTeacher) {
+                    if (isPrincipal) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(TeacherNeon.copy(alpha = 0.12f))
+                                .border(0.5.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        ) {
+                            Text("KEPALA SEKOLAH", color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+                    } else if (isTeacher) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))

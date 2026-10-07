@@ -94,7 +94,8 @@ fun AssignmentListScreen(
     }
 
     val isParent  = com.schoolos.android.core.auth.isParentRole(state.userRole)
-    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole)
+    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
+    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
 
     // Tab counts mapping
     val tabCounts = if (isTeacher) {
@@ -117,8 +118,14 @@ fun AssignmentListScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
-                title = if (subjectId.isNotBlank()) "Tugas • $subjectId" else if (isTeacher) "Tugas & Evaluasi" else "Daftar Tugas",
-                subtitle = if (subjectId.isNotBlank()) "Mata Pelajaran Aktif" else if (isTeacher) "Kelola penugasan siswa" else "PR & latihan mandiri",
+                title = if (subjectId.isNotBlank()) "Tugas • $subjectId"
+                    else if (isPrincipal) "Pemantauan Tugas Sekolah"
+                    else if (isTeacher) "Tugas & Evaluasi"
+                    else "Daftar Tugas",
+                subtitle = if (subjectId.isNotBlank()) "Mata Pelajaran Aktif"
+                    else if (isPrincipal) "Rekapitulasi penugasan seluruh guru & rombel"
+                    else if (isTeacher) "Kelola penugasan siswa"
+                    else "PR & latihan mandiri",
                 onBack = onBack,
             )
         },

@@ -52,6 +52,8 @@ import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.auth.isPrincipalRole
+import com.schoolos.android.core.auth.isTeacherRole
 import com.schoolos.android.core.designsystem.subjectGradient
 import com.schoolos.android.core.designsystem.subjectIcon
 
@@ -78,6 +80,7 @@ fun SessionDetailScreen(
     val rawSubject = session?.subjectName ?: session?.notes ?: "Pelajaran"
     val subject = rawSubject.substringBefore(" • ").substringBefore(" (Ruang").trim()
     val roomText = session?.let { listOfNotNull(it.room ?: "Ruang Kelas", it.className).joinToString(" • ") } ?: "Ruang Belajar"
+    val isPrincipal = isPrincipalRole(state.userRole)
 
     Scaffold(
         containerColor = CosmicBlack,
@@ -93,7 +96,7 @@ fun SessionDetailScreen(
         topBar = {
             ExecutiveTopBar(
                 title = subject,
-                subtitle = "Jadwal Pembelajaran • $roomText",
+                subtitle = if (isPrincipal) "Monitoring Sesi • $roomText" else "Jadwal Pembelajaran • $roomText",
                 onBack = onBack,
             )
         }
@@ -112,8 +115,7 @@ fun SessionDetailScreen(
                     val s = session
                     val gradient = subjectGradient(subject)
                     val icon = subjectIcon(subject)
-                    val role = state.userRole.lowercase()
-                    val isTeacher = role == "teacher" || role == "guru"
+                    val isTeacher = isTeacherRole(state.userRole) || isPrincipal
                     val accentColor = if (isTeacher) TeacherNeon else StudentNeon
 
                     // Wrap callbacks to pass the subject name for filtering
