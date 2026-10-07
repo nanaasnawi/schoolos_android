@@ -44,6 +44,7 @@ import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.LibraryBook
 import com.schoolos.android.domain.model.MaterialType
 import androidx.compose.ui.window.Dialog
+import android.content.Intent
 
 private fun queryFileName(context: android.content.Context, uri: Uri): String? {
     var result: String? = null
@@ -174,7 +175,6 @@ fun MaterialCreatorScreen(
                         description = fullDesc.trim(),
                         materialType = selectedType,
                         mediaUrl = mediaUrl.trim().ifBlank { null },
-                        contentBody = if (selectedType == MaterialType.ARTICLE) contentBody.trim() else null,
                         subject = selectedSubject,
                         classId = targetClassId
                     )
@@ -773,6 +773,7 @@ fun MaterialCreatorScreen(
                         accentColor = EmeraldGlow
                     )
 
+                    // Form Judul (Semua tipe butuh ini)
                     StudioTextField(
                         value = title,
                         onValueChange = { title = it },
@@ -782,111 +783,90 @@ fun MaterialCreatorScreen(
                         accentColor = EmeraldGlow
                     )
 
-                    StudioTextField(
-                        value = description,
-                        onValueChange = { description = it },
-                        label = "Deskripsi & Panduan Belajar",
-                        placeholder = "Uraian singkat materi untuk panduan siswa...",
-                        icon = Icons.Default.Notes,
-                        accentColor = EmeraldGlow,
-                        minHeight = 90.dp
-                    )
+                    // Jika PDF tapi dari Buku SIBI, tidak perlu Upload Manual & Deskripsi (Otomatis & Locked)
+                    val isSibiSelected = selectedType == MaterialType.DOCUMENT && selectedBook != null
+
+                    if (!isSibiSelected && selectedType != MaterialType.VIDEO && selectedType != MaterialType.IMAGE && selectedType != MaterialType.ARTICLE) {
+                        StudioTextField(
+                            value = description,
+                            onValueChange = { description = it },
+                            label = "Deskripsi & Panduan Belajar",
+                            placeholder = "Uraian singkat materi untuk panduan siswa...",
+                            icon = Icons.Default.Notes,
+                            accentColor = EmeraldGlow,
+                            minHeight = 90.dp
+                        )
+                    }
 
                     when (selectedType) {
                         MaterialType.DOCUMENT -> {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text(
-                                    "Berkas Dokumen PDF",
-                                    color = TextPrimary,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                if (state.isUploadingFile) {
-                                    UploadingIndicator("Mengunggah dokumen PDF ke server...", EmeraldGlow)
-                                } else if (!state.uploadedFileName.isNullOrBlank() || mediaUrl.isNotBlank()) {
-                                    val displayName = state.uploadedFileName ?: mediaUrl.substringAfterLast("/")
-                                    FileUploadedCard(
-                                        fileName = displayName,
-                                        statusText = "✓ Berkas PDF siap diterbitkan",
-                                        icon = Icons.Default.PictureAsPdf,
-                                        iconTint = Color(0xFFEF4444),
-                                        accentColor = NeonSuccess,
-                                        onReplace = { documentPickerLauncher.launch("application/pdf") }
+                            if (!isSibiSelected) {
+                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text(
+                                        "Berkas Dokumen PDF",
+                                        color = TextPrimary,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold
                                     )
-                                } else {
-                                    FileDropzone(
-                                        label = "Pilih Dokumen PDF dari Perangkat",
-                                        hint = "Sentuh di sini untuk memilih file PDF",
-                                        icon = Icons.Default.UploadFile,
-                                        accentColor = EmeraldGlow,
-                                        onClick = { documentPickerLauncher.launch("application/pdf") }
-                                    )
+                                    if (state.isUploadingFile) {
+                                        UploadingIndicator("Mengunggah dokumen PDF ke server...", EmeraldGlow)
+                                    } else if (!state.uploadedFileName.isNullOrBlank() || mediaUrl.isNotBlank()) {
+                                        val displayName = state.uploadedFileName ?: mediaUrl.substringAfterLast("/")
+                                        FileUploadedCard(
+                                            fileName = displayName,
+                                            statusText = "✓ Berkas PDF siap diterbitkan",
+                                            icon = Icons.Default.PictureAsPdf,
+                                            iconTint = Color(0xFFEF4444),
+                                            accentColor = NeonSuccess,
+                                            onReplace = { documentPickerLauncher.launch("application/pdf") }
+                                        )
+                                    } else {
+                                        FileDropzone(
+                                            label = "Pilih Dokumen PDF dari Perangkat",
+                                            hint = "Atau gunakan Katalog Buku SIBI di atas",
+                                            icon = Icons.Default.UploadFile,
+                                            accentColor = EmeraldGlow,
+                                            onClick = { documentPickerLauncher.launch("application/pdf") }
+                                        )
+                                    }
+                                }
+                            } else {
+                                Surface(
+                                    color = EmeraldGlow.copy(alpha = 0.1f),
+                                    shape = RoundedCornerShape(12.dp),
+                                    border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.5f))
+                                ) {
+                                    Row(modifier = Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.LibraryBooks, contentDescription = null, tint = EmeraldGlow)
+                                        Spacer(Modifier.width(12.dp))
+                                        Column {
+                                            Text("Menggunakan Buku Kurikulum SIBI", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                            Text("Berkas dokumen diatur otomatis dari Pusat Perbukuan.", color = TextSecondary, fontSize = 11.sp)
+                                        }
+                                    }
                                 }
                             }
                         }
                         MaterialType.VIDEO -> {
-                            StudioTextField(
-                                value = mediaUrl,
-                                onValueChange = { mediaUrl = it },
-                                label = "Tautan Video (YouTube / MP4) *",
-                                placeholder = "https://www.youtube.com/watch?v=...",
-                                icon = Icons.Default.Link,
-                                accentColor = EmeraldGlow
+                            YoutubeSearchSection(
+                                viewModel = viewModel,
+                                state = state,
+                                currentMediaUrl = mediaUrl,
+                                onVideoSelected = { video ->
+                                    title = video.title
+                                    mediaUrl = "https://www.youtube.com/watch?v=${video.videoId}"
+                                }
                             )
                         }
-                        MaterialType.IMAGE -> {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("Berkas Gambar / Infografis", color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                                if (state.isUploadingFile) {
-                                    UploadingIndicator("Mengunggah berkas gambar ke server...", EmeraldGlow)
-                                } else if (!state.uploadedFileName.isNullOrBlank() || mediaUrl.isNotBlank()) {
-                                    val displayName = state.uploadedFileName ?: mediaUrl.substringAfterLast("/")
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        FileUploadedCard(
-                                            fileName = displayName,
-                                            statusText = "✓ Gambar siap diterbitkan",
-                                            icon = Icons.Default.Image,
-                                            iconTint = TealAccent,
-                                            accentColor = NeonSuccess,
-                                            onReplace = { imagePickerLauncher.launch("image/*") }
-                                        )
-                                        if (mediaUrl.isNotBlank()) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(160.dp)
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .background(CosmicBlack)
-                                            ) {
-                                                SubcomposeAsyncImage(
-                                                    model = mediaUrl,
-                                                    contentDescription = "Preview",
-                                                    contentScale = ContentScale.Crop,
-                                                    modifier = Modifier.fillMaxSize()
-                                                )
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    FileDropzone(
-                                        label = "Pilih Gambar dari Galeri",
-                                        hint = "Format: JPG, PNG, WEBP (maks. 25MB)",
-                                        icon = Icons.Default.AddPhotoAlternate,
-                                        accentColor = EmeraldGlow,
-                                        onClick = { imagePickerLauncher.launch("image/*") }
-                                    )
-                                }
-                            }
-                        }
-                        MaterialType.ARTICLE -> {
-                            StudioTextField(
-                                value = contentBody,
-                                onValueChange = { contentBody = it },
-                                label = "Isi Teks Artikel Pembelajaran *",
-                                placeholder = "Tuliskan naskah materi lengkap di sini...",
-                                icon = Icons.Default.Edit,
-                                accentColor = EmeraldGlow,
-                                minHeight = 160.dp
+                        MaterialType.IMAGE, MaterialType.ARTICLE -> {
+                            val contentBlocks by viewModel.contentBlocks.collectAsState()
+                            RichBlockEditorSection(
+                                blocks = contentBlocks,
+                                onAddBlock = viewModel::addBlock,
+                                onUpdateBlock = viewModel::updateBlock,
+                                onRemoveBlock = viewModel::removeBlock,
+                                viewModel = viewModel,
+                                materialType = selectedType,
                             )
                         }
                     }
@@ -1729,6 +1709,250 @@ private fun PrePublishMaterialReviewDialog(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun YoutubeSearchSection(
+    viewModel: MaterialCreatorViewModel,
+    state: MaterialCreatorUiState,
+    currentMediaUrl: String,
+    onVideoSelected: (YoutubeVideoResult) -> Unit
+) {
+    var searchQuery by remember { mutableStateOf("") }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        SectionHeader(
+            number = null,
+            title = "Cari Video Pembelajaran di YouTube",
+            subtitle = "Temukan video relevan langsung dari YouTube dan sematkan ke dalam materi",
+            accentColor = NeonBlue
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = { searchQuery = it },
+                modifier = Modifier.weight(1f),
+                placeholder = { Text("Kata Kunci (Mis: Tata Surya SIBI)", color = TextTertiary, fontSize = 12.sp) },
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = NeonBlue,
+                    unfocusedBorderColor = GlassBorder,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
+                ),
+                singleLine = true
+            )
+            Button(
+                onClick = { if (searchQuery.isNotBlank()) viewModel.searchYoutube(searchQuery) },
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = NeonBlue),
+                modifier = Modifier.height(56.dp)
+            ) {
+                Icon(Icons.Default.Search, contentDescription = null, tint = Color.White)
+            }
+        }
+
+        if (state.isSearchingYoutube) {
+            Box(Modifier.fillMaxWidth().height(100.dp), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(color = NeonBlue)
+            }
+        } else if (!state.youtubeSearchError.isNullOrBlank()) {
+            Text(state.youtubeSearchError ?: "", color = NeonError, fontSize = 12.sp)
+        } else if (state.youtubeSearchResults.isNotEmpty()) {
+            androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                items(state.youtubeSearchResults) { video ->
+                    val isSelected = currentMediaUrl.contains(video.videoId)
+                    Card(
+                        modifier = Modifier
+                            .width(200.dp)
+                            .clickable { onVideoSelected(video) }
+                            .border(1.dp, if (isSelected) NeonBlue else Color.Transparent, RoundedCornerShape(12.dp)),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = CosmicNavy)
+                    ) {
+                        Column {
+                            SubcomposeAsyncImage(
+                                model = video.thumbnailUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(110.dp)
+                                    .background(Color.DarkGray)
+                            )
+                            Column(modifier = Modifier.padding(8.dp)) {
+                                Text(
+                                    text = video.title,
+                                    color = TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 2,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(text = video.channelTitle, color = TextSecondary, fontSize = 10.sp, maxLines = 1)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (currentMediaUrl.isNotBlank() && currentMediaUrl.contains("youtube")) {
+            OutlinedTextField(
+                value = currentMediaUrl,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text("Tautan Video Terpilih", fontSize = 12.sp) },
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = GlassBorder,
+                    unfocusedBorderColor = GlassBorder,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
+                ),
+                trailingIcon = { Icon(Icons.Default.CheckCircle, null, tint = EmeraldGlow) }
+            )
+        }
+    }
+}
+
+@Composable
+private fun RichBlockEditorSection(
+    blocks: List<ContentBlock>,
+    onAddBlock: (ContentBlockType) -> Unit,
+    onUpdateBlock: (String, String) -> Unit,
+    onRemoveBlock: (String) -> Unit,
+    viewModel: MaterialCreatorViewModel,
+    materialType: MaterialType
+) {
+    val context = LocalContext.current
+    var activeBlockId by remember { mutableStateOf<String?>(null) }
+
+    val localImagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            val mime = context.contentResolver.getType(it) ?: "image/jpeg"
+            val bytes = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
+            if (bytes != null && activeBlockId != null) {
+                viewModel.uploadFile(bytes, "block_image_${System.currentTimeMillis()}.jpg", mime, onUploaded = { url ->
+                    onUpdateBlock(activeBlockId!!, url)
+                    activeBlockId = null
+                })
+            }
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        SectionHeader(
+            number = null,
+            title = if (materialType == MaterialType.ARTICLE) "Susun Artikel Pembelajaran" else "Susun Infografis",
+            subtitle = "Tambahkan teks dan gambar untuk menyusun materi yang interaktif",
+            accentColor = EmeraldGlow
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            blocks.forEach { block ->
+                Card(
+                    modifier = Modifier.fillMaxWidth().border(1.dp, GlassBorder, RoundedCornerShape(12.dp)),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = CosmicSurface2)
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Chip(label = if (block.type == ContentBlockType.TEXT) "Teks" else "Gambar", color = TextSecondary)
+                            IconButton(onClick = { onRemoveBlock(block.id) }, modifier = Modifier.size(24.dp)) {
+                                Icon(Icons.Default.Close, contentDescription = "Hapus Blok", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        if (block.type == ContentBlockType.TEXT) {
+                            OutlinedTextField(
+                                value = block.content,
+                                onValueChange = { onUpdateBlock(block.id, it) },
+                                modifier = Modifier.fillMaxWidth().heightIn(min = 100.dp),
+                                placeholder = { Text("Tulis konten teks di sini...", color = TextTertiary, fontSize = 12.sp) },
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    focusedBorderColor = EmeraldGlow,
+                                    unfocusedBorderColor = GlassBorder,
+                                    focusedTextColor = TextPrimary,
+                                    unfocusedTextColor = TextPrimary
+                                )
+                            )
+                        } else {
+                            if (block.content.isNotBlank()) {
+                                Box(
+                                    modifier = Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(8.dp)).background(Color.DarkGray),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    SubcomposeAsyncImage(
+                                        model = block.content,
+                                        contentDescription = null,
+                                        modifier = Modifier.fillMaxSize(),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                    IconButton(
+                                        onClick = {
+                                            activeBlockId = block.id
+                                            localImagePickerLauncher.launch("image/*")
+                                        },
+                                        modifier = Modifier.background(Color.Black.copy(alpha=0.5f), CircleShape)
+                                    ) {
+                                        Icon(Icons.Default.Edit, contentDescription = "Ubah Gambar", tint = Color.White)
+                                    }
+                                }
+                            } else {
+                                OutlinedButton(
+                                    onClick = {
+                                        activeBlockId = block.id
+                                        localImagePickerLauncher.launch("image/*")
+                                    },
+                                    modifier = Modifier.fillMaxWidth().height(100.dp),
+                                    shape = RoundedCornerShape(8.dp),
+                                    border = BorderStroke(1.dp, EmeraldGlow)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.Image, contentDescription = null, tint = EmeraldGlow)
+                                        Text("Pilih Gambar", color = EmeraldGlow, fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(
+                onClick = { onAddBlock(ContentBlockType.TEXT) },
+                colors = ButtonDefaults.buttonColors(containerColor = CosmicSurface2),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Tambah Teks", fontSize = 12.sp)
+            }
+            Button(
+                onClick = { onAddBlock(ContentBlockType.IMAGE) },
+                colors = ButtonDefaults.buttonColors(containerColor = CosmicSurface2),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.weight(1f)
+            ) {
+                Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Tambah Gambar", fontSize = 12.sp)
             }
         }
     }
