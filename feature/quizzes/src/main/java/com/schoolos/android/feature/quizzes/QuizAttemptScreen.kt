@@ -101,8 +101,10 @@ fun QuizAttemptScreen(
     val state by viewModel.state.collectAsState()
     var showConfirm by remember { mutableStateOf(false) }
 
+    val xpReward by viewModel.xpRewardEvent.collectAsState()
+
     LaunchedEffect(state.submitSuccess) {
-        if (state.submitSuccess && state.resultAttempt != null) {
+        if (state.submitSuccess && state.resultAttempt != null && xpReward == null) {
             val attempt = state.resultAttempt!!
             onSubmitted(attempt.id, attempt.score ?: 0, attempt.totalPoints)
         }
@@ -447,6 +449,17 @@ fun QuizAttemptScreen(
             shape = RoundedCornerShape(24.dp),
         )
     }
+
+    com.schoolos.android.core.designsystem.XpCelebrationDialog(
+        reward = xpReward,
+        onDismiss = {
+            viewModel.clearXpReward()
+            val attempt = state.resultAttempt
+            if (attempt != null) {
+                onSubmitted(attempt.id, attempt.score ?: 0, attempt.totalPoints)
+            }
+        },
+    )
 }
 
 @Composable

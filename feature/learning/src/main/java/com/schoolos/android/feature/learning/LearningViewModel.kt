@@ -72,6 +72,11 @@ class LearningViewModel @Inject constructor(
     val selectedMaterial = MutableStateFlow<com.schoolos.android.domain.model.LearningMaterial?>(null)
     val materialCompletions = MutableStateFlow<List<com.schoolos.android.domain.model.MaterialStudentCompletion>>(emptyList())
     val isLoadingCompletions = MutableStateFlow(false)
+    val xpRewardEvent = MutableStateFlow<com.schoolos.android.core.designsystem.XpRewardData?>(null)
+
+    fun clearXpReward() {
+        xpRewardEvent.value = null
+    }
 
     init {
         viewModelScope.launch {
@@ -267,6 +272,20 @@ class LearningViewModel @Inject constructor(
                     }
                     filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
                     loadMaterialCompletions(id)
+
+                    if (serverIsCompleted) {
+                        val completedCount = allMaterials.count { it.isCompleted }.coerceAtLeast(1)
+                        val totalXp = completedCount * 25
+                        val level = kotlin.math.floor(kotlin.math.sqrt(totalXp / 50.0)).toInt() + 1
+                        xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
+                            xpEarned = 25,
+                            newTotalXp = totalXp,
+                            level = level,
+                            title = "Materi Selesai Dibaca! 📖",
+                            description = "Hebat! Anda mendapatkan +25 XP dan pemahaman materi Anda semakin mendalam.",
+                            actionType = "READ_MATERIAL",
+                        )
+                    }
                 }
                 .onFailure {
                     // Revert on error
