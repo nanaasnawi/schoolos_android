@@ -103,7 +103,7 @@ fun TeacherCompletionsTrackerCard(
                             color = TextPrimary
                         )
                         Text(
-                            text = if (!className.isNullOrBlank()) "Rombel " else "Daftar Siswa Kelas",
+                            text = if (!className.isNullOrBlank()) "Rombel $className" else "Daftar Siswa Kelas",
                             fontSize = 11.sp,
                             color = TextSecondary
                         )
@@ -118,7 +118,7 @@ fun TeacherCompletionsTrackerCard(
                         .padding(horizontal = 9.dp, vertical = 4.dp)
                 ) {
                     Text(
-                        text = " /  Selesai",
+                        text = "$completedStudents / $totalStudents Selesai",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.ExtraBold,
                         color = if (completedStudents > 0) NeonSuccess else TextSecondary
@@ -139,7 +139,7 @@ fun TeacherCompletionsTrackerCard(
                         color = TextTertiary
                     )
                     Text(
-                        text = "%",
+                        text = "${(progressRatio * 100).toInt()}%",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Black,
                         color = TeacherNeon
@@ -196,7 +196,7 @@ fun TeacherCompletionsTrackerCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = " ()",
+                            text = "$tab ($count)",
                             fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
                             color = if (isSelected) tabColor else TextTertiary,
@@ -290,7 +290,7 @@ fun TeacherCompletionsTrackerCard(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = if (isExpanded) "Sembunyikan Sebagian" else "Tampilkan Semua ( Siswa)",
+                                        text = if (isExpanded) "Sembunyikan Sebagian" else "Tampilkan Semua (${filteredList.size} Siswa)",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = TeacherNeon
@@ -314,7 +314,7 @@ fun TeacherCompletionsTrackerCard(
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Text(
-                                    text = "Roster Lengkap ?",
+                                    text = "Roster Lengkap →",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = NeonBlue
@@ -385,7 +385,12 @@ fun StudentCompletionRow(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "NISN: ",
+                        text = buildString {
+                            append("NISN: ${student.nisn ?: "-"}")
+                            if (!student.className.isNullOrBlank()) {
+                                append(" • ${student.className}")
+                            }
+                        },
                         fontSize = 10.sp,
                         color = TextTertiary
                     )
@@ -422,7 +427,7 @@ fun StudentCompletionRow(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = NeonBlue, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Hal. ", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonBlue)
+                            Text("Hal. ${student.currentPage}", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonBlue)
                         }
                     }
                 }
@@ -507,7 +512,7 @@ fun MaterialCompletionsBottomSheet(
                         color = TextPrimary
                     )
                     Text(
-                        text = " dari  siswa telah menuntaskan materi ini",
+                        text = "$completed dari $total siswa telah menuntaskan materi ini",
                         fontSize = 12.sp,
                         color = TextSecondary
                     )
@@ -565,7 +570,7 @@ fun MaterialCompletionsBottomSheet(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = " ()",
+                            text = "$tab ($count)",
                             fontSize = 10.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             color = if (isSelected) tabColor else TextTertiary,

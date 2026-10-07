@@ -23,12 +23,14 @@ data class QuizDetailUiState(
     val userRole: String = "student",
     val hasCompleted: Boolean = false,
     val completedAttempt: QuizAttempt? = null,
+    val allAttempts: List<QuizAttempt> = emptyList(),
 )
 
 @HiltViewModel
 class QuizDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuizRepository,
+    private val academicRepository: com.schoolos.android.domain.repository.AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
 ) : ViewModel() {
 
@@ -58,6 +60,8 @@ class QuizDetailViewModel @Inject constructor(
                     val role = _state.value.userRole.lowercase()
                     val isStudent = role != "teacher" && role != "guru"
 
+                    var allAttempts: List<QuizAttempt> = emptyList()
+
                     if (isStudent) {
                         val attemptsResult = repository.getQuizAttempts(quizId).getOrNull()
                         if (!attemptsResult.isNullOrEmpty()) {
@@ -68,6 +72,43 @@ class QuizDetailViewModel @Inject constructor(
                                 hasCompleted = true
                             }
                         }
+                    } else if (role == "teacher" || role == "guru" || role == "principal") {
+                        val attemptsResult = repository.getQuizAttempts(quizId).getOrNull() ?: emptyList()
+                        var mergedAttempts = attemptsResult
+                        val className = quiz.className ?: ""
+                        val classId = quiz.classId ?: ""
+                        val classStudents = if (classId.isNotBlank()) {
+                            academicRepository.getClassStudents(classId).getOrNull() ?: emptyList()
+                        } else if (className.isNotBlank() && !className.equals("Semua Rombel", ignoreCase = true)) {
+                            academicRepository.getClassStudents(className).getOrNull() ?: emptyList()
+                        } else {
+                            academicRepository.getClassStudents("ALL").getOrNull() ?: emptyList()
+                        }
+
+                        if (classStudents.isNotEmpty()) {
+                            val submittedStudentIds = attemptsResult.filter { it.status != "unsubmitted" }.flatMap { 
+                                listOfNotNull(it.studentId, it.studentNisn)
+                            }.toSet()
+                            val unsubmittedList = classStudents.filter { s -> s.id !in submittedStudentIds && s.nisn !in submittedStudentIds }.map { s ->
+                                QuizAttempt(
+                                    id = "unsub-${s.id}",
+                                    quizId = quizId,
+                                    studentId = s.id,
+                                    studentName = s.fullName,
+                                    studentNisn = s.nisn,
+                                    startedAt = "",
+                                    completedAt = null,
+                                    status = "unsubmitted",
+                                    score = 0,
+                                    totalPoints = quiz.maxScore,
+                                    createdAt = "",
+                                    updatedAt = "",
+                                    answers = emptyList(),
+                                )
+                            }
+                            mergedAttempts = attemptsResult + unsubmittedList
+                        }
+                        allAttempts = mergedAttempts
                     }
 
                     _state.value = _state.value.copy(
@@ -75,10 +116,23 @@ class QuizDetailViewModel @Inject constructor(
                         quiz = quiz,
                         hasCompleted = hasCompleted,
                         completedAttempt = completedAttempt,
+                        allAttempts = allAttempts,
                     )
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Quiz not found")
+                }
+        }
+    }
+
+    fun gradeAttempt(attemptId: String, score: Int, feedback: String? = null) {
+        viewModelScope.launch {
+            repository.gradeAttempt(quizId, attemptId, score, feedback)
+                .onSuccess {
+                    load()
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(error = e.message ?: "Gagal menilai pengerjaan kuis")
                 }
         }
     }

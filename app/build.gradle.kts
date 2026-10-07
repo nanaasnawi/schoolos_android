@@ -25,7 +25,7 @@ android {
     defaultConfig {
         applicationId = "com.schoolos.android"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 13
         versionName = "1.1.2"
     }
@@ -39,9 +39,11 @@ android {
     buildTypes {
         debug {
             buildConfigField("String", "API_BASE_URL", "\"$devServerUrl\"")
+            buildConfigField("String", "YOUTUBE_API_KEY", "\"${localProps.getProperty("youtube.apiKey", "")}\"")
         }
         release {
             buildConfigField("String", "API_BASE_URL", "\"$prodServerUrl\"")
+            buildConfigField("String", "YOUTUBE_API_KEY", "\"${localProps.getProperty("youtube.apiKey", "")}\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")

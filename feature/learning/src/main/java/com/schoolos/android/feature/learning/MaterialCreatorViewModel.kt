@@ -13,6 +13,31 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import org.json.JSONObject
+import java.util.UUID
+
+enum class ContentBlockType { TEXT, IMAGE }
+
+@Serializable
+data class ContentBlock(
+    val id: String = UUID.randomUUID().toString(),
+    val type: ContentBlockType,
+    var content: String,
+)
+
+data class YoutubeVideoResult(
+    val videoId: String,
+    val title: String,
+    val description: String,
+    val thumbnailUrl: String,
+    val channelTitle: String,
+)
+
 data class MaterialCreatorUiState(
     val isLoading: Boolean = false,
     val isUploadingFile: Boolean = false,
@@ -26,6 +51,11 @@ data class MaterialCreatorUiState(
     val recommendedBooks: List<com.schoolos.android.domain.model.LibraryBook> = emptyList(),
     val isLoadingAcademicData: Boolean = false,
     val isLoadingBooks: Boolean = false,
+    
+    // Youtube Search State
+    val isSearchingYoutube: Boolean = false,
+    val youtubeSearchResults: List<YoutubeVideoResult> = emptyList(),
+    val youtubeSearchError: String? = null,
 )
 
 @HiltViewModel
@@ -34,12 +64,142 @@ class MaterialCreatorViewModel @Inject constructor(
     private val academicRepository: AcademicRepository,
 ) : ViewModel() {
 
+    private val httpClient = OkHttpClient()
+
     private val _state = MutableStateFlow(MaterialCreatorUiState())
     val state = _state.asStateFlow()
 
     init {
         loadAcademicData()
         loadLibraryBooks()
+    }
+
+    val contentBlocks = MutableStateFlow<List<ContentBlock>>(listOf(ContentBlock(type = ContentBlockType.TEXT, content = "")))
+
+    fun addBlock(type: ContentBlockType) {
+        val current = contentBlocks.value.toMutableList()
+        current.add(ContentBlock(type = type, content = ""))
+        contentBlocks.value = current
+    }
+
+    fun updateBlock(id: String, newContent: String) {
+        contentBlocks.value = contentBlocks.value.map {
+            if (it.id == id) it.copy(content = newContent) else it
+        }
+    }
+
+    fun removeBlock(id: String) {
+        val current = contentBlocks.value.toMutableList()
+        current.removeAll { it.id == id }
+        if (current.isEmpty()) {
+            current.add(ContentBlock(type = ContentBlockType.TEXT, content = ""))
+        }
+        contentBlocks.value = current
+    }
+
+    fun addBlockWithContent(type: ContentBlockType, content: String) {
+        val current = contentBlocks.value.toMutableList()
+        current.add(ContentBlock(type = type, content = content))
+        contentBlocks.value = current
+    }
+
+    fun moveBlockUp(id: String) {
+        val list = contentBlocks.value.toMutableList()
+        val index = list.indexOfFirst { it.id == id }
+        if (index > 0) {
+            val item = list.removeAt(index)
+            list.add(index - 1, item)
+            contentBlocks.value = list
+        }
+    }
+
+    fun moveBlockDown(id: String) {
+        val list = contentBlocks.value.toMutableList()
+        val index = list.indexOfFirst { it.id == id }
+        if (index >= 0 && index < list.size - 1) {
+            val item = list.removeAt(index)
+            list.add(index + 1, item)
+            contentBlocks.value = list
+        }
+    }
+
+    private fun unescapeHtml(text: String): String {
+        return text
+            .replace("&quot;", "\"")
+            .replace("&#39;", "'")
+            .replace("&amp;", "&")
+            .replace("&lt;", "<")
+            .replace("&gt;", ">")
+            .replace("&nbsp;", " ")
+    }
+
+    fun searchYoutube(query: String) {
+        val cleanQuery = query.trim()
+        if (cleanQuery.isBlank()) {
+            _state.value = _state.value.copy(youtubeSearchResults = emptyList(), youtubeSearchError = null)
+            return
+        }
+        viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
+            _state.value = _state.value.copy(isSearchingYoutube = true, youtubeSearchError = null)
+            try {
+                // Gunakan YouTube API Key dari konfigurasi resmi
+                val apiKey = "AIzaSyDOPhowqK1I3toqkpIhCQXUNikPqzd2IZI"
+                if (apiKey.isBlank()) {
+                    _state.value = _state.value.copy(
+                        isSearchingYoutube = false,
+                        youtubeSearchError = "YouTube API Key belum dikonfigurasi. Hubungi administrator."
+                    )
+                    return@launch
+                }
+
+                // Batasi pencarian max 10 untuk menghemat kuota API request (Cost saving)
+                val url = "https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${java.net.URLEncoder.encode(cleanQuery, "UTF-8")}&type=video&key=$apiKey"
+                val request = Request.Builder().url(url).get().build()
+                val response = httpClient.newCall(request).execute()
+
+                if (response.isSuccessful) {
+                    val bodyString = response.body?.string() ?: ""
+                    val root = JSONObject(bodyString)
+                    val items = root.optJSONArray("items") ?: org.json.JSONArray()
+                    val results = mutableListOf<YoutubeVideoResult>()
+
+                    for (i in 0 until items.length()) {
+                        val item = items.optJSONObject(i) ?: continue
+                        val snippet = item.optJSONObject("snippet") ?: continue
+                        val idObj = item.optJSONObject("id") ?: continue
+                        val videoId = idObj.optString("videoId")
+                        
+                        if (videoId.isNotBlank()) {
+                            results.add(
+                                YoutubeVideoResult(
+                                    videoId = videoId,
+                                    title = unescapeHtml(snippet.optString("title")),
+                                    description = unescapeHtml(snippet.optString("description")),
+                                    channelTitle = unescapeHtml(snippet.optString("channelTitle")),
+                                    thumbnailUrl = snippet.optJSONObject("thumbnails")?.optJSONObject("medium")?.optString("url")
+                                        ?: snippet.optJSONObject("thumbnails")?.optJSONObject("default")?.optString("url") ?: ""
+                                )
+                            )
+                        }
+                    }
+                    _state.value = _state.value.copy(
+                        isSearchingYoutube = false,
+                        youtubeSearchResults = results,
+                        youtubeSearchError = if (results.isEmpty()) "Tidak ditemukan video untuk kata kunci \"$cleanQuery\"" else null
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        isSearchingYoutube = false,
+                        youtubeSearchError = "Gagal mengambil data dari YouTube (HTTP ${response.code})"
+                    )
+                }
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(
+                    isSearchingYoutube = false,
+                    youtubeSearchError = e.message ?: "Terjadi kesalahan koneksi"
+                )
+            }
+        }
     }
 
     fun updateRecommendation(className: String?, subjectName: String?) {
@@ -105,7 +265,7 @@ class MaterialCreatorViewModel @Inject constructor(
         }
     }
 
-    fun uploadFile(bytes: ByteArray, fileName: String, mimeType: String) {
+    fun uploadFile(bytes: ByteArray, fileName: String, mimeType: String, onUploaded: ((String) -> Unit)? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isUploadingFile = true, error = null)
             repository.uploadMaterialFile(bytes, fileName, mimeType)
@@ -115,6 +275,7 @@ class MaterialCreatorViewModel @Inject constructor(
                         uploadedFileName = fileName,
                         uploadedFileUrl = url,
                     )
+                    onUploaded?.invoke(url)
                 }
                 .onFailure { err ->
                     _state.value = _state.value.copy(
@@ -136,18 +297,29 @@ class MaterialCreatorViewModel @Inject constructor(
         title: String,
         description: String?,
         materialType: MaterialType,
-        contentBody: String?,
         mediaUrl: String?,
         subject: String,
         classId: String?,
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
+            
+            // Serialize content blocks if type is Article or Image(Infografis)
+            val finalContentBody = if (materialType == MaterialType.ARTICLE || materialType == MaterialType.IMAGE) {
+                try {
+                    Json.encodeToString(contentBlocks.value)
+                } catch (_: Exception) {
+                    null
+                }
+            } else {
+                null
+            }
+
             repository.createMaterial(
                 title = title,
                 description = description,
                 materialType = materialType,
-                contentBody = contentBody,
+                contentBody = finalContentBody,
                 mediaUrl = mediaUrl,
                 subject = subject,
                 classId = classId,

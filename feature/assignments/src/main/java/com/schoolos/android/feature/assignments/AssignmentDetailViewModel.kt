@@ -34,6 +34,7 @@ data class AssignmentDetailUiState(
 class AssignmentDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: AssignmentRepository,
+    private val academicRepository: com.schoolos.android.domain.repository.AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
 ) : ViewModel() {
 
@@ -83,6 +84,42 @@ class AssignmentDetailViewModel @Inject constructor(
 
         repository.getSubmissions(assignmentId)
             .onSuccess { submissions ->
+                var mergedSubmissions = submissions
+                if (isTeacher) {
+                    val className = _state.value.assignment?.className ?: ""
+                    val classId = _state.value.assignment?.classId ?: ""
+                    val classStudents = if (classId.isNotBlank()) {
+                        academicRepository.getClassStudents(classId).getOrNull() ?: emptyList()
+                    } else if (className.isNotBlank() && !className.equals("Semua Rombel", ignoreCase = true)) {
+                        academicRepository.getClassStudents(className).getOrNull() ?: emptyList()
+                    } else {
+                        academicRepository.getClassStudents("ALL").getOrNull() ?: emptyList()
+                    }
+                    
+                    if (classStudents.isNotEmpty()) {
+                        val submittedStudentIds = submissions.map { it.studentId }.toSet()
+                        val unsubmittedList = classStudents.filter { s -> s.id !in submittedStudentIds }.map { s ->
+                            AssignmentSubmission(
+                                id = "unsub-${s.id}",
+                                assignmentId = assignmentId,
+                                studentId = s.id,
+                                content = null,
+                                fileUrl = null,
+                                submittedAt = "",
+                                status = "unsubmitted",
+                                score = null,
+                                feedback = null,
+                                gradedAt = null,
+                                gradedBy = null,
+                                studentName = s.fullName,
+                                studentNisn = s.nisn,
+                                studentUserId = s.id,
+                            )
+                        }
+                        mergedSubmissions = submissions + unsubmittedList
+                    }
+                }
+
                 val ownSubmission = if (isTeacher) {
                     null
                 } else {
@@ -96,7 +133,7 @@ class AssignmentDetailViewModel @Inject constructor(
                     } ?: submissions.firstOrNull { it.status != "unsubmitted" }
                 }
                 _state.value = _state.value.copy(
-                    allSubmissions = submissions,
+                    allSubmissions = mergedSubmissions,
                     submission = ownSubmission,
                 )
             }

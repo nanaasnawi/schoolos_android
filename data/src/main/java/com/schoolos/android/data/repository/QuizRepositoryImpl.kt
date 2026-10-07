@@ -269,4 +269,25 @@ class QuizRepositoryImpl @Inject constructor(
         val response = api.getQuizAttempt(quizId, attemptId)
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal memuat hasil kuis.")
     }
+
+    override suspend fun gradeAttempt(
+        quizId: String,
+        attemptId: String,
+        score: Int,
+        feedback: String?,
+    ): Result<QuizAttempt> = try {
+        val response = api.gradeQuizAttempt(
+            quizId = quizId,
+            attemptId = attemptId,
+            request = com.schoolos.android.data.remote.dto.GradeQuizAttemptRequest(
+                score = score,
+                feedback = feedback,
+            ),
+        )
+        val domain = response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal menilai pengerjaan kuis.")
+        Result.success(domain)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal menilai pengerjaan kuis."))
+    }
 }
+

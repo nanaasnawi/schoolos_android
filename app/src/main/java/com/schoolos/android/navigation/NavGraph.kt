@@ -29,6 +29,7 @@ import com.schoolos.android.feature.home.StudentDetailScreen
 import com.schoolos.android.feature.learning.LearningMaterialDetailScreen
 import com.schoolos.android.feature.learning.LearningMaterialListScreen
 import com.schoolos.android.feature.notifications.BroadcastCenterScreen
+import com.schoolos.android.feature.notifications.NotificationDetailScreen
 import com.schoolos.android.feature.notifications.NotificationListScreen
 import com.schoolos.android.feature.profile.AboutAppScreen
 import com.schoolos.android.feature.profile.NotificationSettingsScreen
@@ -163,7 +164,7 @@ fun NavGraph(
             composable(Screen.Auth.route) {
                 LoginScreen(onLoginSuccess = {
                     navController.navigate(Screen.Home.route) {
-                        popUpTo(Screen.Auth.route) { this.inclusive = true }
+                        popUpTo(Screen.Auth.route) { inclusive = true }
                     }
                 })
             }
@@ -422,8 +423,52 @@ fun NavGraph(
                 NotificationListScreen(
                     onBack = if (isParent) null else { { navController.popBackStack() } },
                     onNotificationClick = { notification ->
-                        NotificationDeepLink.navigate(notification.referenceType, notification.referenceId, navController)
+                        navController.navigate(
+                            Screen.NotificationDetail.createRoute(
+                                id = notification.id,
+                                title = notification.title,
+                                body = notification.body,
+                                type = notification.notificationType,
+                                createdAt = notification.createdAt,
+                                referenceType = notification.referenceType ?: "",
+                                referenceId = notification.referenceId ?: ""
+                            )
+                        )
                     },
+                )
+            }
+            composable(
+                route = Screen.NotificationDetail.route,
+                arguments = listOf(
+                    navArgument("id") { type = NavType.StringType },
+                    navArgument("title") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("body") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("type") { type = NavType.StringType; defaultValue = "PENGUMUMAN" },
+                    navArgument("createdAt") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("referenceType") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("referenceId") { type = NavType.StringType; defaultValue = "" },
+                ),
+            ) { backStackEntry ->
+                val id = backStackEntry.arguments?.getString("id") ?: ""
+                val title = backStackEntry.arguments?.getString("title") ?: ""
+                val body = backStackEntry.arguments?.getString("body") ?: ""
+                val type = backStackEntry.arguments?.getString("type") ?: "PENGUMUMAN"
+                val createdAt = backStackEntry.arguments?.getString("createdAt") ?: ""
+                val referenceType = backStackEntry.arguments?.getString("referenceType") ?: ""
+                val referenceId = backStackEntry.arguments?.getString("referenceId") ?: ""
+
+                NotificationDetailScreen(
+                    id = id,
+                    initialTitle = title,
+                    initialBody = body,
+                    initialType = type,
+                    initialCreatedAt = createdAt,
+                    initialReferenceType = referenceType,
+                    initialReferenceId = referenceId,
+                    onBack = { navController.popBackStack() },
+                    onOpenRelated = { refType, refId ->
+                        NotificationDeepLink.navigate(refType, refId, navController)
+                    }
                 )
             }
 
@@ -487,7 +532,7 @@ fun NavGraph(
                         scope.launch {
                             authManager.clearSession()
                             navController.navigate(Screen.Auth.route) {
-                                popUpTo(0) { this.inclusive = true }
+                                popUpTo(0) { inclusive = true }
                             }
                         }
                     },

@@ -108,5 +108,60 @@ class NotificationRepositoryImpl @Inject constructor(
         title: String,
         body: String,
         targetRoles: List<String>
-    ): Result<Unit> = Result.success(Unit)
+    ): Result<Unit> = runCatching {
+        val targets = mutableListOf<String>()
+        if (targetRoles.contains("student")) targets.add("STUDENT")
+        if (targetRoles.contains("teacher")) targets.add("TEACHER")
+        if (targetRoles.contains("parent")) targets.add("GUARDIAN")
+
+        val target = if (targets.size == 3 || targets.isEmpty()) {
+            "TARGET_ALL"
+        } else {
+            targets.joinToString(",")
+        }
+
+        val auth = authManager.authState.first()
+        val authorName = auth.name?.takeIf { it.isNotBlank() }
+        val authorRole = when {
+            auth.isPrincipal -> "Kepala Sekolah"
+            auth.isTeacher -> "Guru Pengampu"
+            else -> "Pihak Sekolah"
+        }
+        val authorDisplay = if (authorName != null) "$authorName ($authorRole)" else authorRole
+
+        api.createAnnouncement(
+            com.schoolos.android.data.remote.CreateAnnouncementRequest(
+                title = title,
+                content = body,
+                category = "PENGUMUMAN",
+                target = target,
+                author = authorDisplay,
+                isPinned = false,
+                sendPush = true
+            )
+        )
+    }
+
+    override suspend fun getNotificationById(id: String): Result<Notification?> = runCatching {
+        val entity = notificationDao.getNotificationById(id)
+        entity?.entityToDomain()
+    }
+
+    override suspend fun getAnnouncementDetail(id: String): Result<com.schoolos.android.domain.model.AnnouncementDetail?> = runCatching {
+        try {
+            val res = api.getAnnouncementById(id)
+            res.data?.let {
+                com.schoolos.android.domain.model.AnnouncementDetail(
+                    id = it.id,
+                    title = it.title,
+                    content = it.content,
+                    category = it.category,
+                    author = it.author,
+                    date = it.date.ifBlank { it.createdAt }
+                )
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
 }

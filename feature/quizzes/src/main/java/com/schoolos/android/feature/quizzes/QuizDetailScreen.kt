@@ -28,16 +28,26 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
 import com.schoolos.android.core.common.formatPublishTimestamp
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -83,12 +93,27 @@ fun QuizDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val isTeacher = isTeacherRole(state.userRole)
+    var selectedFilter by remember { mutableStateOf("Semua") }
+    var attemptToGrade by remember { mutableStateOf<com.schoolos.android.domain.model.QuizAttempt?>(null) }
 
     LaunchedEffect(state.attempt) {
         state.attempt?.let { attempt ->
             viewModel.dismissAttempt()
             onAttemptStarted(attempt.id)
         }
+    }
+
+    if (attemptToGrade != null) {
+        val attempt = attemptToGrade!!
+        TeacherGradeQuizDialog(
+            attempt = attempt,
+            maxScore = state.quiz?.maxScore ?: attempt.totalPoints.takeIf { it > 0 } ?: 100,
+            onDismiss = { attemptToGrade = null },
+            onConfirm = { score, feedback ->
+                viewModel.gradeAttempt(attempt.id, score, feedback)
+                attemptToGrade = null
+            }
+        )
     }
 
     Scaffold(
@@ -360,6 +385,263 @@ fun QuizDetailScreen(
                                         color = if (isDraft) TextPrimary else CosmicBlack,
                                         letterSpacing = 0.5.sp
                                     )
+                                }
+                            }
+
+                            Spacer(Modifier.height(24.dp))
+                            
+                            if (state.allAttempts.isNotEmpty()) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column {
+                                        Text(
+                                            "Monitoring & Koreksi Ujian",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary
+                                        )
+                                        Text(
+                                            "Pantau pengerjaan siswa secara realtime dan beri nilai",
+                                            fontSize = 11.sp,
+                                            color = TextTertiary
+                                        )
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(TeacherNeon.copy(alpha = 0.15f))
+                                            .border(1.dp, TeacherNeon.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            "● Realtime",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = TeacherNeon
+                                        )
+                                    }
+                                }
+                                
+                                val totalSiswa = state.allAttempts.size
+                                val inProgressCount = state.allAttempts.count { it.status == "in_progress" }
+                                val completedCount = state.allAttempts.count { it.status in listOf("completed", "submitted", "graded") }
+                                val unsubmittedCount = state.allAttempts.count { it.status == "unsubmitted" }
+                                val progressPct = if (totalSiswa > 0) completedCount.toFloat() / totalSiswa else 0f
+                                
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "${(progressPct * 100).toInt()}% Selesai ($completedCount/$totalSiswa)",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium,
+                                        color = TextSecondary,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    androidx.compose.material3.LinearProgressIndicator(
+                                        progress = { progressPct },
+                                        modifier = Modifier.width(120.dp).height(6.dp).clip(RoundedCornerShape(3.dp)),
+                                        color = TeacherNeon,
+                                        trackColor = CosmicSurface2
+                                    )
+                                }
+
+                                // Segmented Filter Tabs
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 14.dp),
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    listOf(
+                                        "Semua" to totalSiswa,
+                                        "Sedang Ujian" to inProgressCount,
+                                        "Selesai" to completedCount,
+                                        "Belum" to unsubmittedCount,
+                                    ).forEach { (tab, count) ->
+                                        val isSelected = selectedFilter == tab
+                                        val tabColor = when (tab) {
+                                            "Sedang Ujian" -> NeonBlue
+                                            "Selesai" -> NeonSuccess
+                                            "Belum" -> TextSecondary
+                                            else -> TeacherNeon
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(10.dp))
+                                                .background(if (isSelected) tabColor.copy(alpha = 0.16f) else CosmicSurface2)
+                                                .border(1.dp, if (isSelected) tabColor.copy(alpha = 0.5f) else GlassBorder, RoundedCornerShape(10.dp))
+                                                .clickable { selectedFilter = tab }
+                                                .padding(vertical = 7.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(
+                                                text = "$tab ($count)",
+                                                fontSize = 10.sp,
+                                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                                color = if (isSelected) tabColor else TextTertiary,
+                                                maxLines = 1
+                                            )
+                                        }
+                                    }
+                                }
+
+                                val filteredAttempts = state.allAttempts.filter { attempt ->
+                                    when (selectedFilter) {
+                                        "Sedang Ujian" -> attempt.status == "in_progress"
+                                        "Selesai" -> attempt.status in listOf("completed", "submitted", "graded")
+                                        "Belum" -> attempt.status == "unsubmitted"
+                                        else -> true
+                                    }
+                                }.sortedWith(
+                                    compareByDescending<com.schoolos.android.domain.model.QuizAttempt> { it.status == "in_progress" }
+                                        .thenByDescending { it.status in listOf("completed", "submitted", "graded") }
+                                        .thenByDescending { it.score }
+                                )
+                                
+                                if (filteredAttempts.isEmpty()) {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(CosmicSurface2)
+                                            .padding(16.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            "Tidak ada siswa dalam kategori ini.",
+                                            fontSize = 12.sp,
+                                            color = TextTertiary
+                                        )
+                                    }
+                                } else {
+                                    filteredAttempts.forEach { attempt ->
+                                        val isDone = attempt.status in listOf("completed", "submitted", "graded")
+                                        val isInProgress = attempt.status == "in_progress"
+                                        val canGrade = attempt.status != "unsubmitted"
+                                        
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .padding(bottom = 8.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(CosmicSurface2)
+                                                .border(
+                                                    1.dp,
+                                                    if (isInProgress) NeonBlue.copy(alpha = 0.4f) else GlassBorder,
+                                                    RoundedCornerShape(12.dp)
+                                                )
+                                                .clickable(enabled = canGrade) {
+                                                    attemptToGrade = attempt
+                                                }
+                                                .padding(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            // Avatar circle
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(36.dp)
+                                                    .clip(CircleShape)
+                                                    .background(
+                                                        if (isInProgress) Brush.linearGradient(listOf(NeonBlue, TeacherNeon))
+                                                        else if (isDone) Brush.linearGradient(listOf(NeonSuccess, NeonBlue))
+                                                        else Brush.linearGradient(listOf(CosmicSurface, CosmicSurface2))
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Text(
+                                                    text = attempt.studentName?.firstOrNull()?.toString()?.uppercase() ?: "?",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    color = Color.White
+                                                )
+                                            }
+
+                                            Spacer(Modifier.width(10.dp))
+
+                                            Column(modifier = Modifier.weight(1f)) {
+                                                Text(
+                                                    attempt.studentName ?: "Siswa Tidak Diketahui",
+                                                    fontSize = 13.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = TextPrimary
+                                                )
+                                                Text(
+                                                    "NISN: ${attempt.studentNisn ?: "-"}",
+                                                    fontSize = 10.sp,
+                                                    color = TextTertiary
+                                                )
+                                            }
+
+                                            Spacer(Modifier.width(8.dp))
+
+                                            // Status / Action
+                                            when {
+                                                isInProgress -> {
+                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .clip(RoundedCornerShape(8.dp))
+                                                                .background(NeonBlue.copy(alpha = 0.15f))
+                                                                .border(1.dp, NeonBlue.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                        ) {
+                                                            Text(
+                                                                "Sedang Ujian ⏳",
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = NeonBlue
+                                                            )
+                                                        }
+                                                        Spacer(Modifier.width(6.dp))
+                                                        Button(
+                                                            onClick = { attemptToGrade = attempt },
+                                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                            shape = RoundedCornerShape(8.dp),
+                                                            colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon.copy(alpha = 0.2f)),
+                                                            modifier = Modifier.height(28.dp)
+                                                        ) {
+                                                            Text("Koreksi", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TeacherNeon)
+                                                        }
+                                                    }
+                                                }
+                                                isDone -> {
+                                                    Column(horizontalAlignment = Alignment.End) {
+                                                        Text(
+                                                            "${attempt.score} / ${attempt.totalPoints}",
+                                                            fontSize = 14.sp,
+                                                            fontWeight = FontWeight.ExtraBold,
+                                                            color = NeonSuccess
+                                                        )
+                                                        Text(
+                                                            if (attempt.status == "graded") "Sudah Dinilai" else "Perlu Dinilai",
+                                                            fontSize = 9.sp,
+                                                            color = if (attempt.status == "graded") NeonSuccess else NeonWarning
+                                                        )
+                                                    }
+                                                }
+                                                else -> {
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(8.dp))
+                                                            .background(CosmicSurface)
+                                                            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                                                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    ) {
+                                                        Text(
+                                                            "Belum Mulai",
+                                                            fontSize = 10.sp,
+                                                            fontWeight = FontWeight.Medium,
+                                                            color = TextTertiary
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         } else {
@@ -722,3 +1004,142 @@ private fun RuleBulletItem(text: String) {
         )
     }
 }
+
+@Composable
+fun TeacherGradeQuizDialog(
+    attempt: com.schoolos.android.domain.model.QuizAttempt,
+    maxScore: Int,
+    onDismiss: () -> Unit,
+    onConfirm: (score: Int, feedback: String?) -> Unit,
+) {
+    var scoreText by remember { mutableStateOf(attempt.score.toString()) }
+    var feedbackText by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf<String?>(null) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        containerColor = CosmicNavy,
+        shape = RoundedCornerShape(18.dp),
+        title = {
+            Column {
+                Text(
+                    text = "Koreksi Hasil Ujian",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                Text(
+                    text = "${attempt.studentName ?: "Siswa"} (NISN: ${attempt.studentNisn ?: "-"})",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                if (attempt.status == "in_progress") {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(NeonBlue.copy(alpha = 0.12f))
+                            .border(1.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            "Status: Siswa sedang mengerjakan ujian. Anda dapat menetapkan nilai akhir secara langsung.",
+                            fontSize = 11.sp,
+                            color = NeonBlue
+                        )
+                    }
+                }
+
+                Column {
+                    Text(
+                        text = "Nilai Skor (Maksimal: $maxScore)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = scoreText,
+                        onValueChange = {
+                            if (it.all { ch -> ch.isDigit() }) {
+                                scoreText = it
+                                errorMessage = null
+                            }
+                        },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = CosmicSurface2,
+                            unfocusedContainerColor = CosmicSurface2,
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (errorMessage != null) {
+                        Text(
+                            text = errorMessage!!,
+                            fontSize = 10.sp,
+                            color = NeonError,
+                            modifier = Modifier.padding(top = 4.dp)
+                        )
+                    }
+                }
+
+                Column {
+                    Text(
+                        text = "Catatan / Umpan Balik Guru (Opsional)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextSecondary
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    OutlinedTextField(
+                        value = feedbackText,
+                        onValueChange = { feedbackText = it },
+                        placeholder = { Text("Tulis umpan balik untuk siswa...", fontSize = 12.sp, color = TextTertiary) },
+                        minLines = 2,
+                        maxLines = 4,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = CosmicSurface2,
+                            unfocusedContainerColor = CosmicSurface2,
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val parsed = scoreText.toIntOrNull()
+                    if (parsed == null || parsed < 0 || parsed > maxScore) {
+                        errorMessage = "Masukkan skor valid antara 0 dan $maxScore"
+                    } else {
+                        onConfirm(parsed, feedbackText.takeIf { it.isNotBlank() })
+                    }
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text("Simpan Nilai", color = CosmicBlack, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal", color = TextTertiary, fontSize = 12.sp)
+            }
+        }
+    )
+}
+

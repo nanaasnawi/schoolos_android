@@ -15,4 +15,6 @@ interface NotificationRepository {
         body: String,
         targetRoles: List<String>
     ): Result<Unit>
+    suspend fun getNotificationById(id: String): Result<Notification?>
+    suspend fun getAnnouncementDetail(id: String): Result<com.schoolos.android.domain.model.AnnouncementDetail?>
 }

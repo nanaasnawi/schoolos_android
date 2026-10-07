@@ -56,6 +56,7 @@ data class LearningUiState(
 class LearningViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: LearningMaterialRepository,
+    private val academicRepository: com.schoolos.android.domain.repository.AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
 ) : ViewModel() {
 
@@ -189,7 +190,37 @@ class LearningViewModel @Inject constructor(
             isLoadingCompletions.value = true
             repository.getMaterialCompletions(materialId)
                 .onSuccess { completions ->
-                    materialCompletions.value = completions
+                    var mergedCompletions = completions
+                    if (_state.value.userRole.equals("teacher", true) || _state.value.userRole.equals("guru", true) || _state.value.userRole.equals("principal", true)) {
+                        val className = selectedMaterial.value?.className ?: ""
+                        val classId = selectedMaterial.value?.classId ?: ""
+                        val classStudents = if (classId.isNotBlank()) {
+                            academicRepository.getClassStudents(classId).getOrNull() ?: emptyList()
+                        } else if (className.isNotBlank() && !className.equals("Semua Rombel", ignoreCase = true)) {
+                            academicRepository.getClassStudents(className).getOrNull() ?: emptyList()
+                        } else {
+                            academicRepository.getClassStudents("ALL").getOrNull() ?: emptyList()
+                        }
+                        
+                        if (classStudents.isNotEmpty()) {
+                            val completedIds = completions.map { it.studentId }.toSet()
+                            val uncompleted = classStudents.filter { s -> s.id !in completedIds }.map { s ->
+                                com.schoolos.android.domain.model.MaterialStudentCompletion(
+                                    studentId = s.id,
+                                    studentName = s.fullName,
+                                    nisn = s.nisn,
+                                    gender = s.gender,
+                                    className = s.className,
+                                    isCompleted = false,
+                                    completedAt = null,
+                                    currentPage = 0,
+                                    lastReadAt = null,
+                                )
+                            }
+                            mergedCompletions = completions + uncompleted
+                        }
+                    }
+                    materialCompletions.value = mergedCompletions
                     isLoadingCompletions.value = false
                 }
                 .onFailure {

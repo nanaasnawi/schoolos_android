@@ -20,7 +20,7 @@ interface SchoolOsApi {
     suspend fun changePassword(@Body request: ChangePasswordRequestDto): ApiResponse<Map<String, String>>
 
     @PUT("auth/profile")
-    suspend fun updateProfile(@Body request: UpdateProfileRequestDto): ApiResponse<Map<String, String>>
+    suspend fun updateProfile(@Body request: UpdateProfileRequestDto): ApiResponse<UpdateProfileResponseDto>
 
     @Multipart
     @POST("auth/avatar")
@@ -140,6 +140,14 @@ interface SchoolOsApi {
         @Header("X-Idempotency-Key") idempotencyKey: String? = null,
     ): ApiResponse<QuizAttemptDto>
 
+    @POST("learning/quizzes/{id}/attempts/{attempt_id}/grade")
+    suspend fun gradeQuizAttempt(
+        @Path("id") quizId: String,
+        @Path("attempt_id") attemptId: String,
+        @Body request: GradeQuizAttemptRequest,
+    ): ApiResponse<QuizAttemptDto>
+
+
     // Sessions
     @GET("learning/sessions")
     suspend fun getSessions(@Query("class_id") classId: String? = null): ApiResponse<List<LearningSessionDto>>
@@ -251,7 +259,43 @@ interface SchoolOsApi {
 
     @PATCH("notifications/read-all")
     suspend fun markAllNotificationsRead(): ApiResponse<Unit>
+
+    @POST("announcements")
+    suspend fun createAnnouncement(@Body request: CreateAnnouncementRequest): ApiResponse<CreateAnnouncementResponse>
+
+    @GET("announcements/{id}")
+    suspend fun getAnnouncementById(@Path("id") id: String): ApiResponse<AnnouncementDto>
 }
+
+@kotlinx.serialization.Serializable
+data class AnnouncementDto(
+    val id: String,
+    val title: String,
+    val content: String,
+    val category: String = "PENGUMUMAN",
+    val target: String = "",
+    val author: String = "Pihak Sekolah",
+    @kotlinx.serialization.SerialName("is_pinned") val isPinned: Boolean = false,
+    @kotlinx.serialization.SerialName("push_status") val pushStatus: Boolean = false,
+    val date: String = "",
+    @kotlinx.serialization.SerialName("created_at") val createdAt: String = "",
+)
+
+@kotlinx.serialization.Serializable
+data class CreateAnnouncementResponse(
+    val notifications_sent: Int = 0
+)
+
+@kotlinx.serialization.Serializable
+data class CreateAnnouncementRequest(
+    val title: String,
+    val content: String,
+    val category: String? = null,
+    val target: String? = null,
+    val author: String? = null,
+    @kotlinx.serialization.SerialName("is_pinned") val isPinned: Boolean? = null,
+    @kotlinx.serialization.SerialName("send_push") val sendPush: Boolean? = null
+)
 
 @kotlinx.serialization.Serializable
 data class GradeSubmissionRequest(

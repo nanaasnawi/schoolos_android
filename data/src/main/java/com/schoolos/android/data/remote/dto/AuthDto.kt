@@ -101,6 +101,13 @@ data class UpdateProfileRequestDto(
 )
 
 @Serializable
+data class UpdateProfileResponseDto(
+    val message: String? = null,
+    @SerialName("avatar_url") val avatarUrl: String? = null,
+    @SerialName("full_name") val fullName: String? = null,
+)
+
+@Serializable
 data class UploadAvatarResponse(
     @SerialName("avatar_url") val avatarUrl: String = "",
     val message: String = "",

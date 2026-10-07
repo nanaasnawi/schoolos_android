@@ -221,7 +221,13 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             MaterialType.IMAGE -> "image"
             MaterialType.ARTICLE -> "article"
         }
-        val fullDesc = if (!description.isNullOrBlank()) "$subject • $description" else "$subject • $title"
+        val fullDesc = if (!contentBody.isNullOrBlank()) {
+            contentBody
+        } else if (!description.isNullOrBlank()) {
+            "$subject • $description"
+        } else {
+            "$subject • $title"
+        }
         val request = com.schoolos.android.data.remote.CreateMaterialRequestDto(
             materialType = typeStr,
             title = title,

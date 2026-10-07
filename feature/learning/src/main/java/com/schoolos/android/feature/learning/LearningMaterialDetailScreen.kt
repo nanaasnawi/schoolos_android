@@ -18,7 +18,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -28,6 +30,8 @@ import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.LearningMaterial
 import com.schoolos.android.domain.model.MaterialType
 import com.schoolos.android.feature.learning.components.*
+import kotlinx.serialization.decodeFromString
+import kotlinx.serialization.json.Json
 
 @Composable
 fun LearningMaterialDetailScreen(
@@ -38,6 +42,7 @@ fun LearningMaterialDetailScreen(
     viewModel: LearningViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
     LaunchedEffect(materialId) {
         viewModel.loadMaterialDetail(materialId)
     }
@@ -315,7 +320,19 @@ fun LearningMaterialDetailScreen(
         ) {
             val mediaUrl = material.mediaUrl
 
-            // ── VIDEO OR IMAGE HERO VIEWER ──────────────────────────────────
+            // ── PARSED RICH CONTENT (INFOGRAFIS / ARTIKEL) ───────────────────
+            var richBlocks: List<ContentBlock>? = null
+            if (material.materialType == MaterialType.IMAGE || material.materialType == MaterialType.ARTICLE) {
+                val candidateBody = material.contentBody ?: material.description
+                if (!candidateBody.isNullOrBlank()) {
+                    try {
+                        val json = Json { ignoreUnknownKeys = true }
+                        richBlocks = json.decodeFromString<List<ContentBlock>>(candidateBody)
+                    } catch (_: Exception) {}
+                }
+            }
+
+            // ── VIDEO OR IMAGE VIEWER ─────────────────────────────────────────
             if (material.materialType == MaterialType.VIDEO) {
                 Box(modifier = Modifier.fillMaxWidth().background(Color.Black)) {
                     if (!mediaUrl.isNullOrBlank()) {
@@ -340,7 +357,7 @@ fun LearningMaterialDetailScreen(
                         }
                     }
                 }
-            } else if (material.materialType == MaterialType.IMAGE) {
+            } else if (material.materialType == MaterialType.IMAGE && (richBlocks == null || richBlocks.isEmpty())) {
                 Box(modifier = Modifier.fillMaxWidth().background(CosmicNavy)) {
                     InAppImageViewer(
                         imageUrl = mediaUrl ?: material.thumbnailUrl ?: "",
@@ -494,6 +511,165 @@ fun LearningMaterialDetailScreen(
                                     ) {
                                         Text("Modul Aktif", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                     }
+                            }
+                        }
+                    }
+                }
+
+                // ── RICH BLOCK CONTENT RENDERER (INFOGRAFIS / MULTI-BLOCK) ────────
+                if (richBlocks != null && richBlocks.isNotEmpty() && material.materialType == MaterialType.IMAGE) {
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = CosmicNavy),
+                        shape = RoundedCornerShape(16.dp),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                            // Infographic Header Bar
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
+                                            .background(NeonBlue.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.AutoAwesome,
+                                            contentDescription = null,
+                                            tint = NeonBlue,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.width(8.dp))
+                                    Column {
+                                        Text(
+                                            text = "🎨 Lembar Infografis Interaktif",
+                                            color = TextPrimary,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        Text(
+                                            text = "Ketuk gambar untuk perbesar (Pinch-to-Zoom), salin teks materi",
+                                            color = TextTertiary,
+                                            fontSize = 10.5.sp
+                                        )
+                                    }
+                                }
+
+                                val allText = richBlocks.filter { it.type.name == "TEXT" }.joinToString("\n\n") { it.content }
+                                if (allText.isNotBlank()) {
+                                    Surface(
+                                        color = CosmicSurface2,
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                                        modifier = Modifier.clickable {
+                                            clipboardManager.setText(AnnotatedString(allText))
+                                            Toast.makeText(context, "✓ Seluruh teks infografis disalin ke papan klip!", Toast.LENGTH_SHORT).show()
+                                        }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.ContentCopy,
+                                                contentDescription = null,
+                                                tint = NeonBlue,
+                                                modifier = Modifier.size(12.dp)
+                                            )
+                                            Text(
+                                                text = "Salin Teks",
+                                                color = NeonBlue,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+
+                            HorizontalDivider(color = GlassBorder)
+
+                            richBlocks.forEachIndexed { idx, block ->
+                                when (block.type.name) {
+                                    "TEXT" -> {
+                                        if (block.content.isNotBlank()) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(CosmicDark.copy(alpha = 0.6f))
+                                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                                                    .padding(12.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        text = "Catatan Infografis",
+                                                        color = TextTertiary,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                    Box(
+                                                        modifier = Modifier
+                                                            .clip(RoundedCornerShape(6.dp))
+                                                            .background(CosmicSurface2)
+                                                            .clickable {
+                                                                clipboardManager.setText(AnnotatedString(block.content))
+                                                                Toast.makeText(context, "✓ Teks berhasil disalin ke papan klip", Toast.LENGTH_SHORT).show()
+                                                            }
+                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                                                    ) {
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                                        ) {
+                                                            Icon(Icons.Default.ContentCopy, null, tint = TextTertiary, modifier = Modifier.size(10.dp))
+                                                            Text("Salin", color = TextTertiary, fontSize = 10.sp)
+                                                        }
+                                                    }
+                                                }
+                                                Spacer(Modifier.height(6.dp))
+                                                Text(
+                                                    text = block.content,
+                                                    color = TextPrimary,
+                                                    fontSize = (13.5 * textSizeMultiplier).sp,
+                                                    lineHeight = (21 * textSizeMultiplier).sp,
+                                                    fontWeight = FontWeight.Normal
+                                                )
+                                            }
+                                        }
+                                    }
+                                    "IMAGE" -> {
+                                        if (block.content.isNotBlank()) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(14.dp))
+                                                    .background(CosmicDark)
+                                                    .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                                            ) {
+                                                InAppImageViewer(
+                                                    imageUrl = block.content,
+                                                    title = "${material.title} (Visual ${idx + 1})",
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .heightIn(min = 220.dp, max = 400.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -694,9 +870,14 @@ fun LearningMaterialDetailScreen(
 
                 // ── ARTICLE TEXT READER ──────────────────────────────────────
                 if (material.materialType == MaterialType.ARTICLE) {
+                    val articleContent = if (richBlocks != null && richBlocks.isNotEmpty()) {
+                        richBlocks.filter { it.type.name == "TEXT" }.joinToString("\n\n") { it.content }
+                    } else {
+                        material.contentBody ?: material.description ?: ""
+                    }
                     ArticleReaderView(
                         title = material.title,
-                        content = material.contentBody ?: material.description ?: "",
+                        content = articleContent,
                         textSizeMultiplier = textSizeMultiplier
                     )
                 }

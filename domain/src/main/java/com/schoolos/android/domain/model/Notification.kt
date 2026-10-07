@@ -13,3 +13,12 @@ data class Notification(
     val readAt: String?,
     val createdAt: String,
 )
+
+data class AnnouncementDetail(
+    val id: String,
+    val title: String,
+    val content: String,
+    val category: String,
+    val author: String,
+    val date: String,
+)

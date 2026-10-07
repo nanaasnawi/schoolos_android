@@ -44,6 +44,25 @@ sealed class Screen(val route: String) {
     data object Progress : Screen("progress")
     data object Achievements : Screen("achievements")
     data object Notifications : Screen("notifications")
+    data object NotificationDetail : Screen("notifications/{id}?title={title}&body={body}&type={type}&createdAt={createdAt}&referenceType={referenceType}&referenceId={referenceId}") {
+        fun createRoute(
+            id: String,
+            title: String = "",
+            body: String = "",
+            type: String = "",
+            createdAt: String = "",
+            referenceType: String = "",
+            referenceId: String = "",
+        ): String {
+            val safeTitle = Uri.encode(title)
+            val safeBody = Uri.encode(body)
+            val safeType = Uri.encode(type)
+            val safeCreatedAt = Uri.encode(createdAt)
+            val safeRefType = Uri.encode(referenceType)
+            val safeRefId = Uri.encode(referenceId)
+            return "notifications/${Uri.encode(id)}?title=$safeTitle&body=$safeBody&type=$safeType&createdAt=$safeCreatedAt&referenceType=$safeRefType&referenceId=$safeRefId"
+        }
+    }
     data object Chat : Screen("chat")
     data object ChatDetail : Screen("chat/{recipientId}/{recipientName}") {
         fun createRoute(recipientId: String, recipientName: String) =
