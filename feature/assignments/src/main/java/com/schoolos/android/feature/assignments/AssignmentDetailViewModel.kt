@@ -98,7 +98,7 @@ class AssignmentDetailViewModel @Inject constructor(
                     } else if (className.isNotBlank() && !className.equals("Semua Rombel", ignoreCase = true)) {
                         academicRepository.getClassStudents(className).getOrNull() ?: emptyList()
                     } else {
-                        academicRepository.getClassStudents("ALL").getOrNull() ?: emptyList()
+                        emptyList()
                     }
                     
                     if (classStudents.isNotEmpty()) {
