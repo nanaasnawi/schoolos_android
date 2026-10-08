@@ -60,6 +60,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -232,8 +234,18 @@ fun ChatDetailScreen(
                     contentAlignment = Alignment.Center,
                 ) {
                     if (!fullAvatarUrl.isNullOrBlank()) {
+                        val context = LocalContext.current
+                        val imageRequest = remember(fullAvatarUrl) {
+                            ImageRequest.Builder(context)
+                                .data(fullAvatarUrl)
+                                // STRICT: Jangan simpan foto profil ke local disk storage atau cache
+                                .diskCachePolicy(CachePolicy.DISABLED)
+                                .memoryCachePolicy(CachePolicy.DISABLED)
+                                .crossfade(true)
+                                .build()
+                        }
                         coil.compose.AsyncImage(
-                            model = fullAvatarUrl,
+                            model = imageRequest,
                             contentDescription = contactName,
                             contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                             modifier = Modifier

@@ -63,6 +63,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalContext
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
@@ -789,8 +792,18 @@ private fun ThreadCard(
                         contentAlignment = Alignment.Center,
                     ) {
                         if (!fullAvatarUrl.isNullOrBlank()) {
+                            val context = LocalContext.current
+                            val imageRequest = remember(fullAvatarUrl) {
+                                ImageRequest.Builder(context)
+                                    .data(fullAvatarUrl)
+                                    // STRICT: Jangan simpan foto profil ke local disk storage atau cache
+                                    .diskCachePolicy(CachePolicy.DISABLED)
+                                    .memoryCachePolicy(CachePolicy.DISABLED)
+                                    .crossfade(true)
+                                    .build()
+                            }
                             coil.compose.AsyncImage(
-                                model = fullAvatarUrl,
+                                model = imageRequest,
                                 contentDescription = contactName,
                                 contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                 modifier = Modifier

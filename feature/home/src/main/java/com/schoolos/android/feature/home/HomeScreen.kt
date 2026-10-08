@@ -56,6 +56,9 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalContext
+import coil.request.CachePolicy
+import coil.request.ImageRequest
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
@@ -328,8 +331,18 @@ fun HomeScreen(
                                 contentAlignment = Alignment.Center,
                             ) {
                                 if (!fullAvatarUrl.isNullOrBlank()) {
+                                    val context = LocalContext.current
+                                    val imageRequest = remember(fullAvatarUrl) {
+                                        ImageRequest.Builder(context)
+                                            .data(fullAvatarUrl)
+                                            // STRICT: Jangan simpan foto profil ke local disk storage atau cache
+                                            .diskCachePolicy(CachePolicy.DISABLED)
+                                            .memoryCachePolicy(CachePolicy.DISABLED)
+                                            .crossfade(true)
+                                            .build()
+                                    }
                                     coil.compose.AsyncImage(
-                                        model = fullAvatarUrl,
+                                        model = imageRequest,
                                         contentDescription = "Profil",
                                         contentScale = androidx.compose.ui.layout.ContentScale.Crop,
                                         modifier = Modifier

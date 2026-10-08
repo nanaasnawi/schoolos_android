@@ -37,8 +37,11 @@ import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import coil.compose.AsyncImage
 import androidx.compose.material3.AlertDialog
+import coil.compose.AsyncImage
+import coil.request.CachePolicy
+import coil.request.ImageRequest
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -644,8 +647,18 @@ fun ProfileAvatarPreviewDialog(
                 contentAlignment = Alignment.Center,
             ) {
                 if (!fullAvatarUrl.isNullOrBlank()) {
+                    val context = LocalContext.current
+                    val imageRequest = remember(fullAvatarUrl) {
+                        ImageRequest.Builder(context)
+                            .data(fullAvatarUrl)
+                            // STRICT: Foto profil tidak disimpan di local disk storage atau cache perangkat
+                            .diskCachePolicy(CachePolicy.DISABLED)
+                            .memoryCachePolicy(CachePolicy.DISABLED)
+                            .crossfade(true)
+                            .build()
+                    }
                     AsyncImage(
-                        model = fullAvatarUrl,
+                        model = imageRequest,
                         contentDescription = "Foto Profil $userName",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
