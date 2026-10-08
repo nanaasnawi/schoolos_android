@@ -41,6 +41,7 @@ fun AutoGenerateQuizDialog(
 ) {
     if (!isOpen) return
 
+    val colorScheme = MaterialTheme.colorScheme
     var selectedType by remember { mutableStateOf("QUIZ_MCQ_ONLY") }
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
@@ -60,9 +61,9 @@ fun AutoGenerateQuizDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp),
             shape = RoundedCornerShape(20.dp),
-            color = CosmicNavy,
-            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-            shadowElevation = 24.dp
+            color = colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
+            shadowElevation = 16.dp
         ) {
             Column(
                 modifier = Modifier
@@ -86,7 +87,7 @@ fun AutoGenerateQuizDialog(
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(Color(0xFFD97706), Color(0xFFEA580C))
+                                        listOf(colorScheme.primary, colorScheme.secondary)
                                     )
                                 ),
                             contentAlignment = Alignment.Center
@@ -94,7 +95,7 @@ fun AutoGenerateQuizDialog(
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = colorScheme.onPrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -103,24 +104,24 @@ fun AutoGenerateQuizDialog(
                                 text = "Sintesis Kuis & Ujian AI",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White
+                                color = colorScheme.onSurface
                             )
                             Text(
                                 text = "Penyusunan paket CBT otomatis",
                                 fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
+                                color = colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
                     if (!isGenerating) {
                         IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color(0xFF94A3B8))
+                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = colorScheme.onSurfaceVariant)
                         }
                     }
                 }
 
-                HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f))
+                HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                 // Subject Selection
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -128,7 +129,7 @@ fun AutoGenerateQuizDialog(
                         text = "Mata Pelajaran (Mapel)",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFCBD5E1)
+                        color = colorScheme.onSurface
                     )
 
                     Box(modifier = Modifier.fillMaxWidth()) {
@@ -137,8 +138,8 @@ fun AutoGenerateQuizDialog(
                                 .fillMaxWidth()
                                 .clickable(enabled = !isGenerating) { isSubjectDropdownOpen = true },
                             shape = RoundedCornerShape(10.dp),
-                            color = CosmicSurface2,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                            color = colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -151,20 +152,20 @@ fun AutoGenerateQuizDialog(
                                     text = selectedSubject?.name ?: "Pilih Mapel",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (selectedSubject != null) Color.White else Color(0xFF64748B)
+                                    color = if (selectedSubject != null) colorScheme.onSurface else colorScheme.onSurfaceVariant
                                 )
-                                Text(text = "▼", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                                Text(text = "▼", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                             }
                         }
 
                         DropdownMenu(
                             expanded = isSubjectDropdownOpen,
                             onDismissRequest = { isSubjectDropdownOpen = false },
-                            modifier = Modifier.background(CosmicNavy).border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
+                            modifier = Modifier.background(colorScheme.surface).border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                         ) {
                             availableSubjects.forEach { sub ->
                                 DropdownMenuItem(
-                                    text = { Text(sub.name, color = Color.White, fontSize = 13.sp) },
+                                    text = { Text(sub.name, color = colorScheme.onSurface, fontSize = 13.sp) },
                                     onClick = {
                                         selectedSubject = sub
                                         isSubjectDropdownOpen = false
@@ -181,7 +182,7 @@ fun AutoGenerateQuizDialog(
                         text = "Target Rombel / Kelas",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFCBD5E1)
+                        color = colorScheme.onSurface
                     )
 
                     Box(modifier = Modifier.fillMaxWidth()) {
@@ -190,8 +191,8 @@ fun AutoGenerateQuizDialog(
                                 .fillMaxWidth()
                                 .clickable(enabled = !isGenerating) { isClassDropdownOpen = true },
                             shape = RoundedCornerShape(10.dp),
-                            color = CosmicSurface2,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                            color = colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -204,20 +205,20 @@ fun AutoGenerateQuizDialog(
                                     text = selectedClass?.name ?: "Pilih Rombel",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (selectedClass != null) Color.White else Color(0xFF64748B)
+                                    color = if (selectedClass != null) colorScheme.onSurface else colorScheme.onSurfaceVariant
                                 )
-                                Text(text = "▼", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                                Text(text = "▼", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                             }
                         }
 
                         DropdownMenu(
                             expanded = isClassDropdownOpen,
                             onDismissRequest = { isClassDropdownOpen = false },
-                            modifier = Modifier.background(CosmicNavy).border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
+                            modifier = Modifier.background(colorScheme.surface).border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                         ) {
                             availableClasses.forEach { cls ->
                                 DropdownMenuItem(
-                                    text = { Text(cls.name, color = Color.White, fontSize = 13.sp) },
+                                    text = { Text(cls.name, color = colorScheme.onSurface, fontSize = 13.sp) },
                                     onClick = {
                                         selectedClass = cls
                                         isClassDropdownOpen = false
@@ -234,7 +235,7 @@ fun AutoGenerateQuizDialog(
                         text = "Jenis Evaluasi",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFCBD5E1)
+                        color = colorScheme.onSurface
                     )
 
                     QuizFormatOptionCard(
@@ -269,8 +270,8 @@ fun AutoGenerateQuizDialog(
                         enabled = !isGenerating,
                         modifier = Modifier.weight(1f).height(44.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF94A3B8)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colorScheme.onSurfaceVariant),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant)
                     ) {
                         Text("Batal", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
@@ -287,14 +288,14 @@ fun AutoGenerateQuizDialog(
                         modifier = Modifier.weight(1.5f).height(44.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = AmberAccent,
-                            contentColor = Color.White
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         )
                     ) {
                         if (isGenerating) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = Color.White,
+                                color = colorScheme.onPrimary,
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(8.dp))
@@ -318,13 +319,14 @@ private fun QuizFormatOptionCard(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
-        color = if (isSelected) Color(0xFFD97706).copy(alpha = 0.15f) else CosmicSurface2,
+        color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
         border = androidx.compose.foundation.BorderStroke(
             if (isSelected) 1.5.dp else 1.dp,
-            if (isSelected) AmberAccent else GlassBorder
+            if (isSelected) colorScheme.primary else colorScheme.outlineVariant
         )
     ) {
         Row(
@@ -337,16 +339,16 @@ private fun QuizFormatOptionCard(
                     text = title,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) Color.White else Color(0xFFCBD5E1)
+                    color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
                     fontSize = 10.sp,
-                    color = if (isSelected) Color(0xFFFDE68A) else Color(0xFF64748B)
+                    color = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
                 )
             }
             if (isSelected) {
-                Text(text = "✓", fontSize = 14.sp, color = AmberAccent, fontWeight = FontWeight.Black)
+                Text(text = "✓", fontSize = 14.sp, color = colorScheme.primary, fontWeight = FontWeight.Black)
             }
         }
     }
