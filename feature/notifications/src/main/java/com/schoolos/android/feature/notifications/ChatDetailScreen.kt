@@ -70,6 +70,7 @@ import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.chat.ChatManager
 import com.schoolos.android.core.chat.ChatMessage
 import com.schoolos.android.core.chat.ChatThread
+import com.schoolos.android.core.chat.InquiryStatus
 import com.schoolos.android.core.chat.InquiryType
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
@@ -276,6 +277,43 @@ fun ChatDetailScreen(
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
+                    }
+                }
+
+                // Status pill in header
+                if (thread != null) {
+                    val isAns = thread.status == InquiryStatus.ANSWERED
+                    val isWait = thread.status == InquiryStatus.WAITING_REPLY
+                    if (isAns) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NeonSuccess.copy(alpha = 0.12f))
+                                .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                        ) {
+                            Text(
+                                text = "Dijawab",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonSuccess,
+                            )
+                        }
+                    } else if (isWait) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(NeonWarning.copy(alpha = 0.12f))
+                                .border(0.5.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                        ) {
+                            Text(
+                                text = "Menunggu Jawaban",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonWarning,
+                            )
+                        }
                     }
                 }
             }
@@ -709,9 +747,17 @@ private fun sendMessage(
     onSuccess: () -> Unit,
 ) {
     if (text.isNotBlank() && thread != null) {
-        val senderRole = if (isTeacherMode) "TEACHER" else "STUDENT"
-        val senderName = if (isTeacherMode) thread.teacherName else thread.studentName
-        val senderId = if (isTeacherMode) thread.teacherId else thread.studentId
+        val auth = chatManager.currentAuth
+        val isTeacher = isTeacherMode || auth?.isTeacher == true
+        val senderRole = if (isTeacher) "TEACHER" else "STUDENT"
+        val senderName = when {
+            isTeacher -> auth?.name?.takeIf { it.isNotBlank() } ?: thread.teacherName
+            else -> auth?.name?.takeIf { it.isNotBlank() } ?: thread.studentName
+        }
+        val senderId = when {
+            isTeacher -> auth?.userId?.takeIf { it.isNotBlank() } ?: thread.teacherId
+            else -> auth?.userId?.takeIf { it.isNotBlank() } ?: thread.studentId
+        }
         chatManager.sendMessage(
             threadId = thread.id,
             senderId = senderId,
