@@ -84,7 +84,7 @@ fun ProfileScreen(
                     val filename = "photo_${System.currentTimeMillis()}.jpg"
                     viewModel.uploadProfilePhoto(compressedBytes, filename, "image/jpeg") { success, err ->
                         if (success) {
-                            Toast.makeText(context, "✅ Foto profil berhasil disimpan ke database!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "✅ Foto profil berhasil disimpan langsung ke database PostgreSQL!", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
                         }
@@ -101,11 +101,12 @@ fun ProfileScreen(
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
             try {
+                // In-memory scaling: tidak pernah disimpan ke local storage / file cache perangkat
                 val compressedBytes = compressAndScaleBitmap(bitmap, maxDimension = 1024, quality = 80)
                 val filename = "photo_cam_${System.currentTimeMillis()}.jpg"
                 viewModel.uploadProfilePhoto(compressedBytes, filename, "image/jpeg") { success, err ->
                     if (success) {
-                        Toast.makeText(context, "✅ Foto profil berhasil disimpan ke database!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "✅ Foto profil berhasil disimpan langsung ke database PostgreSQL!", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
                     }

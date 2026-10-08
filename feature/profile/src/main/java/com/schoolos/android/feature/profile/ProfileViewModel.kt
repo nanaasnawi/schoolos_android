@@ -23,7 +23,7 @@ data class ProfileUiState(
     val user: User? = null,
     val username: String = "",
     val phone: String = "",
-    val about: String = "Ada di SchoolOS",
+    val about: String = "",
     val schoolName: String = "",
     val schoolLogoUrl: String? = null,
     val className: String = "",
@@ -82,7 +82,7 @@ class ProfileViewModel @Inject constructor(
                     ) else null,
                     username = identifier.ifBlank { authState.name?.lowercase()?.replace(" ", "_") ?: "user" },
                     phone = authState.phone ?: "",
-                    about = authState.about?.ifBlank { null } ?: "Ada di SchoolOS",
+                    about = authState.about?.ifBlank { null } ?: "",
                     schoolName = authState.schoolName ?: "",
                     schoolLogoUrl = authState.schoolLogoUrl,
                     className = authState.className ?: "",
@@ -166,7 +166,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     fun updateEditableField(
-        fieldKey: String, // "username", "email", "phone", "about"
+        fieldKey: String,
         newValue: String,
         onComplete: (Boolean, String?) -> Unit
     ) {
