@@ -39,6 +39,7 @@ fun AutoGenerateAssignmentDialog(
 ) {
     if (!isOpen) return
 
+    val colorScheme = MaterialTheme.colorScheme
     var selectedFormat by remember { mutableStateOf("STRUCTURED_QUESTIONS") }
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
@@ -52,9 +53,9 @@ fun AutoGenerateAssignmentDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp),
             shape = RoundedCornerShape(20.dp),
-            color = CosmicNavy,
-            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-            shadowElevation = 24.dp
+            color = colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
+            shadowElevation = 16.dp
         ) {
             Column(
                 modifier = Modifier
@@ -78,7 +79,7 @@ fun AutoGenerateAssignmentDialog(
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(Color(0xFF2563EB), Color(0xFF4F46E5))
+                                        listOf(colorScheme.primary, colorScheme.tertiary)
                                     )
                                 ),
                             contentAlignment = Alignment.Center
@@ -86,7 +87,7 @@ fun AutoGenerateAssignmentDialog(
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = colorScheme.onPrimary,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -95,24 +96,28 @@ fun AutoGenerateAssignmentDialog(
                                 text = "Sintesis Tugas AI",
                                 fontSize = 16.sp,
                                 fontWeight = FontWeight.Black,
-                                color = Color.White
+                                color = colorScheme.onSurface
                             )
                             Text(
                                 text = "Otomatisasi kurikulum mapel",
                                 fontSize = 11.sp,
-                                color = Color(0xFF94A3B8)
+                                color = colorScheme.onSurfaceVariant
                             )
                         }
                     }
 
                     if (!isGenerating) {
                         IconButton(onClick = onDismiss, modifier = Modifier.size(32.dp)) {
-                            Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color(0xFF94A3B8))
+                            Icon(
+                                Icons.Default.Close,
+                                contentDescription = "Tutup",
+                                tint = colorScheme.onSurfaceVariant
+                            )
                         }
                     }
                 }
 
-                HorizontalDivider(color = GlassBorder.copy(alpha = 0.5f))
+                HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.5f))
 
                 // Subject Selection
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -120,7 +125,7 @@ fun AutoGenerateAssignmentDialog(
                         text = "Mata Pelajaran (Mapel)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFCBD5E1)
+                        color = colorScheme.onSurface
                     )
 
                     Box(modifier = Modifier.fillMaxWidth()) {
@@ -131,8 +136,8 @@ fun AutoGenerateAssignmentDialog(
                                     isSubjectDropdownOpen = true
                                 },
                             shape = RoundedCornerShape(10.dp),
-                            color = CosmicSurface2,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                            color = colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -145,9 +150,9 @@ fun AutoGenerateAssignmentDialog(
                                     text = selectedSubject?.name ?: "Pilih Mata Pelajaran",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (selectedSubject != null) Color.White else Color(0xFF64748B)
+                                    color = if (selectedSubject != null) colorScheme.onSurface else colorScheme.onSurfaceVariant
                                 )
-                                Text(text = "▼", fontSize = 10.sp, color = Color(0xFF94A3B8))
+                                Text(text = "▼", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                             }
                         }
 
@@ -155,13 +160,13 @@ fun AutoGenerateAssignmentDialog(
                             expanded = isSubjectDropdownOpen,
                             onDismissRequest = { isSubjectDropdownOpen = false },
                             modifier = Modifier
-                                .background(CosmicNavy)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
+                                .background(colorScheme.surface)
+                                .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp))
                         ) {
                             availableSubjects.forEach { sub ->
                                 DropdownMenuItem(
                                     text = {
-                                        Text(sub.name, color = Color.White, fontSize = 13.sp)
+                                        Text(sub.name, color = colorScheme.onSurface, fontSize = 13.sp)
                                     },
                                     onClick = {
                                         selectedSubject = sub
@@ -179,7 +184,7 @@ fun AutoGenerateAssignmentDialog(
                         text = "Format Penugasan",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFCBD5E1)
+                        color = colorScheme.onSurface
                     )
 
                     Row(
@@ -207,8 +212,8 @@ fun AutoGenerateAssignmentDialog(
                 // Info Callout
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF1E3A8A).copy(alpha = 0.25f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3B82F6).copy(alpha = 0.4f)),
+                    color = colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.secondary.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -220,7 +225,7 @@ fun AutoGenerateAssignmentDialog(
                         Text(
                             text = "100% Terisolasi: Soal dirancang ketat hanya dari materi mata pelajaran terpilih tanpa resiko kebocoran antar rombel.",
                             fontSize = 11.sp,
-                            color = Color(0xFF93C5FD),
+                            color = colorScheme.onSecondaryContainer,
                             lineHeight = 15.sp
                         )
                     }
@@ -238,8 +243,8 @@ fun AutoGenerateAssignmentDialog(
                             .weight(1f)
                             .height(46.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF94A3B8)),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colorScheme.onSurfaceVariant),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant)
                     ) {
                         Text("Batal", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
@@ -257,14 +262,14 @@ fun AutoGenerateAssignmentDialog(
                             .height(46.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = TeacherNeon,
-                            contentColor = Color.White
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         )
                     ) {
                         if (isGenerating) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
-                                color = Color.White,
+                                color = colorScheme.onPrimary,
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(8.dp))
@@ -289,13 +294,14 @@ private fun FormatOptionCard(
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
+    val colorScheme = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.clickable { onClick() },
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) Color(0xFF1E3A8A).copy(alpha = 0.4f) else CosmicSurface2,
+        color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
         border = androidx.compose.foundation.BorderStroke(
             if (isSelected) 1.5.dp else 1.dp,
-            if (isSelected) TeacherNeon else GlassBorder
+            if (isSelected) colorScheme.primary else colorScheme.outlineVariant
         )
     ) {
         Column(
@@ -306,12 +312,12 @@ private fun FormatOptionCard(
                 text = title,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) Color.White else Color(0xFFCBD5E1)
+                color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
             )
             Text(
                 text = subtitle,
                 fontSize = 10.sp,
-                color = if (isSelected) Color(0xFF93C5FD) else Color(0xFF64748B)
+                color = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
             )
         }
     }
