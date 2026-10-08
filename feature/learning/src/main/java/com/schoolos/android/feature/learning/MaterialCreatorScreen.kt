@@ -275,39 +275,7 @@ fun MaterialCreatorScreen(
             ExecutiveTopBar(
                 title = "Studio Materi Guru",
                 subtitle = "Publikasikan Modul Digital ke Kelas",
-                onBack = onBack,
-                actions = {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (showPreview) EmeraldGlow.copy(alpha = 0.2f) else CosmicSurface2)
-                            .border(
-                                0.5.dp,
-                                if (showPreview) EmeraldGlow else GlassBorder,
-                                RoundedCornerShape(8.dp)
-                            )
-                            .clickable { showPreview = !showPreview }
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Icon(
-                                if (showPreview) Icons.Default.Edit else Icons.Default.Visibility,
-                                contentDescription = null,
-                                tint = if (showPreview) EmeraldGlow else TextSecondary,
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Text(
-                                if (showPreview) "Tutup" else "Preview",
-                                color = if (showPreview) EmeraldGlow else TextPrimary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
+                onBack = onBack
             )
         },
         bottomBar = {
