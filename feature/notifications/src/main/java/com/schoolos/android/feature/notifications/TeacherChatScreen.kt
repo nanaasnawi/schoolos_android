@@ -497,7 +497,7 @@ private fun ChatOverviewCard(
             // 2. Menunggu Respon
             OverviewStatItem(
                 value = "$waitingCount",
-                label = if (isTeacherMode) "Perlu Dibalas" else "Menunggu",
+                label = if (isTeacherMode) "Perlu Dibalas" else "Menunggu Jawaban",
                 valueColor = if (waitingCount > 0) NeonWarning else NeonSuccess,
                 hasWarningDot = waitingCount > 0,
                 isSelected = selectedFilter == ChatFilter.WAITING,
@@ -608,7 +608,7 @@ private fun ChatFilterRow(
         if (waitingCount > 0) {
             item {
                 FilterPill(
-                    label = "Menunggu",
+                    label = "Menunggu Jawaban",
                     count = waitingCount,
                     isSelected = selectedFilter == ChatFilter.WAITING,
                     accentColor = NeonWarning,
@@ -653,7 +653,7 @@ private fun ChatFilterRow(
         if (answeredCount > 0) {
             item {
                 FilterPill(
-                    label = "Terjawab",
+                    label = "Dijawab",
                     count = answeredCount,
                     isSelected = selectedFilter == ChatFilter.ANSWERED,
                     accentColor = NeonSuccess,
@@ -888,7 +888,7 @@ private fun ThreadCard(
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                         ) {
                             Text(
-                                text = "Menunggu",
+                                text = "Menunggu Jawaban",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = NeonWarning,
@@ -903,7 +903,7 @@ private fun ThreadCard(
                                 .padding(horizontal = 6.dp, vertical = 2.dp),
                         ) {
                             Text(
-                                text = "Terjawab",
+                                text = "Dijawab",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = NeonSuccess,

@@ -172,6 +172,48 @@ class ChatManager @Inject constructor(
             }
         }
 
+        // Real-time listener for all inquiries from Firebase Realtime Database
+        scope.launch {
+            firebaseRtdbManager.observeAllInquiries().collectLatest { rtdbMap ->
+                if (rtdbMap.isNotEmpty()) {
+                    val auth = cachedAuth ?: return@collectLatest
+                    val currentList = _threads.value
+                    var hasChanges = false
+                    val updatedList = currentList.map { thread ->
+                        val rtdbData = rtdbMap[thread.id]
+                        if (rtdbData != null) {
+                            val rtdbStatusStr = rtdbData["status"] as? String
+                            val rtdbStatus = when (rtdbStatusStr?.uppercase()) {
+                                "ANSWERED" -> InquiryStatus.ANSWERED
+                                "WAITING_REPLY", "OPEN" -> InquiryStatus.WAITING_REPLY
+                                else -> thread.status
+                            }
+                            val rtdbLastMsg = rtdbData["lastMessageContent"] as? String
+                            val rtdbLastMsgAt = (rtdbData["lastMessageAt"] as? Number)?.toLong() ?: thread.lastUpdated
+
+                            val isStatusChanged = thread.status != rtdbStatus
+                            val isMsgChanged = rtdbLastMsg != null && thread.lastMessage?.content != rtdbLastMsg
+                            if (isStatusChanged || isMsgChanged) {
+                                hasChanges = true
+                                thread.copy(
+                                    status = rtdbStatus,
+                                    lastUpdated = rtdbLastMsgAt.coerceAtLeast(thread.lastUpdated)
+                                )
+                            } else {
+                                thread
+                            }
+                        } else {
+                            thread
+                        }
+                    }
+                    if (hasChanges) {
+                        _threads.value = updatedList
+                        saveToDisk(updatedList, auth.userId)
+                    }
+                }
+            }
+        }
+
         // Initial fetch from database
         refresh()
 
@@ -303,16 +345,17 @@ class ChatManager @Inject constructor(
                         existing.messages
                     }
                 } else if (!dto.lastMessageContent.isNullOrBlank()) {
+                    val isTeacherMsg = st == InquiryStatus.ANSWERED
                     listOf(
                         ChatMessage(
                             id = dto.id,
                             threadId = dto.id,
-                            senderId = dto.studentId,
-                            senderName = dto.studentName,
-                            senderRole = "STUDENT",
+                            senderId = if (isTeacherMsg) (dto.teacherId ?: "teacher") else dto.studentId,
+                            senderName = if (isTeacherMsg) dto.teacherName else dto.studentName,
+                            senderRole = if (isTeacherMsg) "TEACHER" else "STUDENT",
                             content = dto.lastMessageContent,
                             timestamp = timestamp,
-                            isFromTeacher = false,
+                            isFromTeacher = isTeacherMsg,
                         )
                     )
                 } else {
@@ -332,6 +375,14 @@ class ChatManager @Inject constructor(
                     "Guru Mata Pelajaran"
                 }
 
+                val effectiveStatus = if (messages.lastOrNull()?.isFromTeacher == true) {
+                    InquiryStatus.ANSWERED
+                } else if (dto.status.uppercase() == "ANSWERED") {
+                    InquiryStatus.ANSWERED
+                } else {
+                    InquiryStatus.WAITING_REPLY
+                }
+
                 ChatThread(
                     id = dto.id,
                     studentId = dto.studentId,
@@ -344,8 +395,8 @@ class ChatManager @Inject constructor(
                     referenceTitle = dto.referenceTitle,
                     referenceId = dto.referenceId,
                     messages = messages,
-                    status = st,
-                    lastUpdated = timestamp,
+                    status = effectiveStatus,
+                    lastUpdated = messages.lastOrNull()?.timestamp ?: timestamp,
                     studentAvatarUrl = dto.studentAvatarUrl ?: existing?.studentAvatarUrl,
                     teacherAvatarUrl = dto.teacherAvatarUrl ?: existing?.teacherAvatarUrl,
                 )
@@ -356,7 +407,10 @@ class ChatManager @Inject constructor(
                 .groupBy { "${it.studentName.trim().lowercase()}_${it.subjectName.trim().lowercase()}_${it.referenceTitle.trim().lowercase()}" }
                 .map { (_, groupThreads) ->
                     if (groupThreads.size == 1) {
-                        groupThreads.first()
+                        val single = groupThreads.first()
+                        val lastMsg = single.messages.lastOrNull()
+                        val latestStatus = if (lastMsg?.isFromTeacher == true) InquiryStatus.ANSWERED else single.status
+                        single.copy(status = latestStatus)
                     } else {
                         val sortedByTime = groupThreads.sortedByDescending { it.lastUpdated }
                         val primary = sortedByTime.first()
@@ -391,6 +445,33 @@ class ChatManager @Inject constructor(
     }
 
     fun loadThreadDetail(threadId: String) {
+        // Start real-time Firebase RTDB listener for active thread immediately
+        scope.launch {
+            firebaseRtdbManager.observeThreadMessages(threadId).collect { rtdbMsgs ->
+                if (rtdbMsgs.isNotEmpty()) {
+                    _threads.value = _threads.value.map { th ->
+                        if (th.id == threadId) {
+                            val serverMsgIds = rtdbMsgs.map { it.id }.toSet()
+                            val localPending = th.messages.filter { it.id !in serverMsgIds && (it.id.startsWith("temp-") || it.timestamp > System.currentTimeMillis() - 60_000) }
+                            val combinedMsgs = (rtdbMsgs + localPending)
+                                .distinctBy { "${it.content.trim()}_${it.timestamp}" }
+                                .sortedBy { it.timestamp }
+
+                            val lastMsg = combinedMsgs.lastOrNull()
+                            val updatedStatus = if (lastMsg?.isFromTeacher == true) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
+
+                            th.copy(
+                                messages = combinedMsgs,
+                                status = updatedStatus,
+                                lastUpdated = lastMsg?.timestamp ?: th.lastUpdated
+                            )
+                        } else th
+                    }
+                    saveToDisk(_threads.value, cachedAuth?.userId)
+                }
+            }
+        }
+
         scope.launch {
             try {
                 val detailResp = api.getInquiryDetail(threadId)
@@ -441,7 +522,7 @@ class ChatManager @Inject constructor(
                             val existing = currentList[index]
                             // Keep any unconfirmed local temporary messages
                             val serverMsgIds = msgs.map { it.id }.toSet()
-                            val localPending = existing.messages.filter { it.id !in serverMsgIds && it.id.startsWith("temp-") }
+                            val localPending = existing.messages.filter { it.id !in serverMsgIds && (it.id.startsWith("temp-") || it.timestamp > System.currentTimeMillis() - 60_000) }
                             val combinedMsgs = (msgs + localPending).sortedBy { it.timestamp }
 
                             val updatedTeacherName = if (detail.thread.teacherName.isNotBlank() && !detail.thread.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
@@ -450,10 +531,18 @@ class ChatManager @Inject constructor(
                                 existing.teacherName
                             }
 
+                            val effectiveStatus = if (combinedMsgs.lastOrNull()?.isFromTeacher == true) {
+                                InquiryStatus.ANSWERED
+                            } else if (detail.thread.status.uppercase() == "ANSWERED") {
+                                InquiryStatus.ANSWERED
+                            } else {
+                                InquiryStatus.WAITING_REPLY
+                            }
+
                             val updated = existing.copy(
                                 messages = combinedMsgs,
-                                status = if (detail.thread.status == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
-                                lastUpdated = parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt),
+                                status = effectiveStatus,
+                                lastUpdated = combinedMsgs.lastOrNull()?.timestamp ?: parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt),
                                 teacherName = updatedTeacherName,
                                 teacherId = detail.thread.teacherId ?: existing.teacherId,
                                 studentAvatarUrl = detail.thread.studentAvatarUrl ?: existing.studentAvatarUrl,
@@ -467,8 +556,14 @@ class ChatManager @Inject constructor(
                                 "GENERAL" -> InquiryType.GENERAL
                                 else -> InquiryType.MATERIAL
                             }
-                            val st = if (detail.thread.status.uppercase() == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
-                            val timestamp = parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt)
+                            val effectiveStatus = if (msgs.lastOrNull()?.isFromTeacher == true) {
+                                InquiryStatus.ANSWERED
+                            } else if (detail.thread.status.uppercase() == "ANSWERED") {
+                                InquiryStatus.ANSWERED
+                            } else {
+                                InquiryStatus.WAITING_REPLY
+                            }
+                            val timestamp = msgs.lastOrNull()?.timestamp ?: parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt)
                             listOf(
                                 ChatThread(
                                     id = detail.thread.id,
@@ -482,7 +577,7 @@ class ChatManager @Inject constructor(
                                     referenceTitle = detail.thread.referenceTitle,
                                     referenceId = detail.thread.referenceId,
                                     messages = msgs,
-                                    status = st,
+                                    status = effectiveStatus,
                                     lastUpdated = timestamp,
                                     studentAvatarUrl = detail.thread.studentAvatarUrl,
                                     teacherAvatarUrl = detail.thread.teacherAvatarUrl,
@@ -491,33 +586,6 @@ class ChatManager @Inject constructor(
                         }
                     }
                     saveToDisk(_threads.value, auth?.userId)
-
-                    // Start real-time Firebase RTDB listener for active thread
-                    launch {
-                        firebaseRtdbManager.observeThreadMessages(threadId).collect { rtdbMsgs ->
-                            if (rtdbMsgs.isNotEmpty()) {
-                                _threads.value = _threads.value.map { th ->
-                                    if (th.id == threadId) {
-                                        val serverMsgIds = rtdbMsgs.map { it.id }.toSet()
-                                        val localPending = th.messages.filter { it.id !in serverMsgIds && it.id.startsWith("temp-") }
-                                        val combinedMsgs = (rtdbMsgs + localPending)
-                                            .distinctBy { "${it.content.trim()}_${it.timestamp}" }
-                                            .sortedBy { it.timestamp }
-
-                                        val lastMsg = combinedMsgs.lastOrNull()
-                                        val updatedStatus = if (lastMsg?.isFromTeacher == true) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
-
-                                        th.copy(
-                                            messages = combinedMsgs,
-                                            status = updatedStatus,
-                                            lastUpdated = lastMsg?.timestamp ?: th.lastUpdated
-                                        )
-                                    } else th
-                                }
-                                saveToDisk(_threads.value, cachedAuth?.userId)
-                            }
-                        }
-                    }
 
                     // Mark as read in server persistence
                     launch {
@@ -545,9 +613,10 @@ class ChatManager @Inject constructor(
         content: String,
     ): ChatMessage {
         val auth = cachedAuth
-        val isTeacher = if (auth?.isStudent == true) false else senderRole.equals("TEACHER", ignoreCase = true)
+        val isTeacher = if (auth?.isStudent == true) false else (senderRole.equals("TEACHER", ignoreCase = true) || auth?.isTeacher == true)
         val now = System.currentTimeMillis()
-        val tempId = "temp-" + UUID.randomUUID().toString()
+        val clientUuid = UUID.randomUUID().toString()
+        val tempId = clientUuid
 
         val effectiveSenderName = when {
             auth?.isStudent == true -> auth.name ?: "Siswa"
@@ -601,7 +670,7 @@ class ChatManager @Inject constructor(
         scope.launch {
             try {
                 val req = SendInquiryMessageRequestDto(
-                    clientMessageId = tempId,
+                    clientMessageId = clientUuid,
                     senderId = effectiveSenderId,
                     senderName = effectiveSenderName,
                     senderRole = effectiveRole,
@@ -615,7 +684,8 @@ class ChatManager @Inject constructor(
                             val updatedMsgs = th.messages.map { msg ->
                                 if (msg.id == tempId) msg.copy(id = canonicalMsg.id) else msg
                             }
-                            th.copy(messages = updatedMsgs)
+                            val effStatus = if (isTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
+                            th.copy(messages = updatedMsgs, status = effStatus)
                         } else th
                     }
                     saveToDisk(_threads.value, auth?.userId)
