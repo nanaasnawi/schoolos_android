@@ -122,6 +122,9 @@ object SystemNotificationHelper {
         channelId: String? = null,
         clickAction: String? = null,
         category: String? = null,
+        referenceId: String? = null,
+        referenceType: String? = null,
+        deepLink: String? = null,
     ) {
         // 1. Drop duplicate notifications from multi-channel triggers (FCM + SSE + Polling)
         //    Dedup key mencakup navigateTo agar materi/tugas/kuis berbeda tidak saling menelan.
@@ -167,11 +170,19 @@ object SystemNotificationHelper {
         val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("navigate_to", navigateTo)
+            if (!referenceId.isNullOrBlank()) putExtra("reference_id", referenceId)
+            if (!referenceType.isNullOrBlank()) putExtra("reference_type", referenceType)
+            if (!deepLink.isNullOrBlank()) putExtra("deep_link", deepLink)
+            if (!category.isNullOrBlank()) putExtra("category", category)
             if (!clickAction.isNullOrBlank()) action = clickAction
         } ?: Intent(Intent.ACTION_MAIN).apply {
             `package` = context.packageName
             flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("navigate_to", navigateTo)
+            if (!referenceId.isNullOrBlank()) putExtra("reference_id", referenceId)
+            if (!referenceType.isNullOrBlank()) putExtra("reference_type", referenceType)
+            if (!deepLink.isNullOrBlank()) putExtra("deep_link", deepLink)
+            if (!category.isNullOrBlank()) putExtra("category", category)
             if (!clickAction.isNullOrBlank()) action = clickAction
         }
 

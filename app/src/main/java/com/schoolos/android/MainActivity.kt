@@ -82,10 +82,8 @@ class MainActivity : ComponentActivity() {
             }
         } catch (_: Exception) {}
 
-        // Subscribe SEMUA topik belajar (bukan cuma pengumuman) agar materi/tugas/
-        // kuis/nilai/sesi ikut membangunkan HP saat idle via FCM data-message.
+        // Subscribe topik belajar & topik tertarget pengguna (user & class)
         try {
-            com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
             com.google.firebase.messaging.FirebaseMessaging.getInstance().token
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
@@ -95,9 +93,23 @@ class MainActivity : ComponentActivity() {
                             .edit()
                             .putString("fcm_token", token)
                             .apply()
-                        com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
                     }
                 }
+            
+            lifecycleScope.launch {
+                authManager.authState.collect { auth ->
+                    if (auth.isLoggedIn) {
+                        com.schoolos.android.notification.SchoolOsFirebaseMessagingService.syncUserTopics(
+                            userId = auth.userId,
+                            classId = auth.classId,
+                            role = auth.role,
+                            context = this@MainActivity,
+                        )
+                    } else {
+                        com.schoolos.android.notification.SchoolOsFirebaseMessagingService.unsubscribeUserTopics(this@MainActivity)
+                    }
+                }
+            }
         } catch (e: Exception) {
             timber.log.Timber.e(e, "Firebase initialization error")
         }
@@ -175,9 +187,20 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun extractNavigationTarget(intent: android.content.Intent?) {
+        val deepLink = intent?.getStringExtra("deep_link")
+            ?: intent?.extras?.getString("deep_link")
+        val refId = intent?.getStringExtra("reference_id")
+            ?: intent?.extras?.getString("reference_id")
+        val refType = intent?.getStringExtra("reference_type")
+            ?: intent?.extras?.getString("reference_type")
         val target = intent?.getStringExtra("navigate_to")
             ?: intent?.extras?.getString("navigate_to")
-        if (!target.isNullOrBlank()) {
+
+        if (!deepLink.isNullOrBlank()) {
+            pendingNavigationRoute = deepLink
+        } else if (!refType.isNullOrBlank() && !refId.isNullOrBlank()) {
+            pendingNavigationRoute = "${refType}_detail:${refId}"
+        } else if (!target.isNullOrBlank()) {
             pendingNavigationRoute = target
         }
     }

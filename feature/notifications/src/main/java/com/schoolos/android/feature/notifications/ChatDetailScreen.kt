@@ -390,7 +390,7 @@ fun ChatDetailScreen(
                         color = TextPrimary,
                     )
                     Text(
-                        text = "Pertanyaan seputar materi & tugas langsung terhubung antara guru dan siswa.",
+                        text = "Pertanyaan seputar materi & tugas.",
                         fontSize = 12.sp,
                         color = TextTertiary,
                         textAlign = TextAlign.Center,
@@ -592,6 +592,19 @@ private fun TopicContextBanner(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+                if (!thread.readStatusLabel.isNullOrBlank()) {
+                    val isReadDone = thread.readStatusLabel.contains("Dibaca")
+                    val badgeColor = if (isReadDone) Color(0xFF10B981) else Color(0xFFF59E0B)
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = thread.readStatusLabel,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = badgeColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
 
@@ -735,13 +748,21 @@ private fun MessageBubble(
                         color = TextTertiary,
                     )
                     if (isMe) {
-                        Spacer(Modifier.width(3.dp))
-                        Icon(
-                            imageVector = Icons.Default.CheckCircle,
-                            contentDescription = "Terkirim",
-                            tint = NeonSuccess.copy(alpha = 0.7f),
-                            modifier = Modifier.size(11.dp),
-                        )
+                        Spacer(Modifier.width(4.dp))
+                        if (message.isRead) {
+                            Text(
+                                text = "✓✓ Dibaca",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF38BDF8),
+                            )
+                        } else {
+                            Text(
+                                text = "✓ Terkirim",
+                                fontSize = 9.5.sp,
+                                color = TextTertiary,
+                            )
+                        }
                     }
                 }
             }

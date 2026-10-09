@@ -40,6 +40,10 @@ data class InquiryThreadDto(
     @SerialName("message_count") val messageCount: Long = 1,
     @SerialName("student_avatar_url") val studentAvatarUrl: String? = null,
     @SerialName("teacher_avatar_url") val teacherAvatarUrl: String? = null,
+    @SerialName("student_last_read_at") val studentLastReadAt: String? = null,
+    @SerialName("teacher_last_read_at") val teacherLastReadAt: String? = null,
+    @SerialName("is_read") val isRead: Boolean = false,
+    @SerialName("read_status_label") val readStatusLabel: String? = null,
 )
 
 @Serializable
@@ -52,6 +56,8 @@ data class InquiryMessageDto(
     @SerialName("content") val content: String,
     @SerialName("is_from_teacher") val isFromTeacher: Boolean = false,
     @SerialName("created_at") val createdAt: String? = null,
+    @SerialName("is_read") val isRead: Boolean = false,
+    @SerialName("read_at") val readAt: String? = null,
 )
 
 @Serializable
