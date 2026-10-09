@@ -314,8 +314,6 @@ class ChatManager @Inject constructor(
             val currentMap = _threads.value.associateBy { it.id }
             val dbIds = dbThreads.map { it.id }.toSet()
 
-            val threadsNeedingDetails = mutableListOf<String>()
-
             val updatedThreads = dbThreads.map { dto ->
                 val type = when (dto.inquiryType.uppercase()) {
                     "ASSIGNMENT" -> InquiryType.ASSIGNMENT
@@ -325,47 +323,9 @@ class ChatManager @Inject constructor(
                 val st = if (dto.status.uppercase() == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
                 val timestamp = parseIsoTimestamp(dto.lastMessageAt ?: dto.createdAt)
 
-                // Preserve or update messages: NEVER wipe existing full message history!
+                // Messages are strictly managed in real time via Firebase Realtime Database
                 val existing = currentMap[dto.id]
-                val messages = if (existing != null && existing.messages.isNotEmpty()) {
-                    val hasLastMsg = !dto.lastMessageContent.isNullOrBlank() &&
-                        existing.messages.any { it.content == dto.lastMessageContent }
-                    if (!hasLastMsg && !dto.lastMessageContent.isNullOrBlank()) {
-                        existing.messages + ChatMessage(
-                            id = UUID.randomUUID().toString(),
-                            threadId = dto.id,
-                            senderId = if (st == InquiryStatus.ANSWERED) (dto.teacherId ?: "teacher") else dto.studentId,
-                            senderName = if (st == InquiryStatus.ANSWERED) dto.teacherName else dto.studentName,
-                            senderRole = if (st == InquiryStatus.ANSWERED) "TEACHER" else "STUDENT",
-                            content = dto.lastMessageContent,
-                            timestamp = timestamp,
-                            isFromTeacher = (st == InquiryStatus.ANSWERED),
-                        )
-                    } else {
-                        existing.messages
-                    }
-                } else if (!dto.lastMessageContent.isNullOrBlank()) {
-                    val isTeacherMsg = st == InquiryStatus.ANSWERED
-                    listOf(
-                        ChatMessage(
-                            id = dto.id,
-                            threadId = dto.id,
-                            senderId = if (isTeacherMsg) (dto.teacherId ?: "teacher") else dto.studentId,
-                            senderName = if (isTeacherMsg) dto.teacherName else dto.studentName,
-                            senderRole = if (isTeacherMsg) "TEACHER" else "STUDENT",
-                            content = dto.lastMessageContent,
-                            timestamp = timestamp,
-                            isFromTeacher = isTeacherMsg,
-                        )
-                    )
-                } else {
-                    emptyList()
-                }
-
-                // If messages on device are fewer than server count or empty, automatically queue detail fetch
-                if (messages.size < dto.messageCount) {
-                    threadsNeedingDetails.add(dto.id)
-                }
+                val messages = existing?.messages ?: emptyList()
 
                 val resolvedTeacherName = if (dto.teacherName.isNotBlank() && !dto.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
                     dto.teacherName
@@ -415,7 +375,7 @@ class ChatManager @Inject constructor(
                         val sortedByTime = groupThreads.sortedByDescending { it.lastUpdated }
                         val primary = sortedByTime.first()
                         val allMessages = groupThreads.flatMap { it.messages }
-                            .distinctBy { "${it.content.trim()}_${it.timestamp}" }
+                            .distinctBy { it.id }
                             .sortedBy { it.timestamp }
 
                         val lastMsg = allMessages.lastOrNull()
@@ -436,11 +396,6 @@ class ChatManager @Inject constructor(
             val merged = (pendingLocal + consolidatedThreads).sortedByDescending { it.lastUpdated }
             _threads.value = merged
             saveToDisk(merged, auth.userId)
-
-            // Trigger detail loads in background for threads with missing messages
-            for (tid in threadsNeedingDetails) {
-                loadThreadDetail(tid)
-            }
         }
     }
 
@@ -448,26 +403,22 @@ class ChatManager @Inject constructor(
         // Start real-time Firebase RTDB listener for active thread immediately
         scope.launch {
             firebaseRtdbManager.observeThreadMessages(threadId).collect { rtdbMsgs ->
-                if (rtdbMsgs.isNotEmpty()) {
-                    _threads.value = _threads.value.map { th ->
-                        if (th.id == threadId) {
-                            val serverMsgIds = rtdbMsgs.map { it.id }.toSet()
-                            val localPending = th.messages.filter { it.id !in serverMsgIds && (it.id.startsWith("temp-") || it.timestamp > System.currentTimeMillis() - 60_000) }
-                            val combinedMsgs = (rtdbMsgs + localPending)
-                                .distinctBy { "${it.content.trim()}_${it.timestamp}" }
-                                .sortedBy { it.timestamp }
-
-                            val lastMsg = combinedMsgs.lastOrNull()
-                            val updatedStatus = if (lastMsg?.isFromTeacher == true) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
-
-                            th.copy(
-                                messages = combinedMsgs,
-                                status = updatedStatus,
-                                lastUpdated = lastMsg?.timestamp ?: th.lastUpdated
-                            )
-                        } else th
-                    }
-                    saveToDisk(_threads.value, cachedAuth?.userId)
+                _threads.value = _threads.value.map { th ->
+                    if (th.id == threadId) {
+                        val lastMsg = rtdbMsgs.lastOrNull()
+                        val updatedStatus = if (lastMsg?.isFromTeacher == true) {
+                            InquiryStatus.ANSWERED
+                        } else if (rtdbMsgs.isNotEmpty()) {
+                            InquiryStatus.WAITING_REPLY
+                        } else {
+                            th.status
+                        }
+                        th.copy(
+                            messages = rtdbMsgs,
+                            status = updatedStatus,
+                            lastUpdated = lastMsg?.timestamp ?: th.lastUpdated
+                        )
+                    } else th
                 }
             }
         }
@@ -498,51 +449,16 @@ class ChatManager @Inject constructor(
                         }
                     }
 
-                    val msgs = detail.messages.map { m ->
-                        val isTeacherRole = m.isFromTeacher ||
-                            m.senderRole.equals("TEACHER", ignoreCase = true) ||
-                            m.senderRole.equals("GURU", ignoreCase = true) ||
-                            m.senderRole.equals("PRINCIPAL", ignoreCase = true) ||
-                            m.senderRole.equals("KEPALA_SEKOLAH", ignoreCase = true)
-                        ChatMessage(
-                            id = m.id,
-                            threadId = m.threadId,
-                            senderId = m.senderId,
-                            senderName = m.senderName,
-                            senderRole = m.senderRole,
-                            content = m.content,
-                            timestamp = parseIsoTimestamp(m.createdAt),
-                            isFromTeacher = isTeacherRole,
-                        )
-                    }
-
                     _threads.value = _threads.value.let { currentList ->
                         val index = currentList.indexOfFirst { it.id == threadId }
                         if (index >= 0) {
                             val existing = currentList[index]
-                            // Keep any unconfirmed local temporary messages
-                            val serverMsgIds = msgs.map { it.id }.toSet()
-                            val localPending = existing.messages.filter { it.id !in serverMsgIds && (it.id.startsWith("temp-") || it.timestamp > System.currentTimeMillis() - 60_000) }
-                            val combinedMsgs = (msgs + localPending).sortedBy { it.timestamp }
-
                             val updatedTeacherName = if (detail.thread.teacherName.isNotBlank() && !detail.thread.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
                                 detail.thread.teacherName
                             } else {
                                 existing.teacherName
                             }
-
-                            val effectiveStatus = if (combinedMsgs.lastOrNull()?.isFromTeacher == true) {
-                                InquiryStatus.ANSWERED
-                            } else if (detail.thread.status.uppercase() == "ANSWERED") {
-                                InquiryStatus.ANSWERED
-                            } else {
-                                InquiryStatus.WAITING_REPLY
-                            }
-
                             val updated = existing.copy(
-                                messages = combinedMsgs,
-                                status = effectiveStatus,
-                                lastUpdated = combinedMsgs.lastOrNull()?.timestamp ?: parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt),
                                 teacherName = updatedTeacherName,
                                 teacherId = detail.thread.teacherId ?: existing.teacherId,
                                 studentAvatarUrl = detail.thread.studentAvatarUrl ?: existing.studentAvatarUrl,
@@ -556,14 +472,6 @@ class ChatManager @Inject constructor(
                                 "GENERAL" -> InquiryType.GENERAL
                                 else -> InquiryType.MATERIAL
                             }
-                            val effectiveStatus = if (msgs.lastOrNull()?.isFromTeacher == true) {
-                                InquiryStatus.ANSWERED
-                            } else if (detail.thread.status.uppercase() == "ANSWERED") {
-                                InquiryStatus.ANSWERED
-                            } else {
-                                InquiryStatus.WAITING_REPLY
-                            }
-                            val timestamp = msgs.lastOrNull()?.timestamp ?: parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt)
                             listOf(
                                 ChatThread(
                                     id = detail.thread.id,
@@ -576,16 +484,15 @@ class ChatManager @Inject constructor(
                                     inquiryType = type,
                                     referenceTitle = detail.thread.referenceTitle,
                                     referenceId = detail.thread.referenceId,
-                                    messages = msgs,
-                                    status = effectiveStatus,
-                                    lastUpdated = timestamp,
+                                    messages = emptyList(), // Messages arrive exclusively via Firebase RTDB
+                                    status = if (detail.thread.status.uppercase() == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
+                                    lastUpdated = parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt),
                                     studentAvatarUrl = detail.thread.studentAvatarUrl,
                                     teacherAvatarUrl = detail.thread.teacherAvatarUrl,
                                 )
                             ) + currentList
                         }
                     }
-                    saveToDisk(_threads.value, auth?.userId)
 
                     // Mark as read in server persistence
                     launch {
@@ -616,7 +523,6 @@ class ChatManager @Inject constructor(
         val isTeacher = if (auth?.isStudent == true) false else (senderRole.equals("TEACHER", ignoreCase = true) || auth?.isTeacher == true)
         val now = System.currentTimeMillis()
         val clientUuid = UUID.randomUUID().toString()
-        val tempId = clientUuid
 
         val effectiveSenderName = when {
             auth?.isStudent == true -> auth.name ?: "Siswa"
@@ -633,7 +539,7 @@ class ChatManager @Inject constructor(
         val effectiveRole = if (isTeacher) "TEACHER" else "STUDENT"
 
         val localMsg = ChatMessage(
-            id = tempId,
+            id = clientUuid,
             threadId = threadId,
             senderId = effectiveSenderId,
             senderName = effectiveSenderName,
@@ -643,7 +549,11 @@ class ChatManager @Inject constructor(
             isFromTeacher = isTeacher,
         )
 
-        // Optimistic local state update & immediate disk persistence!
+        // Single Source of Truth: Push directly to Firebase Realtime Database
+        // No local disk caching and no PostgreSQL message writes to prevent duplication
+        firebaseRtdbManager.pushMessage(threadId, localMsg)
+
+        // Optimistically update in-memory thread
         _threads.value = _threads.value.map { thread ->
             if (thread.id == threadId) {
                 val updatedTeacherName = if (isTeacher && effectiveSenderName.isNotBlank() && !effectiveSenderName.equals("Guru Pengampu", ignoreCase = true)) {
@@ -651,49 +561,16 @@ class ChatManager @Inject constructor(
                 } else {
                     thread.teacherName
                 }
+                val alreadyHas = thread.messages.any { it.id == clientUuid }
+                val updatedMsgs = if (alreadyHas) thread.messages else thread.messages + localMsg
                 thread.copy(
-                    messages = thread.messages + localMsg,
+                    messages = updatedMsgs,
                     status = if (isTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
                     lastUpdated = now,
                     teacherName = updatedTeacherName,
                 )
             } else {
                 thread
-            }
-        }
-        saveToDisk(_threads.value, auth?.userId)
-
-        // Push message to Firebase Realtime Database instantly!
-        firebaseRtdbManager.pushMessage(threadId, localMsg)
-
-        // Persist to real database via backend API with idempotent client_message_id
-        scope.launch {
-            try {
-                val req = SendInquiryMessageRequestDto(
-                    clientMessageId = clientUuid,
-                    senderId = effectiveSenderId,
-                    senderName = effectiveSenderName,
-                    senderRole = effectiveRole,
-                    content = content.trim()
-                )
-                val resp = api.sendMessage(threadId, req)
-                if (resp.success && resp.data != null) {
-                    val canonicalMsg = resp.data
-                    _threads.value = _threads.value.map { th ->
-                        if (th.id == threadId) {
-                            val updatedMsgs = th.messages.map { msg ->
-                                if (msg.id == tempId) msg.copy(id = canonicalMsg.id) else msg
-                            }
-                            val effStatus = if (isTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
-                            th.copy(messages = updatedMsgs, status = effStatus)
-                        } else th
-                    }
-                    saveToDisk(_threads.value, auth?.userId)
-                    // Refresh detail to ensure canonical sync
-                    loadThreadDetail(threadId)
-                }
-            } catch (e: Exception) {
-                Timber.e(e, "Failed to persist chat message to database")
             }
         }
 
@@ -828,21 +705,8 @@ class ChatManager @Inject constructor(
                     put("status", thread.status.name)
                     put("lastUpdated", thread.lastUpdated)
 
-                    val mArray = JSONArray()
-                    for (msg in thread.messages) {
-                        val mObj = JSONObject().apply {
-                            put("id", msg.id)
-                            put("threadId", msg.threadId)
-                            put("senderId", msg.senderId)
-                            put("senderName", msg.senderName)
-                            put("senderRole", msg.senderRole)
-                            put("content", msg.content)
-                            put("timestamp", msg.timestamp)
-                            put("isFromTeacher", msg.isFromTeacher)
-                        }
-                        mArray.put(mObj)
-                    }
-                    put("messages", mArray)
+                    // Chat messages are managed exclusively via Firebase RTDB (no disk cache)
+                    put("messages", JSONArray())
                 }
                 jsonArray.put(tObj)
             }
@@ -871,25 +735,7 @@ class ChatManager @Inject constructor(
             val result = ArrayList<ChatThread>(jsonArray.length())
             for (i in 0 until jsonArray.length()) {
                 val tObj = jsonArray.getJSONObject(i)
-                val msgs = ArrayList<ChatMessage>()
-                if (tObj.has("messages")) {
-                    val mArray = tObj.getJSONArray("messages")
-                    for (j in 0 until mArray.length()) {
-                        val mObj = mArray.getJSONObject(j)
-                        msgs.add(
-                            ChatMessage(
-                                id = mObj.optString("id", UUID.randomUUID().toString()),
-                                threadId = mObj.optString("threadId", tObj.optString("id")),
-                                senderId = mObj.optString("senderId", ""),
-                                senderName = mObj.optString("senderName", ""),
-                                senderRole = mObj.optString("senderRole", "STUDENT"),
-                                content = mObj.optString("content", ""),
-                                timestamp = mObj.optLong("timestamp", System.currentTimeMillis()),
-                                isFromTeacher = mObj.optBoolean("isFromTeacher", false),
-                            )
-                        )
-                    }
-                }
+                val msgs = emptyList<ChatMessage>() // Real-time messages are streamed directly from Firebase RTDB
                 val inqType = try {
                     InquiryType.valueOf(tObj.optString("inquiryType", "MATERIAL"))
                 } catch (_: Exception) {
