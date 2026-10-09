@@ -229,16 +229,16 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                             questionType = qObj.optString("question_type", "MULTIPLE_CHOICE"),
                             points = qObj.optInt("points", 10),
                             choices = choicesList,
-                            explanation = qObj.optString("explanation", null),
-                            rubric = qObj.optString("rubric", null),
+                            explanation = if (qObj.isNull("explanation") || !qObj.has("explanation")) null else qObj.optString("explanation"),
+                            rubric = if (qObj.isNull("rubric") || !qObj.has("rubric")) null else qObj.optString("rubric"),
                         )
                     )
                 }
 
                 val result = GeneratedCurriculumResult(
                     title = data.optString("title", "Tugas Otomatis"),
-                    instructions = data.optString("instructions", null),
-                    description = data.optString("description", null),
+                    instructions = if (data.isNull("instructions") || !data.has("instructions")) null else data.optString("instructions"),
+                    description = if (data.isNull("description") || !data.has("description")) null else data.optString("description"),
                     format = data.optString("assignment_type", data.optString("format", type)),
                     questions = questionsList,
                     timeLimitMinutes = data.optInt("time_limit_minutes", 30),
