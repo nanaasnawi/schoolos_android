@@ -131,5 +131,28 @@ class SessionRepositoryImpl @Inject constructor(
         attendanceDao.insertAll(domainList.map { it.toEntity() })
         domainList
     }
+
+    override suspend fun cancelSession(sessionId: String, reason: String?): Result<LearningSession> = runCatching {
+        val response = api.cancelSession(sessionId, com.schoolos.android.data.remote.dto.CancelSessionRequestDto(reason))
+        val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal membatalkan sesi pembelajaran.")
+        val domain = dto.toDomain()
+        sessionDao.insert(domain.toEntity())
+        domain
+    }
+
+    override suspend fun substituteTeacher(
+        sessionId: String,
+        substituteTeacherId: String,
+        notes: String?,
+    ): Result<LearningSession> = runCatching {
+        val response = api.substituteTeacher(
+            sessionId,
+            com.schoolos.android.data.remote.dto.SubstituteTeacherRequestDto(substituteTeacherId, notes)
+        )
+        val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal menugaskan guru pengganti.")
+        val domain = dto.toDomain()
+        sessionDao.insert(domain.toEntity())
+        domain
+    }
 }
 

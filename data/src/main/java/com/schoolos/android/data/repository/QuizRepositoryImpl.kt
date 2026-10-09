@@ -289,5 +289,20 @@ class QuizRepositoryImpl @Inject constructor(
     } catch (e: Throwable) {
         Result.failure(parseHttpError(e, "Gagal menilai pengerjaan kuis."))
     }
+
+    override suspend fun verifyToken(quizId: String, token: String): Result<Boolean> = try {
+        val response = api.verifyQuizToken(
+            id = quizId,
+            request = com.schoolos.android.data.remote.dto.VerifyQuizTokenRequestDto(token = token.trim().uppercase()),
+        )
+        val data = response.data ?: throw Exception(response.error?.message ?: "Gagal memverifikasi token kuis.")
+        if (data.valid) {
+            Result.success(true)
+        } else {
+            Result.failure(Exception(data.message))
+        }
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Token kuis tidak valid atau akun terkunci."))
+    }
 }
 

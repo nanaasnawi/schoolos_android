@@ -137,9 +137,20 @@ class QuizDetailViewModel @Inject constructor(
         }
     }
 
-    fun startAttempt() {
+    fun startAttempt(token: String? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isStarting = true, startError = null)
+            val quiz = _state.value.quiz
+            if (quiz?.examMode == "PROCTORED_CBT" && !token.isNullOrBlank()) {
+                val verifyRes = repository.verifyToken(quizId, token)
+                if (verifyRes.isFailure) {
+                    _state.value = _state.value.copy(
+                        isStarting = false,
+                        startError = verifyRes.exceptionOrNull()?.message ?: "Token ujian CBT tidak valid",
+                    )
+                    return@launch
+                }
+            }
             repository.startAttempt(quizId)
                 .onSuccess { attempt ->
                     _state.value = _state.value.copy(isStarting = false, attempt = attempt)

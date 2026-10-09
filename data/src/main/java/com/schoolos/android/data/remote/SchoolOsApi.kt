@@ -115,6 +115,12 @@ interface SchoolOsApi {
         @Body request: CreateQuizQuestionRequestDto,
     ): ApiResponse<QuizQuestionDto>
 
+    @POST("learning/quizzes/{id}/verify-token")
+    suspend fun verifyQuizToken(
+        @Path("id") id: String,
+        @Body request: VerifyQuizTokenRequestDto,
+    ): ApiResponse<VerifyQuizTokenResponseDto>
+
     @POST("learning/quizzes/{id}/attempts")
     suspend fun startAttempt(
         @Path("id") id: String,
@@ -171,6 +177,18 @@ interface SchoolOsApi {
         @Body request: List<RecordAttendanceRequestDto>,
         @Header("X-Idempotency-Key") idempotencyKey: String? = null,
     ): ApiResponse<List<SessionAttendanceDto>>
+
+    @POST("learning/sessions/{id}/cancel")
+    suspend fun cancelSession(
+        @Path("id") id: String,
+        @Body request: CancelSessionRequestDto,
+    ): ApiResponse<LearningSessionDto>
+
+    @POST("learning/sessions/{id}/substitute")
+    suspend fun substituteTeacher(
+        @Path("id") id: String,
+        @Body request: SubstituteTeacherRequestDto,
+    ): ApiResponse<LearningSessionDto>
 
 
     @GET("learning/materials/{id}")
@@ -265,6 +283,12 @@ interface SchoolOsApi {
 
     @GET("announcements/{id}")
     suspend fun getAnnouncementById(@Path("id") id: String): ApiResponse<AnnouncementDto>
+
+    // Analytics & Headmaster Compliance Monitoring
+    @GET("analytics/schedule-compliance")
+    suspend fun getScheduleCompliance(
+        @Query("date") date: String? = null,
+    ): ApiResponse<ScheduleComplianceResponseDto>
 }
 
 @kotlinx.serialization.Serializable
