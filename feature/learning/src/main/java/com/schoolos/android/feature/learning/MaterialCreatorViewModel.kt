@@ -228,18 +228,35 @@ class MaterialCreatorViewModel @Inject constructor(
                 (s.contains("pancasila") && (title.contains("pancasila") || title.contains("ppkn")))
             )
 
-            val classMatch = if (c.contains("10") || c.contains(" x") || c.contains("x ")) {
-                title.contains("kelas x") || title.contains("kelas 10") || (b.gradeLevelName?.contains("10") == true)
+            val classNumber = Regex("\\d+").find(c)?.value?.toIntOrNull()
+            val classMatch = if (classNumber != null) {
+                b.classLevel == classNumber ||
+                b.gradeLevelName?.contains(classNumber.toString()) == true ||
+                title.contains("kelas $classNumber") ||
+                (classNumber == 1 && (title.contains("kelas i") || title.contains("kelas 1"))) ||
+                (classNumber == 2 && (title.contains("kelas ii") || title.contains("kelas 2"))) ||
+                (classNumber == 3 && (title.contains("kelas iii") || title.contains("kelas 3"))) ||
+                (classNumber == 4 && (title.contains("kelas iv") || title.contains("kelas 4"))) ||
+                (classNumber == 5 && (title.contains("kelas v") || title.contains("kelas 5"))) ||
+                (classNumber == 6 && (title.contains("kelas vi") || title.contains("kelas 6"))) ||
+                (classNumber == 7 && (title.contains("kelas vii") || title.contains("kelas 7"))) ||
+                (classNumber == 8 && (title.contains("kelas viii") || title.contains("kelas 8"))) ||
+                (classNumber == 9 && (title.contains("kelas ix") || title.contains("kelas 9"))) ||
+                (classNumber == 10 && (title.contains("kelas x") || title.contains("kelas 10"))) ||
+                (classNumber == 11 && (title.contains("kelas xi") || title.contains("kelas 11"))) ||
+                (classNumber == 12 && (title.contains("kelas xii") || title.contains("kelas 12")))
+            } else if (c.contains("10") || c.contains(" x") || c.contains("x ")) {
+                b.classLevel == 10 || title.contains("kelas x") || title.contains("kelas 10")
             } else if (c.contains("11") || c.contains(" xi") || c.contains("xi ")) {
-                title.contains("kelas xi") || title.contains("kelas 11") || (b.gradeLevelName?.contains("11") == true)
+                b.classLevel == 11 || title.contains("kelas xi") || title.contains("kelas 11")
             } else if (c.contains("12") || c.contains(" xii") || c.contains("xii ")) {
-                title.contains("kelas xii") || title.contains("kelas 12") || (b.gradeLevelName?.contains("12") == true)
+                b.classLevel == 12 || title.contains("kelas xii") || title.contains("kelas 12")
             } else if (c.contains("7") || c.contains("vii")) {
-                title.contains("kelas vii") || title.contains("kelas 7") || (b.gradeLevelName?.contains("7") == true)
+                b.classLevel == 7 || title.contains("kelas vii") || title.contains("kelas 7")
             } else if (c.contains("8") || c.contains("viii")) {
-                title.contains("kelas viii") || title.contains("kelas 8") || (b.gradeLevelName?.contains("8") == true)
+                b.classLevel == 8 || title.contains("kelas viii") || title.contains("kelas 8")
             } else if (c.contains("9") || c.contains("ix")) {
-                title.contains("kelas ix") || title.contains("kelas 9") || (b.gradeLevelName?.contains("9") == true)
+                b.classLevel == 9 || title.contains("kelas ix") || title.contains("kelas 9")
             } else true
 
             subjMatch && classMatch

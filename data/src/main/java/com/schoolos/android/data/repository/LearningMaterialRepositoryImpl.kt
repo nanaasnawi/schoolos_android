@@ -290,8 +290,12 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getLibraryBooks(search: String?): Result<List<com.schoolos.android.domain.model.LibraryBook>> = runCatching {
-        val response = api.getLibraryBooks(search = search)
+    override suspend fun getLibraryBooks(
+        search: String?,
+        classId: String?,
+        recommendations: Boolean?,
+    ): Result<List<com.schoolos.android.domain.model.LibraryBook>> = runCatching {
+        val response = api.getLibraryBooks(search = search, classId = classId, recommendations = recommendations)
         response.data?.map { dto ->
             com.schoolos.android.domain.model.LibraryBook(
                 id = dto.id,
@@ -302,6 +306,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 subjectName = dto.subjectName,
                 gradeLevelId = dto.gradeLevelId,
                 gradeLevelName = dto.gradeLevelName,
+                classLevel = dto.classLevel,
                 totalPages = dto.totalPages,
                 coverUrl = dto.coverUrl,
                 fileUrl = dto.fileUrl,

@@ -519,15 +519,42 @@ class HomeViewModel @Inject constructor(
             if (combinedHistory.isNotEmpty()) {
                 _state.update { it.copy(activeReadingHistory = combinedHistory, recommendedSibiBook = null) }
             } else {
-                // If student has NO reading history, fetch integrated SIBI Kemendikdasmen books
-                learningMaterialRepository.getLibraryBooks().onSuccess { books ->
-                    val recommended = books.firstOrNull { book ->
+                // If student has NO reading history, fetch integrated SIBI Kemendikdasmen books scoped to student's rombel
+                val studentClassName = (currentAuth.className ?: auth.className ?: "").lowercase()
+                val studentClassNum = Regex("\\d+").find(studentClassName)?.value?.toIntOrNull()
+
+                learningMaterialRepository.getLibraryBooks(recommendations = true).onSuccess { books ->
+                    // 1. Strictly match student's enrolled rombel/grade level
+                    val gradeMatchedBooks = books.filter { book ->
                         val t = book.title.lowercase()
-                        !t.contains("panduan guru") && !t.contains("buku guru") && (t.contains("koding") || t.contains("informatika") || t.contains("bahasa") || t.contains("matematika") || t.contains("dasar"))
-                    } ?: books.firstOrNull { book ->
-                        val t = book.title.lowercase()
+                        val isNotTeacherGuide = !t.contains("panduan guru") && !t.contains("buku guru")
+                        if (!isNotTeacherGuide) return@filter false
+
+                        if (studentClassNum != null) {
+                            book.classLevel == studentClassNum ||
+                            book.gradeLevelName?.contains(studentClassNum.toString()) == true ||
+                            t.contains("kelas $studentClassNum") ||
+                            (studentClassNum == 5 && (t.contains("kelas v") || t.contains("kelas 5"))) ||
+                            (studentClassNum == 4 && (t.contains("kelas iv") || t.contains("kelas 4"))) ||
+                            (studentClassNum == 6 && (t.contains("kelas vi") || t.contains("kelas 6"))) ||
+                            (studentClassNum == 7 && (t.contains("kelas vii") || t.contains("kelas 7"))) ||
+                            (studentClassNum == 8 && (t.contains("kelas viii") || t.contains("kelas 8"))) ||
+                            (studentClassNum == 9 && (t.contains("kelas ix") || t.contains("kelas 9"))) ||
+                            (studentClassNum == 10 && (t.contains("kelas x") || t.contains("kelas 10"))) ||
+                            (studentClassNum == 11 && (t.contains("kelas xi") || t.contains("kelas 11"))) ||
+                            (studentClassNum == 12 && (t.contains("kelas xii") || t.contains("kelas 12")))
+                        } else true
+                    }
+
+                    val candidateBooks = if (gradeMatchedBooks.isNotEmpty()) gradeMatchedBooks else books.filter {
+                        val t = it.title.lowercase()
                         !t.contains("panduan guru") && !t.contains("buku guru")
-                    } ?: books.firstOrNull()
+                    }
+
+                    val recommended = candidateBooks.firstOrNull { book ->
+                        val t = book.title.lowercase()
+                        t.contains("koding") || t.contains("informatika") || t.contains("bahasa") || t.contains("matematika") || t.contains("ilmu pengetahuan") || t.contains("pancasila")
+                    } ?: candidateBooks.firstOrNull() ?: books.firstOrNull()
 
                     _state.update { it.copy(activeReadingHistory = emptyList(), recommendedSibiBook = recommended) }
                 }
