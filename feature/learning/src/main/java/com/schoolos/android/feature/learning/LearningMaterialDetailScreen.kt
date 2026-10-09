@@ -327,9 +327,23 @@ fun LearningMaterialDetailScreen(
                 val candidateBody = material.contentBody ?: material.description
                 if (!candidateBody.isNullOrBlank()) {
                     try {
-                        val json = Json { ignoreUnknownKeys = true }
+                        val json = Json { ignoreUnknownKeys = true; isLenient = true }
                         richBlocks = json.decodeFromString<List<ContentBlock>>(candidateBody)
-                    } catch (_: Exception) {}
+                    } catch (_: Exception) {
+                        try {
+                            val arr = org.json.JSONArray(candidateBody)
+                            val list = mutableListOf<ContentBlock>()
+                            for (i in 0 until arr.length()) {
+                                val obj = arr.getJSONObject(i)
+                                val id = obj.optString("id", "block-$i")
+                                val rawType = obj.optString("type", obj.optString("block_type", "TEXT")).uppercase()
+                                val type = if (rawType == "IMAGE") ContentBlockType.IMAGE else ContentBlockType.TEXT
+                                val content = obj.optString("content", "")
+                                list.add(ContentBlock(id = id, type = type, content = content))
+                            }
+                            richBlocks = list
+                        } catch (_: Exception) {}
+                    }
                 }
             }
 
@@ -517,163 +531,30 @@ fun LearningMaterialDetailScreen(
                     }
                 }
 
+                // ── RESOLVED TEACHER NAME ───────────────────────────────────
+                val descPartsForQ = (material.description ?: "").split(" • ")
+                val resolvedTeacherName = material.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
+                    ?: if (descPartsForQ.size >= 3 && descPartsForQ[2].isNotBlank() && !descPartsForQ[2].equals("Guru Pengampu", ignoreCase = true)) descPartsForQ[2] else "Guru Mata Pelajaran"
+
                 // ── RICH BLOCK CONTENT RENDERER (INFOGRAFIS / MULTI-BLOCK) ────────
-                if (richBlocks != null && richBlocks.isNotEmpty() && material.materialType == MaterialType.IMAGE) {
-                    Card(
-                        colors = CardDefaults.cardColors(containerColor = CosmicNavy),
-                        shape = RoundedCornerShape(16.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            // Infographic Header Bar
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(34.dp)
-                                            .clip(CircleShape)
-                                            .background(NeonBlue.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Default.AutoAwesome,
-                                            contentDescription = null,
-                                            tint = NeonBlue,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = "🎨 Lembar Infografis Interaktif",
-                                            color = TextPrimary,
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = "Ketuk gambar untuk perbesar (Pinch-to-Zoom), salin teks materi",
-                                            color = TextTertiary,
-                                            fontSize = 10.5.sp
-                                        )
-                                    }
-                                }
-
-                                val allText = richBlocks.filter { it.type.name == "TEXT" }.joinToString("\n\n") { it.content }
-                                if (allText.isNotBlank()) {
-                                    Surface(
-                                        color = CosmicSurface2,
-                                        shape = RoundedCornerShape(8.dp),
-                                        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
-                                        modifier = Modifier.clickable {
-                                            clipboardManager.setText(AnnotatedString(allText))
-                                            Toast.makeText(context, "✓ Seluruh teks infografis disalin ke papan klip!", Toast.LENGTH_SHORT).show()
-                                        }
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                        ) {
-                                            Icon(
-                                                imageVector = Icons.Default.ContentCopy,
-                                                contentDescription = null,
-                                                tint = NeonBlue,
-                                                modifier = Modifier.size(12.dp)
-                                            )
-                                            Text(
-                                                text = "Salin Teks",
-                                                color = NeonBlue,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            HorizontalDivider(color = GlassBorder)
-
-                            richBlocks.forEachIndexed { idx, block ->
-                                when (block.type.name) {
-                                    "TEXT" -> {
-                                        if (block.content.isNotBlank()) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(12.dp))
-                                                    .background(CosmicDark.copy(alpha = 0.6f))
-                                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                                                    .padding(12.dp)
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                    verticalAlignment = Alignment.CenterVertically
-                                                ) {
-                                                    Text(
-                                                        text = "Catatan Infografis",
-                                                        color = TextTertiary,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(6.dp))
-                                                            .background(CosmicSurface2)
-                                                            .clickable {
-                                                                clipboardManager.setText(AnnotatedString(block.content))
-                                                                Toast.makeText(context, "✓ Teks berhasil disalin ke papan klip", Toast.LENGTH_SHORT).show()
-                                                            }
-                                                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                                                    ) {
-                                                        Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.spacedBy(3.dp)
-                                                        ) {
-                                                            Icon(Icons.Default.ContentCopy, null, tint = TextTertiary, modifier = Modifier.size(10.dp))
-                                                            Text("Salin", color = TextTertiary, fontSize = 10.sp)
-                                                        }
-                                                    }
-                                                }
-                                                Spacer(Modifier.height(6.dp))
-                                                Text(
-                                                    text = block.content,
-                                                    color = TextPrimary,
-                                                    fontSize = (13.5 * textSizeMultiplier).sp,
-                                                    lineHeight = (21 * textSizeMultiplier).sp,
-                                                    fontWeight = FontWeight.Normal
-                                                )
-                                            }
-                                        }
-                                    }
-                                    "IMAGE" -> {
-                                        if (block.content.isNotBlank()) {
-                                            Column(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .clip(RoundedCornerShape(14.dp))
-                                                    .background(CosmicDark)
-                                                    .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                                            ) {
-                                                InAppImageViewer(
-                                                    imageUrl = block.content,
-                                                    title = "${material.title} (Visual ${idx + 1})",
-                                                    modifier = Modifier
-                                                        .fillMaxWidth()
-                                                        .heightIn(min = 220.dp, max = 400.dp)
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                if (material.materialType == MaterialType.IMAGE) {
+                    val effectiveBlocks = if (richBlocks != null && richBlocks.isNotEmpty()) {
+                        richBlocks
+                    } else if (!material.mediaUrl.isNullOrBlank()) {
+                        listOf(ContentBlock(type = ContentBlockType.IMAGE, content = material.mediaUrl ?: ""))
+                    } else {
+                        emptyList()
                     }
+
+                    InfographicMagazineReaderView(
+                        title = material.title,
+                        subtitle = if (material.description?.trim()?.startsWith("[") == true) null else material.description,
+                        subjectName = material.subject,
+                        className = material.className ?: "Semua Rombel",
+                        teacherName = resolvedTeacherName,
+                        blocks = effectiveBlocks,
+                        textSizeMultiplier = textSizeMultiplier
+                    )
                 }
 
                 // ── MONITORING KETERBACAAN SISWA (Role: Guru) ────────────────
@@ -687,10 +568,6 @@ fun LearningMaterialDetailScreen(
                 }
 
                 // ── TANYA GURU / KONSULTASI MATERI (In-App Q&A) ──────────────
-                val descPartsForQ = (material.description ?: "").split(" • ")
-                val resolvedTeacherName = material.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
-                    ?: if (descPartsForQ.size >= 3 && descPartsForQ[2].isNotBlank() && !descPartsForQ[2].equals("Guru Pengampu", ignoreCase = true)) descPartsForQ[2] else "Guru Mata Pelajaran"
-
                 if (!isTeacher && onAskTeacher != null) {
                     Box(
                         modifier = Modifier
@@ -758,7 +635,8 @@ fun LearningMaterialDetailScreen(
 
                 // ── RINGKASAN & TUJUAN PEMBELAJARAN (Structured) ───────────
                 val matDesc = material.description
-                if (!matDesc.isNullOrBlank()) {
+                val isDescJson = matDesc?.trim()?.let { it.startsWith("[") || it.startsWith("{") } == true
+                if (!matDesc.isNullOrBlank() && !isDescJson && material.materialType != MaterialType.IMAGE) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -874,7 +752,8 @@ fun LearningMaterialDetailScreen(
                     val articleContent = if (richBlocks != null && richBlocks.isNotEmpty()) {
                         richBlocks.filter { it.type.name == "TEXT" }.joinToString("\n\n") { it.content }
                     } else {
-                        material.contentBody ?: material.description ?: ""
+                        val raw = material.contentBody ?: material.description ?: ""
+                        if (raw.trim().startsWith("[") || raw.trim().startsWith("{")) "" else raw
                     }
                     ArticleReaderView(
                         title = material.title,
@@ -992,7 +871,10 @@ private fun EditMaterialDialog(
     onSave: (title: String, description: String, mediaUrl: String?, startPage: Int?, endPage: Int?) -> Unit,
 ) {
     var title by remember { mutableStateOf(material.title) }
-    var description by remember { mutableStateOf(material.description ?: "") }
+    var description by remember {
+        val d = material.description ?: ""
+        mutableStateOf(if (d.trim().startsWith("[") || d.trim().startsWith("{")) "" else d)
+    }
     var mediaUrl by remember { mutableStateOf(material.mediaUrl ?: "") }
     var startPageStr by remember { mutableStateOf(material.startPage?.toString() ?: "") }
     var endPageStr by remember { mutableStateOf(material.endPage?.toString() ?: "") }
