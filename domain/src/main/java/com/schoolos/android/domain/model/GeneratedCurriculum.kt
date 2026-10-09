@@ -25,3 +25,16 @@ data class GeneratedCurriculumResult(
     val passingScore: Int = 70,
     val subjectName: String = "",
 )
+
+data class GeneratedMaterialBlock(
+    val id: String,
+    val type: String, // "TEXT" or "IMAGE"
+    val content: String,
+)
+
+data class GeneratedMaterialResult(
+    val title: String,
+    val description: String,
+    val mode: String, // "INFOGRAPHIC" or "ARTICLE"
+    val blocks: List<GeneratedMaterialBlock> = emptyList(),
+)

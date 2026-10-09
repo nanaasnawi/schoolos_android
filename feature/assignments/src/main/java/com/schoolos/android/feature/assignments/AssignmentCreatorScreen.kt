@@ -115,17 +115,18 @@ fun AssignmentCreatorScreen(
             availableSubjects = state.availableSubjects,
             currentSubjectName = selectedSubject,
             isGenerating = state.isGeneratingAi,
-            onGenerate = { format, subId, subName ->
+            onGenerate = { format, subId, subName, topic ->
                 viewModel.generateWithAi(
                     format = format,
                     subjectId = subId,
                     subjectName = subName,
+                    topic = topic,
                     onGenerated = { genTitle, genInstructions ->
                         title = genTitle
                         instructions = genInstructions
                         selectedSubject = subName
                         showAiGenerateDialog = false
-                        Toast.makeText(context, "✓ Berhasil menyusun tugas otomatis!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "✓ Berhasil menyusun tugas (NVIDIA NIM)!", Toast.LENGTH_SHORT).show()
                     },
                     onError = { err ->
                         Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
@@ -256,7 +257,7 @@ fun AssignmentCreatorScreen(
                 color = CosmicNavy,
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
-                    Brush.horizontalGradient(listOf(Color(0xFF2563EB), Color(0xFF4F46E5)))
+                    Brush.horizontalGradient(listOf(Color(0xFF76B900), Color(0xFF10B981)))
                 ),
                 shadowElevation = 6.dp
             ) {
@@ -278,7 +279,7 @@ fun AssignmentCreatorScreen(
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(Color(0xFF2563EB), Color(0xFF4F46E5))
+                                        listOf(Color(0xFF76B900), Color(0xFF10B981))
                                     )
                                 ),
                             contentAlignment = Alignment.Center
@@ -286,19 +287,19 @@ fun AssignmentCreatorScreen(
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color.White,
+                                tint = Color.Black,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = "✨ Generate Tugas Otomatis (AI)",
+                                text = "✨ Generate Tugas (AI NVIDIA NIM)",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Black,
                                 color = Color.White
                             )
                             Text(
-                                text = "Sintesis soal PG, esai & rubrik instan dari materi terbit",
+                                text = "Sintesis tugas & soal otomatis bertenaga NVIDIA NIM",
                                 fontSize = 11.sp,
                                 color = Color(0xFF94A3B8),
                                 maxLines = 1,
@@ -309,14 +310,14 @@ fun AssignmentCreatorScreen(
 
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF1E3A8A).copy(alpha = 0.5f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF3B82F6).copy(alpha = 0.5f))
+                        color = Color(0xFF0F3918).copy(alpha = 0.6f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF76B900).copy(alpha = 0.5f))
                     ) {
                         Text(
-                            text = "Buka AI",
+                            text = "NVIDIA NIM",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF93C5FD),
+                            color = Color(0xFF76B900),
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         )
                     }

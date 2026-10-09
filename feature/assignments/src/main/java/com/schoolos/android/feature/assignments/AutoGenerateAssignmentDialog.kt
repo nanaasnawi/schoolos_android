@@ -26,6 +26,10 @@ private val CosmicSurface2 = Color(0xFF1E293B)
 private val CosmicNavy = Color(0xFF0F172A)
 private val TeacherNeon = Color(0xFF3B82F6)
 private val GlassBorder = Color(0xFF334155)
+private val NvidiaGreen = Color(0xFF76B900)
+private val NvidiaGradient = Brush.linearGradient(
+    listOf(Color(0xFF76B900), Color(0xFF10B981))
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,13 +38,14 @@ fun AutoGenerateAssignmentDialog(
     onDismiss: () -> Unit,
     availableSubjects: List<AcademicSubject>,
     currentSubjectName: String,
-    onGenerate: (format: String, subjectId: String, subjectName: String) -> Unit,
+    onGenerate: (format: String, subjectId: String, subjectName: String, topic: String) -> Unit,
     isGenerating: Boolean = false,
 ) {
     if (!isOpen) return
 
     val colorScheme = MaterialTheme.colorScheme
     var selectedFormat by remember { mutableStateOf("STRUCTURED_QUESTIONS") }
+    var customTopic by remember { mutableStateOf("") }
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
         mutableStateOf(matched ?: availableSubjects.firstOrNull())
@@ -77,29 +82,43 @@ fun AutoGenerateAssignmentDialog(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(colorScheme.primary, colorScheme.tertiary)
-                                    )
-                                ),
+                                .background(NvidiaGradient),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = colorScheme.onPrimary,
+                                tint = Color.Black,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                         Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Sintesis Tugas AI",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = colorScheme.onSurface
+                                )
+                                Surface(
+                                    shape = RoundedCornerShape(4.dp),
+                                    color = NvidiaGreen.copy(alpha = 0.2f),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, NvidiaGreen)
+                                ) {
+                                    Text(
+                                        text = "NVIDIA NIM",
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = NvidiaGreen,
+                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                             Text(
-                                text = "Sintesis Tugas AI",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Black,
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Otomatisasi kurikulum mapel",
+                                text = "NVIDIA NIM AI • Zero Local Mock",
                                 fontSize = 11.sp,
                                 color = colorScheme.onSurfaceVariant
                             )
@@ -178,6 +197,35 @@ fun AutoGenerateAssignmentDialog(
                     }
                 }
 
+                // Topik / Fokus Materi (Opsional)
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "Topik / Fokus Tugas (Opsional)",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface
+                    )
+                    OutlinedTextField(
+                        value = customTopic,
+                        onValueChange = { customTopic = it },
+                        placeholder = {
+                            Text(
+                                "Contoh: Eksosistem Hutan Hujan, Hukum Newton, dll",
+                                fontSize = 12.sp,
+                                color = colorScheme.onSurfaceVariant
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = !isGenerating,
+                        singleLine = true,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NvidiaGreen,
+                            unfocusedBorderColor = colorScheme.outlineVariant
+                        )
+                    )
+                }
+
                 // Format Selection
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
@@ -212,8 +260,8 @@ fun AutoGenerateAssignmentDialog(
                 // Info Callout
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = colorScheme.secondaryContainer.copy(alpha = 0.4f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.secondary.copy(alpha = 0.3f)),
+                    color = Color(0xFF0F3918).copy(alpha = 0.3f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, NvidiaGreen.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -221,11 +269,11 @@ fun AutoGenerateAssignmentDialog(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "🔒", fontSize = 14.sp)
+                        Text(text = "⚡", fontSize = 14.sp)
                         Text(
-                            text = "100% Terisolasi: Soal dirancang ketat hanya dari materi mata pelajaran terpilih tanpa resiko kebocoran antar rombel.",
+                            text = "NVIDIA NIM AI: Menyintesis soal penugasan berstandar industri secara instan tanpa template lokal.",
                             fontSize = 11.sp,
-                            color = colorScheme.onSecondaryContainer,
+                            color = NvidiaGreen,
                             lineHeight = 15.sp
                         )
                     }
@@ -253,7 +301,7 @@ fun AutoGenerateAssignmentDialog(
                         onClick = {
                             val sub = selectedSubject ?: availableSubjects.firstOrNull()
                             if (sub != null) {
-                                onGenerate(selectedFormat, sub.id, sub.name)
+                                onGenerate(selectedFormat, sub.id, sub.name, customTopic.trim())
                             }
                         },
                         enabled = !isGenerating && (selectedSubject != null || availableSubjects.isNotEmpty()),
@@ -262,22 +310,22 @@ fun AutoGenerateAssignmentDialog(
                             .height(46.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = colorScheme.onPrimary
+                            containerColor = NvidiaGreen,
+                            contentColor = Color.Black
                         )
                     ) {
                         if (isGenerating) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
-                                color = colorScheme.onPrimary,
+                                color = Color.Black,
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("Menyusun Soal...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Sintesis NVIDIA NIM...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         } else {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Generate Tugas", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Generate (NVIDIA)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }

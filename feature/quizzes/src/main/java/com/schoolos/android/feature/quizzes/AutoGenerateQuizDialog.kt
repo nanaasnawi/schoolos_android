@@ -22,10 +22,10 @@ import androidx.compose.ui.window.Dialog
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 
-private val CosmicSurface2 = Color(0xFF1E293B)
-private val CosmicNavy = Color(0xFF0F172A)
-private val AmberAccent = Color(0xFFD97706)
-private val GlassBorder = Color(0xFF334155)
+private val NvidiaGreen = Color(0xFF76B900)
+private val NvidiaGradient = Brush.linearGradient(
+    listOf(Color(0xFF76B900), Color(0xFF10B981))
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,13 +36,14 @@ fun AutoGenerateQuizDialog(
     availableClasses: List<AcademicClass>,
     currentSubjectName: String,
     currentClassName: String,
-    onGenerate: (type: String, subjectId: String, subjectName: String, classId: String?, className: String) -> Unit,
+    onGenerate: (type: String, subjectId: String, subjectName: String, classId: String?, className: String, topic: String) -> Unit,
     isGenerating: Boolean = false,
 ) {
     if (!isOpen) return
 
     val colorScheme = MaterialTheme.colorScheme
     var selectedType by remember { mutableStateOf("QUIZ_MCQ_ONLY") }
+    var customTopic by remember { mutableStateOf("") }
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
         mutableStateOf(matched ?: availableSubjects.firstOrNull())
@@ -85,29 +86,42 @@ fun AutoGenerateQuizDialog(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(colorScheme.primary, colorScheme.secondary)
-                                    )
-                                ),
+                                .background(NvidiaGradient),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = colorScheme.onPrimary,
+                                tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
                         Column {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text(
+                                    text = "Sintesis Kuis (AI NVIDIA)",
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = colorScheme.onSurface
+                                )
+                                Surface(
+                                    color = NvidiaGreen.copy(alpha = 0.15f),
+                                    shape = RoundedCornerShape(4.dp)
+                                ) {
+                                    Text(
+                                        text = "NVIDIA NIM",
+                                        color = NvidiaGreen,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                    )
+                                }
+                            }
                             Text(
-                                text = "Sintesis Kuis & Ujian AI",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Black,
-                                color = colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Penyusunan paket CBT otomatis",
+                                text = "Penyusunan CBT via NVIDIA NIM (Llama-3-70B)",
                                 fontSize = 11.sp,
                                 color = colorScheme.onSurfaceVariant
                             )
@@ -176,10 +190,40 @@ fun AutoGenerateQuizDialog(
                     }
                 }
 
+                // Custom Topic
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Topik / Materi Spesifik (Opsional)",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface
+                    )
+                    OutlinedTextField(
+                        value = customTopic,
+                        onValueChange = { customTopic = it },
+                        placeholder = {
+                            Text(
+                                "Contoh: Hukum Newton (atau biarkan kosong)",
+                                fontSize = 12.sp,
+                                color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = NvidiaGreen,
+                            unfocusedBorderColor = colorScheme.outlineVariant,
+                            focusedTextColor = colorScheme.onSurface,
+                            unfocusedTextColor = colorScheme.onSurface
+                        )
+                    )
+                }
+
                 // Target Class Selection
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Target Rombel / Kelas",
+                        text = "Rombel / Kelas Target",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = colorScheme.onSurface
@@ -229,38 +273,40 @@ fun AutoGenerateQuizDialog(
                     }
                 }
 
-                // Format Selection
+                // Evaluation Scope & Format
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Jenis Evaluasi",
+                        text = "Format Soal Evaluasi",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = colorScheme.onSurface
                     )
 
                     QuizFormatOptionCard(
-                        title = "Kuis Pilihan Ganda (MCQ)",
-                        subtitle = "Evaluasi cepat butir pilihan ganda",
+                        title = "Pilihan Ganda Saja (PG A-D)",
+                        subtitle = "5 Soal PG otomatis dengan kunci jawaban",
                         isSelected = selectedType == "QUIZ_MCQ_ONLY",
-                        onClick = { if (!isGenerating) selectedType = "QUIZ_MCQ_ONLY" }
+                        onClick = { selectedType = "QUIZ_MCQ_ONLY" }
                     )
 
                     QuizFormatOptionCard(
-                        title = "Kuis Kombinasi (PG + Esai)",
-                        subtitle = "Soal pemahaman konseptual & uraian",
+                        title = "Kombinasi PG & Esai Analitis",
+                        subtitle = "4 Soal PG + 2 Soal Esai HOTS dengan rubrik",
                         isSelected = selectedType == "QUIZ_MCQ_ESSAY",
-                        onClick = { if (!isGenerating) selectedType = "QUIZ_MCQ_ESSAY" }
+                        onClick = { selectedType = "QUIZ_MCQ_ESSAY" }
                     )
 
                     QuizFormatOptionCard(
-                        title = "Ujian Bulanan / Tengah Semester",
-                        subtitle = "Sintesis materi 30 hari terakhir",
+                        title = "Ujian Tengah / Akhir Semester",
+                        subtitle = "10 Soal komprehensif (KKM 75, durasi 90 mnt)",
                         isSelected = selectedType == "EXAM_MONTHLY",
-                        onClick = { if (!isGenerating) selectedType = "EXAM_MONTHLY" }
+                        onClick = { selectedType = "EXAM_MONTHLY" }
                     )
                 }
 
-                // Action Buttons
+                Spacer(Modifier.height(4.dp))
+
+                // Actions
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -281,29 +327,29 @@ fun AutoGenerateQuizDialog(
                             val sub = selectedSubject ?: availableSubjects.firstOrNull()
                             val cls = selectedClass ?: availableClasses.firstOrNull()
                             if (sub != null) {
-                                onGenerate(selectedType, sub.id, sub.name, cls?.id, cls?.name ?: "")
+                                onGenerate(selectedType, sub.id, sub.name, cls?.id, cls?.name ?: "", customTopic.trim())
                             }
                         },
                         enabled = !isGenerating && (selectedSubject != null || availableSubjects.isNotEmpty()),
                         modifier = Modifier.weight(1.5f).height(44.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = colorScheme.primary,
-                            contentColor = colorScheme.onPrimary
+                            containerColor = NvidiaGreen,
+                            contentColor = Color.White
                         )
                     ) {
                         if (isGenerating) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = colorScheme.onPrimary,
+                                color = Color.White,
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("Menyusun Kuis...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Menyusun...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         } else {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(15.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Generate Kuis", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Generate (AI NVIDIA)", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -323,10 +369,10 @@ private fun QuizFormatOptionCard(
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
-        color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = if (isSelected) NvidiaGreen.copy(alpha = 0.12f) else colorScheme.surfaceVariant.copy(alpha = 0.5f),
         border = androidx.compose.foundation.BorderStroke(
             if (isSelected) 1.5.dp else 1.dp,
-            if (isSelected) colorScheme.primary else colorScheme.outlineVariant
+            if (isSelected) NvidiaGreen else colorScheme.outlineVariant
         )
     ) {
         Row(
@@ -339,16 +385,16 @@ private fun QuizFormatOptionCard(
                     text = title,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
+                    color = if (isSelected) colorScheme.onSurface else colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
                     fontSize = 10.sp,
-                    color = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
+                    color = if (isSelected) colorScheme.onSurface.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
                 )
             }
             if (isSelected) {
-                Text(text = "✓", fontSize = 14.sp, color = colorScheme.primary, fontWeight = FontWeight.Black)
+                Text(text = "✓", fontSize = 14.sp, color = NvidiaGreen, fontWeight = FontWeight.Black)
             }
         }
     }

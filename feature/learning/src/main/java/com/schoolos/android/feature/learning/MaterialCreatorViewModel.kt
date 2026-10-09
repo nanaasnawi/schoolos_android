@@ -41,6 +41,7 @@ data class YoutubeVideoResult(
 data class MaterialCreatorUiState(
     val isLoading: Boolean = false,
     val isUploadingFile: Boolean = false,
+    val isGeneratingAi: Boolean = false,
     val uploadedFileName: String? = null,
     val uploadedFileUrl: String? = null,
     val success: Boolean = false,
@@ -62,6 +63,7 @@ data class MaterialCreatorUiState(
 class MaterialCreatorViewModel @Inject constructor(
     private val repository: LearningMaterialRepository,
     private val academicRepository: AcademicRepository,
+    private val generatorRepository: com.schoolos.android.domain.repository.CurriculumGeneratorRepository,
 ) : ViewModel() {
 
     private val httpClient = OkHttpClient()
@@ -397,10 +399,46 @@ class MaterialCreatorViewModel @Inject constructor(
         }
     }
 
+    fun generateMaterialWithAi(
+        mode: String,
+        topic: String,
+        gradeLevel: String = "Kelas 5 SD",
+        subjectName: String,
+        onSuccess: (title: String, description: String) -> Unit = { _, _ -> },
+        onError: (String) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isGeneratingAi = true, error = null)
+            generatorRepository.generateMaterial(
+                mode = mode,
+                topic = topic,
+                gradeLevel = gradeLevel,
+                subjectName = subjectName
+            ).onSuccess { res ->
+                val newBlocks = res.blocks.map { b ->
+                    ContentBlock(
+                        id = b.id,
+                        type = if (b.type.equals("IMAGE", ignoreCase = true)) ContentBlockType.IMAGE else ContentBlockType.TEXT,
+                        content = b.content
+                    )
+                }
+                if (newBlocks.isNotEmpty()) {
+                    contentBlocks.value = newBlocks
+                }
+                _state.value = _state.value.copy(isGeneratingAi = false)
+                onSuccess(res.title, res.description)
+            }.onFailure { err ->
+                _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
+                onError(err.message ?: "Gagal menyusun materi dengan AI NVIDIA NIM")
+            }
+        }
+    }
+
     fun resetState() {
         _state.value = _state.value.copy(
             isLoading = false,
             isUploadingFile = false,
+            isGeneratingAi = false,
             uploadedFileName = null,
             uploadedFileUrl = null,
             success = false,
