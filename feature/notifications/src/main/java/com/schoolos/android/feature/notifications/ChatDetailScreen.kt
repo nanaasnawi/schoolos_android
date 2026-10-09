@@ -592,12 +592,13 @@ private fun TopicContextBanner(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                if (!thread.readStatusLabel.isNullOrBlank()) {
-                    val isReadDone = thread.readStatusLabel.contains("Dibaca")
+                val label = thread.readStatusLabel
+                if (!label.isNullOrBlank()) {
+                    val isReadDone = label.contains("Dibaca")
                     val badgeColor = if (isReadDone) Color(0xFF10B981) else Color(0xFFF59E0B)
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = thread.readStatusLabel,
+                        text = label,
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = badgeColor,
