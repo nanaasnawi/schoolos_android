@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.BrokenImage
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.*
@@ -19,42 +19,108 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import com.schoolos.android.core.designsystem.*
+import kotlin.math.absoluteValue
+
+val EDUCATIONAL_FALLBACK_IMAGES = listOf(
+    "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800&q=80",
+    "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800&q=80",
+    "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&q=80",
+    "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&q=80",
+    "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80"
+)
 
 /**
- * In-App High Resolution Image & Infographic Viewer with Pinch-to-Zoom and Lightbox
+ * In-App High Resolution Image & Infographic Viewer with Pinch-to-Zoom, Lightbox,
+ * and automatic educational fallback so images never show broken icons.
  */
 @Composable
 fun InAppImageViewer(
     imageUrl: String,
     title: String,
     modifier: Modifier = Modifier,
+    fallbackIndex: Int = 0,
 ) {
+    val context = LocalContext.current
     var showFullscreenLightbox by remember { mutableStateOf(false) }
+    var useFallback by remember(imageUrl) { mutableStateOf(false) }
+
+    val fallbackUrl = remember(title, fallbackIndex) {
+        val idx = (title.hashCode().absoluteValue + fallbackIndex) % EDUCATIONAL_FALLBACK_IMAGES.size
+        EDUCATIONAL_FALLBACK_IMAGES[idx]
+    }
+
+    val activeUrl = remember(imageUrl, useFallback) {
+        if (useFallback || imageUrl.isBlank()) {
+            fallbackUrl
+        } else {
+            imageUrl
+        }
+    }
+
+    val imageRequest = remember(activeUrl) {
+        ImageRequest.Builder(context)
+            .data(activeUrl)
+            .addHeader(
+                "User-Agent",
+                "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+            )
+            .crossfade(true)
+            .build()
+    }
 
     Box(modifier = modifier) {
         SubcomposeAsyncImage(
-            model = imageUrl,
+            model = imageRequest,
             contentDescription = title,
             contentScale = ContentScale.Crop,
             loading = {
                 ShimmerBox(modifier = Modifier.fillMaxSize())
             },
             error = {
+                if (!useFallback && imageUrl.isNotBlank()) {
+                    LaunchedEffect(imageUrl) {
+                        useFallback = true
+                    }
+                }
                 Box(
-                    modifier = Modifier.fillMaxSize().background(CosmicNavy),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(CosmicNavy),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Default.BrokenImage, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(40.dp))
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = NeonBlue,
+                            modifier = Modifier.size(36.dp)
+                        )
                         Spacer(Modifier.height(8.dp))
-                        Text("Infografis Pembelajaran", color = TextSecondary, fontSize = 12.sp)
+                        Text(
+                            text = "Ilustrasi Materi Digital",
+                            color = TextPrimary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = title,
+                            color = TextTertiary,
+                            fontSize = 10.sp,
+                            maxLines = 1
+                        )
                     }
                 }
             },
@@ -67,16 +133,26 @@ fun InAppImageViewer(
         Box(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(12.dp)
+                .padding(10.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black.copy(alpha = 0.7f))
+                .background(Color.Black.copy(alpha = 0.72f))
                 .clickable { showFullscreenLightbox = true }
-                .padding(horizontal = 10.dp, vertical = 6.dp)
+                .padding(horizontal = 9.dp, vertical = 5.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.ZoomIn, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                Icon(
+                    imageVector = Icons.Default.ZoomIn,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(15.dp)
+                )
                 Spacer(Modifier.width(4.dp))
-                Text("Perbesar Infografis", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "Perbesar (Pinch-to-Zoom)",
+                    color = Color.White,
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -90,15 +166,31 @@ fun InAppImageViewer(
             var offsetX by remember { mutableStateOf(0f) }
             var offsetY by remember { mutableStateOf(0f) }
 
+            val lightboxRequest = remember(activeUrl) {
+                ImageRequest.Builder(context)
+                    .data(activeUrl)
+                    .addHeader(
+                        "User-Agent",
+                        "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
+                    )
+                    .crossfade(true)
+                    .build()
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color.Black)
             ) {
                 SubcomposeAsyncImage(
-                    model = imageUrl,
+                    model = lightboxRequest,
                     contentDescription = title,
                     contentScale = ContentScale.Fit,
+                    loading = {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = NeonBlue)
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxSize()
                         .graphicsLayer(
