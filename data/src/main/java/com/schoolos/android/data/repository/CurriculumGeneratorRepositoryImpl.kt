@@ -5,6 +5,8 @@ import com.schoolos.android.core.network.ApiClient
 import com.schoolos.android.domain.model.GeneratedCurriculumChoice
 import com.schoolos.android.domain.model.GeneratedCurriculumQuestion
 import com.schoolos.android.domain.model.GeneratedCurriculumResult
+import com.schoolos.android.domain.model.GeneratedMaterialBlock
+import com.schoolos.android.domain.model.GeneratedMaterialResult
 import com.schoolos.android.domain.repository.CurriculumGeneratorRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -13,6 +15,7 @@ import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
 import timber.log.Timber
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -27,244 +30,332 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
         subjectId: String,
         subjectName: String,
         sourceMode: String,
+        topic: String?,
+        gradeLevel: String?,
     ): Result<GeneratedCurriculumResult> = withContext(Dispatchers.IO) {
+        val effectiveTopic = topic?.trim()?.ifBlank { null } ?: subjectName
+        val effectiveGrade = gradeLevel ?: "Kelas 5 SD"
+        val isQuiz = type.startsWith("QUIZ") || type == "EXAM_MONTHLY"
+        val isExam = type == "EXAM_MONTHLY"
+
+        val backendBase = (authManager.getCustomServerUrl() ?: com.schoolos.android.core.common.BuildConfig.API_BASE_URL).trimEnd('/')
+        val token = authManager.getAccessToken()
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+
+        // 1. Direct call to Axum Backend (Strict NVIDIA NIM AI endpoint)
         try {
-            val payload = JSONObject().apply {
-                put("type", type)
-                put("subject_id", subjectId)
+            val directAiUrl = "$backendBase/api/v1/ai/generate-content"
+            val aiMode = if (isQuiz) "QUIZ" else "ASSIGNMENT"
+            val directPayload = JSONObject().apply {
+                put("mode", aiMode)
+                put("topic", effectiveTopic)
                 put("subject_name", subjectName)
-                put("source_mode", sourceMode)
+                put("grade_level", effectiveGrade)
+                put("num_questions", if (isExam) 10 else 5)
+                put("difficulty", if (isExam) "HOTS" else "Sedang")
             }
 
-            val mediaType = "application/json; charset=utf-8".toMediaType()
-            val requestBody = payload.toString().toRequestBody(mediaType)
+            val requestBuilder = Request.Builder()
+                .url(directAiUrl)
+                .post(directPayload.toString().toRequestBody(mediaType))
+            if (!token.isNullOrBlank()) {
+                requestBuilder.addHeader("Authorization", "Bearer $token")
+            }
 
-            // Candidate URLs: primary is active backend baseUrl, followed by web proxies
-            val backendBase = (authManager.getCustomServerUrl() ?: com.schoolos.android.core.common.BuildConfig.API_BASE_URL).trimEnd('/')
-            val candidateUrls = listOf(
-                "$backendBase/learning/auto-generate",
-                "$backendBase/learning/materials/auto-generate",
-                "https://www.akselerasi-edu.id/api/learning/auto-generate",
-                "https://akselerasi-edu.id/api/learning/auto-generate",
-                "https://www.akselerasi-edu.id/api/v1/learning/auto-generate",
-                "https://akselerasi-edu.id/api/v1/learning/auto-generate",
-            )
+            val response = apiClient.httpClient.newCall(requestBuilder.build()).execute()
+            val responseBody = response.body?.string() ?: ""
 
-            for (url in candidateUrls) {
-                try {
-                    val requestBuilder = Request.Builder()
-                        .url(url)
-                        .post(requestBody)
-
-                    val token = authManager.getAccessToken()
-                    if (!token.isNullOrBlank()) {
-                        requestBuilder.addHeader("Authorization", "Bearer $token")
-                    }
-
-                    val response = apiClient.httpClient.newCall(requestBuilder.build()).execute()
-                    val responseBody = response.body?.string() ?: ""
-
-                    if (!response.isSuccessful) {
-                        Timber.w("Auto-generate HTTP error from $url: ${response.code} $responseBody")
-                        continue
-                    }
-
-                    val json = JSONObject(responseBody)
-                    if (!json.optBoolean("success", false)) {
-                        continue
-                    }
-
+            if (response.isSuccessful && responseBody.isNotBlank()) {
+                val json = JSONObject(responseBody)
+                if (json.optBoolean("success", false)) {
                     val data = json.getJSONObject("data")
-                    val questionsArray = data.getJSONArray("questions")
-                    val questionsList = ArrayList<GeneratedCurriculumQuestion>()
 
-                    for (i in 0 until questionsArray.length()) {
-                        val qObj = questionsArray.getJSONObject(i)
-                        val choicesArray = qObj.optJSONArray("choices")
-                        val choicesList = ArrayList<GeneratedCurriculumChoice>()
+                    // Handle Direct AI Quiz Response
+                    if (data.has("quiz") && !data.isNull("quiz")) {
+                        val quizObj = data.getJSONObject("quiz")
+                        val questionsArray = quizObj.getJSONArray("questions")
+                        val questionsList = ArrayList<GeneratedCurriculumQuestion>()
 
-                        if (choicesArray != null) {
-                            for (j in 0 until choicesArray.length()) {
-                                val cObj = choicesArray.getJSONObject(j)
-                                choicesList.add(
-                                    GeneratedCurriculumChoice(
-                                        choiceText = cObj.optString("choice_text", ""),
-                                        isCorrect = cObj.optBoolean("is_correct", false),
+                        for (i in 0 until questionsArray.length()) {
+                            val qObj = questionsArray.getJSONObject(i)
+                            val choicesArray = qObj.optJSONArray("choices")
+                            val choicesList = ArrayList<GeneratedCurriculumChoice>()
+                            if (choicesArray != null) {
+                                for (j in 0 until choicesArray.length()) {
+                                    val cObj = choicesArray.getJSONObject(j)
+                                    choicesList.add(
+                                        GeneratedCurriculumChoice(
+                                            choiceText = cObj.optString("choice_text", ""),
+                                            isCorrect = cObj.optBoolean("is_correct", false),
+                                        )
+                                    )
+                                }
+                            }
+
+                            questionsList.add(
+                                GeneratedCurriculumQuestion(
+                                    id = qObj.optString("id", "q-$i"),
+                                    questionText = qObj.optString("question_text", ""),
+                                    questionType = "MULTIPLE_CHOICE",
+                                    points = qObj.optInt("points", 20),
+                                    choices = choicesList,
+                                    explanation = qObj.optString("explanation", "Disusun oleh AI NVIDIA NIM"),
+                                    rubric = null,
+                                )
+                            )
+                        }
+
+                        val result = GeneratedCurriculumResult(
+                            title = quizObj.optString("title", "Paket Soal CBT: $effectiveTopic"),
+                            instructions = "Kerjakan seluruh butir soal ujian pilihan ganda berikut dengan teliti.",
+                            description = quizObj.optString("description", "Paket soal CBT resmi disusun otomatis oleh AI NVIDIA NIM."),
+                            format = type,
+                            questions = questionsList,
+                            timeLimitMinutes = if (isExam) 90 else 45,
+                            passingScore = 75,
+                            subjectName = subjectName,
+                        )
+                        return@withContext Result.success(result)
+                    }
+
+                    // Handle Direct AI Assignment Response
+                    if (data.has("assignment") && !data.isNull("assignment")) {
+                        val assignObj = data.getJSONObject("assignment")
+                        val tasksArray = assignObj.optJSONArray("tasks")
+                        val rubric = assignObj.optString("rubric", "Rubrik Penilaian AI NVIDIA NIM")
+                        val questionsList = ArrayList<GeneratedCurriculumQuestion>()
+
+                        if (tasksArray != null) {
+                            val count = maxOf(1, tasksArray.length())
+                            for (i in 0 until tasksArray.length()) {
+                                questionsList.add(
+                                    GeneratedCurriculumQuestion(
+                                        id = "task-${i + 1}",
+                                        questionText = tasksArray.getString(i),
+                                        questionType = "ESSAY",
+                                        points = 100 / count,
+                                        choices = emptyList(),
+                                        explanation = rubric,
+                                        rubric = rubric,
                                     )
                                 )
                             }
                         }
 
-                        questionsList.add(
-                            GeneratedCurriculumQuestion(
-                                id = qObj.optString("id", "q-$i"),
-                                questionText = qObj.optString("question_text", ""),
-                                questionType = qObj.optString("question_type", "MULTIPLE_CHOICE"),
-                                points = qObj.optInt("points", 10),
-                                choices = choicesList,
-                                explanation = qObj.optString("explanation", null),
-                                rubric = qObj.optString("rubric", null),
+                        val result = GeneratedCurriculumResult(
+                            title = assignObj.optString("title", "Tugas Siswa: $effectiveTopic"),
+                            instructions = "${assignObj.optString("instructions", "")}\n\nRubrik Penilaian Objektif (AI NVIDIA NIM):\n$rubric",
+                            description = "Lembar tugas terstruktur disusun otomatis oleh AI NVIDIA NIM.",
+                            format = type,
+                            questions = questionsList,
+                            timeLimitMinutes = 45,
+                            passingScore = 70,
+                            subjectName = subjectName,
+                        )
+                        return@withContext Result.success(result)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Direct Axum AI endpoint call failed, trying proxy route")
+        }
+
+        // 2. Fallback to Web API Route (/api/v1/learning/auto-generate)
+        val proxyUrls = listOf(
+            "$backendBase/api/v1/learning/auto-generate",
+            "$backendBase/api/learning/auto-generate",
+            "https://www.akselerasi-edu.id/api/v1/learning/auto-generate",
+            "https://akselerasi-edu.id/api/v1/learning/auto-generate",
+        )
+
+        val proxyPayload = JSONObject().apply {
+            put("type", type)
+            put("subject_id", subjectId)
+            put("subject_name", subjectName)
+            put("topic", effectiveTopic)
+            put("grade_level", effectiveGrade)
+            put("source_mode", sourceMode)
+        }
+        val requestBody = proxyPayload.toString().toRequestBody(mediaType)
+
+        for (url in proxyUrls) {
+            try {
+                val requestBuilder = Request.Builder()
+                    .url(url)
+                    .post(requestBody)
+
+                if (!token.isNullOrBlank()) {
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
+
+                val response = apiClient.httpClient.newCall(requestBuilder.build()).execute()
+                val responseBody = response.body?.string() ?: ""
+
+                if (!response.isSuccessful) {
+                    Timber.w("Auto-generate HTTP error from $url: ${response.code} $responseBody")
+                    continue
+                }
+
+                val json = JSONObject(responseBody)
+                if (!json.optBoolean("success", false)) {
+                    continue
+                }
+
+                val data = json.getJSONObject("data")
+                val questionsArray = data.getJSONArray("questions")
+                val questionsList = ArrayList<GeneratedCurriculumQuestion>()
+
+                for (i in 0 until questionsArray.length()) {
+                    val qObj = questionsArray.getJSONObject(i)
+                    val choicesArray = qObj.optJSONArray("choices")
+                    val choicesList = ArrayList<GeneratedCurriculumChoice>()
+
+                    if (choicesArray != null) {
+                        for (j in 0 until choicesArray.length()) {
+                            val cObj = choicesArray.getJSONObject(j)
+                            choicesList.add(
+                                GeneratedCurriculumChoice(
+                                    choiceText = cObj.optString("choice_text", cObj.optString("text", "")),
+                                    isCorrect = cObj.optBoolean("is_correct", cObj.optBoolean("isCorrect", false)),
+                                )
+                            )
+                        }
+                    }
+
+                    questionsList.add(
+                        GeneratedCurriculumQuestion(
+                            id = qObj.optString("id", "q-$i"),
+                            questionText = qObj.optString("question_text", ""),
+                            questionType = qObj.optString("question_type", "MULTIPLE_CHOICE"),
+                            points = qObj.optInt("points", 10),
+                            choices = choicesList,
+                            explanation = qObj.optString("explanation", null),
+                            rubric = qObj.optString("rubric", null),
+                        )
+                    )
+                }
+
+                val result = GeneratedCurriculumResult(
+                    title = data.optString("title", "Tugas Otomatis"),
+                    instructions = data.optString("instructions", null),
+                    description = data.optString("description", null),
+                    format = data.optString("assignment_type", data.optString("format", type)),
+                    questions = questionsList,
+                    timeLimitMinutes = data.optInt("time_limit_minutes", 30),
+                    passingScore = data.optInt("passing_score", 70),
+                    subjectName = subjectName,
+                )
+
+                return@withContext Result.success(result)
+            } catch (e: Exception) {
+                Timber.w(e, "Attempt failed for $url")
+            }
+        }
+
+        // NO LOCAL SYNTHESIS / DUMMY MOCK ENGINE: Strict NVIDIA NIM only
+        Result.failure(Exception("Gagal menghubungi server AI NVIDIA NIM. Pastikan server aktif dan koneksi internet stabil."))
+    }
+
+    override suspend fun generateMaterial(
+        mode: String,
+        topic: String,
+        gradeLevel: String,
+        subjectName: String,
+    ): Result<GeneratedMaterialResult> = withContext(Dispatchers.IO) {
+        val backendBase = (authManager.getCustomServerUrl() ?: com.schoolos.android.core.common.BuildConfig.API_BASE_URL).trimEnd('/')
+        val token = authManager.getAccessToken()
+        val mediaType = "application/json; charset=utf-8".toMediaType()
+
+        val candidateUrls = listOf(
+            "$backendBase/api/v1/ai/generate-content",
+            "https://www.akselerasi-edu.id/api/v1/ai/generate-content",
+            "https://akselerasi-edu.id/api/v1/ai/generate-content",
+        )
+
+        val payload = JSONObject().apply {
+            put("mode", mode.uppercase())
+            put("topic", topic.trim())
+            put("grade_level", gradeLevel)
+            put("subject_name", subjectName)
+        }
+
+        for (url in candidateUrls) {
+            try {
+                val requestBuilder = Request.Builder()
+                    .url(url)
+                    .post(payload.toString().toRequestBody(mediaType))
+
+                if (!token.isNullOrBlank()) {
+                    requestBuilder.addHeader("Authorization", "Bearer $token")
+                }
+
+                val response = apiClient.httpClient.newCall(requestBuilder.build()).execute()
+                val responseBody = response.body?.string() ?: ""
+
+                if (!response.isSuccessful) {
+                    Timber.w("AI material error from $url: ${response.code} $responseBody")
+                    continue
+                }
+
+                val json = JSONObject(responseBody)
+                if (!json.optBoolean("success", false)) continue
+
+                val data = json.getJSONObject("data")
+
+                if (mode.equals("INFOGRAPHIC", ignoreCase = true) && data.has("infographic")) {
+                    val infoObj = data.getJSONObject("infographic")
+                    val blocksArr = infoObj.getJSONArray("blocks")
+                    val blocksList = ArrayList<GeneratedMaterialBlock>()
+
+                    for (i in 0 until blocksArr.length()) {
+                        val bObj = blocksArr.getJSONObject(i)
+                        val bType = bObj.optString("type", bObj.optString("block_type", "TEXT"))
+                        blocksList.add(
+                            GeneratedMaterialBlock(
+                                id = bObj.optString("id", UUID.randomUUID().toString()),
+                                type = bType,
+                                content = bObj.optString("content", "")
                             )
                         )
                     }
 
-                    val result = GeneratedCurriculumResult(
-                        title = data.optString("title", "Tugas Otomatis"),
-                        instructions = data.optString("instructions", null),
-                        description = data.optString("description", null),
-                        format = data.optString("assignment_type", data.optString("format", type)),
-                        questions = questionsList,
-                        timeLimitMinutes = data.optInt("time_limit_minutes", 30),
-                        passingScore = data.optInt("passing_score", 70),
-                        subjectName = subjectName,
+                    return@withContext Result.success(
+                        GeneratedMaterialResult(
+                            title = "Infografis: ${topic.trim()}",
+                            description = "Modul infografis interaktif Kurikulum Merdeka disusun otomatis oleh AI NVIDIA NIM.",
+                            mode = "INFOGRAPHIC",
+                            blocks = blocksList
+                        )
                     )
-
-                    return@withContext Result.success(result)
-                } catch (e: Exception) {
-                    Timber.w(e, "Attempt failed for $url")
                 }
-            }
 
-            // Fallback: Autonomous Local Synthesis Engine according to Kurikulum Merdeka
-            Timber.i("Server unavailable or 404, generating questions autonomously for $subjectName ($type)")
-            val synthesized = synthesizeLocally(type, subjectId, subjectName)
-            Result.success(synthesized)
-        } catch (e: Exception) {
-            Timber.e(e, "Curriculum generation unhandled exception, generating fallback")
-            Result.success(synthesizeLocally(type, subjectId, subjectName))
-        }
-    }
+                if (mode.equals("ARTICLE", ignoreCase = true) && data.has("article")) {
+                    val artObj = data.getJSONObject("article")
+                    val artTitle = artObj.optString("title", "Artikel: ${topic.trim()}")
+                    val artContent = artObj.optString("content", "")
 
-    private fun synthesizeLocally(
-        type: String,
-        subjectId: String,
-        subjectName: String,
-    ): GeneratedCurriculumResult {
-        val cleanSubject = subjectName.ifBlank { "Mata Pelajaran" }
-        val isHomework = type == "ASSIGNMENT_HOMEWORK"
-        val isMcqOnly = type == "QUIZ_MCQ_ONLY"
-        val isExam = type == "EXAM_MONTHLY"
-        val isCombo = type == "QUIZ_MCQ_ESSAY" || isExam
-
-        val title = when {
-            isHomework -> "Tugas Mandiri: $cleanSubject"
-            isExam -> "Paket Ujian Tengah Semester: $cleanSubject"
-            type == "ASSIGNMENT_STRUCTURED" -> "Tugas Terstruktur: $cleanSubject"
-            else -> "Kuis Pemahaman: $cleanSubject"
-        }
-
-        val instructions = when {
-            isHomework -> "1. Kerjakan tugas analisis dan resume materi secara teliti.\n2. Uraikan pemahaman konseptual dan contoh penerapan nyata.\n3. Kumpulkan sebelum batas waktu yang telah ditentukan."
-            isExam -> "1. Waktu pengerjaan maksimal 60 menit.\n2. Bacalah setiap butir soal dengan saksama.\n3. Periksa kembali jawaban sebelum mengirim evaluasi."
-            else -> "Kerjakan setiap butir soal pilihan ganda berikut untuk menguji pemahaman materi $cleanSubject."
-        }
-
-        val questions = ArrayList<GeneratedCurriculumQuestion>()
-
-        // Subject-tailored question generators
-        val mcqTemplates = listOf(
-            Triple(
-                "Berdasarkan capaian pembelajaran mata pelajaran $cleanSubject, manakah prinsip dasar yang paling esensial dalam memahami topik inti?",
-                "Penerapan konsep secara kontekstual yang menghubungkan teori dengan pemecahan masalah nyata.",
-                listOf(
-                    "Penghafalan definisi tanpa memahami konteks penerapan praktis.",
-                    "Pengabaian kaidah dasar demi mempercepat penyelesaian tugas.",
-                    "Pendekatan subjektif tanpa berlandaskan data atau fakta materi."
-                )
-            ),
-            Triple(
-                "Dalam konteks materi $cleanSubject, faktor utama yang menentukan keberhasilan analisis masalah adalah...",
-                "Kemampuan mengidentifikasi hubungan sebab-akibat dan merumuskan solusi berbasis fakta.",
-                listOf(
-                    "Kecepatan menjawab tanpa melalui proses verifikasi data.",
-                    "Menggunakan asumsi pribadi yang tidak teruji secara materiil.",
-                    "Mengabaikan indikator kompetensi dasar yang ditentukan kurikulum."
-                )
-            ),
-            Triple(
-                "Manakah langkah awal yang paling tepat saat menghadapi permasalahan studi kasus pada $cleanSubject?",
-                "Mengumpulkan data awal, memetakan indikator masalah, dan menentukan rujukan materi yang relevan.",
-                listOf(
-                    "Langsung mengambil kesimpulan tanpa menganalisis akar masalah.",
-                    "Mengabaikan petunjuk dasar dan membuat perkiraan acak.",
-                    "Menghindari penggunaan rumus atau kaidah baku materi."
-                )
-            ),
-            Triple(
-                "Bagaimana keterkaitan antara penguasaan teori $cleanSubject dengan efektivitas penerapannya di lingkungan sehari-hari?",
-                "Teori memberikan kerangka berpikir logis untuk memandu tindakan dan solusi yang tepat sasaran.",
-                listOf(
-                    "Teori hanya bersifat akademis dan tidak relevan dengan kebutuhan praktis.",
-                    "Penguasaan teori mengurangi fleksibilitas dalam menyelesaikan masalah.",
-                    "Penerapan praktis sama sekali tidak membutuhkan rujukan teori pendukung."
-                )
-            ),
-            Triple(
-                "Evaluasi terhadap hasil kerja pada mata pelajaran $cleanSubject sebaiknya dilakukan dengan cara...",
-                "Membandingkan hasil capaian dengan kriteria penilaian objektif dan indikator ketuntasan.",
-                listOf(
-                    "Menilai berdasarkan intuisi semata tanpa rubrik yang jelas.",
-                    "Hanya mengukur kecepatan waktu tanpa meninjau akurasi jawaban.",
-                    "Mengabaikan umpan balik yang diberikan oleh guru pembimbing."
-                )
-            )
-        )
-
-        // Generate Multiple Choice Questions
-        val mcqCount = if (isHomework) 2 else if (isCombo) 4 else 5
-        for (i in 0 until mcqCount) {
-            val tmpl = mcqTemplates[i % mcqTemplates.size]
-            val choices = ArrayList<GeneratedCurriculumChoice>()
-            choices.add(GeneratedCurriculumChoice(choiceText = tmpl.second, isCorrect = true))
-            tmpl.third.forEach { wrong ->
-                choices.add(GeneratedCurriculumChoice(choiceText = wrong, isCorrect = false))
-            }
-            // Deterministic rotation based on index
-            val shift = i % 4
-            val rotated = ArrayList<GeneratedCurriculumChoice>()
-            for (k in shift until choices.size) rotated.add(choices[k])
-            for (k in 0 until shift) rotated.add(choices[k])
-
-            questions.add(
-                GeneratedCurriculumQuestion(
-                    id = "gen-mcq-${i + 1}",
-                    questionText = tmpl.first,
-                    questionType = "MULTIPLE_CHOICE",
-                    points = if (isHomework) 15 else 10,
-                    choices = rotated,
-                    explanation = "Jawaban yang benar adalah pemahaman komprehensif terhadap prinsip capaian pembelajaran $cleanSubject.",
-                    rubric = null
-                )
-            )
-        }
-
-        // Generate Essay Questions for Combo or Homework
-        if (isCombo || isHomework) {
-            val essayCount = if (isHomework) 2 else 1
-            for (e in 0 until essayCount) {
-                questions.add(
-                    GeneratedCurriculumQuestion(
-                        id = "gen-essay-${e + 1}",
-                        questionText = "Jelaskan pemahaman Anda mengenai topik utama materi $cleanSubject! Berikan satu contoh konkret serta analisis bagaimana konsep tersebut diterapkan dalam kehidupan sehari-hari.",
-                        questionType = "ESSAY",
-                        points = if (isHomework) 35 else 20,
-                        choices = emptyList(),
-                        explanation = null,
-                        rubric = "Kriteria Penilaian:\n1. Kejelasan definisi konsep (8 poin)\n2. Relevansi contoh penerapan nyata (7 poin)\n3. Analisis kritis dan alur berpikir runtut (5 poin)"
+                    val blocksList = listOf(
+                        GeneratedMaterialBlock(
+                            id = UUID.randomUUID().toString(),
+                            type = "TEXT",
+                            content = artContent
+                        )
                     )
-                )
+
+                    return@withContext Result.success(
+                        GeneratedMaterialResult(
+                            title = artTitle,
+                            description = "Artikel komprehensif kurikulum resmi disusun otomatis oleh AI NVIDIA NIM.",
+                            mode = "ARTICLE",
+                            blocks = blocksList
+                        )
+                    )
+                }
+            } catch (e: Exception) {
+                Timber.w(e, "Generate material failed for $url")
             }
         }
 
-        return GeneratedCurriculumResult(
-            title = title,
-            instructions = instructions,
-            description = "Paket materi dan asesmen pembelajaran otomatis untuk $cleanSubject.",
-            format = type,
-            questions = questions,
-            timeLimitMinutes = if (isExam) 60 else 30,
-            passingScore = 75,
-            subjectName = cleanSubject,
-        )
+        Result.failure(Exception("Gagal menyusun materi dengan AI NVIDIA NIM. Pastikan server aktif."))
     }
 }

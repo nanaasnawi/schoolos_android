@@ -1,6 +1,5 @@
-package com.schoolos.android.feature.assignments
+package com.schoolos.android.feature.learning
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -20,12 +19,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 
-private val CosmicSurface2 = Color(0xFF1E293B)
-private val CosmicNavy = Color(0xFF0F172A)
-private val TeacherNeon = Color(0xFF3B82F6)
-private val GlassBorder = Color(0xFF334155)
 private val NvidiaGreen = Color(0xFF76B900)
 private val NvidiaGradient = Brush.linearGradient(
     listOf(Color(0xFF76B900), Color(0xFF10B981))
@@ -33,24 +29,33 @@ private val NvidiaGradient = Brush.linearGradient(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AutoGenerateAssignmentDialog(
+fun AutoGenerateMaterialDialog(
     isOpen: Boolean,
     onDismiss: () -> Unit,
     availableSubjects: List<AcademicSubject>,
+    availableClasses: List<AcademicClass>,
     currentSubjectName: String,
-    onGenerate: (format: String, subjectId: String, subjectName: String, topic: String) -> Unit,
+    currentClassName: String,
+    onGenerate: (mode: String, subjectName: String, topic: String, gradeLevel: String) -> Unit,
     isGenerating: Boolean = false,
 ) {
     if (!isOpen) return
 
     val colorScheme = MaterialTheme.colorScheme
-    var selectedFormat by remember { mutableStateOf("STRUCTURED_QUESTIONS") }
-    var customTopic by remember { mutableStateOf("") }
+    var selectedMode by remember { mutableStateOf("INFOGRAPHIC") } // "INFOGRAPHIC" vs "ARTICLE"
+    var topicInput by remember { mutableStateOf("") }
+
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
         mutableStateOf(matched ?: availableSubjects.firstOrNull())
     }
+    var selectedClass by remember(currentClassName, availableClasses) {
+        val matched = availableClasses.find { it.name.equals(currentClassName, ignoreCase = true) }
+        mutableStateOf(matched ?: availableClasses.firstOrNull())
+    }
+
     var isSubjectDropdownOpen by remember { mutableStateOf(false) }
+    var isClassDropdownOpen by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = { if (!isGenerating) onDismiss() }) {
         Surface(
@@ -66,7 +71,7 @@ fun AutoGenerateAssignmentDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Header
                 Row(
@@ -98,7 +103,7 @@ fun AutoGenerateAssignmentDialog(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = "Sintesis Tugas AI",
+                                    text = "Sintesis Materi AI",
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Black,
                                     color = colorScheme.onSurface
@@ -138,22 +143,91 @@ fun AutoGenerateAssignmentDialog(
 
                 HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.5f))
 
-                // Subject Selection
+                // Mode Format: Infografis vs Artikel
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
-                        text = "Mata Pelajaran (Mapel)",
+                        text = "Format Materi",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = colorScheme.onSurface
                     )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = !isGenerating) { selectedMode = "INFOGRAPHIC" },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (selectedMode == "INFOGRAPHIC") NvidiaGreen.copy(alpha = 0.15f) else colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (selectedMode == "INFOGRAPHIC") 1.5.dp else 1.dp,
+                                if (selectedMode == "INFOGRAPHIC") NvidiaGreen else colorScheme.outlineVariant
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "🖼️ Infografis Majalah",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (selectedMode == "INFOGRAPHIC") NvidiaGreen else colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Visual dinamis, card & ilustrasi",
+                                    fontSize = 10.sp,
+                                    color = colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
 
+                        Surface(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clickable(enabled = !isGenerating) { selectedMode = "ARTICLE" },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (selectedMode == "ARTICLE") NvidiaGreen.copy(alpha = 0.15f) else colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            border = androidx.compose.foundation.BorderStroke(
+                                if (selectedMode == "ARTICLE") 1.5.dp else 1.dp,
+                                if (selectedMode == "ARTICLE") NvidiaGreen else colorScheme.outlineVariant
+                            )
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(10.dp),
+                                verticalArrangement = Arrangement.spacedBy(2.dp)
+                            ) {
+                                Text(
+                                    text = "📰 Artikel Berita",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (selectedMode == "ARTICLE") NvidiaGreen else colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "Sub-bab & fakta terstruktur",
+                                    fontSize = 10.sp,
+                                    color = colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Mapel Selection
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Mata Pelajaran",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = colorScheme.onSurface
+                    )
                     Box(modifier = Modifier.fillMaxWidth()) {
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable(enabled = !isGenerating) {
-                                    isSubjectDropdownOpen = true
-                                },
+                                .clickable(enabled = !isGenerating) { isSubjectDropdownOpen = true },
                             shape = RoundedCornerShape(10.dp),
                             color = colorScheme.surfaceVariant.copy(alpha = 0.5f),
                             border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant)
@@ -161,32 +235,26 @@ fun AutoGenerateAssignmentDialog(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = selectedSubject?.name ?: "Pilih Mata Pelajaran",
-                                    fontSize = 13.sp,
+                                    text = selectedSubject?.name ?: currentSubjectName.ifBlank { "Pilih Mata Pelajaran" },
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = if (selectedSubject != null) colorScheme.onSurface else colorScheme.onSurfaceVariant
+                                    color = colorScheme.onSurface
                                 )
-                                Text(text = "▼", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
+                                Text("▼", fontSize = 9.sp, color = colorScheme.onSurfaceVariant)
                             }
                         }
-
                         DropdownMenu(
                             expanded = isSubjectDropdownOpen,
-                            onDismissRequest = { isSubjectDropdownOpen = false },
-                            modifier = Modifier
-                                .background(colorScheme.surface)
-                                .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp))
+                            onDismissRequest = { isSubjectDropdownOpen = false }
                         ) {
                             availableSubjects.forEach { sub ->
                                 DropdownMenuItem(
-                                    text = {
-                                        Text(sub.name, color = colorScheme.onSurface, fontSize = 13.sp)
-                                    },
+                                    text = { Text(sub.name, fontSize = 12.sp) },
                                     onClick = {
                                         selectedSubject = sub
                                         isSubjectDropdownOpen = false
@@ -197,20 +265,20 @@ fun AutoGenerateAssignmentDialog(
                     }
                 }
 
-                // Topik / Fokus Materi (Opsional)
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                // Topik / Konsep Materi (Wajib)
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(
-                        text = "Topik / Fokus Tugas (Opsional)",
+                        text = "Topik / Konsep Materi *",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
                         color = colorScheme.onSurface
                     )
                     OutlinedTextField(
-                        value = customTopic,
-                        onValueChange = { customTopic = it },
+                        value = topicInput,
+                        onValueChange = { topicInput = it },
                         placeholder = {
                             Text(
-                                "Contoh: Eksosistem Hutan Hujan, Hukum Newton, dll",
+                                "Contoh: Siklus Air & Hidrologi, Planet & Tata Surya...",
                                 fontSize = 12.sp,
                                 color = colorScheme.onSurfaceVariant
                             )
@@ -226,37 +294,6 @@ fun AutoGenerateAssignmentDialog(
                     )
                 }
 
-                // Format Selection
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        text = "Format Penugasan",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.onSurface
-                    )
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        FormatOptionCard(
-                            modifier = Modifier.weight(1f),
-                            title = "Soal Terstruktur",
-                            subtitle = "Pilihan Ganda & Esai",
-                            isSelected = selectedFormat == "STRUCTURED_QUESTIONS",
-                            onClick = { if (!isGenerating) selectedFormat = "STRUCTURED_QUESTIONS" }
-                        )
-
-                        FormatOptionCard(
-                            modifier = Modifier.weight(1f),
-                            title = "Tugas Mandiri",
-                            subtitle = "PR & Lembar Kerja",
-                            isSelected = selectedFormat == "HOMEWORK_PR",
-                            onClick = { if (!isGenerating) selectedFormat = "HOMEWORK_PR" }
-                        )
-                    }
-                }
-
                 // Info Callout
                 Surface(
                     shape = RoundedCornerShape(10.dp),
@@ -265,13 +302,13 @@ fun AutoGenerateAssignmentDialog(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.padding(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(text = "⚡", fontSize = 14.sp)
                         Text(
-                            text = "NVIDIA NIM AI: Menyintesis soal penugasan berstandar industri secara instan tanpa template lokal.",
+                            text = "NVIDIA NIM AI: Menyusun narasi, headline, callout dan visual ilustrasi materi siap ajar.",
                             fontSize = 11.sp,
                             color = NvidiaGreen,
                             lineHeight = 15.sp
@@ -289,25 +326,22 @@ fun AutoGenerateAssignmentDialog(
                         enabled = !isGenerating,
                         modifier = Modifier
                             .weight(1f)
-                            .height(46.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = colorScheme.onSurfaceVariant),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant)
+                            .height(44.dp),
+                        shape = RoundedCornerShape(12.dp)
                     ) {
-                        Text("Batal", fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Batal", fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
 
                     Button(
                         onClick = {
-                            val sub = selectedSubject ?: availableSubjects.firstOrNull()
-                            if (sub != null) {
-                                onGenerate(selectedFormat, sub.id, sub.name, customTopic.trim())
-                            }
+                            val subName = selectedSubject?.name ?: currentSubjectName.ifBlank { "Umum" }
+                            val clsName = selectedClass?.name ?: currentClassName.ifBlank { "Kelas 5 SD" }
+                            onGenerate(selectedMode, subName, topicInput.trim(), clsName)
                         },
-                        enabled = !isGenerating && (selectedSubject != null || availableSubjects.isNotEmpty()),
+                        enabled = !isGenerating && topicInput.isNotBlank(),
                         modifier = Modifier
                             .weight(1.5f)
-                            .height(46.dp),
+                            .height(44.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = NvidiaGreen,
@@ -316,57 +350,20 @@ fun AutoGenerateAssignmentDialog(
                     ) {
                         if (isGenerating) {
                             CircularProgressIndicator(
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(16.dp),
                                 color = Color.Black,
                                 strokeWidth = 2.dp
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Sintesis NVIDIA NIM...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Spacer(Modifier.width(6.dp))
+                            Text("Sintesis NVIDIA NIM...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         } else {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Generate (NVIDIA)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Generate (NVIDIA)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun FormatOptionCard(
-    modifier: Modifier = Modifier,
-    title: String,
-    subtitle: String,
-    isSelected: Boolean,
-    onClick: () -> Unit,
-) {
-    val colorScheme = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier.clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
-        border = androidx.compose.foundation.BorderStroke(
-            if (isSelected) 1.5.dp else 1.dp,
-            if (isSelected) colorScheme.primary else colorScheme.outlineVariant
-        )
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = title,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
-            )
-            Text(
-                text = subtitle,
-                fontSize = 10.sp,
-                color = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
-            )
         }
     }
 }

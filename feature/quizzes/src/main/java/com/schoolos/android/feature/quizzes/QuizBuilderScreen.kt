@@ -140,16 +140,17 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
             currentSubjectName = selectedSubject,
             currentClassName = selectedClass,
             isGenerating = state.isGeneratingAi,
-            onGenerate = { type, subId, subName, clsId, clsName ->
+            onGenerate = { type, subId, subName, clsId, clsName, topic ->
                 viewModel.generateQuizWithAi(
                     type = type,
                     subjectId = subId,
                     subjectName = subName,
                     classId = clsId,
                     className = clsName,
+                    topic = topic,
                     onSuccessCallback = {
                         showAiGenerateDialog = false
-                        Toast.makeText(context, "✓ Berhasil menyusun paket kuis CBT!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "✓ Berhasil menyusun paket kuis CBT (NVIDIA NIM)!", Toast.LENGTH_SHORT).show()
                     },
                     onError = { err ->
                         Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
@@ -175,7 +176,7 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
             color = CosmicNavy,
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
-                Brush.horizontalGradient(listOf(Color(0xFFD97706), Color(0xFFEA580C)))
+                Brush.horizontalGradient(listOf(Color(0xFF76B900), Color(0xFF10B981)))
             ),
             shadowElevation = 6.dp
         ) {
@@ -197,7 +198,7 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                             .clip(RoundedCornerShape(10.dp))
                             .background(
                                 Brush.linearGradient(
-                                    listOf(Color(0xFFD97706), Color(0xFFEA580C))
+                                    listOf(Color(0xFF76B900), Color(0xFF10B981))
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -205,19 +206,19 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = Color.Black,
                             modifier = Modifier.size(20.dp)
                         )
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = "✨ Generate Kuis / Ujian Otomatis (AI)",
+                            text = "✨ Generate Kuis / Ujian (AI NVIDIA NIM)",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Black,
                             color = Color.White
                         )
                         Text(
-                            text = "Generate bank soal CBT otomatis dari materi kurikulum",
+                            text = "Generate bank soal CBT otomatis bertenaga NVIDIA NIM",
                             fontSize = 11.sp,
                             color = Color(0xFF94A3B8),
                             maxLines = 1,
@@ -228,14 +229,14 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF78350F).copy(alpha = 0.5f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFD97706).copy(alpha = 0.5f))
+                    color = Color(0xFF0F3918).copy(alpha = 0.6f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF76B900).copy(alpha = 0.5f))
                 ) {
                     Text(
-                        text = "Buka AI",
+                        text = "NVIDIA NIM",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFDE68A),
+                        color = Color(0xFF76B900),
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                     )
                 }

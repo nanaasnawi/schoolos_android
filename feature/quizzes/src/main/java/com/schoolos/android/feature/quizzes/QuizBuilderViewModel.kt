@@ -62,6 +62,7 @@ class QuizBuilderViewModel @Inject constructor(
         subjectName: String,
         classId: String?,
         className: String,
+        topic: String = "",
         onSuccessCallback: () -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
@@ -71,7 +72,8 @@ class QuizBuilderViewModel @Inject constructor(
                 type = type,
                 subjectId = subjectId,
                 subjectName = subjectName,
-                sourceMode = if (type == "EXAM_MONTHLY") "PAST_MONTH" else "LATEST_PUBLISHED"
+                sourceMode = if (type == "EXAM_MONTHLY") "PAST_MONTH" else "LATEST_PUBLISHED",
+                topic = topic.trim().ifBlank { null }
             ).onSuccess { generated ->
                 val totalComputedScore = generated.questions.sumOf { it.points }.let { if (it > 0) it else 100 }
                 repository.createQuiz(

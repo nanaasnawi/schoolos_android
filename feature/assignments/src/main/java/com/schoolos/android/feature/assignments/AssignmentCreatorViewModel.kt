@@ -68,6 +68,7 @@ class AssignmentCreatorViewModel @Inject constructor(
         format: String,
         subjectId: String,
         subjectName: String,
+        topic: String = "",
         onGenerated: (title: String, instructions: String) -> Unit,
         onError: (String) -> Unit = {}
     ) {
@@ -78,7 +79,8 @@ class AssignmentCreatorViewModel @Inject constructor(
                 type = apiType,
                 subjectId = subjectId,
                 subjectName = subjectName,
-                sourceMode = "LATEST_PUBLISHED"
+                sourceMode = "LATEST_PUBLISHED",
+                topic = topic.trim().ifBlank { null }
             ).onSuccess { result ->
                 val convertedQuestions = result.questions.mapIndexed { idx, q ->
                     AssignmentQuestion(

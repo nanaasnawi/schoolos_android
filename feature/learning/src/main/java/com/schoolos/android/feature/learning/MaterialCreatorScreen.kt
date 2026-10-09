@@ -135,6 +135,7 @@ fun MaterialCreatorScreen(
     var isChangingYoutubeVideo by remember { mutableStateOf(false) }
     var infographicViewMode by remember { mutableStateOf("EDIT") } // "EDIT" vs "CANVAS"
     var articleViewMode by remember { mutableStateOf("EDIT") } // "EDIT" vs "PREVIEW"
+    var showAiGenerateDialog by remember { mutableStateOf(false) }
 
     val clipboardManager = LocalClipboardManager.current
 
@@ -177,6 +178,36 @@ fun MaterialCreatorScreen(
                 isChangingYoutubeVideo = false
                 previewingYoutubeVideo = null
                 Toast.makeText(context, "✓ Video dipilih! Judul dan deskripsi otomatis terisi.", Toast.LENGTH_SHORT).show()
+            }
+        )
+    }
+
+    if (showAiGenerateDialog) {
+        AutoGenerateMaterialDialog(
+            isOpen = showAiGenerateDialog,
+            onDismiss = { showAiGenerateDialog = false },
+            availableSubjects = state.availableSubjects,
+            availableClasses = state.availableClasses,
+            currentSubjectName = selectedSubject,
+            currentClassName = selectedClass,
+            isGenerating = state.isGeneratingAi,
+            onGenerate = { mode, subName, topic, gradeLevel ->
+                viewModel.generateMaterialWithAi(
+                    mode = mode,
+                    topic = topic,
+                    gradeLevel = gradeLevel,
+                    subjectName = subName,
+                    onSuccess = { genTitle, genDesc ->
+                        title = genTitle
+                        description = genDesc
+                        selectedType = if (mode == "INFOGRAPHIC") MaterialType.IMAGE else MaterialType.ARTICLE
+                        showAiGenerateDialog = false
+                        Toast.makeText(context, "✓ Materi \"$genTitle\" berhasil disusun via NVIDIA NIM!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { err ->
+                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
+                    }
+                )
             }
         )
     }
@@ -437,6 +468,82 @@ fun MaterialCreatorScreen(
                                 Chip(label = selectedClass, color = NeonBlue)
                             }
                         }
+                    }
+                }
+            }
+
+            // ── AI MATERIAL GENERATOR CALLOUT CARD ──
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showAiGenerateDialog = true },
+                shape = RoundedCornerShape(16.dp),
+                color = CosmicNavy,
+                border = BorderStroke(
+                    1.dp,
+                    Brush.horizontalGradient(listOf(Color(0xFF76B900), Color(0xFF10B981)))
+                ),
+                shadowElevation = 6.dp
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(Color(0xFF76B900), Color(0xFF10B981))
+                                    )
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = Color.Black,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Text(
+                                text = "✨ Generate Materi (AI NVIDIA NIM)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black,
+                                color = Color.White
+                            )
+                            Text(
+                                text = "Sintesis infografis majalah & artikel terstruktur otomatis",
+                                fontSize = 11.sp,
+                                color = Color(0xFF94A3B8),
+                                maxLines = 1,
+                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFF0F3918).copy(alpha = 0.6f),
+                        border = BorderStroke(1.dp, Color(0xFF76B900).copy(alpha = 0.5f))
+                    ) {
+                        Text(
+                            text = "NVIDIA NIM",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF76B900),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        )
                     }
                 }
             }
