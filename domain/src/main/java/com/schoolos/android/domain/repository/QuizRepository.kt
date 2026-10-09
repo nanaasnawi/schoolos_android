@@ -30,6 +30,7 @@ interface QuizRepository {
     suspend fun getQuizAttempts(quizId: String): Result<List<QuizAttempt>>
     suspend fun getQuizAttempt(quizId: String, attemptId: String): Result<QuizAttempt>
     suspend fun gradeAttempt(quizId: String, attemptId: String, score: Int, feedback: String?): Result<QuizAttempt>
+    suspend fun verifyToken(quizId: String, token: String): Result<Boolean>
 }
 
 data class ChoiceInput(

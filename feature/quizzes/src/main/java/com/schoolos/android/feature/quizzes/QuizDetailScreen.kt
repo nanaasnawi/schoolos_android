@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
 import com.schoolos.android.core.common.formatPublishTimestamp
@@ -97,6 +98,7 @@ fun QuizDetailScreen(
     val isTeacher = isTeacherRole(state.userRole) || isPrincipal
     var selectedFilter by remember { mutableStateOf("Semua") }
     var attemptToGrade by remember { mutableStateOf<com.schoolos.android.domain.model.QuizAttempt?>(null) }
+    var tokenInput by remember { mutableStateOf("") }
 
     LaunchedEffect(state.attempt) {
         state.attempt?.let { attempt ->
@@ -697,9 +699,62 @@ fun QuizDetailScreen(
                                     }
                                 }
                             } else {
+                                if (q.examMode == "PROCTORED_CBT") {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(CosmicNavy)
+                                            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                                            .padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Lock,
+                                                contentDescription = null,
+                                                tint = com.schoolos.android.core.designsystem.NeonWarning,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = "TOKEN UJIAN CBT PROCTORED",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = com.schoolos.android.core.designsystem.NeonWarning,
+                                                letterSpacing = 0.5.sp,
+                                            )
+                                        }
+                                        Text(
+                                            text = "Ujian ini diawasi ketat. Masukkan token resmi yang diberikan oleh guru pengawas.",
+                                            fontSize = 11.sp,
+                                            color = TextTertiary,
+                                        )
+                                        OutlinedTextField(
+                                            value = tokenInput,
+                                            onValueChange = { if (it.length <= 10) tokenInput = it.uppercase() },
+                                            placeholder = { Text("Contoh: TOKEN6", color = TextTertiary, fontSize = 13.sp) },
+                                            singleLine = true,
+                                            modifier = Modifier.fillMaxWidth(),
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = com.schoolos.android.core.designsystem.NeonWarning,
+                                                unfocusedBorderColor = GlassBorder,
+                                                focusedTextColor = TextPrimary,
+                                                unfocusedTextColor = TextPrimary,
+                                            ),
+                                            shape = RoundedCornerShape(10.dp),
+                                        )
+                                    }
+                                    Spacer(Modifier.height(10.dp))
+                                }
+
+                                val canStartAttempt = !state.isStarting && isAvailable && (q.examMode != "PROCTORED_CBT" || tokenInput.isNotBlank())
+
                                 Button(
-                                    onClick = viewModel::startAttempt,
-                                    enabled = !state.isStarting && isAvailable,
+                                    onClick = { viewModel.startAttempt(tokenInput.takeIf { q.examMode == "PROCTORED_CBT" }) },
+                                    enabled = canStartAttempt,
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
                                         containerColor = Color.Transparent,
@@ -710,7 +765,7 @@ fun QuizDetailScreen(
                                         .height(52.dp)
                                         .clip(RoundedCornerShape(14.dp))
                                         .background(
-                                            if (isAvailable && !state.isStarting) {
+                                            if (canStartAttempt) {
                                                 Brush.horizontalGradient(
                                                     listOf(StudentNeon, Color(0xFF00B4D8))
                                                 )
@@ -722,7 +777,7 @@ fun QuizDetailScreen(
                                         )
                                         .border(
                                             width = 1.dp,
-                                            color = if (isAvailable && !state.isStarting) GlassBorder2 else GlassBorder,
+                                            color = if (canStartAttempt) GlassBorder2 else GlassBorder,
                                             shape = RoundedCornerShape(14.dp)
                                         )
                                 ) {

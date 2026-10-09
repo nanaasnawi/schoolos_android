@@ -21,12 +21,27 @@ data class QuizDto(
     @SerialName("class_id") val classId: String? = null,
     @SerialName("class_name") val className: String? = null,
     @SerialName("subject_name") val subjectName: String? = null,
-    @SerialName("teacher_name") val teacherName: String? = null,
+    @SerialName("session_id") val sessionId: String? = null,
+    @SerialName("exam_mode") val examMode: String = "HOMEWORK_QUIZ",
+    @SerialName("exam_token") val examToken: String? = null,
+    @SerialName("token_expires_at") val tokenExpiresAt: String? = null,
+    @SerialName("max_token_attempts") val maxTokenAttempts: Int = 5,
     @SerialName("student_attempt_status") val studentAttemptStatus: String? = null,
     @SerialName("student_attempts_count") val studentAttemptsCount: Int? = null,
     @SerialName("student_has_completed") val studentHasCompleted: Boolean? = null,
     @SerialName("student_last_score") val studentLastScore: Int? = null,
     @SerialName("student_last_attempt_id") val studentLastAttemptId: String? = null,
+)
+
+@Serializable
+data class VerifyQuizTokenRequestDto(
+    val token: String,
+)
+
+@Serializable
+data class VerifyQuizTokenResponseDto(
+    val valid: Boolean,
+    val message: String,
 )
 
 @Serializable

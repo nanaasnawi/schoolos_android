@@ -109,7 +109,7 @@ class TodayViewModel @Inject constructor(
         // Compute schedule count per date for weekly calendar indicator dots
         val dateCounts = mutableMapOf<LocalDate, Int>()
         allSessions.forEach { s ->
-            val d = s.scheduledAt?.let { parseDate(it) } ?: s.startedAt?.let { parseDate(it) }
+            val d = extractSessionDate(s)
             if (d != null) {
                 dateCounts[d] = (dateCounts[d] ?: 0) + 1
             }
@@ -117,9 +117,7 @@ class TodayViewModel @Inject constructor(
 
         // Filter sessions that belong to targetDate
         val targetSessions = allSessions.filter { s ->
-            val scheduled = s.scheduledAt?.let { parseDate(it) }
-            val started = s.startedAt?.let { parseDate(it) }
-            scheduled == targetDate || started == targetDate
+            extractSessionDate(s) == targetDate
         }
 
         val grouped = groupSessions(targetSessions)
@@ -171,6 +169,16 @@ class TodayViewModel @Inject constructor(
             upcoming = upcoming.sortedBy { it.scheduledAt },
             completed = completed.sortedByDescending { it.endedAt ?: it.scheduledAt ?: "" },
         )
+    }
+
+    private fun extractSessionDate(s: LearningSession): LocalDate? {
+        return s.sessionDate?.let { dateStr ->
+            try {
+                LocalDate.parse(dateStr.substringBefore("T"))
+            } catch (_: Exception) {
+                null
+            }
+        } ?: s.scheduledAt?.let { parseDate(it) } ?: s.startedAt?.let { parseDate(it) }
     }
 
     private fun parseDate(iso: String): LocalDate? {
