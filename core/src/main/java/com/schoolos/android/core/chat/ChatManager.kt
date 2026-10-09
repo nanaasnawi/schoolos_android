@@ -48,6 +48,8 @@ data class ChatMessage(
     val content: String,
     val timestamp: Long = System.currentTimeMillis(),
     val isFromTeacher: Boolean = false,
+    val isRead: Boolean = false,
+    val readAt: Long? = null,
 )
 
 data class ChatThread(
@@ -66,6 +68,8 @@ data class ChatThread(
     val lastUpdated: Long = System.currentTimeMillis(),
     val studentAvatarUrl: String? = null,
     val teacherAvatarUrl: String? = null,
+    val isRead: Boolean = false,
+    val readStatusLabel: String? = null,
 ) {
     val lastMessage: ChatMessage? get() = messages.lastOrNull()
     val isAwaitingReply: Boolean get() = status == InquiryStatus.WAITING_REPLY
@@ -359,6 +363,8 @@ class ChatManager @Inject constructor(
                     lastUpdated = messages.lastOrNull()?.timestamp ?: timestamp,
                     studentAvatarUrl = dto.studentAvatarUrl ?: existing?.studentAvatarUrl,
                     teacherAvatarUrl = dto.teacherAvatarUrl ?: existing?.teacherAvatarUrl,
+                    isRead = dto.isRead,
+                    readStatusLabel = dto.readStatusLabel,
                 )
             }
 
@@ -458,11 +464,36 @@ class ChatManager @Inject constructor(
                             } else {
                                 existing.teacherName
                             }
+                            val apiMessages = detail.messages.map { m ->
+                                ChatMessage(
+                                    id = m.id,
+                                    threadId = m.threadId,
+                                    senderId = m.senderId,
+                                    senderName = m.senderName,
+                                    senderRole = m.senderRole,
+                                    content = m.content,
+                                    timestamp = parseIsoTimestamp(m.createdAt),
+                                    isFromTeacher = m.isFromTeacher,
+                                    isRead = m.isRead,
+                                    readAt = m.readAt?.let { parseIsoTimestamp(it) },
+                                )
+                            }
+                            val mergedMessages = if (existing.messages.isNotEmpty()) {
+                                existing.messages.map { em ->
+                                    val match = apiMessages.find { it.id == em.id || (it.senderId == em.senderId && it.content == em.content) }
+                                    if (match != null) em.copy(isRead = match.isRead, readAt = match.readAt) else em
+                                }
+                            } else {
+                                apiMessages
+                            }
                             val updated = existing.copy(
                                 teacherName = updatedTeacherName,
                                 teacherId = detail.thread.teacherId ?: existing.teacherId,
                                 studentAvatarUrl = detail.thread.studentAvatarUrl ?: existing.studentAvatarUrl,
                                 teacherAvatarUrl = detail.thread.teacherAvatarUrl ?: existing.teacherAvatarUrl,
+                                isRead = detail.thread.isRead,
+                                readStatusLabel = detail.thread.readStatusLabel ?: existing.readStatusLabel,
+                                messages = mergedMessages,
                             )
                             currentList.toMutableList().apply { set(index, updated) }
                         } else {
@@ -471,6 +502,20 @@ class ChatManager @Inject constructor(
                                 "ASSIGNMENT" -> InquiryType.ASSIGNMENT
                                 "GENERAL" -> InquiryType.GENERAL
                                 else -> InquiryType.MATERIAL
+                            }
+                            val initialMsgs = detail.messages.map { m ->
+                                ChatMessage(
+                                    id = m.id,
+                                    threadId = m.threadId,
+                                    senderId = m.senderId,
+                                    senderName = m.senderName,
+                                    senderRole = m.senderRole,
+                                    content = m.content,
+                                    timestamp = parseIsoTimestamp(m.createdAt),
+                                    isFromTeacher = m.isFromTeacher,
+                                    isRead = m.isRead,
+                                    readAt = m.readAt?.let { parseIsoTimestamp(it) },
+                                )
                             }
                             listOf(
                                 ChatThread(
@@ -484,11 +529,13 @@ class ChatManager @Inject constructor(
                                     inquiryType = type,
                                     referenceTitle = detail.thread.referenceTitle,
                                     referenceId = detail.thread.referenceId,
-                                    messages = emptyList(), // Messages arrive exclusively via Firebase RTDB
+                                    messages = initialMsgs,
                                     status = if (detail.thread.status.uppercase() == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
                                     lastUpdated = parseIsoTimestamp(detail.thread.lastMessageAt ?: detail.thread.createdAt),
                                     studentAvatarUrl = detail.thread.studentAvatarUrl,
                                     teacherAvatarUrl = detail.thread.teacherAvatarUrl,
+                                    isRead = detail.thread.isRead,
+                                    readStatusLabel = detail.thread.readStatusLabel,
                                 )
                             ) + currentList
                         }

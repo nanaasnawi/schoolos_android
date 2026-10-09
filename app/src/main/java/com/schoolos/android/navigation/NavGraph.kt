@@ -73,13 +73,81 @@ fun NavGraph(
         startCheck = true
     }
 
-    // Auto-navigate if deep link / notification click occurred (e.g. from lockscreen)
+    // Auto-navigate if deep link / notification click occurred (e.g. from lockscreen / status bar)
     LaunchedEffect(pendingDeepLink, isLoggedIn, startCheck) {
         if (startCheck && isLoggedIn && !pendingDeepLink.isNullOrBlank()) {
-            if (pendingDeepLink == "notifications") {
-                navController.navigate(Screen.Notifications.route) {
-                    launchSingleTop = true
+            val link = pendingDeepLink
+            try {
+                when {
+                    link.startsWith("announcement_detail:") -> {
+                        val id = link.removePrefix("announcement_detail:")
+                        navController.navigate(Screen.NotificationDetail.createRoute(id)) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link.startsWith("material_detail:") -> {
+                        val id = link.removePrefix("material_detail:")
+                        navController.navigate(Screen.LearningDetail.createRoute(id)) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link.startsWith("assignment_detail:") -> {
+                        val id = link.removePrefix("assignment_detail:")
+                        navController.navigate(Screen.AssignmentDetail.createRoute(id)) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link.startsWith("quiz_detail:") -> {
+                        val id = link.removePrefix("quiz_detail:")
+                        navController.navigate(Screen.QuizDetail.createRoute(id)) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link.startsWith("chat_detail:") || link.startsWith("inquiry_detail:") -> {
+                        val id = link.removePrefix("chat_detail:").removePrefix("inquiry_detail:")
+                        navController.navigate(Screen.ChatDetail.createRoute(id, "Tanya Jawab")) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link.startsWith("session_detail:") -> {
+                        val id = link.removePrefix("session_detail:")
+                        navController.navigate(Screen.SessionDetail.createRoute(id)) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link == "notifications" -> {
+                        navController.navigate(Screen.Notifications.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link == "materials" -> {
+                        navController.navigate(Screen.Learning.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link == "assignments" -> {
+                        navController.navigate(Screen.Assignments.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link == "quizzes" -> {
+                        navController.navigate(Screen.Quizzes.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                    link == "chat" -> {
+                        navController.navigate(Screen.Chat.route) {
+                            launchSingleTop = true
+                        }
+                    }
+                    else -> {
+                        navController.navigate(link) {
+                            launchSingleTop = true
+                        }
+                    }
                 }
+            } catch (e: Exception) {
+                timber.log.Timber.w(e, "Failed to navigate to deep link: %s", link)
             }
         }
     }

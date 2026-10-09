@@ -40,6 +40,76 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
                 }
             }
         }
+
+        fun syncUserTopics(
+            userId: String?,
+            classId: String?,
+            role: String?,
+            context: Context? = null,
+        ) {
+            val fcm = FirebaseMessaging.getInstance()
+
+            // 1. General announcement topic
+            fcm.subscribeToTopic(TOPIC_ANNOUNCEMENTS)
+
+            val prefs = context?.getSharedPreferences(PREFS_FCM, Context.MODE_PRIVATE)
+
+            // 2. Role-based topic
+            val cleanRole = when {
+                role.isNullOrBlank() -> null
+                role.contains("teacher", true) || role.contains("guru", true) -> "teacher"
+                role.contains("parent", true) || role.contains("wali", true) -> "parent"
+                else -> "student"
+            }
+            if (cleanRole != null) {
+                val oldRole = prefs?.getString("subscribed_role_topic", null)
+                if (oldRole != null && oldRole != "role_$cleanRole") {
+                    fcm.unsubscribeFromTopic(oldRole)
+                }
+                val roleTopic = "role_$cleanRole"
+                fcm.subscribeToTopic(roleTopic)
+                prefs?.edit()?.putString("subscribed_role_topic", roleTopic)?.apply()
+            }
+
+            // 3. Class-targeted topic (rombel target: materi, tugas, kuis CBT hanya untuk rombel murid tersebut)
+            if (!classId.isNullOrBlank()) {
+                val cleanClass = classId.replace("-", "").lowercase()
+                val classTopic = "class_$cleanClass"
+                val oldClass = prefs?.getString("subscribed_class_topic", null)
+                if (oldClass != null && oldClass != classTopic) {
+                    fcm.unsubscribeFromTopic(oldClass)
+                }
+                fcm.subscribeToTopic(classTopic)
+                prefs?.edit()?.putString("subscribed_class_topic", classTopic)?.apply()
+                Timber.d("FCM Subscribed to class topic: %s", classTopic)
+            }
+
+            // 4. User-targeted private topic (1-to-1 chat: murid tanya guru A -> hanya guru A, guru A balas -> hanya murid A)
+            if (!userId.isNullOrBlank()) {
+                val cleanUser = userId.replace("-", "").lowercase()
+                val userTopic = "user_$cleanUser"
+                val oldUser = prefs?.getString("subscribed_user_topic", null)
+                if (oldUser != null && oldUser != userTopic) {
+                    fcm.unsubscribeFromTopic(oldUser)
+                }
+                fcm.subscribeToTopic(userTopic)
+                prefs?.edit()?.putString("subscribed_user_topic", userTopic)?.apply()
+                Timber.d("FCM Subscribed to private user topic: %s", userTopic)
+            }
+        }
+
+        fun unsubscribeUserTopics(context: Context) {
+            val fcm = FirebaseMessaging.getInstance()
+            val prefs = context.getSharedPreferences(PREFS_FCM, Context.MODE_PRIVATE)
+            prefs.getString("subscribed_class_topic", null)?.let { fcm.unsubscribeFromTopic(it) }
+            prefs.getString("subscribed_user_topic", null)?.let { fcm.unsubscribeFromTopic(it) }
+            prefs.getString("subscribed_role_topic", null)?.let { fcm.unsubscribeFromTopic(it) }
+            prefs.edit()
+                .remove("subscribed_class_topic")
+                .remove("subscribed_user_topic")
+                .remove("subscribed_role_topic")
+                .apply()
+        }
     }
 
     override fun onNewToken(token: String) {
@@ -76,6 +146,7 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
         val navigateTo = data["navigate_to"] ?: navigateTargetFor(category, referenceType)
         val channelId = data["channel_id"]
         val clickAction = data["click_action"]
+        val deepLink = data["deep_link"]
 
         // ID unik per pesan agar judul mirip tidak saling menimpa saat idle.
         val notifId = if (referenceId.isNotBlank()) {
@@ -106,6 +177,9 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             channelId = channelId,
             clickAction = clickAction,
             category = category,
+            referenceId = referenceId,
+            referenceType = referenceType,
+            deepLink = deepLink,
         )
     }
 
