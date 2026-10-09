@@ -9,6 +9,7 @@ data class LibraryBook(
     val subjectName: String? = null,
     val gradeLevelId: String? = null,
     val gradeLevelName: String? = null,
+    val classLevel: Int? = null,
     val totalPages: Int = 100,
     val coverUrl: String? = null,
     val fileUrl: String? = null,

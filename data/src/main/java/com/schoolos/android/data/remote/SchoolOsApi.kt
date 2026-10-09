@@ -209,7 +209,9 @@ interface SchoolOsApi {
     suspend fun getLibraryBooks(
         @Query("subject_id") subjectId: String? = null,
         @Query("grade_level_id") gradeLevelId: String? = null,
+        @Query("class_id") classId: String? = null,
         @Query("search") search: String? = null,
+        @Query("recommendations") recommendations: Boolean? = null,
     ): ApiResponse<List<com.schoolos.android.data.remote.dto.LibraryBookDto>>
 
     @POST("learning/library/assign")

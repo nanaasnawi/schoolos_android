@@ -41,6 +41,7 @@ data class LibraryBookDto(
     @SerialName("subject_name") val subjectName: String? = null,
     @SerialName("grade_level_id") val gradeLevelId: String? = null,
     @SerialName("grade_level_name") val gradeLevelName: String? = null,
+    @SerialName("class_level") val classLevel: Int? = null,
     @SerialName("total_pages") val totalPages: Int = 100,
     @SerialName("cover_url") val coverUrl: String? = null,
     @SerialName("file_url") val fileUrl: String? = null,
