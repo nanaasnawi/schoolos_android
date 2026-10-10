@@ -113,6 +113,7 @@ object NotificationPollWorker {
                         title = prefixFor(type, title),
                         message = message,
                         navigateTo = navigateTo,
+                        referenceId = refId.ifBlank { null },
                     )
                     shownThisCycle++
                 } catch (e: Exception) {
