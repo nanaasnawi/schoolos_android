@@ -3,9 +3,12 @@ package com.schoolos.android.feature.learning
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
@@ -48,6 +51,11 @@ fun AutoGenerateMaterialDialog(
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
         mutableStateOf(matched ?: availableSubjects.firstOrNull())
+    }
+    var customSubjectText by remember(currentSubjectName, availableSubjects) {
+        val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
+        val initial = currentSubjectName.ifBlank { matched?.name ?: "" }
+        mutableStateOf(initial)
     }
     var selectedClass by remember(currentClassName, availableClasses) {
         val matched = availableClasses.find { it.name.equals(currentClassName, ignoreCase = true) }
@@ -215,39 +223,63 @@ fun AutoGenerateMaterialDialog(
                     }
                 }
 
-                // Mapel Selection
+                // Mapel Selection (Dukungan Bebas Semua Mata Pelajaran & Pilihan Cepat)
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(
-                        text = "Mata Pelajaran",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = colorScheme.onSurface
-                    )
-                    Box(modifier = Modifier.fillMaxWidth()) {
-                        Surface(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable(enabled = !isGenerating) { isSubjectDropdownOpen = true },
-                            shape = RoundedCornerShape(10.dp),
-                            color = colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = selectedSubject?.name ?: currentSubjectName.ifBlank { "Pilih Mata Pelajaran" },
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = colorScheme.onSurface
-                                )
-                                Text("▼", fontSize = 9.sp, color = colorScheme.onSurfaceVariant)
-                            }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Mata Pelajaran *",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.onSurface
+                        )
+                        if (availableSubjects.isNotEmpty()) {
+                            Text(
+                                text = "Ketik bebas / pilih daftar",
+                                fontSize = 10.sp,
+                                color = colorScheme.onSurfaceVariant
+                            )
                         }
+                    }
+
+                    Box(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = customSubjectText,
+                            onValueChange = { customSubjectText = it },
+                            placeholder = {
+                                Text(
+                                    "Ketik mapel (misal: Bahasa Cirebon, PAI, IPA, Sejarah)...",
+                                    fontSize = 12.sp,
+                                    color = colorScheme.onSurfaceVariant
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            enabled = !isGenerating,
+                            singleLine = true,
+                            shape = RoundedCornerShape(10.dp),
+                            trailingIcon = {
+                                if (availableSubjects.isNotEmpty()) {
+                                    IconButton(
+                                        onClick = { isSubjectDropdownOpen = !isSubjectDropdownOpen },
+                                        enabled = !isGenerating
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.ArrowDropDown,
+                                            contentDescription = "Pilih dari daftar mapel",
+                                            tint = colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            },
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = NvidiaGreen,
+                                unfocusedBorderColor = colorScheme.outlineVariant
+                            )
+                        )
+
                         DropdownMenu(
                             expanded = isSubjectDropdownOpen,
                             onDismissRequest = { isSubjectDropdownOpen = false }
@@ -256,10 +288,45 @@ fun AutoGenerateMaterialDialog(
                                 DropdownMenuItem(
                                     text = { Text(sub.name, fontSize = 12.sp) },
                                     onClick = {
+                                        customSubjectText = sub.name
                                         selectedSubject = sub
                                         isSubjectDropdownOpen = false
                                     }
                                 )
+                            }
+                        }
+                    }
+
+                    // Rekomendasi Chip Mapel Cepat (jika ada daftar mapel)
+                    if (availableSubjects.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            availableSubjects.take(8).forEach { sub ->
+                                val isSelected = customSubjectText.equals(sub.name, ignoreCase = true)
+                                Surface(
+                                    modifier = Modifier.clickable(enabled = !isGenerating) {
+                                        customSubjectText = sub.name
+                                        selectedSubject = sub
+                                    },
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = if (isSelected) NvidiaGreen.copy(alpha = 0.2f) else colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSelected) NvidiaGreen else colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                    )
+                                ) {
+                                    Text(
+                                        text = sub.name,
+                                        fontSize = 10.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) NvidiaGreen else colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                    )
+                                }
                             }
                         }
                     }
@@ -334,11 +401,13 @@ fun AutoGenerateMaterialDialog(
 
                     Button(
                         onClick = {
-                            val subName = selectedSubject?.name ?: currentSubjectName.ifBlank { "Umum" }
+                            val subName = customSubjectText.trim().ifBlank {
+                                selectedSubject?.name ?: currentSubjectName.ifBlank { "Umum" }
+                            }
                             val clsName = selectedClass?.name ?: currentClassName.ifBlank { "Kelas 5 SD" }
                             onGenerate(selectedMode, subName, topicInput.trim(), clsName)
                         },
-                        enabled = !isGenerating && topicInput.isNotBlank(),
+                        enabled = !isGenerating && topicInput.isNotBlank() && customSubjectText.isNotBlank(),
                         modifier = Modifier
                             .weight(1.5f)
                             .height(44.dp),
