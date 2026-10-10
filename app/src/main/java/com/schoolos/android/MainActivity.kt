@@ -103,6 +103,7 @@ class MainActivity : ComponentActivity() {
                             userId = auth.userId,
                             classId = auth.classId,
                             role = auth.role,
+                            className = auth.className,
                             context = this@MainActivity,
                         )
                     } else {
@@ -196,12 +197,24 @@ class MainActivity : ComponentActivity() {
         val target = intent?.getStringExtra("navigate_to")
             ?: intent?.extras?.getString("navigate_to")
 
+        val action = intent?.action
         if (!deepLink.isNullOrBlank()) {
             pendingNavigationRoute = deepLink
         } else if (!refType.isNullOrBlank() && !refId.isNullOrBlank()) {
             pendingNavigationRoute = "${refType}_detail:${refId}"
         } else if (!target.isNullOrBlank()) {
             pendingNavigationRoute = target
+        } else if (!action.isNullOrBlank()) {
+            pendingNavigationRoute = when (action) {
+                "OPEN_MATERIALS" -> "materials"
+                "OPEN_ASSIGNMENTS" -> "assignments"
+                "OPEN_QUIZZES" -> "quizzes"
+                "OPEN_GRADES" -> "grades"
+                "OPEN_SESSIONS" -> "sessions"
+                "OPEN_SCHEDULE" -> "schedule"
+                "OPEN_NOTIFICATIONS" -> "notifications"
+                else -> null
+            }
         }
     }
 }
