@@ -160,7 +160,10 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             val syncPrefs = applicationContext.getSharedPreferences("schoolos_notif_sync", Context.MODE_PRIVATE)
             val shownIds = syncPrefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
             val mutableShown = shownIds.toMutableSet()
-            if (referenceId.isNotBlank()) mutableShown.add(referenceId)
+            if (referenceId.isNotBlank()) {
+                mutableShown.add(referenceId)
+                mutableShown.add("schoolos_$referenceId")
+            }
             val rawId = data["id"]
             if (!rawId.isNullOrBlank()) mutableShown.add(rawId)
             mutableShown.add(notifId.toString())
