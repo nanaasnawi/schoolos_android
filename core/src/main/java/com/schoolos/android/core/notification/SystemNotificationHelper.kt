@@ -180,6 +180,17 @@ object SystemNotificationHelper {
             }
         } catch (_: Exception) { null }
 
+        // Wake up screen for 3 seconds so high-priority notification turns on display during standby/idle
+        try {
+            val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+            @Suppress("DEPRECATION")
+            val screenLock = pm?.newWakeLock(
+                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+                "schoolos:notification_screen_wake"
+            )
+            screenLock?.acquire(3000L)
+        } catch (_: Exception) {}
+
         // Deterministic notification slot per pesan — pakai ID dari FCM (bukan hash
         // judul!) agar tiap materi/tugas/kuis tampil sendiri dan tidak menimpa tray.
         val notifyId = notificationId
@@ -253,6 +264,7 @@ object SystemNotificationHelper {
             .setLights(Color.BLUE, 1000, 1000)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
+            .setFullScreenIntent(pendingIntent, false)
 
         if (largeIconBitmap != null) {
             builder.setLargeIcon(largeIconBitmap)

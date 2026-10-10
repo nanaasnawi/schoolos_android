@@ -3,6 +3,8 @@ package com.schoolos.android.notification
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 /**
@@ -26,6 +28,27 @@ class BootReceiver : BroadcastReceiver() {
             SchoolOsFirebaseMessagingService.subscribeAllTopics()
         } catch (e: Exception) {
             Timber.w(e, "BootReceiver subscribe failed")
+        }
+        try {
+            val entry = dagger.hilt.android.EntryPointAccessors.fromApplication(
+                context.applicationContext,
+                NotificationPollWorker.PollEntryPoint::class.java
+            )
+            val authManager = entry.authManager()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                val auth = authManager.authState.first()
+                if (auth.isLoggedIn) {
+                    SchoolOsFirebaseMessagingService.syncUserTopics(
+                        userId = auth.userId,
+                        classId = auth.classId,
+                        role = auth.role,
+                        className = auth.className,
+                        context = context.applicationContext,
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "BootReceiver syncUserTopics failed")
         }
         try {
             NotificationPollReceiver.schedule(context.applicationContext)

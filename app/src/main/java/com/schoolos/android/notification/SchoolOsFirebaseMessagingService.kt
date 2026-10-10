@@ -7,6 +7,9 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.schoolos.android.core.notification.SystemNotificationHelper
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.GlobalScope
 import timber.log.Timber
 
 class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
@@ -24,6 +27,7 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             val topics = listOf(
                 TOPIC_ANNOUNCEMENTS, TOPIC_MATERIALS, TOPIC_ASSIGNMENTS,
                 TOPIC_QUIZZES, TOPIC_GRADES, TOPIC_SESSIONS,
+                "role_student",
             )
             topics.forEach { topic ->
                 try {
@@ -45,11 +49,12 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             userId: String?,
             classId: String?,
             role: String?,
+            className: String? = null,
             context: Context? = null,
         ) {
             val fcm = FirebaseMessaging.getInstance()
 
-            // 1. General announcement topic
+            // 1. General announcement topic & general learning topics
             fcm.subscribeToTopic(TOPIC_ANNOUNCEMENTS)
 
             val prefs = context?.getSharedPreferences(PREFS_FCM, Context.MODE_PRIVATE)
@@ -73,7 +78,7 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
 
             // 3. Class-targeted topic (rombel target: materi, tugas, kuis CBT hanya untuk rombel murid tersebut)
             if (!classId.isNullOrBlank()) {
-                val cleanClass = classId.replace("-", "").lowercase()
+                val cleanClass = classId.removePrefix("class_").replace("-", "").lowercase()
                 val classTopic = "class_$cleanClass"
                 val oldClass = prefs?.getString("subscribed_class_topic", null)
                 if (oldClass != null && oldClass != classTopic) {
@@ -84,9 +89,19 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
                 Timber.d("FCM Subscribed to class topic: %s", classTopic)
             }
 
+            // 3b. Class-name targeted topic alias (misal: "class_paketc" atau "class_5")
+            if (!className.isNullOrBlank()) {
+                val cleanName = className.replace(" ", "").replace("-", "").lowercase()
+                if (cleanName.isNotBlank()) {
+                    val nameTopic = "class_$cleanName"
+                    fcm.subscribeToTopic(nameTopic)
+                    Timber.d("FCM Subscribed to class name topic: %s", nameTopic)
+                }
+            }
+
             // 4. User-targeted private topic (1-to-1 chat: murid tanya guru A -> hanya guru A, guru A balas -> hanya murid A)
             if (!userId.isNullOrBlank()) {
-                val cleanUser = userId.replace("-", "").lowercase()
+                val cleanUser = userId.removePrefix("user_").replace("-", "").lowercase()
                 val userTopic = "user_$cleanUser"
                 val oldUser = prefs?.getString("subscribed_user_topic", null)
                 if (oldUser != null && oldUser != userTopic) {

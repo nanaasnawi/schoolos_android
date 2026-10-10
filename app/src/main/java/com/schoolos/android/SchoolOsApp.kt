@@ -3,6 +3,8 @@ package com.schoolos.android
 import android.app.Application
 import com.schoolos.android.core.notification.SystemNotificationHelper
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import timber.log.Timber
 
 @HiltAndroidApp
@@ -33,6 +35,27 @@ class SchoolOsApp : Application() {
         // Subscribe to all FCM topics early
         try {
             com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
+        } catch (_: Throwable) {}
+
+        // Re-sync user-targeted and class topics immediately if user is already authenticated
+        try {
+            val entry = dagger.hilt.android.EntryPointAccessors.fromApplication(
+                this,
+                com.schoolos.android.notification.NotificationPollWorker.PollEntryPoint::class.java
+            )
+            val authManager = entry.authManager()
+            kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+                val auth = authManager.authState.first()
+                if (auth.isLoggedIn) {
+                    com.schoolos.android.notification.SchoolOsFirebaseMessagingService.syncUserTopics(
+                        userId = auth.userId,
+                        classId = auth.classId,
+                        role = auth.role,
+                        className = auth.className,
+                        context = this@SchoolOsApp,
+                    )
+                }
+            }
         } catch (_: Throwable) {}
 
         // Clean up any old persistent service notification & channel

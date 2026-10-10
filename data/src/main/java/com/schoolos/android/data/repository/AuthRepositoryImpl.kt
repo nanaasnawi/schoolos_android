@@ -18,6 +18,17 @@ class AuthRepositoryImpl @Inject constructor(
     private val authManager: AuthManager,
 ) : AuthRepository {
 
+    private suspend fun resolveClassId(explicitClassId: String?, className: String?): String? {
+        if (!explicitClassId.isNullOrBlank()) return explicitClassId
+        if (className.isNullOrBlank()) return null
+        return try {
+            val classesResp = api.getClasses(pageSize = 100)
+            classesResp.data?.find { it.name.equals(className, ignoreCase = true) }?.id
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     override suspend fun login(username: String, password: String): Result<User> = runCatching {
         val response = api.login(LoginRequest(username = username, password = password))
         val data = response.data ?: throw Exception(
@@ -34,6 +45,7 @@ class AuthRepositoryImpl @Inject constructor(
             role = data.role,
             identifier = data.identifier,
             className = data.className,
+            classId = resolveClassId(data.classId, data.className),
             childName = data.childName,
             childId = data.childId,
             avatarUrl = data.avatarUrl,
@@ -71,6 +83,7 @@ class AuthRepositoryImpl @Inject constructor(
             role = data.role,
             identifier = data.identifier,
             className = data.className,
+            classId = resolveClassId(data.classId, data.className),
             childName = data.childName,
             childId = data.childId,
             avatarUrl = data.avatarUrl,
@@ -124,6 +137,7 @@ class AuthRepositoryImpl @Inject constructor(
             role = data.role,
             identifier = data.identifier,
             className = data.className,
+            classId = resolveClassId(data.classId, data.className),
             childName = data.childName,
             childId = data.childId,
             avatarUrl = data.avatarUrl,
