@@ -113,6 +113,27 @@ object SystemNotificationHelper {
         }
     }
 
+    fun isNotificationAlreadyActive(context: Context, referenceId: String?, title: String): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return false
+        return try {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
+            val active = nm.activeNotifications ?: return false
+            val cleanTitle = title
+                .removePrefix("📢").removePrefix("📚").removePrefix("📝")
+                .removePrefix("💻").removePrefix("🏆").removePrefix("🔔").removePrefix("🎓")
+                .trim()
+            val targetTag = if (!referenceId.isNullOrBlank()) "schoolos_$referenceId" else null
+
+            active.any { sbn ->
+                (targetTag != null && sbn.tag == targetTag) ||
+                (!referenceId.isNullOrBlank() && sbn.tag?.contains(referenceId) == true) ||
+                (cleanTitle.isNotBlank() && sbn.notification.extras.getString(Notification.EXTRA_TITLE)?.contains(cleanTitle) == true)
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     fun showNotification(
         context: Context,
         notificationId: Int,
@@ -127,8 +148,13 @@ object SystemNotificationHelper {
         deepLink: String? = null,
     ) {
         // 1. Drop duplicate notifications from multi-channel triggers (FCM + SSE + Polling)
-        //    Dedup key mencakup navigateTo agar materi/tugas/kuis berbeda tidak saling menelan.
         if (isDuplicate(context, title, message, navigateTo)) {
+            return
+        }
+
+        // 2. Jika notifikasi sistem dari FCM (Google Play Services) sudah aktif di tray,
+        //    jangan buat notifikasi kedua.
+        if (isNotificationAlreadyActive(context, referenceId, title)) {
             return
         }
 
@@ -234,7 +260,12 @@ object SystemNotificationHelper {
 
         try {
             @Suppress("MissingPermission")
-            NotificationManagerCompat.from(context).notify(notifyId, builder.build())
+            val effectiveTag = if (!referenceId.isNullOrBlank()) "schoolos_$referenceId" else null
+            if (effectiveTag != null) {
+                NotificationManagerCompat.from(context).notify(effectiveTag, notifyId, builder.build())
+            } else {
+                NotificationManagerCompat.from(context).notify(notifyId, builder.build())
+            }
         } catch (_: SecurityException) {
             // Permission not granted
         }

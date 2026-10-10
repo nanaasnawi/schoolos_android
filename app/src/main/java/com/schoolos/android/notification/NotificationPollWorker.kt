@@ -93,23 +93,38 @@ object NotificationPollWorker {
                 val o = arr.optJSONObject(i) ?: continue
                 val id = o.optString("id")
                 val refId = o.optString("reference_id", o.optString("referenceId", ""))
-                if (id.isBlank() || shown.contains(id) || (refId.isNotBlank() && shown.contains(refId))) continue
+                if (id.isBlank() || shown.contains(id) || (refId.isNotBlank() && (shown.contains(refId) || shown.contains("schoolos_$refId")))) continue
                 val isRead = o.optBoolean("is_read", o.optBoolean("isRead", false))
                 if (isRead) {
                     shown.add(id)
-                    if (refId.isNotBlank()) shown.add(refId)
+                    if (refId.isNotBlank()) {
+                        shown.add(refId)
+                        shown.add("schoolos_$refId")
+                    }
                     continue
                 }
                 val title = o.optString("title", "Pemberitahuan Sekolah")
+                if (com.schoolos.android.core.notification.SystemNotificationHelper.isNotificationAlreadyActive(appContext, refId.ifBlank { null }, title)) {
+                    shown.add(id)
+                    if (refId.isNotBlank()) {
+                        shown.add(refId)
+                        shown.add("schoolos_$refId")
+                    }
+                    continue
+                }
                 val message = o.optString("body", o.optString("content", "Ada informasi baru"))
                 val type = o.optString("notification_type", o.optString("notificationType", "ANNOUNCEMENT"))
                 val navigateTo = navigateFor(type)
                 shown.add(id)
-                if (refId.isNotBlank()) shown.add(refId)
+                if (refId.isNotBlank()) {
+                    shown.add(refId)
+                    shown.add("schoolos_$refId")
+                }
                 try {
+                    val notifId = if (refId.isNotBlank()) (refId + navigateTo).hashCode() else (id + navigateTo).hashCode()
                     com.schoolos.android.core.notification.SystemNotificationHelper.showNotification(
                         context = appContext,
-                        notificationId = (id + navigateTo).hashCode(),
+                        notificationId = notifId,
                         title = prefixFor(type, title),
                         message = message,
                         navigateTo = navigateTo,

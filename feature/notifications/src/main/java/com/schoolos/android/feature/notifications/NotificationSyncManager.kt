@@ -162,15 +162,18 @@ suspend fun syncNotifications() {
                 }
 
                 val refIdStr = notif.referenceId ?: ""
-                val notifId = (notif.id + navigateTo).hashCode()
+                val notifId = if (refIdStr.isNotBlank()) (refIdStr + navigateTo).hashCode() else (notif.id + navigateTo).hashCode()
                 val isAlreadyShown = mutableShownIds.contains(notif.id) ||
-                    (refIdStr.isNotBlank() && mutableShownIds.contains(refIdStr)) ||
+                    (refIdStr.isNotBlank() && (mutableShownIds.contains(refIdStr) || mutableShownIds.contains("schoolos_$refIdStr"))) ||
                     mutableShownIds.contains(notifId.toString()) ||
-                    (refIdStr.isNotBlank() && mutableShownIds.contains((refIdStr + navigateTo).hashCode().toString()))
+                    SystemNotificationHelper.isNotificationAlreadyActive(context, notif.referenceId, notif.title)
 
                 if (!isAlreadyShown) {
                     mutableShownIds.add(notif.id)
-                    if (refIdStr.isNotBlank()) mutableShownIds.add(refIdStr)
+                    if (refIdStr.isNotBlank()) {
+                        mutableShownIds.add(refIdStr)
+                        mutableShownIds.add("schoolos_$refIdStr")
+                    }
                     mutableShownIds.add(notifId.toString())
                     newShown = true
                     val emoji = when (navigateTo) {
