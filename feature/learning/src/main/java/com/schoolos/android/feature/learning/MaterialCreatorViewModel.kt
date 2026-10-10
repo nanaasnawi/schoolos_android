@@ -214,21 +214,48 @@ class MaterialCreatorViewModel @Inject constructor(
         val s = (subjectName ?: "").lowercase()
         val c = (className ?: "").lowercase()
 
+        // Ekstraksi token kata kunci mapel dinamis untuk SEMUA mata pelajaran (tanpa stop words)
+        val stopWords = setOf("dan", "atau", "untuk", "mata", "pelajaran", "mapel", "kelas", "tingkat", "fase", "sd", "smp", "sma", "smk", "wajib", "peminatan", "umum", "dasar", "lanjut", "lanjutan")
+        val subjectTokens = s.split(Regex("[^a-zA-Z0-9]+"))
+            .map { it.trim() }
+            .filter { it.length >= 2 && !stopWords.contains(it) }
+
         val matches = books.filter { b ->
             val title = b.title.lowercase()
             val bookSubj = (b.subjectName ?: "").lowercase()
 
-            val subjMatch = s.isNotBlank() && (
-                title.contains(s) || bookSubj.contains(s) ||
-                (s.contains("matematika") && (title.contains("matematika") || bookSubj.contains("matematika"))) ||
-                (s.contains("indonesia") && (title.contains("indonesia") || bookSubj.contains("indonesia"))) ||
-                (s.contains("inggris") && (title.contains("inggris") || bookSubj.contains("inggris"))) ||
-                (s.contains("fisika") && (title.contains("fisika") || bookSubj.contains("fisika"))) ||
-                (s.contains("biologi") && (title.contains("biologi") || bookSubj.contains("biologi"))) ||
-                (s.contains("kimia") && (title.contains("kimia") || bookSubj.contains("kimia"))) ||
-                (s.contains("komputer") && (title.contains("informatika") || title.contains("koding"))) ||
-                (s.contains("pancasila") && (title.contains("pancasila") || title.contains("ppkn")))
-            )
+            val subjMatch = if (s.isBlank()) {
+                true
+            } else {
+                // 1. Direct contains (nama lengkap mapel)
+                val isDirect = title.contains(s) || bookSubj.contains(s) || (bookSubj.isNotBlank() && s.contains(bookSubj))
+
+                // 2. Token keyword matching untuk SEMUA mata pelajaran secara dinamis
+                val isTokenMatched = subjectTokens.isNotEmpty() && subjectTokens.any { token ->
+                    title.contains(token) || bookSubj.contains(token)
+                }
+
+                // 3. Toleransi alias nasional untuk singkatan umum (PAI, PJOK, PPKn, IPAS, TIK, SBK)
+                val isAliasMatched = when {
+                    (s.contains("pai") || s.contains("agama")) ->
+                        title.contains("agama") || bookSubj.contains("agama") || title.contains("budi pekerti") || bookSubj.contains("budi pekerti")
+                    (s.contains("pjok") || s.contains("penjas") || s.contains("jasmani") || s.contains("olahraga")) ->
+                        title.contains("pjok") || title.contains("jasmani") || title.contains("olahraga") || bookSubj.contains("pjok") || bookSubj.contains("jasmani")
+                    (s.contains("pkn") || s.contains("ppkn") || s.contains("pancasila") || s.contains("kewarganegaraan")) ->
+                        title.contains("pancasila") || title.contains("ppkn") || title.contains("kewarganegaraan") || bookSubj.contains("pancasila") || bookSubj.contains("ppkn")
+                    (s.contains("tik") || s.contains("komputer") || s.contains("informatika") || s.contains("koding")) ->
+                        title.contains("informatika") || title.contains("koding") || title.contains("komputer") || bookSubj.contains("informatika")
+                    (s.contains("ipas") || s.contains("ipa") || s.contains("sains")) ->
+                        title.contains("ipa") || title.contains("ipas") || title.contains("sains") || title.contains("alam") || bookSubj.contains("ipa") || bookSubj.contains("ipas")
+                    (s.contains("ips") || s.contains("sosial")) ->
+                        title.contains("ips") || title.contains("sosial") || bookSubj.contains("ips") || bookSubj.contains("sosial")
+                    (s.contains("seni") || s.contains("sbk") || s.contains("budaya") || s.contains("prakarya")) ->
+                        title.contains("seni") || title.contains("budaya") || title.contains("prakarya") || bookSubj.contains("seni") || bookSubj.contains("budaya")
+                    else -> false
+                }
+
+                isDirect || isTokenMatched || isAliasMatched
+            }
 
             val classNumber = Regex("\\d+").find(c)?.value?.toIntOrNull()
             val classMatch = if (classNumber != null) {
