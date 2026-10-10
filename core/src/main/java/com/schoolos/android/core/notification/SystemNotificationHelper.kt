@@ -101,8 +101,8 @@ object SystemNotificationHelper {
             val now = System.currentTimeMillis()
 
             val lastShown = prefs.getLong(key, 0L)
-            if (now - lastShown < 60_000L) {
-                // Duplicate notification within 60 seconds, drop it
+            if (now - lastShown < 300_000L) { // 5 menit dedup window
+                // Duplicate notification within 5 minutes, drop it
                 true
             } else {
                 prefs.edit().putLong(key, now).apply()
@@ -164,6 +164,7 @@ object SystemNotificationHelper {
             val shownIds = syncPrefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
             val mutableShown = shownIds.toMutableSet()
             mutableShown.add(notificationId.toString())
+            if (!referenceId.isNullOrBlank()) mutableShown.add(referenceId)
             syncPrefs.edit().putStringSet("shown_notif_ids", mutableShown).apply()
         } catch (_: Exception) {}
 

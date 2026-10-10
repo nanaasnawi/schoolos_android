@@ -151,19 +151,28 @@ suspend fun syncNotifications() {
             // Process unread notifications
             val unread = notifications.filter { !it.isRead }
             for (notif in unread) {
-                if (!mutableShownIds.contains(notif.id)) {
-                    mutableShownIds.add(notif.id)
-                    newShown = true
+                val navigateTo = when {
+                    notif.notificationType.contains("MATERIAL", ignoreCase = true) -> "materials"
+                    notif.notificationType.contains("ASSIGN", ignoreCase = true) || notif.notificationType.contains("TUGAS", ignoreCase = true) -> "assignments"
+                    notif.notificationType.contains("QUIZ", ignoreCase = true) || notif.notificationType.contains("KUIS", ignoreCase = true) || notif.notificationType.contains("CBT", ignoreCase = true) -> "quizzes"
+                    notif.notificationType.contains("GRADE", ignoreCase = true) || notif.notificationType.contains("NILAI", ignoreCase = true) -> "grades"
+                    notif.notificationType.contains("SESSION", ignoreCase = true) || notif.notificationType.contains("SESI", ignoreCase = true) || notif.notificationType.contains("JADWAL", ignoreCase = true) -> "sessions"
+                    notif.notificationType.contains("REMINDER", ignoreCase = true) -> "schedule"
+                    else -> "notifications"
+                }
 
-                    val navigateTo = when {
-                        notif.notificationType.contains("MATERIAL", ignoreCase = true) -> "materials"
-                        notif.notificationType.contains("ASSIGN", ignoreCase = true) || notif.notificationType.contains("TUGAS", ignoreCase = true) -> "assignments"
-                        notif.notificationType.contains("QUIZ", ignoreCase = true) || notif.notificationType.contains("KUIS", ignoreCase = true) || notif.notificationType.contains("CBT", ignoreCase = true) -> "quizzes"
-                        notif.notificationType.contains("GRADE", ignoreCase = true) || notif.notificationType.contains("NILAI", ignoreCase = true) -> "grades"
-                        notif.notificationType.contains("SESSION", ignoreCase = true) || notif.notificationType.contains("SESI", ignoreCase = true) || notif.notificationType.contains("JADWAL", ignoreCase = true) -> "sessions"
-                        notif.notificationType.contains("REMINDER", ignoreCase = true) -> "schedule"
-                        else -> "notifications"
-                    }
+                val refIdStr = notif.referenceId ?: ""
+                val notifId = (notif.id + navigateTo).hashCode()
+                val isAlreadyShown = mutableShownIds.contains(notif.id) ||
+                    (refIdStr.isNotBlank() && mutableShownIds.contains(refIdStr)) ||
+                    mutableShownIds.contains(notifId.toString()) ||
+                    (refIdStr.isNotBlank() && mutableShownIds.contains((refIdStr + navigateTo).hashCode().toString()))
+
+                if (!isAlreadyShown) {
+                    mutableShownIds.add(notif.id)
+                    if (refIdStr.isNotBlank()) mutableShownIds.add(refIdStr)
+                    mutableShownIds.add(notifId.toString())
+                    newShown = true
                     val emoji = when (navigateTo) {
                         "materials" -> "📚"
                         "assignments" -> "📝"
@@ -180,13 +189,14 @@ suspend fun syncNotifications() {
                     ) notif.title else "$emoji ${notif.title}"
 
                     // Trigger native Android system notification
-                    val notifId = (notif.id + navigateTo).hashCode()
                     SystemNotificationHelper.showNotification(
                         context = context,
                         notificationId = notifId,
                         title = displayTitle,
                         message = notif.body,
-                        navigateTo = navigateTo
+                        navigateTo = navigateTo,
+                        referenceId = notif.referenceId,
+                        referenceType = notif.referenceType,
                     )
                 }
             }
