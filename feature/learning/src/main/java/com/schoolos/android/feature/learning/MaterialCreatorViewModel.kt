@@ -144,55 +144,88 @@ class MaterialCreatorViewModel @Inject constructor(
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             _state.value = _state.value.copy(isSearchingYoutube = true, youtubeSearchError = null)
             try {
-                // Gunakan YouTube API Key dari local.properties via BuildConfig
                 val apiKey = BuildConfig.YOUTUBE_API_KEY
-                if (apiKey.isBlank()) {
-                    _state.value = _state.value.copy(
-                        isSearchingYoutube = false,
-                        youtubeSearchError = "YouTube API Key belum dikonfigurasi. Hubungi administrator."
-                    )
-                    return@launch
+                val encodedQuery = java.net.URLEncoder.encode(cleanQuery, "UTF-8")
+
+                // Kandidat URL: Gunakan Google Data API langsung (30 video) dan fallback ke server proxy Next.js
+                val candidateUrls = mutableListOf<String>()
+                if (apiKey.isNotBlank()) {
+                    candidateUrls.add("https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=30&q=$encodedQuery&type=video&key=$apiKey")
+                }
+                candidateUrls.add("https://akselerasi-edu.id/api/youtube/search?q=$encodedQuery&maxResults=30")
+                candidateUrls.add("https://www.akselerasi-edu.id/api/youtube/search?q=$encodedQuery&maxResults=30")
+
+                var finalResults: List<YoutubeVideoResult>? = null
+                var lastErrorMessage = "Gagal memuat video dari YouTube"
+
+                for (url in candidateUrls) {
+                    try {
+                        val request = Request.Builder().url(url).get().build()
+                        val response = httpClient.newCall(request).execute()
+                        if (!response.isSuccessful) {
+                            lastErrorMessage = "Gagal mengambil data dari YouTube (HTTP ${response.code})"
+                            continue
+                        }
+
+                        val bodyString = response.body?.string() ?: ""
+                        val root = JSONObject(bodyString)
+                        val items = root.optJSONArray("items") ?: org.json.JSONArray()
+                        val results = mutableListOf<YoutubeVideoResult>()
+
+                        for (i in 0 until items.length()) {
+                            val item = items.optJSONObject(i) ?: continue
+
+                            // Dukung format Google Data API dan SchoolOS Next.js Proxy
+                            val videoId = when {
+                                item.has("videoId") -> item.optString("videoId")
+                                item.has("id") && item.opt("id") is String -> item.optString("id")
+                                item.optJSONObject("id") != null -> item.optJSONObject("id")?.optString("videoId") ?: ""
+                                else -> ""
+                            }
+
+                            if (videoId.isNotBlank()) {
+                                val snippet = item.optJSONObject("snippet")
+                                val title = if (snippet != null) snippet.optString("title") else item.optString("title")
+                                val description = if (snippet != null) snippet.optString("description") else item.optString("description")
+                                val channelTitle = if (snippet != null) snippet.optString("channelTitle") else item.optString("channelTitle")
+                                val thumb = when {
+                                    snippet?.optJSONObject("thumbnails")?.optJSONObject("medium") != null ->
+                                        snippet.optJSONObject("thumbnails")?.optJSONObject("medium")?.optString("url") ?: ""
+                                    snippet?.optJSONObject("thumbnails")?.optJSONObject("default") != null ->
+                                        snippet.optJSONObject("thumbnails")?.optJSONObject("default")?.optString("url") ?: ""
+                                    item.has("thumbnailUrl") -> item.optString("thumbnailUrl")
+                                    else -> "https://img.youtube.com/vi/$videoId/mqdefault.jpg"
+                                }
+
+                                results.add(
+                                    YoutubeVideoResult(
+                                        videoId = videoId,
+                                        title = unescapeHtml(title),
+                                        description = unescapeHtml(description),
+                                        channelTitle = unescapeHtml(channelTitle),
+                                        thumbnailUrl = thumb
+                                    )
+                                )
+                            }
+                        }
+
+                        finalResults = results
+                        break
+                    } catch (e: Exception) {
+                        lastErrorMessage = e.message ?: "Terjadi kesalahan koneksi"
+                    }
                 }
 
-                // Batasi pencarian max 10 untuk menghemat kuota API request (Cost saving)
-                val url = "https://www.googleapis.com/youtube/v3/search?part=snippet&maxResults=10&q=${java.net.URLEncoder.encode(cleanQuery, "UTF-8")}&type=video&key=$apiKey"
-                val request = Request.Builder().url(url).get().build()
-                val response = httpClient.newCall(request).execute()
-
-                if (response.isSuccessful) {
-                    val bodyString = response.body?.string() ?: ""
-                    val root = JSONObject(bodyString)
-                    val items = root.optJSONArray("items") ?: org.json.JSONArray()
-                    val results = mutableListOf<YoutubeVideoResult>()
-
-                    for (i in 0 until items.length()) {
-                        val item = items.optJSONObject(i) ?: continue
-                        val snippet = item.optJSONObject("snippet") ?: continue
-                        val idObj = item.optJSONObject("id") ?: continue
-                        val videoId = idObj.optString("videoId")
-                        
-                        if (videoId.isNotBlank()) {
-                            results.add(
-                                YoutubeVideoResult(
-                                    videoId = videoId,
-                                    title = unescapeHtml(snippet.optString("title")),
-                                    description = unescapeHtml(snippet.optString("description")),
-                                    channelTitle = unescapeHtml(snippet.optString("channelTitle")),
-                                    thumbnailUrl = snippet.optJSONObject("thumbnails")?.optJSONObject("medium")?.optString("url")
-                                        ?: snippet.optJSONObject("thumbnails")?.optJSONObject("default")?.optString("url") ?: ""
-                                )
-                            )
-                        }
-                    }
+                if (finalResults != null) {
                     _state.value = _state.value.copy(
                         isSearchingYoutube = false,
-                        youtubeSearchResults = results,
-                        youtubeSearchError = if (results.isEmpty()) "Tidak ditemukan video untuk kata kunci \"$cleanQuery\"" else null
+                        youtubeSearchResults = finalResults,
+                        youtubeSearchError = if (finalResults.isEmpty()) "Tidak ditemukan video untuk kata kunci \"$cleanQuery\"" else null
                     )
                 } else {
                     _state.value = _state.value.copy(
                         isSearchingYoutube = false,
-                        youtubeSearchError = "Gagal mengambil data dari YouTube (HTTP ${response.code})"
+                        youtubeSearchError = lastErrorMessage
                     )
                 }
             } catch (e: Exception) {
