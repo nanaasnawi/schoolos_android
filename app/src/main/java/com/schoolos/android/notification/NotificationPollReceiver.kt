@@ -59,12 +59,25 @@ class NotificationPollReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent?) {
         val pendingResult = goAsync()
         val appContext = context.applicationContext
+        val pm = appContext.getSystemService(Context.POWER_SERVICE) as? android.os.PowerManager
+        val wakeLock = try {
+            pm?.newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "schoolos:poll_wakelock")?.apply {
+                setReferenceCounted(false)
+                acquire(30_000L)
+            }
+        } catch (_: Exception) { null }
+
         scope.launch {
             try {
                 NotificationPollWorker.pollOnce(appContext)
             } catch (e: Exception) {
                 Timber.w(e, "Notification poll failed")
             } finally {
+                try {
+                    if (wakeLock?.isHeld == true) {
+                        wakeLock.release()
+                    }
+                } catch (_: Exception) {}
                 // Jadwalkan alarm exact berikutnya agar tetap bangun saat idle.
                 try {
                     val am = appContext.getSystemService(Context.ALARM_SERVICE) as? AlarmManager

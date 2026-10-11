@@ -85,6 +85,11 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
                     fcm.unsubscribeFromTopic(oldClass)
                 }
                 fcm.subscribeToTopic(classTopic)
+                // Also subscribe to UUID with hyphens if different
+                val rawClassTopic = "class_${classId.removePrefix("class_").lowercase()}"
+                if (rawClassTopic != classTopic) {
+                    fcm.subscribeToTopic(rawClassTopic)
+                }
                 prefs?.edit()?.putString("subscribed_class_topic", classTopic)?.apply()
                 Timber.d("FCM Subscribed to class topic: %s", classTopic)
             }
@@ -159,7 +164,13 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
         val referenceType = data["reference_type"] ?: category.lowercase()
         val referenceId = data["reference_id"] ?: data["id"] ?: ""
         val navigateTo = data["navigate_to"] ?: navigateTargetFor(category, referenceType)
-        val channelId = data["channel_id"]
+        val rawChannelId = data["channel_id"]
+        val channelId = when (rawChannelId) {
+            "school_os_announcements_v1", "school_os_announcements_v2", "school_os_announcements_v3", "school_os_announcements_v4" -> SystemNotificationHelper.CHANNEL_ID
+            "school_os_learning_v1", "school_os_learning_v2" -> SystemNotificationHelper.CHANNEL_LEARNING_ID
+            null, "" -> null
+            else -> rawChannelId
+        }
         val clickAction = data["click_action"]
         val deepLink = data["deep_link"]
 

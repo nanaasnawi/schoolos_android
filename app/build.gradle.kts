@@ -26,8 +26,8 @@ android {
         applicationId = "com.schoolos.android"
         minSdk = 26
         targetSdk = 36
-        versionCode = 16
-        versionName = "1.1.5"
+        versionCode = 17
+        versionName = "1.1.6"
     }
 
     packaging {
