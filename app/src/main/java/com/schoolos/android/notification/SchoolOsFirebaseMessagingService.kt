@@ -25,9 +25,7 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
 
         fun subscribeAllTopics() {
             val topics = listOf(
-                TOPIC_ANNOUNCEMENTS, TOPIC_MATERIALS, TOPIC_ASSIGNMENTS,
-                TOPIC_QUIZZES, TOPIC_GRADES, TOPIC_SESSIONS,
-                "role_student",
+                TOPIC_ANNOUNCEMENTS,
             )
             topics.forEach { topic ->
                 try {
@@ -195,6 +193,14 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             mutableShown.add(notifId.toString())
             syncPrefs.edit().putStringSet("shown_notif_ids", mutableShown).apply()
         } catch (_: Exception) {}
+
+        // Quiet hours protection: drop reminder alarms/notifications between 21:00 and 06:00 WIB
+        val isReminder = category.contains("REMINDER", ignoreCase = true) || 
+                         referenceType.contains("reminder", ignoreCase = true)
+        if (isReminder && com.schoolos.android.core.notification.TeacherScheduleReminderManager.isQuietHours()) {
+            Timber.d("FCM Reminder dropped during quiet hours (21:00 - 06:00 WIB)")
+            return
+        }
 
         // Trigger native Android system notification with HIGH priority (wakes up lock screen)
         SystemNotificationHelper.showNotification(

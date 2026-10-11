@@ -13,6 +13,7 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.OffsetDateTime
 import java.time.ZoneId
+import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -36,7 +37,13 @@ class TeacherScheduleAlarmReceiver : BroadcastReceiver() {
         val subjectName = intent.getStringExtra(EXTRA_SUBJECT_NAME) ?: "Mata Pelajaran"
         val className = intent.getStringExtra(EXTRA_CLASS_NAME) ?: "Kelas"
         val scheduledTime = intent.getStringExtra(EXTRA_SCHEDULED_TIME) ?: "Hari ini"
-        val reminderType = intent.getStringExtra(EXTRA_REMINDER_TYPE) ?: "1_HOUR_BEFORE"
+        val reminderType = intent.getStringExtra(EXTRA_REMINDER_TYPE) ?: TeacherScheduleReminderManager.TYPE_15_MINUTES_BEFORE
+
+        // Quiet hours protection: 21:00 to 06:00 WIB
+        if (TeacherScheduleReminderManager.isQuietHours()) {
+            Timber.d("TeacherScheduleAlarmReceiver: Quiet hours active (21:00 - 06:00 WIB). Dropping alarm.")
+            return
+        }
 
         Timber.d("TeacherScheduleAlarmReceiver fired: %s for %s (%s)", reminderType, subjectName, className)
 
@@ -53,17 +60,76 @@ class TeacherScheduleAlarmReceiver : BroadcastReceiver() {
 
 /**
  * Manages alarm scheduling and notifications for teacher daily teaching sessions.
- * Sends alerts:
- * 1. 1 hour before scheduled class time
- * 2. At class start time
- * Reminding teachers to prepare & publish materials, assignments, or quizzes.
+ * Sends alerts strictly 15 minutes before scheduled class time.
+ * Reminding teachers to prepare & publish materials, assignments, or quizzes for their assigned classes.
  */
 object TeacherScheduleReminderManager {
 
+    const val TYPE_15_MINUTES_BEFORE = "15_MINUTES_BEFORE"
+    // Backward compatibility constants
     const val TYPE_1_HOUR_BEFORE = "1_HOUR_BEFORE"
     const val TYPE_CLASS_START = "CLASS_START"
 
     private const val PREFS_NAME = "teacher_schedule_reminders"
+
+    /**
+     * Strict check for quiet hours: 21:00 WIB (night) until 06:00 WIB (morning).
+     * No alarms or loud notifications must ever trigger during quiet hours.
+     */
+    fun isQuietHours(): Boolean {
+        return try {
+            val zoneJakarta = ZoneId.of("Asia/Jakarta")
+            val hour = ZonedDateTime.now(zoneJakarta).hour
+            hour >= 21 || hour < 6
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    /**
+     * Computes exact epoch millis of when a teaching session starts in Asia/Jakarta (WIB).
+     * Rejects 00:00:00 midnight fallbacks so alarms NEVER fire at midnight.
+     */
+    fun getSessionStartEpochMs(session: LearningSession): Long? {
+        val zoneJakarta = ZoneId.of("Asia/Jakarta")
+        val today = LocalDate.now(zoneJakarta)
+
+        // 1. Prioritize session.startTime (e.g. "07:30", "08:15", "08:00:00")
+        val rawTime = session.startTime?.trim()
+        if (!rawTime.isNullOrBlank()) {
+            try {
+                val cleanTime = rawTime.substringBefore(" ").take(5)
+                val parts = cleanTime.split(":")
+                if (parts.size >= 2) {
+                    val hour = parts[0].toIntOrNull()
+                    val minute = parts[1].toIntOrNull()
+                    if (hour != null && minute != null && hour in 0..23 && minute in 0..59) {
+                        val sessionDate = session.sessionDate?.let {
+                            try { LocalDate.parse(it.substringBefore("T")) } catch (_: Exception) { today }
+                        } ?: today
+                        return sessionDate.atTime(hour, minute).atZone(zoneJakarta).toInstant().toEpochMilli()
+                    }
+                }
+            } catch (_: Exception) {}
+        }
+
+        // 2. Fallback to scheduledAt or startedAt
+        val iso = session.scheduledAt ?: session.startedAt
+        if (!iso.isNullOrBlank()) {
+            val ms = parseEpochMs(iso)
+            if (ms != null) {
+                val zdt = Instant.ofEpochMilli(ms).atZone(zoneJakarta)
+                // Guard: If it parsed to midnight (00:00:00), it's date-only and lacks time!
+                // Midnight classes do not exist in schools; reject to prevent 00:21 WIB alarms.
+                if (zdt.hour == 0 && zdt.minute == 0) {
+                    return null
+                }
+                return ms
+            }
+        }
+
+        return null
+    }
 
     fun parseEpochMs(isoString: String?): Long? {
         if (isoString.isNullOrBlank()) return null
@@ -88,7 +154,8 @@ object TeacherScheduleReminderManager {
                     LocalDateTime.parse(clean).atZone(zoneJakarta).toInstant().toEpochMilli()
                 }
                 trimmed.length == 10 && trimmed.count { it == '-' } == 2 -> {
-                    LocalDate.parse(trimmed).atStartOfDay(zoneJakarta).toInstant().toEpochMilli()
+                    // Date-only without time: DO NOT default to midnight for alarms
+                    null
                 }
                 else -> Instant.parse(trimmed).toEpochMilli()
             }
@@ -110,20 +177,21 @@ object TeacherScheduleReminderManager {
 
     private fun isAlreadyNotified(context: Context, sessionId: String, reminderType: String): Boolean {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val todayStr = LocalDate.now().toString()
+        val todayStr = LocalDate.now(ZoneId.of("Asia/Jakarta")).toString()
         val key = "${sessionId}_${reminderType}_$todayStr"
         return prefs.getBoolean(key, false)
     }
 
     private fun markAsNotified(context: Context, sessionId: String, reminderType: String) {
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val todayStr = LocalDate.now().toString()
+        val todayStr = LocalDate.now(ZoneId.of("Asia/Jakarta")).toString()
         val key = "${sessionId}_${reminderType}_$todayStr"
         prefs.edit().putBoolean(key, true).apply()
     }
 
     /**
-     * Show notification immediately via SystemNotificationHelper with loud sound & vibration.
+     * Show notification immediately via SystemNotificationHelper with sound & vibration.
+     * Guaranteed to never play during quiet hours (21:00 - 06:00 WIB).
      */
     fun showReminderNotification(
         context: Context,
@@ -134,22 +202,18 @@ object TeacherScheduleReminderManager {
         reminderType: String
     ) {
         try {
+            if (isQuietHours()) {
+                Timber.d("Quiet hours active (21:00 - 06:00 WIB). Suppressing reminder.")
+                return
+            }
+
             if (isAlreadyNotified(context, sessionId, reminderType)) {
                 Timber.d("Teacher reminder already notified today: %s (%s)", sessionId, reminderType)
                 return
             }
 
-            val title = if (reminderType == TYPE_1_HOUR_BEFORE) {
-                "⏰ 1 Jam Lagi: Jadwal Mengajar $subjectName"
-            } else {
-                "🚨 Waktunya Mengajar: $subjectName • $className"
-            }
-
-            val message = if (reminderType == TYPE_1_HOUR_BEFORE) {
-                "Jadwal mengajar kelas $className dimulai pukul $scheduledTime. Jangan lupa siapkan dan isi materi pembelajaran, tugas, atau kuis untuk murid Anda!"
-            } else {
-                "Jam mata pelajaran telah dimulai! Pastikan materi ajar, penugasan, atau kuis sudah diterbitkan ke murid."
-            }
+            val title = "⏰ 15 Menit Lagi: Jadwal Mengajar $subjectName"
+            val message = "Jadwal mengajar kelas $className dimulai pukul $scheduledTime. Jangan lupa siapkan dan isi materi pembelajaran, tugas, atau kuis untuk murid Anda!"
 
             val notifId = (sessionId + "_" + reminderType).hashCode() and 0x7FFFFFFF
 
@@ -158,7 +222,7 @@ object TeacherScheduleReminderManager {
                 notificationId = notifId,
                 title = title,
                 message = message,
-                navigateTo = if (reminderType == TYPE_1_HOUR_BEFORE) "learning" else "sessions",
+                navigateTo = "learning",
                 channelId = SystemNotificationHelper.CHANNEL_LEARNING_ID,
                 category = "TEACHER_SCHEDULE_REMINDER"
             )
@@ -171,67 +235,61 @@ object TeacherScheduleReminderManager {
     }
 
     /**
-     * Schedule alarms and check immediate notifications for all of today's teacher sessions.
+     * Schedule alarms strictly 15 minutes before teaching sessions start.
+     * Only schedules for today's active teaching sessions belonging to the teacher.
      */
     fun scheduleReminders(context: Context, sessions: List<LearningSession>) {
         if (sessions.isEmpty()) return
         try {
             val am = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
             val now = System.currentTimeMillis()
+            val zoneJakarta = ZoneId.of("Asia/Jakarta")
+            val today = LocalDate.now(zoneJakarta)
 
             for (session in sessions) {
-                val scheduledMs = parseEpochMs(session.scheduledAt ?: session.startedAt) ?: continue
+                // Ignore completed or cancelled sessions
+                if (session.status.equals("completed", ignoreCase = true) ||
+                    session.status.equals("cancelled", ignoreCase = true)
+                ) {
+                    continue
+                }
+
+                val scheduledMs = getSessionStartEpochMs(session) ?: continue
+                val sessionDate = Instant.ofEpochMilli(scheduledMs).atZone(zoneJakarta).toLocalDate()
+                // Only process sessions scheduled for TODAY
+                if (sessionDate != today) continue
+
                 val subject = session.subjectName?.takeIf { it.isNotBlank() && !it.contains("-") } ?: "Mata Pelajaran"
                 val className = session.className?.takeIf { it.isNotBlank() && !it.contains("-") } ?: (session.room ?: "Kelas")
                 val timeStr = formatHourMinute(scheduledMs)
 
-                // 1. One Hour Before (scheduledMs - 60 mins)
-                val oneHourBeforeMs = scheduledMs - 60 * 60 * 1000L
-                if (oneHourBeforeMs > now) {
-                    val intent = Intent(context, TeacherScheduleAlarmReceiver::class.java).apply {
-                        action = TeacherScheduleAlarmReceiver.ACTION_REMINDER
-                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SESSION_ID, session.id)
-                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SUBJECT_NAME, subject)
-                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_CLASS_NAME, className)
-                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_SCHEDULED_TIME, timeStr)
-                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_REMINDER_TYPE, TYPE_1_HOUR_BEFORE)
-                    }
-                    val pi = PendingIntent.getBroadcast(
-                        context,
-                        (session.id + "_1h").hashCode(),
-                        intent,
-                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-                    )
-                    safeScheduleAlarm(am, oneHourBeforeMs, pi)
-                } else if (now in oneHourBeforeMs until scheduledMs) {
-                    if (!isAlreadyNotified(context, session.id, TYPE_1_HOUR_BEFORE)) {
-                        showReminderNotification(context, session.id, subject, className, timeStr, TYPE_1_HOUR_BEFORE)
-                    }
-                }
+                // 15 Minutes Before Start Time
+                val fifteenMinsBeforeMs = scheduledMs - 15 * 60 * 1000L
 
-                // 2. Class Start Time (scheduledMs)
-                val startMs = scheduledMs
-                if (startMs > now) {
+                if (fifteenMinsBeforeMs > now) {
+                    // Future schedule: set exact alarm
                     val intent = Intent(context, TeacherScheduleAlarmReceiver::class.java).apply {
                         action = TeacherScheduleAlarmReceiver.ACTION_REMINDER
                         putExtra(TeacherScheduleAlarmReceiver.EXTRA_SESSION_ID, session.id)
                         putExtra(TeacherScheduleAlarmReceiver.EXTRA_SUBJECT_NAME, subject)
                         putExtra(TeacherScheduleAlarmReceiver.EXTRA_CLASS_NAME, className)
                         putExtra(TeacherScheduleAlarmReceiver.EXTRA_SCHEDULED_TIME, timeStr)
-                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_REMINDER_TYPE, TYPE_CLASS_START)
+                        putExtra(TeacherScheduleAlarmReceiver.EXTRA_REMINDER_TYPE, TYPE_15_MINUTES_BEFORE)
                     }
                     val pi = PendingIntent.getBroadcast(
                         context,
-                        (session.id + "_start").hashCode(),
+                        (session.id + "_15m").hashCode(),
                         intent,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
                     )
-                    safeScheduleAlarm(am, startMs, pi)
-                } else if (session.status.equals("active", ignoreCase = true) || (now in startMs until (startMs + 2 * 3600_000L))) {
-                    if (!isAlreadyNotified(context, session.id, TYPE_CLASS_START)) {
-                        showReminderNotification(context, session.id, subject, className, timeStr, TYPE_CLASS_START)
+                    safeScheduleAlarm(am, fifteenMinsBeforeMs, pi)
+                } else if (now in fifteenMinsBeforeMs until scheduledMs) {
+                    // Currently in the 15-minute preparation window right before class starts
+                    if (!isAlreadyNotified(context, session.id, TYPE_15_MINUTES_BEFORE) && !isQuietHours()) {
+                        showReminderNotification(context, session.id, subject, className, timeStr, TYPE_15_MINUTES_BEFORE)
                     }
                 }
+                // Note: If now >= scheduledMs, class has already started or ended. Do not sound preparation alarm!
             }
         } catch (t: Throwable) {
             Timber.w(t, "Teacher schedule reminders check failed safely: %s", t.message)

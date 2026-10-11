@@ -154,9 +154,17 @@ class HomeViewModel @Inject constructor(
             while (isActive) {
                 delay(30_000L)
                 if (currentAuth.isTeacher && _state.value.todaySessions.isNotEmpty()) {
-                    TeacherScheduleReminderManager.scheduleReminders(context, _state.value.todaySessions)
+                    val teacherUserId = currentAuth.userId ?: ""
+                    val teacherName = currentAuth.name ?: ""
+                    val mySessions = _state.value.todaySessions.filter { s ->
+                        (teacherUserId.isNotBlank() && (s.teacherId == teacherUserId || s.substituteTeacherId == teacherUserId)) ||
+                        (teacherName.isNotBlank() && s.teacherName?.equals(teacherName, ignoreCase = true) == true)
+                    }
+                    if (mySessions.isNotEmpty()) {
+                        TeacherScheduleReminderManager.scheduleReminders(context, mySessions)
+                    }
                     val updatedUrgent = evaluateUrgentSession(
-                        _state.value.todaySessions,
+                        if (mySessions.isNotEmpty()) mySessions else _state.value.todaySessions,
                         cachedClassMap,
                         cachedSubjectMap,
                         currentAuth.className ?: ""
@@ -334,7 +342,15 @@ class HomeViewModel @Inject constructor(
             cachedSubjectMap = subjectMap
 
             if (isTeacher && todaySessions.isNotEmpty()) {
-                TeacherScheduleReminderManager.scheduleReminders(context, todaySessions)
+                val teacherUserId = currentAuth.userId ?: ""
+                val teacherName = currentAuth.name ?: ""
+                val mySessions = todaySessions.filter { s ->
+                    (teacherUserId.isNotBlank() && (s.teacherId == teacherUserId || s.substituteTeacherId == teacherUserId)) ||
+                    (teacherName.isNotBlank() && s.teacherName?.equals(teacherName, ignoreCase = true) == true)
+                }
+                if (mySessions.isNotEmpty()) {
+                    TeacherScheduleReminderManager.scheduleReminders(context, mySessions)
+                }
             }
 
             val urgentSession = if (isTeacher) {
@@ -659,7 +675,7 @@ class HomeViewModel @Inject constructor(
         // 1. Live or current session (status == "active" or now is within startMs until startMs + 2 hours)
         val liveOrCurrent = sessions.firstOrNull { s ->
             if (s.status.equals("active", ignoreCase = true)) return@firstOrNull true
-            val startMs = TeacherScheduleReminderManager.parseEpochMs(s.scheduledAt ?: s.startedAt)
+            val startMs = TeacherScheduleReminderManager.getSessionStartEpochMs(s)
             if (startMs != null && now >= startMs && now < (startMs + 2 * 3600_000L) && !s.status.equals("completed", ignoreCase = true)) {
                 return@firstOrNull true
             }
@@ -667,7 +683,7 @@ class HomeViewModel @Inject constructor(
         }
 
         if (liveOrCurrent != null) {
-            val startMs = TeacherScheduleReminderManager.parseEpochMs(liveOrCurrent.scheduledAt ?: liveOrCurrent.startedAt) ?: now
+            val startMs = TeacherScheduleReminderManager.getSessionStartEpochMs(liveOrCurrent) ?: now
             val subj = cleanSubjectName(liveOrCurrent.lessonId, liveOrCurrent.subjectName, liveOrCurrent.notes, subjectMap)
             val cls = cleanClassName(liveOrCurrent.classId, liveOrCurrent.className, classMap, homeroom).ifBlank { liveOrCurrent.room ?: "Kelas" }
             val timeStr = TeacherScheduleReminderManager.formatHourMinute(startMs)
@@ -686,7 +702,7 @@ class HomeViewModel @Inject constructor(
         val upcoming1h = sessions.filter { s ->
             !s.status.equals("completed", ignoreCase = true)
         }.mapNotNull { s ->
-            val startMs = TeacherScheduleReminderManager.parseEpochMs(s.scheduledAt ?: s.startedAt) ?: return@mapNotNull null
+            val startMs = TeacherScheduleReminderManager.getSessionStartEpochMs(s) ?: return@mapNotNull null
             val diffMs = startMs - now
             val mins = diffMs / (60 * 1000L)
             if (mins in 0..60) Pair(s, mins) else null
@@ -695,7 +711,7 @@ class HomeViewModel @Inject constructor(
         if (upcoming1h != null) {
             val session = upcoming1h.first
             val mins = upcoming1h.second
-            val startMs = TeacherScheduleReminderManager.parseEpochMs(session.scheduledAt ?: session.startedAt) ?: now
+            val startMs = TeacherScheduleReminderManager.getSessionStartEpochMs(session) ?: now
             val subj = cleanSubjectName(session.lessonId, session.subjectName, session.notes, subjectMap)
             val cls = cleanClassName(session.classId, session.className, classMap, homeroom).ifBlank { session.room ?: "Kelas" }
             val timeStr = TeacherScheduleReminderManager.formatHourMinute(startMs)
