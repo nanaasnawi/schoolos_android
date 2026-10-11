@@ -23,8 +23,8 @@ import android.net.Uri
 
 object SystemNotificationHelper {
 
-    const val CHANNEL_ID = "school_os_announcements_v4"
-    const val CHANNEL_LEARNING_ID = "school_os_learning_v2"
+    const val CHANNEL_ID = "school_os_announcements_v5"
+    const val CHANNEL_LEARNING_ID = "school_os_learning_v3"
     private const val CHANNEL_NAME = "Pengumuman & Broadcast Sekolah"
     private const val CHANNEL_DESC = "Pemberitahuan resmi dan pengumuman sekolah"
     private const val CHANNEL_LEARNING_NAME = "Materi, Tugas, Kuis & Nilai"
@@ -42,12 +42,14 @@ object SystemNotificationHelper {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
 
-            // Clean up obsolete/locked channels from earlier versions to reset OEM sound restrictions
+            // Clean up obsolete/locked channels from earlier versions to reset OEM sound & visibility restrictions
             val obsoleteChannels = listOf(
                 "school_os_announcements_v1",
                 "school_os_announcements_v2",
                 "school_os_announcements_v3",
+                "school_os_announcements_v4",
                 "school_os_learning_v1",
+                "school_os_learning_v2",
                 "fcm_fallback_notification_channel"
             )
             for (oldChannel in obsoleteChannels) {
@@ -176,19 +178,22 @@ object SystemNotificationHelper {
         val wakeLock = try {
             val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
             pm?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "schoolos:notification_wake")?.apply {
-                acquire(3000L)
+                setReferenceCounted(false)
+                acquire(5000L)
             }
         } catch (_: Exception) { null }
 
-        // Wake up screen for 3 seconds so high-priority notification turns on display during standby/idle
+        // Wake up screen for 4 seconds so high-priority notification turns on display during standby/idle/lockscreen
         try {
             val pm = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-            @Suppress("DEPRECATION")
-            val screenLock = pm?.newWakeLock(
-                PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
-                "schoolos:notification_screen_wake"
-            )
-            screenLock?.acquire(3000L)
+            if (pm?.isInteractive == false) {
+                @Suppress("DEPRECATION")
+                val screenLock = pm.newWakeLock(
+                    PowerManager.SCREEN_BRIGHT_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP or PowerManager.ON_AFTER_RELEASE,
+                    "schoolos:notification_screen_wake"
+                )
+                screenLock.acquire(4000L)
+            }
         } catch (_: Exception) {}
 
         // Deterministic notification slot per pesan — pakai ID dari FCM (bukan hash
@@ -257,14 +262,13 @@ object SystemNotificationHelper {
             .setStyle(NotificationCompat.BigTextStyle().bigText(message))
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setCategory(NotificationCompat.CATEGORY_EVENT)
             .setSound(soundUri, AudioManager.STREAM_NOTIFICATION)
             .setOnlyAlertOnce(false)
             .setVibrate(longArrayOf(0, 350, 150, 350))
             .setLights(Color.BLUE, 1000, 1000)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
-            .setFullScreenIntent(pendingIntent, false)
 
         if (largeIconBitmap != null) {
             builder.setLargeIcon(largeIconBitmap)
