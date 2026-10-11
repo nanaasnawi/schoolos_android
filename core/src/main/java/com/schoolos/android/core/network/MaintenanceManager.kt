@@ -38,7 +38,8 @@ class MaintenanceManager @Inject constructor(
                 if (active) {
                     setMaintenance(true, "Sistem sedang dalam mode pemeliharaan berkala.")
                 } else if (_isMaintenance.value) {
-                    setMaintenance(false)
+                    // Firebase signaled false, verify with primary backend before clearing maintenance
+                    checkServerStatus()
                 }
             }
         }
