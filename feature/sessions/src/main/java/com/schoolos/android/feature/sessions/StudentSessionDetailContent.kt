@@ -20,6 +20,10 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,9 +48,9 @@ fun StudentSessionDetailContent(
     accentColor: Color,
     onSubmitExcuse: ((status: String, notes: String) -> Unit)? = null,
 ) {
-    var showExcuseDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
-    var selectedExcuseType by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("sick") }
-    var excuseReason by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    var showExcuseDialog by remember { mutableStateOf(false) }
+    var selectedExcuseType by remember { mutableStateOf("sick") }
+    var excuseReason by remember { mutableStateOf("") }
 
     if (showExcuseDialog && onSubmitExcuse != null) {
         androidx.compose.material3.AlertDialog(
@@ -292,9 +296,10 @@ fun StudentSessionDetailContent(
                                     fontWeight = FontWeight.Medium,
                                     color = TextSecondary,
                                 )
-                                if (!att.notes.isNullOrBlank()) {
+                                val excuseNotes = att.notes
+                                if (!excuseNotes.isNullOrBlank()) {
                                     Text(
-                                        att.notes,
+                                        excuseNotes,
                                         fontSize = 11.sp,
                                         color = TextTertiary,
                                     )
