@@ -11,6 +11,7 @@ interface SessionRepository {
     suspend fun recordAttendanceBulk(sessionId: String, items: List<RecordAttendanceItem>): Result<List<SessionAttendance>>
     suspend fun cancelSession(sessionId: String, reason: String? = null): Result<LearningSession>
     suspend fun substituteTeacher(sessionId: String, substituteTeacherId: String, notes: String? = null): Result<LearningSession>
+    suspend fun submitExcuse(sessionId: String, status: String, notes: String? = null): Result<Boolean>
 }
 
 data class RecordAttendanceItem(

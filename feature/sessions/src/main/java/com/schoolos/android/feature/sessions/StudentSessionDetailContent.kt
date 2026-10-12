@@ -42,7 +42,100 @@ fun StudentSessionDetailContent(
     onOpenQuizzes: (String) -> Unit,
     onOpenMaterials: (String) -> Unit,
     accentColor: Color,
+    onSubmitExcuse: ((status: String, notes: String) -> Unit)? = null,
 ) {
+    var showExcuseDialog by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    var selectedExcuseType by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("sick") }
+    var excuseReason by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+
+    if (showExcuseDialog && onSubmitExcuse != null) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showExcuseDialog = false },
+            title = {
+                Text(
+                    "Pengajuan Keterangan Ketidakhadiran",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = TextPrimary
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Text(
+                        "Pemberitahuan: Keterangan harus diajukan dalam kurun waktu maksimal 24 jam dari jadwal sesi. Setelah 24 jam tanpa keterangan atau membaca materi, status otomatis ditutup menjadi Alpa.",
+                        fontSize = 11.sp,
+                        color = TextTertiary,
+                        lineHeight = 16.sp,
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (selectedExcuseType == "sick") NeonBlue.copy(alpha = 0.2f) else CosmicSurface)
+                                .border(1.dp, if (selectedExcuseType == "sick") NeonBlue else GlassBorder, RoundedCornerShape(10.dp))
+                                .clickable { selectedExcuseType = "sick" }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "🏥 Sakit",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (selectedExcuseType == "sick") NeonBlue else TextSecondary
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (selectedExcuseType == "excused") NeonWarning.copy(alpha = 0.2f) else CosmicSurface)
+                                .border(1.dp, if (selectedExcuseType == "excused") NeonWarning else GlassBorder, RoundedCornerShape(10.dp))
+                                .clickable { selectedExcuseType = "excused" }
+                                .padding(vertical = 10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                "✉️ Izin",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = if (selectedExcuseType == "excused") NeonWarning else TextSecondary
+                            )
+                        }
+                    }
+
+                    androidx.compose.material3.OutlinedTextField(
+                        value = excuseReason,
+                        onValueChange = { excuseReason = it },
+                        label = { Text("Alasan / Catatan (contoh: Surat Dokter/Demam)") },
+                        modifier = Modifier.fillMaxWidth(),
+                        maxLines = 3,
+                    )
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(
+                    onClick = {
+                        val notes = excuseReason.ifBlank { if (selectedExcuseType == "sick") "Sakit" else "Izin" }
+                        onSubmitExcuse(selectedExcuseType, notes)
+                        showExcuseDialog = false
+                    }
+                ) {
+                    Text("Kirim Keterangan", fontWeight = FontWeight.Bold, color = NeonSuccess)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = { showExcuseDialog = false }) {
+                    Text("Batal", color = TextTertiary)
+                }
+            },
+            containerColor = CosmicNavy,
+        )
+    }
+
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         // Info Card
         Box(
@@ -147,8 +240,8 @@ fun StudentSessionDetailContent(
 
                 if (attendance.isEmpty()) {
                     EmptyStateContent(
-                        message = "Belum ada data presensi",
-                        subtitle = "Presensi akan tercatat saat sesi berlangsung",
+                        message = "Belum Ada Presensi Tercatat",
+                        subtitle = "Presensi otomatis tercatat 'Hadir Daring' saat Anda membaca materi pelajaran ini hari ini. Jika berhalangan hadir, ajukan Izin/Sakit dalam kurun waktu 24 jam sebelum dinyatakan Alpa.",
                         accentColor = accentColor,
                     )
                 } else {
@@ -166,7 +259,7 @@ fun StudentSessionDetailContent(
                             else -> Icons.Default.Schedule
                         }
                         val statusLabel = when (att.status.lowercase()) {
-                            "present" -> "Hadir Tepat Waktu"
+                            "present" -> "Hadir (Daring / Luring)"
                             "late" -> "Terlambat"
                             "excused" -> "Izin"
                             "sick" -> "Sakit"
@@ -192,11 +285,48 @@ fun StudentSessionDetailContent(
                                 )
                             }
                             Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text(
+                                    statusLabel,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextSecondary,
+                                )
+                                if (!att.notes.isNullOrBlank()) {
+                                    Text(
+                                        att.notes,
+                                        fontSize = 11.sp,
+                                        color = TextTertiary,
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Tombol ajukan izin / sakit jika siswa belum hadir atau alpa
+                val myStatus = attendance.firstOrNull()?.status?.lowercase()
+                val canSubmitExcuse = myStatus == null || myStatus == "absent"
+                if (onSubmitExcuse != null && canSubmitExcuse) {
+                    Spacer(Modifier.height(10.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Brush.horizontalGradient(listOf(NeonWarning.copy(alpha = 0.12f), NeonBlue.copy(alpha = 0.12f))))
+                            .border(1.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .clickable { showExcuseDialog = true }
+                            .padding(vertical = 10.dp, horizontal = 14.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("📝", fontSize = 14.sp)
+                            Spacer(Modifier.width(8.dp))
                             Text(
-                                statusLabel,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = TextSecondary,
+                                "Ajukan Keterangan Izin / Sakit (Maks. 24 Jam)",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
                             )
                         }
                     }

@@ -207,6 +207,27 @@ class SessionDetailViewModel @Inject constructor(
         }
     }
 
+    fun submitExcuse(status: String, notes: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
+            repository.submitExcuse(sessionId, status, notes)
+                .onSuccess {
+                    val label = if (status.equals("sick", ignoreCase = true)) "Sakit" else "Izin"
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        snackbarMessage = "Keterangan $label berhasil diajukan",
+                    )
+                    _state.value.session?.let { loadAttendanceAndStudents(it) }
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        snackbarMessage = "Gagal mengajukan keterangan: ${e.message}",
+                    )
+                }
+        }
+    }
+
     fun clearSnackbar() {
         _state.value = _state.value.copy(snackbarMessage = null)
     }

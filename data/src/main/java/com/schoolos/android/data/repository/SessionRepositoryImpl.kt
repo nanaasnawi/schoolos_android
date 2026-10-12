@@ -154,5 +154,18 @@ class SessionRepositoryImpl @Inject constructor(
         sessionDao.insert(domain.toEntity())
         domain
     }
+
+    override suspend fun submitExcuse(
+        sessionId: String,
+        status: String,
+        notes: String?,
+    ): Result<Boolean> = runCatching {
+        val request = com.schoolos.android.data.remote.dto.SubmitExcuseRequestDto(
+            status = status,
+            notes = notes,
+        )
+        val response = api.submitStudentExcuse(id = sessionId, request = request)
+        response.data ?: true
+    }
 }
 
