@@ -178,6 +178,12 @@ interface SchoolOsApi {
         @Header("X-Idempotency-Key") idempotencyKey: String? = null,
     ): ApiResponse<List<SessionAttendanceDto>>
 
+    @POST("learning/sessions/{id}/excuse")
+    suspend fun submitStudentExcuse(
+        @Path("id") id: String,
+        @Body request: SubmitExcuseRequestDto,
+    ): ApiResponse<Boolean>
+
     @POST("learning/sessions/{id}/cancel")
     suspend fun cancelSession(
         @Path("id") id: String,

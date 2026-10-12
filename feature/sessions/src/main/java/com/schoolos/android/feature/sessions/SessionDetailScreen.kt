@@ -222,6 +222,7 @@ fun SessionDetailScreen(
                                 onOpenQuizzes = openQuizzes,
                                 onOpenMaterials = openMaterials,
                                 accentColor = accentColor,
+                                onSubmitExcuse = viewModel::submitExcuse,
                             )
                         }
 

@@ -58,3 +58,9 @@ data class RecordAttendanceRequestDto(
     @SerialName("checked_in_at") val checkedInAt: String? = null,
     val notes: String? = null,
 )
+
+@Serializable
+data class SubmitExcuseRequestDto(
+    val status: String,
+    val notes: String? = null,
+)
