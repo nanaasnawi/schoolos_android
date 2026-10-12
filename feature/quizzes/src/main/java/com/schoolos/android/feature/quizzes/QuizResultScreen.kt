@@ -102,11 +102,12 @@ fun QuizResultScreen(
     when {
         state.isLoading -> QuizResultShimmer()
         else -> {
+            val isGraded = state.attempt?.status == "graded"
             val score    = state.attempt?.score ?: 0
             val maxScore = state.attempt?.totalPoints?.let { if (it > 0) it else 100 } ?: 100
             val (grade, gradeLabel, gradeColor) = gradeFromScore(score, maxScore)
             val pct = if (maxScore == 0) 0f else score.toFloat() / maxScore
-            val isCelebration = pct >= 0.75f
+            val isCelebration = isGraded && pct >= 0.75f
 
             Box(modifier = Modifier.fillMaxSize()) {
                 // Dark cosmic background
@@ -116,7 +117,7 @@ fun QuizResultScreen(
                         .background(CosmicBlack)
                 )
 
-                // Confetti particles (only if celebration)
+                // Confetti particles (only if celebration and already graded by teacher)
                 if (isCelebration) {
                     ConfettiCanvas(modifier = Modifier.fillMaxSize())
                 }
@@ -132,64 +133,113 @@ fun QuizResultScreen(
                 ) {
                     Spacer(Modifier.height(32.dp))
 
-                    // Big emoji reaction
-                    Text(
-                        if (pct >= 0.90f) "🎉" else if (pct >= 0.75f) "🌟" else if (pct >= 0.60f) "😊" else "💪",
-                        fontSize = 72.sp,
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        if (isCelebration) "Selamat!" else "Kamu sudah berusaha!",
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 24.sp,
-                        color = gradeColor,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        "Kuis telah selesai dikerjakan",
-                        fontSize = 13.sp,
-                        color = TextTertiary,
-                    )
+                    if (!isGraded) {
+                        // Belum Dinilai Guru (Menunggu Koreksi)
+                        Text(
+                            "📝",
+                            fontSize = 68.sp,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "Jawaban Berhasil Terkirim!",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 22.sp,
+                            color = NeonWarning,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Lembar pengerjaan telah tersimpan aman",
+                            fontSize = 13.sp,
+                            color = TextTertiary,
+                        )
 
-                    Spacer(Modifier.height(28.dp))
+                        Spacer(Modifier.height(24.dp))
 
-                    // Animated score circle
-                    AnimatedScoreCircle(
-                        score = score,
-                        maxScore = maxScore,
-                        size = 140.dp,
-                        color = gradeColor,
-                    )
-
-                    Spacer(Modifier.height(16.dp))
-
-                    // Grade badge
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = gradeColor.copy(alpha = 0.12f),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                        Surface(
+                            shape = RoundedCornerShape(16.dp),
+                            color = CosmicNavy,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder2)
                         ) {
-                            Text(
-                                "Predikat",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = gradeColor,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                grade,
-                                style = MaterialTheme.typography.headlineMedium,
-                                fontWeight = FontWeight.Bold,
-                                color = gradeColor,
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                "— $gradeLabel",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = gradeColor,
-                            )
+                            Column(
+                                modifier = Modifier.padding(20.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    "⏳ Menunggu Koreksi Guru",
+                                    fontWeight = FontWeight.Bold,
+                                    color = NeonWarning,
+                                    fontSize = 16.sp
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Koreksi hasil kuis & ujian CBT diserahkan kepada Guru pengampu mapel. Nilai resmi dan pembahasan akan tampil setelah diverifikasi dan disahkan oleh Guru.",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                    color = TextSecondary,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+                    } else {
+                        // Sudah Dinilai oleh Guru
+                        Text(
+                            if (pct >= 0.90f) "🎉" else if (pct >= 0.75f) "🌟" else if (pct >= 0.60f) "😊" else "💪",
+                            fontSize = 72.sp,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            if (isCelebration) "Selamat!" else "Kamu sudah berusaha!",
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 24.sp,
+                            color = gradeColor,
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            "Kuis telah dinilai oleh Guru",
+                            fontSize = 13.sp,
+                            color = TextTertiary,
+                        )
+
+                        Spacer(Modifier.height(28.dp))
+
+                        // Animated score circle
+                        AnimatedScoreCircle(
+                            score = score,
+                            maxScore = maxScore,
+                            size = 140.dp,
+                            color = gradeColor,
+                        )
+
+                        Spacer(Modifier.height(16.dp))
+
+                        // Grade badge
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = gradeColor.copy(alpha = 0.12f),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    "Predikat",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = gradeColor,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    grade,
+                                    style = MaterialTheme.typography.headlineMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = gradeColor,
+                                )
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    "— $gradeLabel",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = gradeColor,
+                                )
+                            }
                         }
                     }
 
