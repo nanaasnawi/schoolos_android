@@ -159,7 +159,7 @@ private fun TeacherClassHeroHeader(
     }
 
     val passRateText = if (hasGrades) {
-        val passedCount = gradedSubjects.count { it.finalScore >= 75.0 }
+        val passedCount = gradedSubjects.count { it.isPassed }
         "${(passedCount * 100) / gradedSubjects.size}% Tuntas"
     } else {
         "—"

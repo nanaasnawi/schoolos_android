@@ -63,9 +63,9 @@ fun StudentGradeDetailContent(
 ) {
     val score = detail.summary.finalScore
     val letter = detail.summary.letterGrade
-    val kkm = 75.0
+    val kkm = detail.summary.passingThreshold
     val kkmDiff = score - kkm
-    val isPassing = score >= kkm
+    val isPassing = detail.summary.isPassed
 
     val evaluationTitle = when {
         score >= 85.0 -> "Predikat Istimewa (A)"

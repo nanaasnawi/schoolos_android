@@ -23,6 +23,9 @@ data class SubjectGradeSummary(
     val lastCalculated: String,
     val componentCount: Int,
     val gradedComponentCount: Int,
+    val passingThreshold: Double = 75.0,
+    val isPassed: Boolean = finalScore >= passingThreshold,
+    val category: String = "Wajib",
 )
 
 data class SubjectGradeDetail(
@@ -38,30 +41,27 @@ data class WeightComponent(
     val maxScore: Double?,
 )
 
-fun List<GradeEntry>.toSubjectSummary(subjectId: String, subjectName: String): SubjectGradeSummary {
+fun List<GradeEntry>.toSubjectSummary(
+    subjectId: String,
+    subjectName: String,
+    backendFinalScore: Double? = null,
+    backendLetterGrade: String? = null,
+    passingThreshold: Double = 75.0,
+    category: String = "Wajib",
+): SubjectGradeSummary {
     val entries = this.filter { it.subjectId == subjectId }
     val graded = entries.filter { it.rawScore != null || it.weightedScore != null }
     
-    val calculatedWeightedSum = graded.sumOf { e ->
-        when {
-            e.weightedScore != null && e.weightedScore > 0 -> e.weightedScore
-            e.rawScore != null && e.maxRawScore != null && e.maxRawScore > 0 -> 
-                (e.rawScore / e.maxRawScore) * (e.weightPercentage ?: 25.0)
-            else -> 0.0
-        }
-    }
-    
-    val finalScore = if (calculatedWeightedSum > 0) calculatedWeightedSum 
-    else if (graded.isNotEmpty()) {
-        graded.mapNotNull { it.rawScore }.average().takeIf { !it.isNaN() } ?: 0.0
-    } else 0.0
+    val finalScore = backendFinalScore 
+        ?: entries.firstOrNull { it.weightedScore != null }?.weightedScore
+        ?: graded.mapNotNull { it.rawScore }.average().takeIf { !it.isNaN() }
+        ?: 0.0
 
-    val letter = when {
-        finalScore >= 85 -> "A"
-        finalScore >= 75 -> "B"
-        finalScore >= 65 -> "C"
-        finalScore >= 55 -> "D"
-        finalScore > 0 -> "E"
+    val letter = backendLetterGrade ?: when {
+        finalScore >= passingThreshold + 10.0 -> "A"
+        finalScore >= passingThreshold -> "B"
+        finalScore >= passingThreshold - 10.0 -> "C"
+        finalScore > 0.0 -> "D"
         else -> "-"
     }
     val completion = if (entries.isEmpty()) 0.0 else (graded.size.toDouble() / entries.size) * 100.0
@@ -74,5 +74,9 @@ fun List<GradeEntry>.toSubjectSummary(subjectId: String, subjectName: String): S
         lastCalculated = graded.maxOfOrNull { it.calculatedAt }.orEmpty(),
         componentCount = entries.size,
         gradedComponentCount = graded.size,
+        passingThreshold = passingThreshold,
+        isPassed = finalScore >= passingThreshold,
+        category = category,
     )
 }
+

@@ -44,33 +44,13 @@ fun GradebookListScreen(
     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
 
     val filteredSubjects = remember(state.subjects, selectedFilter) {
-        when (selectedFilter) {
-            "MIPA" -> state.subjects.filter {
-                it.subjectName.contains("Matematika", ignoreCase = true) ||
-                it.subjectName.contains("IPA", ignoreCase = true) ||
-                it.subjectName.contains("Fisika", ignoreCase = true) ||
-                it.subjectName.contains("Biologi", ignoreCase = true) ||
-                it.subjectName.contains("Kimia", ignoreCase = true)
+        if (selectedFilter == "Semua Mapel") {
+            state.subjects
+        } else {
+            state.subjects.filter {
+                it.category.equals(selectedFilter, ignoreCase = true) ||
+                it.subjectName.contains(selectedFilter, ignoreCase = true)
             }
-            "Bahasa" -> state.subjects.filter {
-                it.subjectName.contains("Bahasa", ignoreCase = true) ||
-                it.subjectName.contains("Inggris", ignoreCase = true) ||
-                it.subjectName.contains("Indonesia", ignoreCase = true)
-            }
-            "Wajib" -> state.subjects.filter {
-                it.subjectName.contains("Indonesia", ignoreCase = true) ||
-                it.subjectName.contains("Matematika", ignoreCase = true) ||
-                it.subjectName.contains("Agama", ignoreCase = true) ||
-                it.subjectName.contains("PPKn", ignoreCase = true)
-            }
-            "Muatan Lokal" -> state.subjects.filter {
-                it.subjectName.contains("Seni", ignoreCase = true) ||
-                it.subjectName.contains("Prakarya", ignoreCase = true) ||
-                it.subjectName.contains("Daerah", ignoreCase = true) ||
-                it.subjectName.contains("Jawa", ignoreCase = true) ||
-                it.subjectName.contains("Sunda", ignoreCase = true)
-            }
-            else -> state.subjects
         }
     }
 
