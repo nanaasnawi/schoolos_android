@@ -22,14 +22,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.schoolos.android.domain.model.AcademicSubject
 
-private val CosmicSurface2 = Color(0xFF1E293B)
-private val CosmicNavy = Color(0xFF0F172A)
-private val TeacherNeon = Color(0xFF3B82F6)
-private val GlassBorder = Color(0xFF334155)
-private val NvidiaGreen = Color(0xFF76B900)
-private val NvidiaGradient = Brush.linearGradient(
-    listOf(Color(0xFF76B900), Color(0xFF10B981))
-)
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,13 +75,17 @@ fun AutoGenerateAssignmentDialog(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(NvidiaGradient),
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(colorScheme.tertiary, colorScheme.primary)
+                                    )
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color.Black,
+                                tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -104,16 +101,16 @@ fun AutoGenerateAssignmentDialog(
                                     color = colorScheme.onSurface
                                 )
                                 Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = NvidiaGreen.copy(alpha = 0.2f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, NvidiaGreen)
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = colorScheme.tertiaryContainer,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.tertiary.copy(alpha = 0.5f))
                                 ) {
                                     Text(
                                         text = "NVIDIA NIM",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = NvidiaGreen,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                        color = colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
@@ -220,7 +217,7 @@ fun AutoGenerateAssignmentDialog(
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NvidiaGreen,
+                            focusedBorderColor = colorScheme.primary,
                             unfocusedBorderColor = colorScheme.outlineVariant
                         )
                     )
@@ -260,8 +257,8 @@ fun AutoGenerateAssignmentDialog(
                 // Info Callout
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF0F3918).copy(alpha = 0.3f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NvidiaGreen.copy(alpha = 0.3f)),
+                    color = colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.secondary.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -273,7 +270,7 @@ fun AutoGenerateAssignmentDialog(
                         Text(
                             text = "NVIDIA NIM AI: Menyintesis soal penugasan berstandar industri secara instan tanpa template lokal.",
                             fontSize = 11.sp,
-                            color = NvidiaGreen,
+                            color = colorScheme.onSecondaryContainer,
                             lineHeight = 15.sp
                         )
                     }
@@ -310,22 +307,22 @@ fun AutoGenerateAssignmentDialog(
                             .height(46.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = NvidiaGreen,
-                            contentColor = Color.Black
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         )
                     ) {
                         if (isGenerating) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(18.dp),
-                                color = Color.Black,
+                                color = colorScheme.onPrimary,
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("Sintesis NVIDIA NIM...", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Sintesis AI...", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         } else {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Generate (NVIDIA)", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                            Text("Generate AI", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
                 }

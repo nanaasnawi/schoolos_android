@@ -176,9 +176,14 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
             color = CosmicNavy,
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
-                Brush.horizontalGradient(listOf(Color(0xFF76B900), Color(0xFF10B981)))
+                Brush.horizontalGradient(
+                    listOf(
+                        MaterialTheme.colorScheme.tertiary,
+                        MaterialTheme.colorScheme.primary
+                    )
+                )
             ),
-            shadowElevation = 6.dp
+            shadowElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp
         ) {
             Row(
                 modifier = Modifier
@@ -198,7 +203,10 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                             .clip(RoundedCornerShape(10.dp))
                             .background(
                                 Brush.linearGradient(
-                                    listOf(Color(0xFF76B900), Color(0xFF10B981))
+                                    listOf(
+                                        MaterialTheme.colorScheme.tertiary,
+                                        MaterialTheme.colorScheme.primary
+                                    )
                                 )
                             ),
                         contentAlignment = Alignment.Center
@@ -206,7 +214,7 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                         Icon(
                             imageVector = Icons.Default.AutoAwesome,
                             contentDescription = null,
-                            tint = Color.Black,
+                            tint = Color.White,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -214,13 +222,13 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                         Text(
                             text = "✨ Generate Kuis / Ujian (AI NVIDIA NIM)",
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
                             text = "Generate bank soal CBT otomatis bertenaga NVIDIA NIM",
                             fontSize = 11.sp,
-                            color = Color(0xFF94A3B8),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
@@ -229,15 +237,15 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFF0F3918).copy(alpha = 0.6f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF76B900).copy(alpha = 0.5f))
+                    color = MaterialTheme.colorScheme.tertiaryContainer,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f))
                 ) {
                     Text(
                         text = "NVIDIA NIM",
-                        fontSize = 11.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF76B900),
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                        color = MaterialTheme.colorScheme.onTertiaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
