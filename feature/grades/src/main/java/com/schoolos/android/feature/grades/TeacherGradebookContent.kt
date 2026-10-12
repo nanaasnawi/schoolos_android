@@ -308,9 +308,10 @@ private fun TeacherClassHeroHeader(
                 value = "${subjects.size} Mapel",
                 modifier = Modifier.weight(1f)
             )
+            val targetKkm = subjects.firstOrNull()?.passingThreshold ?: 75.0
             TeacherMetricCard(
                 label = "Target KKM",
-                value = "75.0",
+                value = "$targetKkm",
                 modifier = Modifier.weight(1f)
             )
             TeacherMetricCard(

@@ -68,18 +68,18 @@ fun StudentGradeDetailContent(
     val isPassing = detail.summary.isPassed
 
     val evaluationTitle = when {
-        score >= 85.0 -> "Predikat Istimewa (A)"
-        score >= 75.0 -> "Kompeten & Tuntas (B)"
-        score >= 65.0 -> "Cukup Memadai (C)"
+        score >= kkm + 10.0 -> "Predikat Istimewa (A)"
+        score >= kkm -> "Kompeten & Tuntas (B)"
+        score >= kkm - 10.0 -> "Cukup Memadai (C)"
         score > 0.0 -> "Perlu Remedial (D)"
         else -> "Belum Ada Catatan Nilai"
     }
 
     val evaluationDesc = when {
-        score >= 85.0 -> "Prestasi luar biasa! Capaian akademik Anda berada pada kuadran kompetensi tertinggi."
-        score >= 75.0 -> "Kerja bagus! Nilai Anda telah memenuhi dan melampaui standar kelulusan KKM yang ditetapkan."
-        score >= 65.0 -> "Capaian mendekati target KKM. Perbanyak latihan mandiri untuk mengoptimalkan nilai akhir."
-        score > 0.0 -> "Nilai saat ini di bawah standar KKM (75.0). Konsultasikan jadwal bimbingan remedial dengan guru pengampu."
+        score >= kkm + 10.0 -> "Prestasi luar biasa! Capaian akademik Anda berada pada kuadran kompetensi tertinggi."
+        score >= kkm -> "Kerja bagus! Nilai Anda telah memenuhi dan melampaui standar kelulusan KKM yang ditetapkan."
+        score >= kkm - 10.0 -> "Capaian mendekati target KKM. Perbanyak latihan mandiri untuk mengoptimalkan nilai akhir."
+        score > 0.0 -> "Nilai saat ini di bawah standar KKM ($kkm). Konsultasikan jadwal bimbingan remedial dengan guru pengampu."
         else -> "Komponen penilaian sedang dalam proses evaluasi oleh guru mata pelajaran."
     }
 
@@ -227,7 +227,7 @@ fun StudentGradeDetailContent(
                         Spacer(Modifier.height(4.dp))
 
                         Text(
-                            text = "Standar KKM: 75.0",
+                            text = "Standar KKM: $kkm",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextTertiary

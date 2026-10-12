@@ -38,10 +38,11 @@ fun LazyListScope.studentGradebookContent(
 @Composable
 private fun StudentSubjectGradeCard(summary: SubjectGradeSummary, onClick: () -> Unit) {
     val icon = subjectIcon(summary.subjectName)
+    val kkm = summary.passingThreshold
     val scoreColor = when {
-        summary.finalScore >= 85.0 -> NeonSuccess
-        summary.finalScore >= 75.0 -> StudentNeon
-        summary.finalScore >= 65.0 -> NeonWarning
+        summary.finalScore >= kkm + 10.0 -> NeonSuccess
+        summary.finalScore >= kkm -> StudentNeon
+        summary.finalScore >= kkm - 10.0 -> NeonWarning
         summary.finalScore > 0.0 -> NeonError
         else -> TextTertiary
     }
