@@ -27,9 +27,10 @@ fun TeacherGradeDetailContent(
     detail: SubjectGradeDetail
 ) {
     val components = detail.components
+    val threshold = detail.summary.passingThreshold
     val graded = components.mapNotNull { it.rawScore ?: it.weightedScore }
     val avg = if (graded.isNotEmpty()) graded.average() else 0.0
-    val passingCount = graded.count { it >= 75.0 }
+    val passingCount = graded.count { it >= threshold }
     val totalCount = components.size
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -54,9 +55,9 @@ fun TeacherGradeDetailContent(
             components.forEach { entry ->
                 val score = entry.rawScore ?: entry.weightedScore ?: 0.0
                 val grade = when {
-                    score >= 85.0 -> "A"
-                    score >= 75.0 -> "B"
-                    score >= 65.0 -> "C"
+                    score >= threshold + 10.0 -> "A"
+                    score >= threshold -> "B"
+                    score >= threshold - 10.0 -> "C"
                     score > 0.0 -> "D"
                     else -> "-"
                 }

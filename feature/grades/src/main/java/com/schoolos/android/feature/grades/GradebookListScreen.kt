@@ -148,11 +148,12 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
     val totalGraded = subjects.sumOf { it.gradedComponentCount }
     val totalComponents = subjects.sumOf { it.componentCount }
 
+    val kkm = subjects.firstOrNull()?.passingThreshold ?: 75.0
     val (predicate, predicateDesc) = when {
-        avgScore >= 85.0 -> Pair("Predikat A", "Sangat Baik")
-        avgScore >= 75.0 -> Pair("Predikat B", "Baik")
-        avgScore >= 65.0 -> Pair("Predikat C", "Cukup")
-        avgScore >= 55.0 -> Pair("Predikat D", "Kurang")
+        avgScore >= kkm + 10.0 -> Pair("Predikat A", "Sangat Baik")
+        avgScore >= kkm -> Pair("Predikat B", "Baik")
+        avgScore >= kkm - 10.0 -> Pair("Predikat C", "Cukup")
+        avgScore >= kkm - 20.0 -> Pair("Predikat D", "Kurang")
         avgScore > 0.0 -> Pair("Predikat E", "Perlu Bimbingan")
         else -> Pair("-", "Belum Ada Nilai")
     }
