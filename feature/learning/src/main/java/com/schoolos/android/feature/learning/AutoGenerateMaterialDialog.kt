@@ -25,10 +25,7 @@ import androidx.compose.ui.window.Dialog
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 
-private val NvidiaGreen = Color(0xFF76B900)
-private val NvidiaGradient = Brush.linearGradient(
-    listOf(Color(0xFF76B900), Color(0xFF10B981))
-)
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -95,13 +92,17 @@ fun AutoGenerateMaterialDialog(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(NvidiaGradient),
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(colorScheme.tertiary, colorScheme.primary)
+                                    )
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color.Black,
+                                tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -117,16 +118,16 @@ fun AutoGenerateMaterialDialog(
                                     color = colorScheme.onSurface
                                 )
                                 Surface(
-                                    shape = RoundedCornerShape(4.dp),
-                                    color = NvidiaGreen.copy(alpha = 0.2f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, NvidiaGreen)
+                                    shape = RoundedCornerShape(6.dp),
+                                    color = colorScheme.tertiaryContainer,
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.tertiary.copy(alpha = 0.5f))
                                 ) {
                                     Text(
                                         text = "NVIDIA NIM",
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = NvidiaGreen,
-                                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                                        color = colorScheme.onTertiaryContainer,
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
@@ -168,10 +169,10 @@ fun AutoGenerateMaterialDialog(
                                 .weight(1f)
                                 .clickable(enabled = !isGenerating) { selectedMode = "INFOGRAPHIC" },
                             shape = RoundedCornerShape(12.dp),
-                            color = if (selectedMode == "INFOGRAPHIC") NvidiaGreen.copy(alpha = 0.15f) else colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            color = if (selectedMode == "INFOGRAPHIC") colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.4f),
                             border = androidx.compose.foundation.BorderStroke(
                                 if (selectedMode == "INFOGRAPHIC") 1.5.dp else 1.dp,
-                                if (selectedMode == "INFOGRAPHIC") NvidiaGreen else colorScheme.outlineVariant
+                                if (selectedMode == "INFOGRAPHIC") colorScheme.primary else colorScheme.outlineVariant
                             )
                         ) {
                             Column(
@@ -182,12 +183,12 @@ fun AutoGenerateMaterialDialog(
                                     text = "🖼️ Infografis Majalah",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (selectedMode == "INFOGRAPHIC") NvidiaGreen else colorScheme.onSurface
+                                    color = if (selectedMode == "INFOGRAPHIC") colorScheme.onPrimaryContainer else colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Visual dinamis, card & ilustrasi",
                                     fontSize = 10.sp,
-                                    color = colorScheme.onSurfaceVariant
+                                    color = if (selectedMode == "INFOGRAPHIC") colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -197,10 +198,10 @@ fun AutoGenerateMaterialDialog(
                                 .weight(1f)
                                 .clickable(enabled = !isGenerating) { selectedMode = "ARTICLE" },
                             shape = RoundedCornerShape(12.dp),
-                            color = if (selectedMode == "ARTICLE") NvidiaGreen.copy(alpha = 0.15f) else colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                            color = if (selectedMode == "ARTICLE") colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.4f),
                             border = androidx.compose.foundation.BorderStroke(
                                 if (selectedMode == "ARTICLE") 1.5.dp else 1.dp,
-                                if (selectedMode == "ARTICLE") NvidiaGreen else colorScheme.outlineVariant
+                                if (selectedMode == "ARTICLE") colorScheme.primary else colorScheme.outlineVariant
                             )
                         ) {
                             Column(
@@ -211,12 +212,12 @@ fun AutoGenerateMaterialDialog(
                                     text = "📰 Artikel Berita",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (selectedMode == "ARTICLE") NvidiaGreen else colorScheme.onSurface
+                                    color = if (selectedMode == "ARTICLE") colorScheme.onPrimaryContainer else colorScheme.onSurface
                                 )
                                 Text(
                                     text = "Sub-bab & fakta terstruktur",
                                     fontSize = 10.sp,
-                                    color = colorScheme.onSurfaceVariant
+                                    color = if (selectedMode == "ARTICLE") colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -275,7 +276,7 @@ fun AutoGenerateMaterialDialog(
                                 }
                             },
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = NvidiaGreen,
+                                focusedBorderColor = colorScheme.primary,
                                 unfocusedBorderColor = colorScheme.outlineVariant
                             )
                         )
@@ -313,18 +314,18 @@ fun AutoGenerateMaterialDialog(
                                         selectedSubject = sub
                                     },
                                     shape = RoundedCornerShape(6.dp),
-                                    color = if (isSelected) NvidiaGreen.copy(alpha = 0.2f) else colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                                    color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
                                     border = androidx.compose.foundation.BorderStroke(
                                         1.dp,
-                                        if (isSelected) NvidiaGreen else colorScheme.outlineVariant.copy(alpha = 0.5f)
+                                        if (isSelected) colorScheme.primary else colorScheme.outlineVariant.copy(alpha = 0.5f)
                                     )
                                 ) {
                                     Text(
                                         text = sub.name,
                                         fontSize = 10.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (isSelected) NvidiaGreen else colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                                     )
                                 }
                             }
@@ -355,7 +356,7 @@ fun AutoGenerateMaterialDialog(
                         singleLine = true,
                         shape = RoundedCornerShape(10.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NvidiaGreen,
+                            focusedBorderColor = colorScheme.primary,
                             unfocusedBorderColor = colorScheme.outlineVariant
                         )
                     )
@@ -364,8 +365,8 @@ fun AutoGenerateMaterialDialog(
                 // Info Callout
                 Surface(
                     shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF0F3918).copy(alpha = 0.3f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, NvidiaGreen.copy(alpha = 0.3f)),
+                    color = colorScheme.secondaryContainer.copy(alpha = 0.4f),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.secondary.copy(alpha = 0.3f)),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -377,7 +378,7 @@ fun AutoGenerateMaterialDialog(
                         Text(
                             text = "NVIDIA NIM AI: Menyusun narasi, headline, callout dan visual ilustrasi materi siap ajar.",
                             fontSize = 11.sp,
-                            color = NvidiaGreen,
+                            color = colorScheme.onSecondaryContainer,
                             lineHeight = 15.sp
                         )
                     }
@@ -413,22 +414,22 @@ fun AutoGenerateMaterialDialog(
                             .height(44.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = NvidiaGreen,
-                            contentColor = Color.Black
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         )
                     ) {
                         if (isGenerating) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = Color.Black,
+                                color = colorScheme.onPrimary,
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(6.dp))
-                            Text("Sintesis NVIDIA NIM...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Sintesis AI...", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         } else {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Generate (NVIDIA)", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Generate AI", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
                 }

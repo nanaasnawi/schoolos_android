@@ -481,9 +481,14 @@ fun MaterialCreatorScreen(
                 color = CosmicNavy,
                 border = BorderStroke(
                     1.dp,
-                    Brush.horizontalGradient(listOf(Color(0xFF76B900), Color(0xFF10B981)))
+                    Brush.horizontalGradient(
+                        listOf(
+                            MaterialTheme.colorScheme.tertiary,
+                            MaterialTheme.colorScheme.primary
+                        )
+                    )
                 ),
-                shadowElevation = 6.dp
+                shadowElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp
             ) {
                 Row(
                     modifier = Modifier
@@ -503,7 +508,10 @@ fun MaterialCreatorScreen(
                                 .clip(RoundedCornerShape(10.dp))
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(Color(0xFF76B900), Color(0xFF10B981))
+                                        listOf(
+                                            MaterialTheme.colorScheme.tertiary,
+                                            MaterialTheme.colorScheme.primary
+                                        )
                                     )
                                 ),
                             contentAlignment = Alignment.Center
@@ -511,7 +519,7 @@ fun MaterialCreatorScreen(
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color.Black,
+                                tint = Color.White,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -519,13 +527,13 @@ fun MaterialCreatorScreen(
                             Text(
                                 text = "✨ Generate Materi (AI NVIDIA NIM)",
                                 fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
                                 text = "Sintesis infografis majalah & artikel terstruktur otomatis",
                                 fontSize = 11.sp,
-                                color = Color(0xFF94A3B8),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
@@ -534,15 +542,15 @@ fun MaterialCreatorScreen(
 
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = Color(0xFF0F3918).copy(alpha = 0.6f),
-                        border = BorderStroke(1.dp, Color(0xFF76B900).copy(alpha = 0.5f))
+                        color = MaterialTheme.colorScheme.tertiaryContainer,
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f))
                     ) {
                         Text(
                             text = "NVIDIA NIM",
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF76B900),
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                            color = MaterialTheme.colorScheme.onTertiaryContainer,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
@@ -627,11 +635,11 @@ fun MaterialCreatorScreen(
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(
-                                        if (isSelected) EmeraldGlow.copy(alpha = 0.15f) else CosmicSurface2
+                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer else CosmicSurface2
                                     )
                                     .border(
                                         width = if (isSelected) 1.5.dp else 0.5.dp,
-                                        color = if (isSelected) EmeraldGlow else GlassBorder,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else GlassBorder,
                                         shape = RoundedCornerShape(12.dp)
                                     )
                                     .clickable {
@@ -650,13 +658,13 @@ fun MaterialCreatorScreen(
                                     Icon(
                                         icon,
                                         contentDescription = label,
-                                        tint = if (isSelected) EmeraldGlow else TextSecondary,
+                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else TextSecondary,
                                         modifier = Modifier.size(24.dp)
                                     )
                                     Spacer(Modifier.height(6.dp))
                                     Text(
                                         label,
-                                        color = if (isSelected) EmeraldGlow else TextPrimary,
+                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else TextPrimary,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         fontSize = 11.sp,
                                         textAlign = TextAlign.Center,

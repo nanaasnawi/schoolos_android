@@ -22,10 +22,7 @@ import androidx.compose.ui.window.Dialog
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 
-private val NvidiaGreen = Color(0xFF76B900)
-private val NvidiaGradient = Brush.linearGradient(
-    listOf(Color(0xFF76B900), Color(0xFF10B981))
-)
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,7 +83,11 @@ fun AutoGenerateQuizDialog(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(NvidiaGradient),
+                                .background(
+                                    Brush.linearGradient(
+                                        listOf(colorScheme.tertiary, colorScheme.primary)
+                                    )
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -108,15 +109,16 @@ fun AutoGenerateQuizDialog(
                                     color = colorScheme.onSurface
                                 )
                                 Surface(
-                                    color = NvidiaGreen.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(4.dp)
+                                    color = colorScheme.tertiaryContainer,
+                                    shape = RoundedCornerShape(6.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.tertiary.copy(alpha = 0.5f))
                                 ) {
                                     Text(
                                         text = "NVIDIA NIM",
-                                        color = NvidiaGreen,
+                                        color = colorScheme.onTertiaryContainer,
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                     )
                                 }
                             }
@@ -212,7 +214,7 @@ fun AutoGenerateQuizDialog(
                         modifier = Modifier.fillMaxWidth(),
                         shape = RoundedCornerShape(10.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NvidiaGreen,
+                            focusedBorderColor = colorScheme.primary,
                             unfocusedBorderColor = colorScheme.outlineVariant,
                             focusedTextColor = colorScheme.onSurface,
                             unfocusedTextColor = colorScheme.onSurface
@@ -334,22 +336,22 @@ fun AutoGenerateQuizDialog(
                         modifier = Modifier.weight(1.5f).height(44.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = NvidiaGreen,
-                            contentColor = Color.White
+                            containerColor = colorScheme.primary,
+                            contentColor = colorScheme.onPrimary
                         )
                     ) {
                         if (isGenerating) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(16.dp),
-                                color = Color.White,
+                                color = colorScheme.onPrimary,
                                 strokeWidth = 2.dp
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("Menyusun...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Text("Menyusun...", fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1)
                         } else {
                             Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(15.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Generate (AI NVIDIA)", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                            Text("Generate AI", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, softWrap = false)
                         }
                     }
                 }
@@ -369,10 +371,10 @@ private fun QuizFormatOptionCard(
     Surface(
         modifier = Modifier.fillMaxWidth().clickable { onClick() },
         shape = RoundedCornerShape(10.dp),
-        color = if (isSelected) NvidiaGreen.copy(alpha = 0.12f) else colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        color = if (isSelected) colorScheme.primaryContainer else colorScheme.surfaceVariant.copy(alpha = 0.5f),
         border = androidx.compose.foundation.BorderStroke(
             if (isSelected) 1.5.dp else 1.dp,
-            if (isSelected) NvidiaGreen else colorScheme.outlineVariant
+            if (isSelected) colorScheme.primary else colorScheme.outlineVariant
         )
     ) {
         Row(
@@ -385,16 +387,16 @@ private fun QuizFormatOptionCard(
                     text = title,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) colorScheme.onSurface else colorScheme.onSurface
+                    color = if (isSelected) colorScheme.onPrimaryContainer else colorScheme.onSurface
                 )
                 Text(
                     text = subtitle,
                     fontSize = 10.sp,
-                    color = if (isSelected) colorScheme.onSurface.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
+                    color = if (isSelected) colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else colorScheme.onSurfaceVariant
                 )
             }
             if (isSelected) {
-                Text(text = "✓", fontSize = 14.sp, color = NvidiaGreen, fontWeight = FontWeight.Black)
+                Text(text = "✓", fontSize = 14.sp, color = colorScheme.primary, fontWeight = FontWeight.Black)
             }
         }
     }
