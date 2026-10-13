@@ -45,3 +45,14 @@ data class GamificationStatus(
         }
     }
 }
+
+data class AwardXpResult(
+    val awarded: Boolean,
+    val alreadyAwarded: Boolean,
+    val xpEarned: Int,
+    val totalXp: Long,
+    val level: Int,
+    val streakDays: Int,
+    val leveledUp: Boolean,
+    val message: String,
+)

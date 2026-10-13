@@ -58,6 +58,7 @@ class LearningViewModel @Inject constructor(
     private val repository: LearningMaterialRepository,
     private val academicRepository: com.schoolos.android.domain.repository.AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
+    private val gamificationRepository: com.schoolos.android.domain.repository.GamificationRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LearningUiState())
@@ -245,17 +246,24 @@ class LearningViewModel @Inject constructor(
                     loadMaterialCompletions(id)
 
                     if (serverIsCompleted) {
-                        val completedCount = allMaterials.count { it.isCompleted }.coerceAtLeast(1)
-                        val totalXp = completedCount * 25
-                        val level = kotlin.math.floor(kotlin.math.sqrt(totalXp / 50.0)).toInt() + 1
-                        xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
-                            xpEarned = 25,
-                            newTotalXp = totalXp,
-                            level = level,
-                            title = "Materi Selesai Dibaca! 📖",
-                            description = "Hebat! Anda mendapatkan +25 XP dan pemahaman materi Anda semakin mendalam.",
-                            actionType = "READ_MATERIAL",
-                        )
+                        viewModelScope.launch {
+                            gamificationRepository.awardXp(
+                                actionType = "READ_MATERIAL",
+                                referenceId = id,
+                                description = "Membaca materi: ${selectedMaterial.value?.title ?: "Materi Pelajaran"}",
+                            ).onSuccess { res ->
+                                if (res.awarded || res.alreadyAwarded) {
+                                    xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
+                                        xpEarned = res.xpEarned,
+                                        newTotalXp = res.totalXp.toInt(),
+                                        level = res.level,
+                                        title = if (res.alreadyAwarded) "Materi Telah Dipelajari ⭐" else "Materi Selesai Dibaca! 📖",
+                                        description = if (res.alreadyAwarded) "Anda telah menyelesaikan materi ini sebelumnya." else "Hebat! Anda mendapatkan +${res.xpEarned} XP dan pemahaman materi Anda semakin mendalam.",
+                                        actionType = "READ_MATERIAL",
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
                 .onFailure {
