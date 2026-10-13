@@ -63,6 +63,8 @@ class QuizBuilderViewModel @Inject constructor(
         classId: String?,
         className: String,
         topic: String = "",
+        numQuestions: Int = 5,
+        difficulty: String = "Sedang",
         onSuccessCallback: () -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
@@ -73,7 +75,10 @@ class QuizBuilderViewModel @Inject constructor(
                 subjectId = subjectId,
                 subjectName = subjectName,
                 sourceMode = if (type == "EXAM_MONTHLY") "PAST_MONTH" else "LATEST_PUBLISHED",
-                topic = topic.trim().ifBlank { null }
+                topic = topic.trim().ifBlank { null },
+                gradeLevel = className.ifBlank { "Kelas 5 SD" },
+                numQuestions = numQuestions,
+                difficulty = difficulty
             ).onSuccess { generated ->
                 val totalComputedScore = generated.questions.sumOf { it.points }.let { if (it > 0) it else 100 }
                 repository.createQuiz(

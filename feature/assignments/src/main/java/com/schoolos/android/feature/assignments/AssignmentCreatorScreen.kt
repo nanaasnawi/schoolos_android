@@ -115,12 +115,17 @@ fun AssignmentCreatorScreen(
             availableSubjects = state.availableSubjects,
             currentSubjectName = selectedSubject,
             isGenerating = state.isGeneratingAi,
-            onGenerate = { format, subId, subName, topic ->
+            onGenerate = { format, subId, subName, topic, gradeLevel, difficulty, numMcq, numEssay, includeImages ->
                 viewModel.generateWithAi(
                     format = format,
                     subjectId = subId,
                     subjectName = subName,
                     topic = topic,
+                    gradeLevel = gradeLevel,
+                    difficulty = difficulty,
+                    numMcq = numMcq,
+                    numEssay = numEssay,
+                    includeImages = includeImages,
                     onGenerated = { genTitle, genInstructions ->
                         title = genTitle
                         instructions = genInstructions

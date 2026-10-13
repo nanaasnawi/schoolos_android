@@ -69,6 +69,11 @@ class AssignmentCreatorViewModel @Inject constructor(
         subjectId: String,
         subjectName: String,
         topic: String = "",
+        gradeLevel: String = "Kelas 5 SD",
+        difficulty: String = "Sedang",
+        numMcq: Int = 4,
+        numEssay: Int = 2,
+        includeImages: Boolean = false,
         onGenerated: (title: String, instructions: String) -> Unit,
         onError: (String) -> Unit = {}
     ) {
@@ -80,7 +85,13 @@ class AssignmentCreatorViewModel @Inject constructor(
                 subjectId = subjectId,
                 subjectName = subjectName,
                 sourceMode = "LATEST_PUBLISHED",
-                topic = topic.trim().ifBlank { null }
+                topic = topic.trim().ifBlank { null },
+                gradeLevel = gradeLevel,
+                numQuestions = if (format == "HOMEWORK_PR") numEssay else (numMcq + numEssay),
+                numMcq = if (format == "HOMEWORK_PR") 0 else numMcq,
+                numEssay = numEssay,
+                difficulty = difficulty,
+                includeImages = includeImages,
             ).onSuccess { result ->
                 val convertedQuestions = result.questions.mapIndexed { idx, q ->
                     AssignmentQuestion(
