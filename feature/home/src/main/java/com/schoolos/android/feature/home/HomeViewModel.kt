@@ -403,13 +403,25 @@ class HomeViewModel @Inject constructor(
                 "-"
             }
 
-            val scheduleCount = if (todaySessions.isNotEmpty()) todaySessions.size else sessions.size
-            val attendanceRate = if (todaySessions.isNotEmpty()) {
-                val completedOrActive = todaySessions.count {
+            val effectiveTodaySessions = if (isTeacher) {
+                val teacherUserId = currentAuth.userId ?: ""
+                val teacherName = currentAuth.name ?: ""
+                val mySessions = todaySessions.filter { s ->
+                    (teacherUserId.isNotBlank() && (s.teacherId == teacherUserId || s.substituteTeacherId == teacherUserId)) ||
+                    (teacherName.isNotBlank() && s.teacherName?.equals(teacherName, ignoreCase = true) == true)
+                }
+                if (mySessions.isNotEmpty()) mySessions else todaySessions
+            } else {
+                todaySessions
+            }
+
+            val scheduleCount = if (effectiveTodaySessions.isNotEmpty()) effectiveTodaySessions.size else if (todaySessions.isNotEmpty()) todaySessions.size else sessions.size
+            val attendanceRate = if (effectiveTodaySessions.isNotEmpty()) {
+                val completedOrActive = effectiveTodaySessions.count {
                     it.status.equals("completed", ignoreCase = true) || it.status.equals("active", ignoreCase = true)
                 }
                 if (completedOrActive > 0) {
-                    val pct = (completedOrActive.toFloat() / todaySessions.size.toFloat()) * 100f
+                    val pct = (completedOrActive.toFloat() / effectiveTodaySessions.size.toFloat()) * 100f
                     "${pct.toInt()}%"
                 } else {
                     "100%"
@@ -422,7 +434,7 @@ class HomeViewModel @Inject constructor(
 
             _state.update { current ->
                 current.copy(
-                    todaySessions = todaySessions,
+                    todaySessions = effectiveTodaySessions,
                     urgentTeachingSession = urgentSession,
                     nextSessionSubject = nextSubj,
                     nextSessionRoom = nextRm,
