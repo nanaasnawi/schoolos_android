@@ -1,37 +1,34 @@
 package com.schoolos.android.feature.profile.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AutoAwesome
-import androidx.compose.material.icons.filled.EmojiEvents
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.GamificationStatus
 
 @Composable
@@ -43,50 +40,34 @@ fun StudentGamificationLevelCard(
     val level = gamification?.level ?: 1
     val totalXp = gamification?.totalXp ?: 0L
     val streakDays = gamification?.streakDays ?: 1
-    val progressPercent = gamification?.progressToNextLevel ?: 0
+    val progressPercent = (gamification?.progressToNextLevel ?: 0).coerceIn(0, 100)
     val targetXp = gamification?.nextLevelTargetXp ?: 50L
     val levelTitle = gamification?.levelTitle ?: GamificationStatus.resolveTitle(level)
     val rankBadge = gamification?.rankBadge ?: GamificationStatus.resolveBadge(level)
     val remainingXp = (targetXp - totalXp).coerceAtLeast(0L)
+    val transactions = gamification?.transactions ?: emptyList()
 
-    val neonCyan = Color(0xFF06B6D4)
-    val neonGold = Color(0xFFF59E0B)
-    val neonEmerald = Color(0xFF10B981)
+    var showHistory by remember { mutableStateOf(false) }
 
-    val infiniteTransition = rememberInfiniteTransition(label = "LevelCardShine")
-    val borderPulse by infiniteTransition.animateFloat(
-        initialValue = 0.4f,
-        targetValue = 0.95f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2200, easing = FastOutSlowInEasing),
-            repeatMode = RepeatMode.Reverse
-        ),
-        label = "BorderPulse"
+    val animatedProgress by animateFloatAsState(
+        targetValue = progressPercent / 100f,
+        animationSpec = tween(durationMillis = 800),
+        label = "XpProgressAnimation"
     )
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        color = Color(0xFF0F172A),
-        border = androidx.compose.foundation.BorderStroke(
-            1.5.dp,
-            Brush.linearGradient(
-                listOf(
-                    neonGold.copy(alpha = borderPulse),
-                    neonEmerald.copy(alpha = 0.6f),
-                    neonCyan.copy(alpha = borderPulse)
-                )
-            )
-        ),
-        shadowElevation = 8.dp
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .padding(16.dp),
     ) {
         Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header Row: Badge & Streak
+            // ── Top Header Row ─────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -94,126 +75,100 @@ fun StudentGamificationLevelCard(
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(
-                                Brush.linearGradient(listOf(neonGold, Color(0xFFD97706)))
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.EmojiEvents,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Column {
-                        Text(
-                            text = "Level & XP Murid",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Black,
-                            color = Color.White
-                        )
-                        Text(
-                            text = "Pencapaian Gamifikasi Belajar",
-                            fontSize = 11.sp,
-                            color = Color(0xFF94A3B8)
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.Default.Stars,
+                        contentDescription = null,
+                        tint = StudentPrimary,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Text(
+                        text = "PENCAPAIAN LEVEL & XP",
+                        color = TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                    )
                 }
 
-                // Streak Badge
-                Surface(
-                    shape = CircleShape,
-                    color = Color(0xFFEA580C).copy(alpha = 0.2f),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFEA580C).copy(alpha = 0.6f))
+                // Streak Badge Pill
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFFEA580C).copy(alpha = 0.12f))
+                        .border(0.5.dp, Color(0xFFEA580C).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.LocalFireDepartment,
                             contentDescription = null,
-                            tint = Color(0xFFFB923C),
-                            modifier = Modifier.size(14.dp)
+                            tint = Color(0xFFEA580C),
+                            modifier = Modifier.size(12.dp)
                         )
                         Text(
-                            text = "$streakDays Hari Beruntun",
-                            fontSize = 11.sp,
+                            text = "$streakDays Hari Aktif",
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFFFED7AA)
+                            color = Color(0xFFEA580C)
                         )
                     }
                 }
             }
 
-            HorizontalDivider(color = Color(0xFF334155).copy(alpha = 0.6f))
-
-            // Main Hero: Level Badge & Total XP
+            // ── Hero Level & Title Row ─────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                // Circular Level Shield
+                // Sleek Level Badge (Indigo Apple-Style Container)
                 Box(
                     modifier = Modifier
-                        .size(76.dp)
-                        .clip(CircleShape)
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(10.dp))
                         .background(
-                            Brush.sweepGradient(
+                            Brush.linearGradient(
                                 listOf(
-                                    neonGold,
-                                    Color(0xFFFBBF24),
-                                    neonEmerald,
-                                    neonCyan,
-                                    neonGold
+                                    Color(0xFF4F46E5),
+                                    Color(0xFF6366F1)
                                 )
                             )
-                        )
-                        .padding(3.dp)
+                        ),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(Color(0xFF0F172A)),
-                        contentAlignment = Alignment.Center
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
                     ) {
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.Center
-                        ) {
-                            Text(
-                                text = "LVL",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = neonGold,
-                                letterSpacing = 1.sp
-                            )
-                            Text(
-                                text = "$level",
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Black,
-                                color = Color.White,
-                                lineHeight = 30.sp
-                            )
-                        }
+                        Text(
+                            text = "LVL",
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White.copy(alpha = 0.85f),
+                            letterSpacing = 0.5.sp,
+                            lineHeight = 10.sp
+                        )
+                        Text(
+                            text = "$level",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            lineHeight = 20.sp
+                        )
                     }
                 }
 
-                // Level Name & Total XP
+                // Title, Rank Badge, and XP info
                 Column(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -221,63 +176,204 @@ fun StudentGamificationLevelCard(
                     ) {
                         Text(
                             text = levelTitle,
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color.White
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = neonEmerald.copy(alpha = 0.2f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, neonEmerald.copy(alpha = 0.5f))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(NeonSuccess.copy(alpha = 0.12f))
+                                .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
                         ) {
                             Text(
                                 text = rankBadge.uppercase(),
-                                fontSize = 9.sp,
+                                fontSize = 8.sp,
                                 fontWeight = FontWeight.Black,
-                                color = neonEmerald,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                color = NeonSuccess
                             )
                         }
                     }
 
                     Row(
-                        verticalAlignment = Alignment.Bottom,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Text(
-                            text = "$totalXp",
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Black,
-                            color = neonGold
+                            text = "$totalXp XP",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = AccentNeonAmber
                         )
                         Text(
-                            text = "XP Telah Dicapai",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFFCBD5E1),
-                            modifier = Modifier.padding(bottom = 2.dp)
+                            text = if (remainingXp > 0) "• Kurang $remainingXp XP lagi" else "• Level Maksimal",
+                            fontSize = 11.sp,
+                            color = TextTertiary
                         )
                     }
+                }
+            }
 
+            // ── Clean Linear Progress Bar ──────────────────────────────
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(
-                        text = "Diperoleh dari membaca materi, tugas & ujian CBT",
-                        fontSize = 10.sp,
-                        color = Color(0xFF94A3B8)
+                        text = "Menuju Level ${level + 1}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextSecondary
+                    )
+                    Text(
+                        text = "$progressPercent%",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StudentPrimary
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(6.dp)
+                        .clip(CircleShape)
+                        .background(CosmicSurface2)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(animatedProgress)
+                            .fillMaxHeight()
+                            .clip(CircleShape)
+                            .background(
+                                Brush.horizontalGradient(
+                                    listOf(
+                                        Color(0xFF6366F1),
+                                        Color(0xFF818CF8)
+                                    )
+                                )
+                            )
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = "Basis: ${level * 50 - 50} XP",
+                        fontSize = 9.sp,
+                        color = TextTertiary
+                    )
+                    Text(
+                        text = "Target: $targetXp XP",
+                        fontSize = 9.sp,
+                        color = TextTertiary
                     )
                 }
             }
 
-            // Progress Bar to Next Level
-            Column(
+            // ── 3-Column Key Metric Grid (Matching ProfileHeaderCard) ──
+            Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(Color(0xFF1E293B).copy(alpha = 0.8f))
-                    .padding(12.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CosmicSurface2)
+                    .padding(vertical = 10.dp, horizontal = 8.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "LEVEL",
+                        color = TextTertiary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Lvl $level",
+                        color = StudentPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(0.5.dp)
+                        .height(22.dp)
+                        .background(GlassBorder)
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "TOTAL XP",
+                        color = TextTertiary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "$totalXp",
+                        color = AccentNeonAmber,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .width(0.5.dp)
+                        .height(22.dp)
+                        .background(GlassBorder)
+                )
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Text(
+                        text = "TARGET LVL ${level + 1}",
+                        color = TextTertiary,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        letterSpacing = 0.5.sp
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "$targetXp XP",
+                        color = TextPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            // ── XP Activity History (Optional Expandable) ──────────────
+            if (transactions.isNotEmpty()) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { showHistory = !showHistory }
+                        .padding(vertical = 4.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -286,199 +382,71 @@ fun StudentGamificationLevelCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.TrendingUp,
+                            imageVector = Icons.Default.AutoAwesome,
                             contentDescription = null,
-                            tint = neonCyan,
-                            modifier = Modifier.size(14.dp)
+                            tint = AccentNeonAmber,
+                            modifier = Modifier.size(12.dp)
                         )
                         Text(
-                            text = "Menuju Level ${level + 1}",
+                            text = "Riwayat Perolehan XP (${transactions.size})",
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextSecondary
                         )
                     }
-
-                    Text(
-                        text = "$progressPercent%",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Black,
-                        color = neonCyan
+                    Icon(
+                        imageVector = if (showHistory) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(16.dp)
                     )
                 }
 
-                // Custom Animated Progress Bar
-                Canvas(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp)
-                        .clip(CircleShape)
-                ) {
-                    // Track
-                    drawRoundRect(
-                        color = Color(0xFF334155),
-                        cornerRadius = CornerRadius(size.height / 2f, size.height / 2f)
-                    )
-
-                    // Fill
-                    val fillWidth = size.width * (progressPercent / 100f).coerceIn(0f, 1f)
-                    if (fillWidth > 0f) {
-                        drawRoundRect(
-                            brush = Brush.horizontalGradient(
-                                listOf(neonCyan, neonEmerald, neonGold)
-                            ),
-                            topLeft = Offset.Zero,
-                            size = Size(fillWidth, size.height),
-                            cornerRadius = CornerRadius(size.height / 2f, size.height / 2f)
-                        )
-                    }
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(
-                        text = if (remainingXp > 0) "Kurang $remainingXp XP lagi untuk naik level" else "Level maksimal tercapai!",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = Color(0xFFCBD5E1)
-                    )
-                    Text(
-                        text = "Target: $targetXp XP",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF94A3B8)
-                    )
-                }
-            }
-
-            // Quick Stats Grid
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                GamificationStatPill(
-                    modifier = Modifier.weight(1f),
-                    title = "Level",
-                    value = "Lvl $level",
-                    accentColor = neonEmerald
-                )
-                GamificationStatPill(
-                    modifier = Modifier.weight(1f),
-                    title = "Total XP",
-                    value = "$totalXp",
-                    accentColor = neonGold
-                )
-                GamificationStatPill(
-                    modifier = Modifier.weight(1f),
-                    title = "Streak",
-                    value = "$streakDays Hari",
-                    accentColor = Color(0xFFFB923C)
-                )
-                GamificationStatPill(
-                    modifier = Modifier.weight(1f),
-                    title = "Target",
-                    value = "$targetXp",
-                    accentColor = neonCyan
-                )
-            }
-
-            // Recent Transactions (if available)
-            val txList = gamification?.transactions ?: emptyList()
-            if (txList.isNotEmpty()) {
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "Riwayat Perolehan XP Terbaru",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFCBD5E1)
-                    )
-
-                    txList.take(3).forEach { tx ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF1E293B).copy(alpha = 0.5f))
-                                .padding(horizontal = 10.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val actionLabel = when (tx.actionType) {
-                                "READ_MATERIAL" -> "📖 Modul Ajar Selesai"
-                                "SUBMIT_ASSIGNMENT" -> "📝 Pengumpulan Tugas"
-                                "COMPLETE_QUIZ" -> "🎯 Ujian Kuis CBT"
-                                "COMPLETE_EXAM" -> "👑 Penilaian Sumatif CBT"
-                                else -> "⭐ Aktivitas Pembelajaran"
-                            }
-
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = actionLabel,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
-                                )
-                                val desc = tx.description
-                                if (!desc.isNullOrBlank()) {
+                AnimatedVisibility(visible = showHistory) {
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        transactions.take(4).forEach { tx ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(CosmicSurface2)
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.CheckCircle,
+                                        contentDescription = null,
+                                        tint = NeonSuccess,
+                                        modifier = Modifier.size(12.dp)
+                                    )
                                     Text(
-                                        text = desc,
-                                        fontSize = 9.sp,
-                                        color = Color(0xFF94A3B8),
-                                        maxLines = 1
+                                        text = tx.description ?: tx.actionType,
+                                        fontSize = 11.sp,
+                                        color = TextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
                                     )
                                 }
+                                Text(
+                                    text = "+${tx.xpAmount} XP",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AccentNeonAmber
+                                )
                             }
-
-                            Text(
-                                text = "+${tx.xpAmount} XP",
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                                color = neonEmerald
-                            )
                         }
                     }
                 }
             }
-        }
-    }
-}
-
-@Composable
-private fun GamificationStatPill(
-    modifier: Modifier = Modifier,
-    title: String,
-    value: String,
-    accentColor: Color,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        color = Color(0xFF1E293B).copy(alpha = 0.6f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, accentColor.copy(alpha = 0.25f))
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            Text(
-                text = title,
-                fontSize = 9.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF94A3B8)
-            )
-            Text(
-                text = value,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Black,
-                color = accentColor,
-                maxLines = 1
-            )
         }
     }
 }

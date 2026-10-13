@@ -215,7 +215,13 @@ fun ProfileScreen(
                 )
             }
 
-            // 2. WhatsApp-Style Profile Details Card
+            // 2. School Affiliation Card (Nama & Logo Sekolah - Diposisikan di bawah Card Level & XP)
+            SchoolAffiliationCard(
+                schoolName = state.schoolName,
+                schoolLogoUrl = state.schoolLogoUrl,
+            )
+
+            // 3. WhatsApp-Style Profile Details Card
             WhatsAppProfileCard(
                 userName = user?.name ?: "",
                 about = state.about,
@@ -228,7 +234,7 @@ fun ProfileScreen(
                 },
             )
 
-            // 3. Downloadable QR Code Login Card
+            // 4. Downloadable QR Code Login Card
             ProfileQrCard(
                 userName = user?.name ?: "Pengguna SchoolOS",
                 roleLabel = roleLabel,
@@ -237,19 +243,13 @@ fun ProfileScreen(
                 roleNeon = roleNeon,
             )
 
-            // 4. Parent-specific Connected Child Card
+            // 5. Parent-specific Connected Child Card
             if (isParent) {
                 ParentStudentCard(
                     studentName = state.childName,
                     studentClass = state.className,
                 )
             }
-
-            // 5. School Affiliation Card
-            SchoolAffiliationCard(
-                schoolName = state.schoolName,
-                schoolLogoUrl = state.schoolLogoUrl,
-            )
 
             // 6. Settings & Account Operations
             ProfileSettingsGroup(
