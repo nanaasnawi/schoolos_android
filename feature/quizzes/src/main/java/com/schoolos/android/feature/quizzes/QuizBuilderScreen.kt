@@ -133,16 +133,33 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
     var showAiGenerateDialog by remember { mutableStateOf(false) }
 
     if (showAiGenerateDialog) {
-        AutoGenerateQuizDialog(
-            isOpen = showAiGenerateDialog,
-            onDismiss = { showAiGenerateDialog = false },
+        QuizAiGeneratorScreen(
             availableSubjects = state.availableSubjects,
             availableClasses = state.availableClasses,
             currentSubjectName = selectedSubject,
             currentClassName = selectedClass,
-            isGenerating = state.isGeneratingAi,
-            onGenerate = { type, subId, subName, clsId, clsName, topic, numQuestions, difficulty ->
-                viewModel.generateQuizWithAi(
+            onBack = { showAiGenerateDialog = false },
+            onApply = { generated ->
+                title = generated.title
+                desc = generated.description ?: ""
+                selectedSubject = generated.subjectName.ifBlank { selectedSubject }
+                selectedDuration = generated.timeLimitMinutes
+                val targetClassId = state.availableClasses.find { it.name == selectedClass }?.id ?: ""
+                viewModel.applyGeneratedQuiz(
+                    classId = targetClassId,
+                    className = selectedClass,
+                    generated = generated,
+                    onSuccess = {
+                        showAiGenerateDialog = false
+                        Toast.makeText(context, "✓ Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { err ->
+                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
+                    }
+                )
+            },
+            onGenerateRequest = { type, subId, subName, clsId, clsName, topic, numQuestions, numMcq, numEssay, difficulty, includeImages ->
+                viewModel.generateQuizAsync(
                     type = type,
                     subjectId = subId,
                     subjectName = subName,
@@ -150,17 +167,14 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                     className = clsName,
                     topic = topic,
                     numQuestions = numQuestions,
+                    numMcq = numMcq,
+                    numEssay = numEssay,
                     difficulty = difficulty,
-                    onSuccessCallback = {
-                        showAiGenerateDialog = false
-                        Toast.makeText(context, "✓ Berhasil menyusun paket kuis CBT (NVIDIA NIM)!", Toast.LENGTH_SHORT).show()
-                    },
-                    onError = { err ->
-                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
-                    }
+                    includeImages = includeImages,
                 )
             }
         )
+        return
     }
 
     Column(

@@ -124,6 +124,61 @@ class AssignmentCreatorViewModel @Inject constructor(
         }
     }
 
+    suspend fun generateAssignmentAsync(
+        format: String,
+        subjectId: String,
+        subjectName: String,
+        topic: String,
+        gradeLevel: String,
+        difficulty: String,
+        numMcq: Int,
+        numEssay: Int,
+        includeImages: Boolean,
+    ): Result<com.schoolos.android.domain.model.GeneratedCurriculumResult> {
+        _state.value = _state.value.copy(isGeneratingAi = true, error = null)
+        val res = generatorRepository.generateCurriculum(
+            type = if (format == "HOMEWORK_PR") "ASSIGNMENT_HOMEWORK" else "ASSIGNMENT_STRUCTURED",
+            subjectId = subjectId,
+            subjectName = subjectName,
+            sourceMode = "LATEST_PUBLISHED",
+            topic = topic.trim().ifBlank { null },
+            gradeLevel = gradeLevel,
+            numQuestions = if (format == "HOMEWORK_PR") numEssay else (numMcq + numEssay),
+            numMcq = if (format == "HOMEWORK_PR") 0 else numMcq,
+            numEssay = numEssay,
+            difficulty = difficulty,
+            includeImages = includeImages,
+        )
+        _state.value = _state.value.copy(isGeneratingAi = false)
+        return res
+    }
+
+    fun applyGeneratedAssignment(result: com.schoolos.android.domain.model.GeneratedCurriculumResult) {
+        val convertedQuestions = result.questions.mapIndexed { idx, q ->
+            AssignmentQuestion(
+                id = null,
+                questionText = q.questionText,
+                questionType = q.questionType,
+                points = q.points,
+                orderIndex = idx + 1,
+                choices = q.choices.mapIndexed { cIdx, c ->
+                    AssignmentChoice(
+                        id = null,
+                        choiceText = c.choiceText,
+                        isCorrect = c.isCorrect,
+                        orderIndex = cIdx + 1
+                    )
+                }
+            )
+        }
+
+        _state.value = _state.value.copy(
+            isGeneratingAi = false,
+            assignmentFormat = if (result.format == "ASSIGNMENT_HOMEWORK") "HOMEWORK_PR" else "STRUCTURED_QUESTIONS",
+            questions = if (convertedQuestions.isNotEmpty()) convertedQuestions else listOf(defaultMultipleChoiceQuestion(1))
+        )
+    }
+
     fun loadAcademicData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingAcademicData = true)

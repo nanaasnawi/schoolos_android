@@ -109,14 +109,20 @@ fun AssignmentCreatorScreen(
     }
 
     if (showAiGenerateDialog) {
-        AutoGenerateAssignmentDialog(
-            isOpen = showAiGenerateDialog,
-            onDismiss = { showAiGenerateDialog = false },
+        AssignmentAiGeneratorScreen(
             availableSubjects = state.availableSubjects,
             currentSubjectName = selectedSubject,
-            isGenerating = state.isGeneratingAi,
-            onGenerate = { format, subId, subName, topic, gradeLevel, difficulty, numMcq, numEssay, includeImages ->
-                viewModel.generateWithAi(
+            onBack = { showAiGenerateDialog = false },
+            onApply = { generated ->
+                title = generated.title
+                instructions = generated.instructions ?: instructions
+                selectedSubject = generated.subjectName.ifBlank { selectedSubject }
+                viewModel.applyGeneratedAssignment(generated)
+                showAiGenerateDialog = false
+                Toast.makeText(context, "✓ Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
+            },
+            onGenerateRequest = { format, subId, subName, topic, gradeLevel, difficulty, numMcq, numEssay, includeImages ->
+                viewModel.generateAssignmentAsync(
                     format = format,
                     subjectId = subId,
                     subjectName = subName,
@@ -126,19 +132,10 @@ fun AssignmentCreatorScreen(
                     numMcq = numMcq,
                     numEssay = numEssay,
                     includeImages = includeImages,
-                    onGenerated = { genTitle, genInstructions ->
-                        title = genTitle
-                        instructions = genInstructions
-                        selectedSubject = subName
-                        showAiGenerateDialog = false
-                        Toast.makeText(context, "✓ Berhasil menyusun tugas (NVIDIA NIM)!", Toast.LENGTH_SHORT).show()
-                    },
-                    onError = { err ->
-                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
-                    }
                 )
             }
         )
+        return
     }
 
     if (showPrePublishReview) {
