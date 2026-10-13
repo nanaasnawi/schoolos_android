@@ -36,6 +36,7 @@ class AssignmentDetailViewModel @Inject constructor(
     private val repository: AssignmentRepository,
     private val academicRepository: com.schoolos.android.domain.repository.AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
+    private val gamificationRepository: com.schoolos.android.domain.repository.GamificationRepository,
 ) : ViewModel() {
 
     private val assignmentId: String = savedStateHandle["id"] ?: ""
@@ -180,16 +181,24 @@ class AssignmentDetailViewModel @Inject constructor(
                     _state.value = _state.value.copy(isSubmitting = false, submitSuccess = true, submission = submission)
                     loadSubmissions()
 
-                    val currentTotal = 150
-                    val level = kotlin.math.floor(kotlin.math.sqrt(currentTotal / 50.0)).toInt() + 1
-                    xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
-                        xpEarned = 50,
-                        newTotalXp = currentTotal,
-                        level = level,
-                        title = "Tugas Berhasil Dikumpulkan! 📝",
-                        description = "Kerja hebat! Pengumpulan tugas mandiri / PR memberi Anda +50 XP.",
-                        actionType = "SUBMIT_ASSIGNMENT",
-                    )
+                    viewModelScope.launch {
+                        gamificationRepository.awardXp(
+                            actionType = "SUBMIT_ASSIGNMENT",
+                            referenceId = submission.id,
+                            description = "Mengumpulkan tugas: ${_state.value.assignment?.title ?: "Tugas Sekolah"}",
+                        ).onSuccess { res ->
+                            if (res.awarded || res.alreadyAwarded) {
+                                xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
+                                    xpEarned = res.xpEarned,
+                                    newTotalXp = res.totalXp.toInt(),
+                                    level = res.level,
+                                    title = if (res.alreadyAwarded) "Tugas Telah Dikumpulkan ⭐" else "Tugas Berhasil Dikumpulkan! 📝",
+                                    description = if (res.alreadyAwarded) "Anda telah mengumpulkan tugas ini sebelumnya." else "Kerja hebat! Pengumpulan tugas mandiri memberi Anda +${res.xpEarned} XP.",
+                                    actionType = "SUBMIT_ASSIGNMENT",
+                                )
+                            }
+                        }
+                    }
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(isSubmitting = false, submitError = e.message ?: "Failed to submit")

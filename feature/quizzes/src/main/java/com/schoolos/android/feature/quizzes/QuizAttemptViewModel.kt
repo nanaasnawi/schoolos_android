@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.schoolos.android.domain.model.QuizAttempt
 import com.schoolos.android.domain.model.QuizQuestion
 import com.schoolos.android.domain.repository.AnswerInput
+import com.schoolos.android.domain.repository.GamificationRepository
 import com.schoolos.android.domain.repository.QuizRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,6 +35,7 @@ data class QuizAttemptUiState(
 class QuizAttemptViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: QuizRepository,
+    private val gamificationRepository: GamificationRepository,
 ) : ViewModel() {
 
     private val quizId: String = savedStateHandle["quizId"] ?: ""
@@ -131,16 +133,24 @@ class QuizAttemptViewModel @Inject constructor(
                 .onSuccess { attempt ->
                     _state.value = _state.value.copy(isSubmitting = false, submitSuccess = true, resultAttempt = attempt)
 
-                    val currentTotal = 250
-                    val level = kotlin.math.floor(kotlin.math.sqrt(currentTotal / 50.0)).toInt() + 1
-                    xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
-                        xpEarned = 100,
-                        newTotalXp = currentTotal,
-                        level = level,
-                        title = "Ujian / Kuis Selesai! 🏆",
-                        description = "Luar biasa! Menyelesaikan evaluasi CBT memberi Anda +100 XP.",
-                        actionType = "COMPLETE_QUIZ",
-                    )
+                    viewModelScope.launch {
+                        gamificationRepository.awardXp(
+                            actionType = "COMPLETE_QUIZ",
+                            referenceId = attempt.id.ifBlank { attemptId },
+                            description = "Menyelesaikan evaluasi kuis CBT",
+                        ).onSuccess { res ->
+                            if (res.awarded || res.alreadyAwarded) {
+                                xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
+                                    xpEarned = res.xpEarned,
+                                    newTotalXp = res.totalXp.toInt(),
+                                    level = res.level,
+                                    title = if (res.alreadyAwarded) "Evaluasi Telah Diselesaikan ⭐" else "Ujian / Kuis Selesai! 🏆",
+                                    description = if (res.alreadyAwarded) "Anda telah menyelesaikan evaluasi ini sebelumnya." else "Luar biasa! Menyelesaikan evaluasi CBT memberi Anda +${res.xpEarned} XP.",
+                                    actionType = "COMPLETE_QUIZ",
+                                )
+                            }
+                        }
+                    }
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(isSubmitting = false, submitError = e.message ?: "Failed to submit")

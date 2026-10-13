@@ -120,6 +120,7 @@ class HomeViewModel @Inject constructor(
     private val learningMaterialRepository: LearningMaterialRepository,
     private val readingHistoryManager: ReadingHistoryManager,
     private val firebaseRtdbManager: com.schoolos.android.core.firebase.FirebaseRealtimeDatabaseManager,
+    private val gamificationRepository: com.schoolos.android.domain.repository.GamificationRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -503,11 +504,17 @@ class HomeViewModel @Inject constructor(
             achievementRepository.getAchievements().onSuccess { achievements ->
                 val earned = achievements.filter { !it.earnedAt.isNullOrBlank() }
                 val badges = earned.size
-                val xp = badges * 50
                 _state.update { current ->
                     current.copy(
                         badgeCount = badges.toString(),
-                        xpCount = xp.toString(),
+                    )
+                }
+            }
+
+            gamificationRepository.getGamificationStatus().onSuccess { gamification ->
+                _state.update { current ->
+                    current.copy(
+                        xpCount = gamification.totalXp.toString(),
                     )
                 }
             }
