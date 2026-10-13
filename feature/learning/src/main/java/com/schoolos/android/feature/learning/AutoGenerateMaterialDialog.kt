@@ -70,11 +70,23 @@ fun AutoGenerateMaterialDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp),
             shape = RoundedCornerShape(20.dp),
-            color = colorScheme.surface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
+            color = if (isGenerating) Color(0xFF0A0F1D) else colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                if (isGenerating) Color(0x3376B900) else colorScheme.outlineVariant
+            ),
             shadowElevation = 16.dp
         ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            if (isGenerating) {
+                AiGenerationLoadingOverlay(
+                    isVisible = true,
+                    type = AiGenerationType.MATERIAL,
+                    subjectName = customSubjectText.ifBlank { selectedSubject?.name ?: "" },
+                    topic = topicInput,
+                    gradeLevel = selectedClass?.name ?: "",
+                    modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                )
+            } else {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -437,15 +449,6 @@ fun AutoGenerateMaterialDialog(
                     }
                 }
             }
-
-            AiGenerationLoadingOverlay(
-                isVisible = isGenerating,
-                type = AiGenerationType.MATERIAL,
-                subjectName = customSubjectText.ifBlank { selectedSubject?.name ?: "" },
-                topic = topicInput,
-                gradeLevel = selectedClass?.name ?: "",
-                modifier = Modifier.matchParentSize()
-            )
         }
     }
 }

@@ -250,6 +250,32 @@ class QuizBuilderViewModel @Inject constructor(
         }
     }
 
+    fun updateQuestionInState(
+        index: Int,
+        text: String,
+        type: String,
+        choices: List<String>,
+        correctIndex: Int,
+        points: Int
+    ) {
+        val currentList = _state.value.questionsList.toMutableList()
+        if (index in currentList.indices) {
+            val old = currentList[index]
+            currentList[index] = old.copy(
+                text = text,
+                type = type,
+                choices = choices,
+                choicesCount = choices.size,
+                correctIndex = correctIndex,
+                points = points
+            )
+            _state.value = _state.value.copy(
+                questionsList = currentList,
+                totalPoints = currentList.sumOf { it.points }
+            )
+        }
+    }
+
     private fun correctOptionIndex(index: Int, size: Int): Int {
         return if (size > 0 && index in 0 until size) index else 0
     }

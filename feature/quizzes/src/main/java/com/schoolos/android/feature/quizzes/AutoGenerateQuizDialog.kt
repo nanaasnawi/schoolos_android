@@ -61,11 +61,23 @@ fun AutoGenerateQuizDialog(
                 .fillMaxWidth()
                 .padding(horizontal = 4.dp),
             shape = RoundedCornerShape(20.dp),
-            color = colorScheme.surface,
-            border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
+            color = if (isGenerating) Color(0xFF0A0F1D) else colorScheme.surface,
+            border = androidx.compose.foundation.BorderStroke(
+                1.dp,
+                if (isGenerating) Color(0x3376B900) else colorScheme.outlineVariant
+            ),
             shadowElevation = 16.dp
         ) {
-            Box(modifier = Modifier.fillMaxWidth()) {
+            if (isGenerating) {
+                AiGenerationLoadingOverlay(
+                    isVisible = true,
+                    type = AiGenerationType.QUIZ,
+                    subjectName = selectedSubject?.name ?: currentSubjectName,
+                    topic = customTopic,
+                    gradeLevel = selectedClass?.name ?: currentClassName,
+                    modifier = Modifier.fillMaxWidth().wrapContentHeight()
+                )
+            } else {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -359,15 +371,6 @@ fun AutoGenerateQuizDialog(
                     }
                 }
             }
-
-            AiGenerationLoadingOverlay(
-                isVisible = isGenerating,
-                type = AiGenerationType.QUIZ,
-                subjectName = selectedSubject?.name ?: currentSubjectName,
-                topic = customTopic,
-                gradeLevel = selectedClass?.name ?: currentClassName,
-                modifier = Modifier.matchParentSize()
-            )
         }
     }
 }

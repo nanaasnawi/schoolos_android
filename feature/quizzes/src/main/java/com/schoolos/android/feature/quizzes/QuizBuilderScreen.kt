@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -446,6 +447,36 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
     val options = remember { mutableStateListOf("Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D") }
     var showPrePublishReview by remember { mutableStateOf(false) }
 
+    // Indeks butir soal yang sedang dilihat / diedit (0..size-1 adalah soal tersusun, >= size adalah mode tambah baru)
+    var selectedQuestionIndex by remember { mutableIntStateOf(0) }
+    var isExpandedListVisible by remember { mutableStateOf(false) }
+
+    // Sinkronkan form saat memilih chip butir soal yang berbeda
+    LaunchedEffect(selectedQuestionIndex, state.questionsList) {
+        if (state.questionsList.isNotEmpty() && selectedQuestionIndex in state.questionsList.indices) {
+            val q = state.questionsList[selectedQuestionIndex]
+            qText = q.text
+            questionType = q.type
+            points = q.points.toString()
+            correctOptionIndex = q.correctIndex
+            options.clear()
+            if (q.choices.isNotEmpty()) {
+                options.addAll(q.choices)
+            } else {
+                options.addAll(listOf("Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D"))
+            }
+        } else if (selectedQuestionIndex >= state.questionsList.size) {
+            // Mode Tambah Butir Baru
+            qText = ""
+            rubricText = ""
+            questionType = "MULTIPLE_CHOICE"
+            points = "20"
+            correctOptionIndex = 0
+            options.clear()
+            options.addAll(listOf("Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D"))
+        }
+    }
+
     if (showPrePublishReview) {
         PrePublishQuizReviewDialog(
             state = state,
@@ -499,29 +530,136 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                         }
                     }
 
+                    // Interactive Chips: Guru dapat mengklik tiap butir soal untuk melihat / mengedit isinya
                     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        items(state.questionsList) { q ->
+                        itemsIndexed(state.questionsList) { idx, q ->
                             val isPg = q.type == "MULTIPLE_CHOICE"
+                            val isSelected = selectedQuestionIndex == idx
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (isPg) NeonBlue.copy(alpha = 0.12f)
-                                        else TeacherNeon.copy(alpha = 0.12f)
+                                        if (isSelected) (if (isPg) NeonBlue else TeacherNeon).copy(alpha = 0.28f)
+                                        else (if (isPg) NeonBlue else TeacherNeon).copy(alpha = 0.08f)
                                     )
                                     .border(
-                                        1.dp,
-                                        if (isPg) NeonBlue.copy(alpha = 0.35f) else TeacherNeon.copy(alpha = 0.35f),
+                                        if (isSelected) 2.dp else 1.dp,
+                                        if (isSelected) (if (isPg) NeonBlue else TeacherNeon)
+                                        else (if (isPg) NeonBlue else TeacherNeon).copy(alpha = 0.35f),
                                         RoundedCornerShape(10.dp)
                                     )
+                                    .clickable { selectedQuestionIndex = idx }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    if (isSelected) {
+                                        Text("●", color = if (isPg) NeonBlue else TeacherNeon, fontSize = 9.sp)
+                                    }
+                                    Text(
+                                        "#${q.number} ${if (isPg) "PG" else "Esai"} (${q.points}p)",
+                                        color = if (isPg) NeonBlue else TeacherNeon,
+                                        fontSize = 11.sp,
+                                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        // Chip Tambah Soal Baru
+                        item {
+                            val isAddNew = selectedQuestionIndex >= state.questionsList.size
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(if (isAddNew) TeacherNeon.copy(alpha = 0.2f) else CosmicSurface2)
+                                    .border(
+                                        if (isAddNew) 2.dp else 1.dp,
+                                        if (isAddNew) TeacherNeon else GlassBorder,
+                                        RoundedCornerShape(10.dp)
+                                    )
+                                    .clickable { selectedQuestionIndex = state.questionsList.size }
                                     .padding(horizontal = 12.dp, vertical = 8.dp)
                             ) {
                                 Text(
-                                    "#${q.number} ${if (isPg) "PG" else "Esai"} (${q.points}p)",
-                                    color = if (isPg) NeonBlue else TeacherNeon,
+                                    "+ Tambah Baru",
+                                    color = if (isAddNew) TeacherNeon else TextSecondary,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
                                 )
+                            }
+                        }
+                    }
+
+                    // Toggle & Ringkasan Daftar Paket Butir Soal Terbentuk
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isExpandedListVisible = !isExpandedListVisible }
+                            .padding(vertical = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            if (isExpandedListVisible) "▲ Sembunyikan Rincian Soal" else "▼ Lihat Ringkasan Seluruh Soal (${state.questionsList.size})",
+                            color = NeonBlue,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text("Pilih butir untuk lihat/edit", color = TextTertiary, fontSize = 10.sp)
+                    }
+
+                    if (isExpandedListVisible) {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            state.questionsList.forEachIndexed { idx, q ->
+                                val isSelected = selectedQuestionIndex == idx
+                                Surface(
+                                    color = if (isSelected) CosmicSurface3 else CosmicSurface2,
+                                    shape = RoundedCornerShape(10.dp),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        if (isSelected) 1.5.dp else 0.5.dp,
+                                        if (isSelected) TeacherNeon else GlassBorder
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { selectedQuestionIndex = idx }
+                                ) {
+                                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(
+                                                "Butir #${q.number} • ${if (q.type == "MULTIPLE_CHOICE") "PG" else "Esai"} (${q.points} Poin)",
+                                                color = TeacherNeon,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Text(
+                                                if (isSelected) "Sedang Ditinjau" else "Klik untuk Pilih",
+                                                color = if (isSelected) TeacherNeon else TextTertiary,
+                                                fontSize = 10.sp
+                                            )
+                                        }
+                                        Text(
+                                            q.text,
+                                            color = TextPrimary,
+                                            fontSize = 12.sp,
+                                            maxLines = 2,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        if (q.choices.isNotEmpty()) {
+                                            Text(
+                                                "Kunci Benar: ${q.choices.getOrNull(q.correctIndex) ?: "Pilihan A"}",
+                                                color = NeonSuccess,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.SemiBold
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -530,23 +668,46 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
         }
 
         // ── CURRENT QUESTION INFO ──
+        val isViewingExisting = state.questionsList.isNotEmpty() && selectedQuestionIndex in state.questionsList.indices
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(TeacherNeon.copy(alpha = 0.12f))
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Text(
-                    "Butir Soal Ke-${state.questionsList.size + 1}",
-                    color = TeacherNeon,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Black
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(TeacherNeon.copy(alpha = 0.12f))
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        if (isViewingExisting) "Melihat Butir Soal #${selectedQuestionIndex + 1}"
+                        else "Tambah Butir Soal Baru (#${state.questionsList.size + 1})",
+                        color = TeacherNeon,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black
+                    )
+                }
+
+                if (isViewingExisting) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = NeonBlue.copy(alpha = 0.15f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.35f))
+                    ) {
+                        Text(
+                            "✨ Disusun AI",
+                            color = NeonBlue,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                        )
+                    }
+                }
             }
 
             // Points presets inline
@@ -811,21 +972,30 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                         "${qText.trim()}\n\n[Rubrik: ${rubricText.trim()}]"
                     else qText.trim()
 
-                    viewModel.addQuestion(
-                        questionText = fullNarrative,
-                        questionType = questionType,
-                        choices = if (questionType == "MULTIPLE_CHOICE") options.toList() else emptyList(),
-                        correctIndex = correctOptionIndex,
-                        points = points.toIntOrNull() ?: 10,
-                        onSuccessCallback = {
-                            val savedNum = state.questionsList.size
-                            Toast.makeText(context, "✓ Soal ke-$savedNum tersimpan!", Toast.LENGTH_SHORT).show()
-                            qText = ""
-                            rubricText = ""
-                            correctOptionIndex = 0
-                            options.indices.forEach { options[it] = "Pilihan " + ('A' + it) }
-                        }
-                    )
+                    if (isViewingExisting) {
+                        viewModel.updateQuestionInState(
+                            index = selectedQuestionIndex,
+                            text = fullNarrative,
+                            type = questionType,
+                            choices = if (questionType == "MULTIPLE_CHOICE") options.toList() else emptyList(),
+                            correctIndex = correctOptionIndex,
+                            points = points.toIntOrNull() ?: 10
+                        )
+                        Toast.makeText(context, "✓ Perubahan butir #${selectedQuestionIndex + 1} disimpan!", Toast.LENGTH_SHORT).show()
+                    } else {
+                        viewModel.addQuestion(
+                            questionText = fullNarrative,
+                            questionType = questionType,
+                            choices = if (questionType == "MULTIPLE_CHOICE") options.toList() else emptyList(),
+                            correctIndex = correctOptionIndex,
+                            points = points.toIntOrNull() ?: 10,
+                            onSuccessCallback = {
+                                val savedNum = state.questionsList.size
+                                Toast.makeText(context, "✓ Soal ke-$savedNum tersimpan!", Toast.LENGTH_SHORT).show()
+                                selectedQuestionIndex = state.questionsList.size
+                            }
+                        )
+                    }
                 },
                 enabled = qText.isNotBlank() && !state.isLoading,
                 modifier = Modifier.weight(1f).height(48.dp),
@@ -833,14 +1003,18 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                 colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
                 border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.6f))
             ) {
-                Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                Icon(if (isViewingExisting) Icons.Default.Check else Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(4.dp))
-                Text("+ Soal Baru", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (isViewingExisting) "Simpan Edit #${selectedQuestionIndex + 1}" else "+ Soal Baru",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
 
             Button(
                 onClick = {
-                    if (qText.isNotBlank()) {
+                    if (qText.isNotBlank() && !isViewingExisting) {
                         val fullNarrative = if (questionType == "ESSAY" && rubricText.isNotBlank())
                             "${qText.trim()}\n\n[Rubrik: ${rubricText.trim()}]"
                         else qText.trim()
@@ -868,11 +1042,11 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                 colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White)
             ) {
                 if (state.isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                 } else {
-                    Icon(Icons.Default.Visibility, null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Pratinjau & Terbitkan", fontSize = 12.sp, fontWeight = FontWeight.Black)
+                    Icon(Icons.Default.Visibility, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Pratinjau (${state.questionsList.size} Soal)", fontSize = 12.sp, fontWeight = FontWeight.Black)
                 }
             }
         }

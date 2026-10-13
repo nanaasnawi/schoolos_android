@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -184,9 +185,10 @@ fun AiGenerationLoadingOverlay(
 
         Box(
             modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xEB0A0F1D))
-                .padding(24.dp),
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .background(Color(0xFA0A0F1D))
+                .padding(vertical = 24.dp, horizontal = 20.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
