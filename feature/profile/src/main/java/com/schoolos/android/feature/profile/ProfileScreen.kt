@@ -47,6 +47,7 @@ import com.schoolos.android.feature.profile.components.ProfileLogoutDialog
 import com.schoolos.android.feature.profile.components.ProfileQrCard
 import com.schoolos.android.feature.profile.components.ProfileSettingsGroup
 import com.schoolos.android.feature.profile.components.SchoolAffiliationCard
+import com.schoolos.android.feature.profile.components.StudentGamificationLevelCard
 import com.schoolos.android.feature.profile.components.WhatsAppProfileCard
 import java.io.ByteArrayOutputStream
 
@@ -205,6 +206,14 @@ fun ProfileScreen(
                 isUploading = isUploadingPhoto,
                 onAvatarClick = { showAvatarPreviewDialog = true },
             )
+
+            // 1.5 Student Gamification Level & XP Card (Khusus Portal Murid / Siswa)
+            if (!isTeacher && !isParent) {
+                StudentGamificationLevelCard(
+                    gamification = state.gamificationStatus,
+                    isLoading = state.gamificationLoading,
+                )
+            }
 
             // 2. WhatsApp-Style Profile Details Card
             WhatsAppProfileCard(
