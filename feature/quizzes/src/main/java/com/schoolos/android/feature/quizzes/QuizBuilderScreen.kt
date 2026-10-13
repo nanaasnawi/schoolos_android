@@ -141,7 +141,7 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
             currentSubjectName = selectedSubject,
             currentClassName = selectedClass,
             isGenerating = state.isGeneratingAi,
-            onGenerate = { type, subId, subName, clsId, clsName, topic ->
+            onGenerate = { type, subId, subName, clsId, clsName, topic, numQuestions, difficulty ->
                 viewModel.generateQuizWithAi(
                     type = type,
                     subjectId = subId,
@@ -149,6 +149,8 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                     classId = clsId,
                     className = clsName,
                     topic = topic,
+                    numQuestions = numQuestions,
+                    difficulty = difficulty,
                     onSuccessCallback = {
                         showAiGenerateDialog = false
                         Toast.makeText(context, "✓ Berhasil menyusun paket kuis CBT (NVIDIA NIM)!", Toast.LENGTH_SHORT).show()

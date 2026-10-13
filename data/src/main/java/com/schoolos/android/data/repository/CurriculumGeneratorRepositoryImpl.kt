@@ -122,11 +122,61 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
         effectiveTopic: String,
         subjectName: String
     ): GeneratedCurriculumResult {
+        val questionsArray = assignObj.optJSONArray("questions")
         val tasksArray = assignObj.optJSONArray("tasks")
-        val rubric = assignObj.optString("rubric", "Rubrik Penilaian Objektif")
+        val rubric = assignObj.optString("rubric", "Rubrik Penilaian Objektif: Kriteria ketepatan konsep dan kelengkapan analisis (Skor 0 - 100)")
         val questionsList = ArrayList<GeneratedCurriculumQuestion>()
 
-        if (tasksArray != null && tasksArray.length() > 0) {
+        if (questionsArray != null && questionsArray.length() > 0) {
+            for (i in 0 until questionsArray.length()) {
+                val qObj = questionsArray.getJSONObject(i)
+                val choicesArray = qObj.optJSONArray("choices")
+                val choicesList = ArrayList<GeneratedCurriculumChoice>()
+
+                if (choicesArray != null) {
+                    for (j in 0 until choicesArray.length()) {
+                        val choiceItem = choicesArray.get(j)
+                        if (choiceItem is JSONObject) {
+                            choicesList.add(
+                                GeneratedCurriculumChoice(
+                                    choiceText = choiceItem.optString("choice_text", choiceItem.optString("text", "")),
+                                    isCorrect = choiceItem.optBoolean("is_correct", choiceItem.optBoolean("isCorrect", false)),
+                                )
+                            )
+                        } else if (choiceItem is String) {
+                            choicesList.add(
+                                GeneratedCurriculumChoice(
+                                    choiceText = choiceItem,
+                                    isCorrect = (j == 0)
+                                )
+                            )
+                        }
+                    }
+                }
+
+                val explicitType = qObj.optString("question_type", "")
+                val qType = if (explicitType.isNotBlank()) {
+                    explicitType.uppercase()
+                } else if (choicesList.isNotEmpty()) {
+                    "MULTIPLE_CHOICE"
+                } else {
+                    "ESSAY"
+                }
+
+                val defaultPoints = if (qType == "MULTIPLE_CHOICE") 10 else 20
+                questionsList.add(
+                    GeneratedCurriculumQuestion(
+                        id = qObj.optString("id", "asg-q-${i + 1}"),
+                        questionText = qObj.optString("question_text", qObj.optString("text", "")),
+                        questionType = qType,
+                        points = qObj.optInt("points", defaultPoints),
+                        choices = choicesList,
+                        explanation = qObj.optString("explanation", rubric),
+                        rubric = if (qObj.isNull("rubric")) rubric else qObj.optString("rubric", rubric),
+                    )
+                )
+            }
+        } else if (tasksArray != null && tasksArray.length() > 0) {
             val count = maxOf(1, tasksArray.length())
             for (i in 0 until tasksArray.length()) {
                 val taskItem = tasksArray.get(i)
@@ -142,23 +192,6 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                         questionText = taskText,
                         questionType = "ESSAY",
                         points = 100 / count,
-                        choices = emptyList(),
-                        explanation = rubric,
-                        rubric = rubric,
-                    )
-                )
-            }
-        } else if (assignObj.has("questions")) {
-            val questionsArray = assignObj.getJSONArray("questions")
-            val count = maxOf(1, questionsArray.length())
-            for (i in 0 until questionsArray.length()) {
-                val qObj = questionsArray.getJSONObject(i)
-                questionsList.add(
-                    GeneratedCurriculumQuestion(
-                        id = qObj.optString("id", "task-${i + 1}"),
-                        questionText = qObj.optString("question_text", ""),
-                        questionType = qObj.optString("question_type", "ESSAY"),
-                        points = qObj.optInt("points", 100 / count),
                         choices = emptyList(),
                         explanation = rubric,
                         rubric = rubric,
@@ -186,11 +219,22 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
         sourceMode: String,
         topic: String?,
         gradeLevel: String?,
+        numQuestions: Int?,
+        numMcq: Int?,
+        numEssay: Int?,
+        difficulty: String?,
+        includeImages: Boolean?,
     ): Result<GeneratedCurriculumResult> = withContext(Dispatchers.IO) {
         val effectiveTopic = topic?.trim()?.ifBlank { null } ?: subjectName
         val effectiveGrade = gradeLevel ?: "Kelas 5 SD"
         val isQuiz = type.startsWith("QUIZ") || type == "EXAM_MONTHLY"
         val isExam = type == "EXAM_MONTHLY"
+        val isHomework = type == "ASSIGNMENT_HOMEWORK"
+
+        val effectiveDifficulty = difficulty ?: if (isExam) "HOTS" else "Sedang"
+        val effectiveNumQuestions = numQuestions ?: if (isExam) 10 else 5
+        val effectiveNumMcq = numMcq ?: if (isHomework) 0 else 4
+        val effectiveNumEssay = numEssay ?: 2
 
         val apiV1 = getApiV1Base()
         val token = authManager.getAccessToken()
@@ -202,8 +246,14 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
             put("topic", effectiveTopic)
             put("subject_name", subjectName)
             put("grade_level", effectiveGrade)
-            put("num_questions", if (isExam) 10 else 5)
-            put("difficulty", if (isExam) "HOTS" else "Sedang")
+            put("difficulty", effectiveDifficulty)
+            put("num_questions", effectiveNumQuestions)
+            put("num_mcq", effectiveNumMcq)
+            put("num_essay", effectiveNumEssay)
+            put("assignment_format", if (isHomework) "HOMEWORK_PR" else "STRUCTURED_QUESTIONS")
+            if (includeImages != null) {
+                put("include_images", includeImages)
+            }
         }
 
         try {

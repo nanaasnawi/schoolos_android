@@ -11,6 +11,11 @@ interface CurriculumGeneratorRepository {
         sourceMode: String = "LATEST_PUBLISHED", // 'LATEST_PUBLISHED' | 'PAST_MONTH'
         topic: String? = null,
         gradeLevel: String? = null,
+        numQuestions: Int? = null,
+        numMcq: Int? = null,
+        numEssay: Int? = null,
+        difficulty: String? = null,
+        includeImages: Boolean? = null,
     ): Result<GeneratedCurriculumResult>
 
     suspend fun generateMaterial(

@@ -35,7 +35,16 @@ fun AutoGenerateQuizDialog(
     availableClasses: List<AcademicClass>,
     currentSubjectName: String,
     currentClassName: String,
-    onGenerate: (type: String, subjectId: String, subjectName: String, classId: String?, className: String, topic: String) -> Unit,
+    onGenerate: (
+        type: String,
+        subjectId: String,
+        subjectName: String,
+        classId: String?,
+        className: String,
+        topic: String,
+        numQuestions: Int,
+        difficulty: String
+    ) -> Unit,
     isGenerating: Boolean = false,
 ) {
     if (!isOpen) return
@@ -43,6 +52,9 @@ fun AutoGenerateQuizDialog(
     val colorScheme = MaterialTheme.colorScheme
     var selectedType by remember { mutableStateOf("QUIZ_MCQ_ONLY") }
     var customTopic by remember { mutableStateOf("") }
+    var numQuestions by remember { mutableIntStateOf(5) }
+    var selectedDifficulty by remember { mutableStateOf("Sedang") }
+
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
         mutableStateOf(matched ?: availableSubjects.firstOrNull())
@@ -290,6 +302,100 @@ fun AutoGenerateQuizDialog(
                     }
                 }
 
+                // Row: Jumlah Soal & Tingkat Kesulitan
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Jumlah Soal
+                    Column(
+                        modifier = Modifier.weight(1.2f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Jumlah Soal",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.onSurface
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            listOf(5, 10, 15, 20).forEach { cnt ->
+                                val isSel = numQuestions == cnt
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { numQuestions = cnt },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSel) Color(0xFF0284C7) else colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSel) Color(0xFF0369A1) else colorScheme.outlineVariant
+                                    )
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = "$cnt",
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSel) Color.White else colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Tingkat Kesulitan
+                    Column(
+                        modifier = Modifier.weight(1.2f),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = "Tingkat Kesulitan",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = colorScheme.onSurface
+                        )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            listOf("Mudah", "Sedang", "HOTS").forEach { diff ->
+                                val isSel = selectedDifficulty == diff
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { selectedDifficulty = diff },
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = if (isSel) Color(0xFFDCFCE7) else colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isSel) Color(0xFF16A34A) else colorScheme.outlineVariant
+                                    )
+                                ) {
+                                    Box(
+                                        modifier = Modifier.padding(vertical = 8.dp),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Text(
+                                            text = diff,
+                                            fontSize = 11.sp,
+                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isSel) Color(0xFF15803D) else colorScheme.onSurface
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // Evaluation Scope & Format
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
@@ -301,21 +407,21 @@ fun AutoGenerateQuizDialog(
 
                     QuizFormatOptionCard(
                         title = "Pilihan Ganda Saja (PG A-D)",
-                        subtitle = "5 Soal PG otomatis dengan kunci jawaban",
+                        subtitle = "$numQuestions Soal PG dinamis dengan kunci jawaban acak",
                         isSelected = selectedType == "QUIZ_MCQ_ONLY",
                         onClick = { selectedType = "QUIZ_MCQ_ONLY" }
                     )
 
                     QuizFormatOptionCard(
                         title = "Kombinasi PG & Esai Analitis",
-                        subtitle = "4 Soal PG + 2 Soal Esai HOTS dengan rubrik",
+                        subtitle = "Kombinasi ${maxOf(2, numQuestions - 2)} PG + 2 Soal Esai HOTS dengan rubrik",
                         isSelected = selectedType == "QUIZ_MCQ_ESSAY",
                         onClick = { selectedType = "QUIZ_MCQ_ESSAY" }
                     )
 
                     QuizFormatOptionCard(
                         title = "Ujian Tengah / Akhir Semester",
-                        subtitle = "10 Soal komprehensif (KKM 75, durasi 90 mnt)",
+                        subtitle = "$numQuestions Soal komprehensif (KKM 75, durasi 90 mnt)",
                         isSelected = selectedType == "EXAM_MONTHLY",
                         onClick = { selectedType = "EXAM_MONTHLY" }
                     )
@@ -344,7 +450,16 @@ fun AutoGenerateQuizDialog(
                             val sub = selectedSubject ?: availableSubjects.firstOrNull()
                             val cls = selectedClass ?: availableClasses.firstOrNull()
                             if (sub != null) {
-                                onGenerate(selectedType, sub.id, sub.name, cls?.id, cls?.name ?: "", customTopic.trim())
+                                onGenerate(
+                                    selectedType,
+                                    sub.id,
+                                    sub.name,
+                                    cls?.id,
+                                    cls?.name ?: "",
+                                    customTopic.trim(),
+                                    numQuestions,
+                                    selectedDifficulty
+                                )
                             }
                         },
                         enabled = !isGenerating && (selectedSubject != null || availableSubjects.isNotEmpty()),
