@@ -91,12 +91,21 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                 }
             }
 
+            val explicitType = qObj.optString("question_type", "")
+            val qType = if (explicitType.isNotBlank()) {
+                explicitType.uppercase()
+            } else if (choicesList.isNotEmpty()) {
+                "MULTIPLE_CHOICE"
+            } else {
+                "ESSAY"
+            }
+
             questionsList.add(
                 GeneratedCurriculumQuestion(
                     id = qObj.optString("id", "q-${i + 1}"),
                     questionText = qObj.optString("question_text", qObj.optString("text", "")),
-                    questionType = qObj.optString("question_type", "MULTIPLE_CHOICE"),
-                    points = qObj.optInt("points", if (isExam) 10 else 20),
+                    questionType = qType,
+                    points = qObj.optInt("points", if (qType == "ESSAY") 20 else (if (isExam) 10 else 10)),
                     choices = choicesList,
                     explanation = qObj.optString("explanation", "Disusun otomatis oleh AI backend"),
                     rubric = if (qObj.isNull("rubric")) null else qObj.optString("rubric"),
@@ -230,11 +239,18 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
         val isQuiz = type.startsWith("QUIZ") || type == "EXAM_MONTHLY"
         val isExam = type == "EXAM_MONTHLY"
         val isHomework = type == "ASSIGNMENT_HOMEWORK"
+        val isQuizMixed = type == "QUIZ_MCQ_ESSAY" || (isQuiz && (numEssay ?: 0) > 0)
 
         val effectiveDifficulty = difficulty ?: if (isExam) "HOTS" else "Sedang"
-        val effectiveNumQuestions = numQuestions ?: if (isExam) 10 else 5
-        val effectiveNumMcq = numMcq ?: if (isHomework) 0 else 4
-        val effectiveNumEssay = numEssay ?: 2
+        val effectiveNumMcq = numMcq ?: if (isHomework) 0 else if (isQuizMixed) 10 else 5
+        val effectiveNumEssay = numEssay ?: if (isQuizMixed) 5 else (if (isHomework) 5 else 2)
+        val effectiveNumQuestions = numQuestions ?: if (isQuiz) {
+            effectiveNumMcq + (if (isQuizMixed) effectiveNumEssay else 0)
+        } else if (isHomework) {
+            effectiveNumEssay
+        } else {
+            effectiveNumMcq + effectiveNumEssay
+        }
 
         val apiV1 = getApiV1Base()
         val token = authManager.getAccessToken()
@@ -250,6 +266,7 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
             put("num_questions", effectiveNumQuestions)
             put("num_mcq", effectiveNumMcq)
             put("num_essay", effectiveNumEssay)
+            put("quiz_format", if (isQuizMixed) "MIXED" else "MCQ_ONLY")
             put("assignment_format", if (isHomework) "HOMEWORK_PR" else "STRUCTURED_QUESTIONS")
             if (includeImages != null) {
                 put("include_images", includeImages)
