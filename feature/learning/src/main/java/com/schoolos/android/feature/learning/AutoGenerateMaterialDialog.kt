@@ -22,6 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.schoolos.android.core.designsystem.AiGenerationLoadingOverlay
+import com.schoolos.android.core.designsystem.AiGenerationType
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 
@@ -72,12 +74,13 @@ fun AutoGenerateMaterialDialog(
             border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
             shadowElevation = 16.dp
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                 // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -434,6 +437,16 @@ fun AutoGenerateMaterialDialog(
                     }
                 }
             }
+
+            AiGenerationLoadingOverlay(
+                isVisible = isGenerating,
+                type = AiGenerationType.MATERIAL,
+                subjectName = customSubjectText.ifBlank { selectedSubject?.name ?: "" },
+                topic = topicInput,
+                gradeLevel = selectedClass?.name ?: "",
+                modifier = Modifier.matchParentSize()
+            )
         }
     }
+}
 }

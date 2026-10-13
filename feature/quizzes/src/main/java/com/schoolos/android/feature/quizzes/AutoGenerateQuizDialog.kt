@@ -19,6 +19,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.schoolos.android.core.designsystem.AiGenerationLoadingOverlay
+import com.schoolos.android.core.designsystem.AiGenerationType
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 
@@ -63,12 +65,13 @@ fun AutoGenerateQuizDialog(
             border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
             shadowElevation = 16.dp
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
-            ) {
+            Box(modifier = Modifier.fillMaxWidth()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                 // Header
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -356,8 +359,18 @@ fun AutoGenerateQuizDialog(
                     }
                 }
             }
+
+            AiGenerationLoadingOverlay(
+                isVisible = isGenerating,
+                type = AiGenerationType.QUIZ,
+                subjectName = selectedSubject?.name ?: currentSubjectName,
+                topic = customTopic,
+                gradeLevel = selectedClass?.name ?: currentClassName,
+                modifier = Modifier.matchParentSize()
+            )
         }
     }
+}
 }
 
 @Composable
