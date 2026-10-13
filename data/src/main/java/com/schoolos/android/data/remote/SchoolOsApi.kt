@@ -252,6 +252,10 @@ interface SchoolOsApi {
     @GET("learning/achievements/student/{student_id}")
     suspend fun getStudentAchievements(@Path("student_id") studentId: String): ApiResponse<List<AchievementDto>>
 
+    // Gamification & Student XP
+    @GET("gamification")
+    suspend fun getGamificationStatus(@Query("student_id") studentId: String? = null): ApiResponse<GamificationStatusDto>
+
     // Notifications
     @GET("notifications")
     suspend fun getNotifications(@Query("page") page: Int = 1): ApiResponse<com.schoolos.android.data.remote.dto.PaginatedNotificationResponse>

@@ -7,8 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.common.Settings
 import com.schoolos.android.core.common.SettingsManager
+import com.schoolos.android.domain.model.GamificationStatus
 import com.schoolos.android.domain.model.User
 import com.schoolos.android.domain.repository.AuthRepository
+import com.schoolos.android.domain.repository.GamificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -42,6 +44,9 @@ data class ProfileUiState(
     val schoolAccreditation: String? = null,
     val schoolWebsite: String? = null,
     val schoolContactLoading: Boolean = false,
+    // Gamification Level & XP
+    val gamificationStatus: GamificationStatus? = null,
+    val gamificationLoading: Boolean = false,
 )
 
 @HiltViewModel
@@ -50,6 +55,7 @@ class ProfileViewModel @Inject constructor(
     private val authManager: AuthManager,
     private val settingsManager: SettingsManager,
     private val authRepository: AuthRepository,
+    private val gamificationRepository: GamificationRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileUiState())
@@ -96,9 +102,28 @@ class ProfileViewModel @Inject constructor(
             if (authManager.isLoggedIn) {
                 authRepository.getCurrentUser()
                 loadQrBadgeToken()
+                loadGamificationStatus()
             }
         }
         loadSchoolContactInfo()
+    }
+
+    fun loadGamificationStatus() {
+        viewModelScope.launch {
+            if (authManager.isLoggedIn) {
+                _state.value = _state.value.copy(gamificationLoading = true)
+                gamificationRepository.getGamificationStatus()
+                    .onSuccess { status ->
+                        _state.value = _state.value.copy(
+                            gamificationStatus = status,
+                            gamificationLoading = false
+                        )
+                    }
+                    .onFailure {
+                        _state.value = _state.value.copy(gamificationLoading = false)
+                    }
+            }
+        }
     }
 
     private fun loadQrBadgeToken() {
