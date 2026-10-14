@@ -11,6 +11,7 @@ import com.schoolos.android.domain.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -29,6 +30,7 @@ data class SessionDetailUiState(
     val userRole: String = "student",
     val session: LearningSession? = null,
     val attendance: List<SessionAttendance> = emptyList(),
+    val myAttendance: SessionAttendance? = null,
     val studentItems: List<StudentAttendanceUiItem> = emptyList(),
     val updatingStudentId: String? = null,
     val isBulkSaving: Boolean = false,
@@ -111,9 +113,17 @@ class SessionDetailViewModel @Inject constructor(
             }
         }
 
+        val auth = authManager.authState.first()
+        val myAtt = attendanceList.find { att ->
+            (!auth.identifier.isNullOrBlank() && classStudents.any { it.nisn.equals(auth.identifier, ignoreCase = true) && it.id == att.studentId }) ||
+            (!auth.userId.isNullOrBlank() && (att.studentId == auth.userId || classStudents.any { it.id == auth.userId && it.id == att.studentId })) ||
+            (!auth.name.isNullOrBlank() && classStudents.any { it.fullName.equals(auth.name, ignoreCase = true) && it.id == att.studentId })
+        } ?: attendanceList.firstOrNull()
+
         _state.value = _state.value.copy(
             attendance = attendanceList,
             studentItems = items,
+            myAttendance = myAtt,
         )
     }
 

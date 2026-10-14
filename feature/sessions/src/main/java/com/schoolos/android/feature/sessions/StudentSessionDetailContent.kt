@@ -42,6 +42,7 @@ import com.schoolos.android.domain.model.SessionAttendance
 fun StudentSessionDetailContent(
     session: LearningSession,
     attendance: List<SessionAttendance>,
+    myAttendance: SessionAttendance? = null,
     onOpenAssignments: (String) -> Unit,
     onOpenQuizzes: (String) -> Unit,
     onOpenMaterials: (String) -> Unit,
@@ -229,85 +230,83 @@ fun StudentSessionDetailContent(
         // Personal Attendance
         GlassCard(cornerRadius = 16.dp) {
             Column(modifier = Modifier.padding(12.dp)) {
+                val myAtt = myAttendance ?: attendance.firstOrNull()
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text("Presensi Saya", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold, color = TextPrimary)
-                    val myAtt = attendance.firstOrNull()
                     if (myAtt != null) {
                         StatusChip(label = myAtt.status)
                     }
                 }
                 Spacer(Modifier.height(14.dp))
 
-                if (attendance.isEmpty()) {
+                if (myAtt == null) {
                     EmptyStateContent(
                         message = "Belum Ada Presensi Tercatat",
                         subtitle = "Presensi otomatis tercatat 'Hadir Daring' saat Anda membaca materi pelajaran ini hari ini. Jika berhalangan hadir, ajukan Izin/Sakit dalam kurun waktu 24 jam sebelum dinyatakan Alpa.",
                         accentColor = accentColor,
                     )
                 } else {
-                    attendance.forEach { att ->
-                        val statusColor = when (att.status.lowercase()) {
-                            "present" -> NeonSuccess
-                            "excused" -> NeonWarning
-                            "sick" -> NeonBlue
-                            else -> NeonError
-                        }
-                        val statusIcon = when (att.status.lowercase()) {
-                            "present" -> Icons.Default.CheckCircle
-                            else -> Icons.Default.Schedule
-                        }
-                        val statusLabel = when (att.status.lowercase()) {
-                            "present" -> "Hadir (Daring / Luring)"
-                            "excused" -> "Izin"
-                            "sick" -> "Sakit"
-                            "absent" -> "Alpa (Tidak Hadir)"
-                            else -> att.status.replaceFirstChar { it.uppercase() }
-                        }
-                        Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                    val statusColor = when (myAtt.status.lowercase()) {
+                        "present" -> NeonSuccess
+                        "excused" -> NeonWarning
+                        "sick" -> NeonBlue
+                        else -> NeonError
+                    }
+                    val statusIcon = when (myAtt.status.lowercase()) {
+                        "present" -> Icons.Default.CheckCircle
+                        else -> Icons.Default.Schedule
+                    }
+                    val statusLabel = when (myAtt.status.lowercase()) {
+                        "present" -> "Hadir (Daring / Luring)"
+                        "excused" -> "Izin"
+                        "sick" -> "Sakit"
+                        "absent" -> "Alpa (Tidak Hadir)"
+                        else -> myAtt.status.replaceFirstChar { it.uppercase() }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(statusColor.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center,
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(CircleShape)
-                                    .background(statusColor.copy(alpha = 0.12f)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Icon(
-                                    statusIcon,
-                                    null,
-                                    tint = statusColor,
-                                    modifier = Modifier.size(20.dp),
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column {
+                            Icon(
+                                statusIcon,
+                                null,
+                                tint = statusColor,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                statusLabel,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                            )
+                            val excuseNotes = myAtt.notes
+                            if (!excuseNotes.isNullOrBlank()) {
                                 Text(
-                                    statusLabel,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = TextSecondary,
+                                    excuseNotes,
+                                    fontSize = 11.sp,
+                                    color = TextTertiary,
                                 )
-                                val excuseNotes = att.notes
-                                if (!excuseNotes.isNullOrBlank()) {
-                                    Text(
-                                        excuseNotes,
-                                        fontSize = 11.sp,
-                                        color = TextTertiary,
-                                    )
-                                }
                             }
                         }
                     }
                 }
 
                 // Tombol ajukan izin / sakit jika siswa belum hadir atau alpa
-                val myStatus = attendance.firstOrNull()?.status?.lowercase()
+                val myStatus = myAtt?.status?.lowercase()
                 val canSubmitExcuse = myStatus == null || myStatus == "absent"
                 if (onSubmitExcuse != null && canSubmitExcuse) {
                     Spacer(Modifier.height(10.dp))

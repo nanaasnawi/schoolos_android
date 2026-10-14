@@ -218,6 +218,7 @@ fun SessionDetailScreen(
                             StudentSessionDetailContent(
                                 session = s,
                                 attendance = state.attendance,
+                                myAttendance = state.myAttendance,
                                 onOpenAssignments = openAssignments,
                                 onOpenQuizzes = openQuizzes,
                                 onOpenMaterials = openMaterials,

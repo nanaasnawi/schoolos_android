@@ -592,80 +592,114 @@ private fun QuizQuestionForm(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                // ── ROW 1: Title & AI Studio Pill Button ──
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
                         Text(
-                            "Bank Butir Soal (${state.questionsList.size})",
+                            "Bank Butir Soal",
                             color = TextPrimary,
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Black
                         )
-                        Text(
-                            "Pilih butir untuk meninjau / menyunting",
-                            color = TextTertiary,
-                            fontSize = 10.sp
-                        )
-                    }
-
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Total points badge
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(6.dp))
                                 .background(TeacherNeon.copy(alpha = 0.12f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
-                                "Total: ${state.totalPoints}p",
+                                "${state.questionsList.size} Butir",
                                 color = TeacherNeon,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
+                    }
 
-                        // Auto-balance points (100p)
-                        if (state.questionsList.isNotEmpty()) {
-                            Surface(
-                                shape = RoundedCornerShape(8.dp),
-                                color = CosmicSurface2,
-                                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
-                                modifier = Modifier.clickable {
-                                    viewModel.balancePoints(100)
-                                    Toast.makeText(context, "Poin otomatis dibagi rata ke 100!", Toast.LENGTH_SHORT).show()
-                                }
-                            ) {
-                                Text(
-                                    "⚖ Rata 100",
-                                    color = TextSecondary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
-                                )
-                            }
-                        }
-
-                        // AI Studio shortcut
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = NeonBlue.copy(alpha = 0.15f),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.4f)),
-                            modifier = Modifier.clickable { onOpenAiGenerator() }
+                    // AI Studio Button (Pinned Right, Fixed Size, Never Squished!)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = NeonBlue.copy(alpha = 0.12f),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.4f)),
+                        modifier = Modifier.clickable { onOpenAiGenerator() }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = NeonBlue, modifier = Modifier.size(12.dp))
-                                Text("AI Studio", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            Icon(
+                                Icons.Default.AutoAwesome,
+                                contentDescription = null,
+                                tint = NeonBlue,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Text(
+                                "AI Studio",
+                                color = NeonBlue,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                }
+
+                // ── ROW 2: Sub-bar for Points Summary & Auto-Balance Action ──
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(CosmicSurface2)
+                        .padding(horizontal = 10.dp, vertical = 7.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Total Bobot:", color = TextTertiary, fontSize = 11.sp)
+                        Text(
+                            "${state.totalPoints} poin",
+                            color = if (state.totalPoints == 100) TeacherNeon else Color(0xFFF59E0B),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        if (state.totalPoints != 100) {
+                            Text(
+                                "(Target 100)",
+                                color = TextTertiary,
+                                fontSize = 10.sp
+                            )
+                        }
+                    }
+
+                    if (state.questionsList.isNotEmpty()) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = CosmicNavy,
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                            modifier = Modifier.clickable {
+                                viewModel.balancePoints(100)
+                                Toast.makeText(context, "Poin otomatis dibagi rata ke 100!", Toast.LENGTH_SHORT).show()
                             }
+                        ) {
+                            Text(
+                                "⚖ Bagi Rata 100",
+                                color = TextSecondary,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
                         }
                     }
                 }
@@ -800,21 +834,7 @@ private fun QuizQuestionForm(
                             )
                         }
 
-                        if (isViewingExisting) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = NeonBlue.copy(alpha = 0.15f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.35f))
-                            ) {
-                                Text(
-                                    "✨ AI Ready",
-                                    color = NeonBlue,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
-                                )
-                            }
-                        }
+
                     }
 
                     // Duplicate and Delete actions
@@ -919,7 +939,20 @@ private fun QuizQuestionForm(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("Bobot Poin Soal:", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Text("Bobot Poin Soal:", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(TeacherNeon.copy(alpha = 0.12f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("${points}p", color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        }
+                    }
 
                     Row(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1069,7 +1102,7 @@ private fun QuizQuestionForm(
                         ) {
                             Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("+ Tambah Pilihan (${'A' + options.size})", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text("Tambah Pilihan (${'A' + options.size})", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1179,13 +1212,16 @@ private fun QuizQuestionForm(
                         enabled = qText.isNotBlank() && !state.isLoading,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1.3f).height(44.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = CosmicSurface3, contentColor = TeacherNeon),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.6f))
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = TeacherNeon,
+                            contentColor = Color.White
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                     ) {
                         Text(
                             if (canGoNext) "Simpan & Lanjut ke #${selectedQuestionIndex + 2} →"
                             else if (isViewingExisting) "Simpan Butir #${selectedQuestionIndex + 1} ✓"
-                            else "+ Simpan Soal Baru",
+                            else "Simpan Soal Baru ✓",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1212,7 +1248,7 @@ private fun QuizQuestionForm(
                     ) {
                         Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("+ Butir Baru", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text("Butir Baru", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
 
                     Button(
@@ -1233,7 +1269,10 @@ private fun QuizQuestionForm(
                         enabled = !state.isLoading,
                         modifier = Modifier.weight(1.3f).height(48.dp),
                         shape = RoundedCornerShape(14.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White)
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (LocalIsDarkTheme.current) CosmicSurface3 else Color(0xFF1E293B),
+                            contentColor = Color.White
+                        )
                     ) {
                         if (state.isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
