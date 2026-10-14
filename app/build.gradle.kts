@@ -51,16 +51,24 @@ android {
                 debugSymbolLevel = "FULL"
             }
             
-            val keystoreFile = localProps.getProperty("release.keystoreFile")
-            if (!keystoreFile.isNullOrEmpty() && file(keystoreFile).exists()) {
+            val keystoreProp = localProps.getProperty("release.keystoreFile")?.replace("\\:", ":")
+            val resolvedKeystore = when {
+                !keystoreProp.isNullOrEmpty() && file(keystoreProp).exists() -> file(keystoreProp)
+                !keystoreProp.isNullOrEmpty() && rootProject.file(keystoreProp).exists() -> rootProject.file(keystoreProp)
+                rootProject.file("keystore/schoolos-upload.jks").exists() -> rootProject.file("keystore/schoolos-upload.jks")
+                else -> null
+            }
+            if (resolvedKeystore != null && resolvedKeystore.exists()) {
                 val releaseSigning = signingConfigs.create("release") {
-                    storeFile = file(keystoreFile)
-                    storePassword = localProps.getProperty("release.storePassword", "")
-                    keyAlias = localProps.getProperty("release.keyAlias", "")
-                    keyPassword = localProps.getProperty("release.keyPassword", "")
+                    storeFile = resolvedKeystore
+                    storePassword = localProps.getProperty("release.storePassword", "jzgXawzZWVMzUF3DYrHqm9Xs")
+                    keyAlias = localProps.getProperty("release.keyAlias", "schoolos-upload")
+                    keyPassword = localProps.getProperty("release.keyPassword", "jzgXawzZWVMzUF3DYrHqm9Xs")
                 }
                 signingConfig = releaseSigning
+                logger.lifecycle(">>> SIGNING RELEASE WITH KEYSTORE: ${resolvedKeystore.absolutePath}")
             } else {
+                logger.warn(">>> WARNING: RELEASE KEYSTORE NOT FOUND! FALLING BACK TO DEBUG SIGNING")
                 signingConfig = signingConfigs.getByName("debug")
             }
         }
