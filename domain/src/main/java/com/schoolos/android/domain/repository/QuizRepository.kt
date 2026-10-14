@@ -25,6 +25,7 @@ interface QuizRepository {
         choices: List<ChoiceInput>
     ): Result<QuizQuestion>
     suspend fun publishQuiz(id: String): Result<Quiz>
+    suspend fun deleteQuiz(id: String): Result<Unit>
     suspend fun startAttempt(quizId: String): Result<QuizAttempt>
     suspend fun submitAttempt(quizId: String, attemptId: String, answers: List<AnswerInput>): Result<QuizAttempt>
     suspend fun getQuizAttempts(quizId: String): Result<List<QuizAttempt>>

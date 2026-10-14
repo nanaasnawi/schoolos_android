@@ -287,6 +287,9 @@ interface SchoolOsApi {
     @POST("learning/quizzes/{id}/publish")
     suspend fun publishQuiz(@Path("id") id: String): ApiResponse<QuizDto>
 
+    @DELETE("learning/quizzes/{id}")
+    suspend fun deleteQuiz(@Path("id") id: String): ApiResponse<Unit>
+
     @PATCH("notifications/{id}/read")
     suspend fun markNotificationRead(@Path("id") id: String): ApiResponse<Unit>
 
