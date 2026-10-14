@@ -30,6 +30,9 @@ import com.schoolos.android.core.designsystem.AiGenerationType
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.GeneratedMaterialResult
+import com.schoolos.android.domain.model.UnifiedAcademicClass
+import com.schoolos.android.domain.model.groupParallelClasses
+import com.schoolos.android.domain.model.findClass
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -71,32 +74,25 @@ fun MaterialAiGeneratorScreen(
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     // Configuration States
-    val gradeOptions = remember {
-        listOf(
-            "Kelas 1 SD", "Kelas 2 SD", "Kelas 3 SD", "Kelas 4 SD", "Kelas 5 SD", "Kelas 6 SD",
-            "Kelas 7 SMP", "Kelas 8 SMP", "Kelas 9 SMP",
-            "Kelas 10 SMA", "Kelas 11 SMA", "Kelas 12 SMA",
-            "Paket A (Setara SD)", "Paket B (Setara SMP)", "Paket C (Setara SMA)"
-        )
-    }
-
     var selectedMode by remember { mutableStateOf("INFOGRAPHIC") } // "INFOGRAPHIC" | "ARTICLE"
     var customTopic by remember { mutableStateOf("") }
-    var selectedGrade by remember { mutableStateOf("Kelas 5 SD") }
 
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
         mutableStateOf(matched ?: availableSubjects.firstOrNull())
     }
 
-    var selectedClass by remember(currentClassName, availableClasses) {
-        val matched = availableClasses.find { it.name.equals(currentClassName, ignoreCase = true) }
-        mutableStateOf(matched ?: availableClasses.firstOrNull())
+    val unifiedClasses = remember(availableClasses) {
+        availableClasses.groupParallelClasses()
+    }
+
+    var selectedClass by remember(currentClassName, unifiedClasses) {
+        val matched = unifiedClasses.findClass(currentClassName)
+        mutableStateOf(matched ?: unifiedClasses.firstOrNull())
     }
 
     var isSubjectDropdownOpen by remember { mutableStateOf(false) }
     var isClassDropdownOpen by remember { mutableStateOf(false) }
-    var isGradeDropdownOpen by remember { mutableStateOf(false) }
 
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     var currentGenJob by remember { mutableStateOf<Job?>(null) }
@@ -126,7 +122,7 @@ fun MaterialAiGeneratorScreen(
             currentStep = MaterialGenStep.GENERATING
 
             val effectiveSubName = subject?.name ?: currentSubjectName
-            val effectiveGrade = selectedClass?.name ?: selectedGrade
+            val effectiveGrade = selectedClass?.memberClassNames?.firstOrNull() ?: selectedClass?.displayName ?: currentClassName
 
             currentGenJob = scope.launch {
                 val res = onGenerateRequest(
@@ -354,84 +350,45 @@ fun MaterialAiGeneratorScreen(
                             }
                         }
 
-                        // 3. TARGET KELAS & JENJANG
+                        // 3. TARGET ROMBEL
                         item {
-                            Text("Target Rombel & Jenjang", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Target Rombel *", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             Spacer(Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                // Rombel / Kelas
-                                Box(modifier = Modifier.weight(1f)) {
-                                    OutlinedCard(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { isClassDropdownOpen = true },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = CardDefaults.outlinedCardColors(containerColor = colorScheme.surface)
+                            Box(modifier = Modifier.fillMaxWidth()) {
+                                OutlinedCard(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable { isClassDropdownOpen = true },
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = CardDefaults.outlinedCardColors(containerColor = colorScheme.surface)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = selectedClass?.name ?: currentClassName.ifBlank { "Pilih Kelas" },
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.Medium,
-                                                maxLines = 1
-                                            )
-                                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = colorScheme.onSurfaceVariant)
-                                        }
-                                    }
-                                    DropdownMenu(
-                                        expanded = isClassDropdownOpen,
-                                        onDismissRequest = { isClassDropdownOpen = false }
-                                    ) {
-                                        availableClasses.forEach { cls ->
-                                            DropdownMenuItem(
-                                                text = { Text(cls.name, fontSize = 12.sp) },
-                                                onClick = {
-                                                    selectedClass = cls
-                                                    isClassDropdownOpen = false
-                                                }
-                                            )
-                                        }
+                                        Text(
+                                            text = selectedClass?.displayName ?: currentClassName.ifBlank { "Pilih Rombel / Kelas" },
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = colorScheme.onSurface,
+                                            maxLines = 1
+                                        )
+                                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = colorScheme.onSurfaceVariant)
                                     }
                                 }
-
-                                // Jenjang Kurikulum
-                                Box(modifier = Modifier.weight(1f)) {
-                                    OutlinedCard(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable { isGradeDropdownOpen = true },
-                                        shape = RoundedCornerShape(12.dp),
-                                        colors = CardDefaults.outlinedCardColors(containerColor = colorScheme.surface)
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 12.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(text = selectedGrade, fontSize = 12.sp, fontWeight = FontWeight.Medium, maxLines = 1)
-                                            Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = colorScheme.onSurfaceVariant)
-                                        }
-                                    }
-                                    DropdownMenu(
-                                        expanded = isGradeDropdownOpen,
-                                        onDismissRequest = { isGradeDropdownOpen = false }
-                                    ) {
-                                        gradeOptions.forEach { gr ->
-                                            DropdownMenuItem(
-                                                text = { Text(gr, fontSize = 12.sp) },
-                                                onClick = {
-                                                    selectedGrade = gr
-                                                    isGradeDropdownOpen = false
-                                                }
-                                            )
-                                        }
+                                DropdownMenu(
+                                    expanded = isClassDropdownOpen,
+                                    onDismissRequest = { isClassDropdownOpen = false }
+                                ) {
+                                    unifiedClasses.forEach { cls ->
+                                        DropdownMenuItem(
+                                            text = { Text(cls.displayName, fontSize = 13.sp) },
+                                            onClick = {
+                                                selectedClass = cls
+                                                isClassDropdownOpen = false
+                                            }
+                                        )
                                     }
                                 }
                             }
