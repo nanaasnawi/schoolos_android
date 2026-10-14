@@ -38,6 +38,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
@@ -131,17 +132,13 @@ fun AssignmentListScreen(
         },
         floatingActionButton = {
             if (isTeacher) {
-                TeacherSpeedDialFab(
-                    expanded = speedDialExpanded,
-                    onToggle = { speedDialExpanded = !speedDialExpanded },
-                    onCreateAssignment = {
-                        speedDialExpanded = false
-                        onCreateAssignment()
-                    },
-                    onCreateQuiz = {
-                        speedDialExpanded = false
-                        onCreateQuiz()
-                    }
+                ExtendedFloatingActionButton(
+                    onClick = onCreateAssignment,
+                    containerColor = TeacherNeon,
+                    contentColor = Color.White,
+                    shape = RoundedCornerShape(16.dp),
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("Buat Tugas", fontWeight = FontWeight.Bold) }
                 )
             }
         }

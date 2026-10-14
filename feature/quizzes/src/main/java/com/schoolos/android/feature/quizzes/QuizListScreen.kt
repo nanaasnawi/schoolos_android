@@ -97,14 +97,14 @@ fun QuizListScreen(
         },
         floatingActionButton = {
             if (isTeacher) {
-                FloatingActionButton(
+                ExtendedFloatingActionButton(
                     onClick = onCreateQuiz,
-                    containerColor = StudentNeon,
+                    containerColor = TeacherNeon,
                     contentColor = Color.White,
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Buat Kuis")
-                }
+                    shape = RoundedCornerShape(16.dp),
+                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
+                    text = { Text("Buat Kuis", fontWeight = FontWeight.Bold) }
+                )
             }
         }
     ) { padding ->

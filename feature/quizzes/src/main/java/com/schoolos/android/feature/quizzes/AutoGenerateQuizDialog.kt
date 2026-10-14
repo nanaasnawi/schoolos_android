@@ -130,27 +130,14 @@ fun AutoGenerateQuizDialog(
                                 horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Text(
-                                    text = "Sintesis Kuis (AI NVIDIA)",
+                                    text = "Sintesis Kuis (AI)",
                                     fontSize = 15.sp,
                                     fontWeight = FontWeight.Black,
                                     color = colorScheme.onSurface
                                 )
-                                Surface(
-                                    color = colorScheme.tertiaryContainer,
-                                    shape = RoundedCornerShape(6.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.tertiary.copy(alpha = 0.5f))
-                                ) {
-                                    Text(
-                                        text = "NVIDIA NIM",
-                                        color = colorScheme.onTertiaryContainer,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
                             }
                             Text(
-                                text = "Penyusunan CBT via NVIDIA NIM (Llama-3-70B)",
+                                text = "Penyusunan paket kuis CBT Kurikulum Merdeka",
                                 fontSize = 11.sp,
                                 color = colorScheme.onSurfaceVariant
                             )

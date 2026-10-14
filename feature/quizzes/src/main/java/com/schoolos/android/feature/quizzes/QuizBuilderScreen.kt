@@ -29,9 +29,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.ui.window.Dialog
+import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.*
+import com.schoolos.android.domain.model.groupParallelClasses
+import com.schoolos.android.domain.model.findClass
 
 private val VioletGradient = Brush.linearGradient(
     colors = listOf(Color(0xFF6D28D9), Color(0xFF7C3AED), Color(0xFF4338CA))
@@ -47,6 +49,56 @@ fun QuizBuilderScreen(
     viewModel: QuizBuilderViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    var showAiGenerateDialog by remember { mutableStateOf(false) }
+
+    if (showAiGenerateDialog) {
+        val selectedSubject = state.availableSubjects.firstOrNull()?.name ?: ""
+        val selectedClass = state.availableClasses.firstOrNull()?.name ?: ""
+        QuizAiGeneratorScreen(
+            availableSubjects = state.availableSubjects,
+            availableClasses = state.availableClasses,
+            currentSubjectName = selectedSubject,
+            currentClassName = selectedClass,
+            onBack = { showAiGenerateDialog = false },
+            onApply = { generated ->
+                val targetClassId = state.availableClasses.firstOrNull()?.id ?: ""
+                val targetClassName = state.availableClasses.firstOrNull()?.name ?: ""
+                viewModel.applyGeneratedQuiz(
+                    classId = targetClassId,
+                    className = targetClassName,
+                    generated = generated,
+                    onSuccess = {
+                        showAiGenerateDialog = false
+                        Toast.makeText(context, "✓ Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
+                    },
+                    onError = { err ->
+                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
+                    }
+                )
+            },
+            onGenerateRequest = { type, subId, subName, clsId, clsName, topic, numQuestions, numMcq, numEssay, difficulty, includeImages ->
+                viewModel.generateQuizAsync(
+                    type = type,
+                    subjectId = subId,
+                    subjectName = subName,
+                    classId = clsId,
+                    className = clsName,
+                    topic = topic,
+                    numQuestions = numQuestions,
+                    numMcq = numMcq,
+                    numEssay = numEssay,
+                    difficulty = difficulty,
+                    includeImages = includeImages,
+                )
+            }
+        )
+        return
+    }
+
+    androidx.activity.compose.BackHandler(enabled = state.currentStep == 2) {
+        viewModel.goToStep(1)
+    }
 
     Scaffold(
         containerColor = CosmicBlack,
@@ -58,7 +110,13 @@ fun QuizBuilderScreen(
                         "Langkah 1/2 • Pengaturan Evaluasi"
                     else
                         "Langkah 2/2 • Penyusunan Butir Soal",
-                    onBack = onBack,
+                    onBack = {
+                        if (state.currentStep == 2) {
+                            viewModel.goToStep(1)
+                        } else {
+                            onBack()
+                        }
+                    },
                 )
                 // Sleek Step Progress Indicator
                 Row(
@@ -98,9 +156,9 @@ fun QuizBuilderScreen(
             modifier = Modifier.padding(padding)
         ) { step ->
             if (step == 1) {
-                QuizInfoForm(viewModel)
+                QuizInfoForm(viewModel, onOpenAiGenerator = { showAiGenerateDialog = true })
             } else {
-                QuizQuestionForm(viewModel, onFinish)
+                QuizQuestionForm(viewModel, onFinish = onFinish, onOpenAiGenerator = { showAiGenerateDialog = true })
             }
         }
     }
@@ -108,11 +166,19 @@ fun QuizBuilderScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
+private fun QuizInfoForm(
+    viewModel: QuizBuilderViewModel,
+    onOpenAiGenerator: () -> Unit = {}
+) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 
-    val classOptions = remember(state.availableClasses) { state.availableClasses.map { it.name } }
+    val unifiedClasses = remember(state.availableClasses) {
+        state.availableClasses.groupParallelClasses()
+    }
+    val classOptions = remember(unifiedClasses) {
+        unifiedClasses.map { it.displayName }
+    }
     val subjectOptions = remember(state.availableSubjects) { state.availableSubjects.map { it.name } }
 
     var selectedClass by remember { mutableStateOf("") }
@@ -121,7 +187,13 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
     var isSubjectMenuExpanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(classOptions) {
-        if (selectedClass.isEmpty() && classOptions.isNotEmpty()) selectedClass = classOptions.first()
+        if (selectedClass.isEmpty() && classOptions.isNotEmpty()) {
+            selectedClass = classOptions.first()
+        } else if (selectedClass.isNotEmpty()) {
+            unifiedClasses.findClass(selectedClass)?.let {
+                selectedClass = it.displayName
+            }
+        }
     }
     LaunchedEffect(subjectOptions) {
         if (selectedSubject.isEmpty() && subjectOptions.isNotEmpty()) selectedSubject = subjectOptions.first()
@@ -130,52 +202,6 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
     var title by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var selectedDuration by remember { mutableStateOf(30) }
-    var showAiGenerateDialog by remember { mutableStateOf(false) }
-
-    if (showAiGenerateDialog) {
-        QuizAiGeneratorScreen(
-            availableSubjects = state.availableSubjects,
-            availableClasses = state.availableClasses,
-            currentSubjectName = selectedSubject,
-            currentClassName = selectedClass,
-            onBack = { showAiGenerateDialog = false },
-            onApply = { generated ->
-                title = generated.title
-                desc = generated.description ?: ""
-                selectedSubject = generated.subjectName.ifBlank { selectedSubject }
-                selectedDuration = generated.timeLimitMinutes
-                val targetClassId = state.availableClasses.find { it.name == selectedClass }?.id ?: ""
-                viewModel.applyGeneratedQuiz(
-                    classId = targetClassId,
-                    className = selectedClass,
-                    generated = generated,
-                    onSuccess = {
-                        showAiGenerateDialog = false
-                        Toast.makeText(context, "✓ Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
-                    },
-                    onError = { err ->
-                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
-                    }
-                )
-            },
-            onGenerateRequest = { type, subId, subName, clsId, clsName, topic, numQuestions, numMcq, numEssay, difficulty, includeImages ->
-                viewModel.generateQuizAsync(
-                    type = type,
-                    subjectId = subId,
-                    subjectName = subName,
-                    classId = clsId,
-                    className = clsName,
-                    topic = topic,
-                    numQuestions = numQuestions,
-                    numMcq = numMcq,
-                    numEssay = numEssay,
-                    difficulty = difficulty,
-                    includeImages = includeImages,
-                )
-            }
-        )
-        return
-    }
 
     Column(
         modifier = Modifier
@@ -188,9 +214,9 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showAiGenerateDialog = true },
+                .clickable { onOpenAiGenerator() },
             shape = RoundedCornerShape(16.dp),
-            color = CosmicNavy,
+            color = if (LocalIsDarkTheme.current) CosmicNavy else MaterialTheme.colorScheme.surface,
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
                 Brush.horizontalGradient(
@@ -237,33 +263,19 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = "✨ Generate Kuis / Ujian (AI NVIDIA NIM)",
+                            text = "✨ Generate Kuis / Ujian (AI)",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
                         )
                         Text(
-                            text = "Generate bank soal CBT otomatis bertenaga NVIDIA NIM",
+                            text = "Generate bank soal CBT otomatis berbasis Kurikulum Merdeka",
                             fontSize = 11.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                     }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = MaterialTheme.colorScheme.tertiaryContainer,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f))
-                ) {
-                    Text(
-                        text = "NVIDIA NIM",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onTertiaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
                 }
             }
         }
@@ -415,7 +427,9 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
                 }
                 val fullTitle = if (title.startsWith(selectedSubject)) title else "$selectedSubject: $title"
                 val fullDesc = "$selectedSubject • $selectedClass • $desc"
-                val targetClassId = state.availableClasses.find { it.name == selectedClass }?.id ?: selectedClass
+                val targetClassId = unifiedClasses.findClass(selectedClass)?.primaryId
+                    ?: state.availableClasses.find { it.name == selectedClass }?.id
+                    ?: selectedClass
                 viewModel.createQuiz(
                     title = fullTitle.trim(),
                     description = fullDesc.trim(),
@@ -451,7 +465,11 @@ private fun QuizInfoForm(viewModel: QuizBuilderViewModel) {
 }
 
 @Composable
-private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Unit) {
+private fun QuizQuestionForm(
+    viewModel: QuizBuilderViewModel,
+    onFinish: () -> Unit,
+    onOpenAiGenerator: () -> Unit = {}
+) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
 
@@ -533,16 +551,36 @@ private fun QuizQuestionForm(viewModel: QuizBuilderViewModel, onFinish: () -> Un
                             "Butir Soal Tersusun (${state.questionsList.size} Soal):",
                             color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold
                         )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(TeacherNeon.copy(alpha = 0.12f))
-                                .padding(horizontal = 10.dp, vertical = 4.dp)
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                "Total: ${state.totalPoints} Poin",
-                                color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Black
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(TeacherNeon.copy(alpha = 0.12f))
+                                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    "Total: ${state.totalPoints} Poin",
+                                    color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Black
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = NeonBlue.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.4f)),
+                                modifier = Modifier.clickable { onOpenAiGenerator() }
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = NeonBlue, modifier = Modifier.size(12.dp))
+                                    Text("AI Studio", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
 

@@ -459,6 +459,20 @@ class MaterialCreatorViewModel @Inject constructor(
         }
     }
 
+    suspend fun generateMaterialAsync(
+        mode: String,
+        topic: String,
+        gradeLevel: String = "Kelas 5 SD",
+        subjectName: String,
+    ): Result<com.schoolos.android.domain.model.GeneratedMaterialResult> {
+        return generatorRepository.generateMaterial(
+            mode = mode,
+            topic = topic,
+            gradeLevel = gradeLevel,
+            subjectName = subjectName
+        )
+    }
+
     fun generateMaterialWithAi(
         mode: String,
         topic: String,
@@ -489,7 +503,7 @@ class MaterialCreatorViewModel @Inject constructor(
                 onSuccess(res.title, res.description)
             }.onFailure { err ->
                 _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
-                onError(err.message ?: "Gagal menyusun materi dengan AI NVIDIA NIM")
+                onError(err.message ?: "Gagal menyusun materi dengan AI")
             }
         }
     }

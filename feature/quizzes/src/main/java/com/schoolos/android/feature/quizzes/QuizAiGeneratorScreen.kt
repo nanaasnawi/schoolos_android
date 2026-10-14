@@ -110,8 +110,25 @@ fun QuizAiGeneratorScreen(
     }
 
     var isSubjectDropdownOpen by remember { mutableStateOf(false) }
-    var isClassDropdownOpen by remember { mutableStateOf(false) }
     var isGradeDropdownOpen by remember { mutableStateOf(false) }
+
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    var lastBackPressTime by remember { mutableLongStateOf(0L) }
+    var currentGenJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+    androidx.activity.compose.BackHandler(enabled = currentStep == QuizGenStep.GENERATING) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastBackPressTime < 2000L) {
+            currentGenJob?.cancel()
+            currentStep = QuizGenStep.CONFIGURE
+            android.widget.Toast.makeText(context, "Proses AI dibatalkan", android.widget.Toast.LENGTH_SHORT).show()
+        } else {
+            lastBackPressTime = currentTime
+            android.widget.Toast.makeText(context, "Tekan sekali lagi untuk membatalkan proses AI", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
 
     val handleStartGeneration = {
         val subject = selectedSubject
@@ -127,7 +144,7 @@ fun QuizAiGeneratorScreen(
             val effectiveTopic = customTopic.trim().ifBlank { subject.name }
             val typeStr = if (examScope == "MONTHLY_EXAM") "EXAM_MONTHLY" else (if (selectedFormat == "MIXED") "QUIZ_MCQ_ESSAY" else "QUIZ_MCQ_ONLY")
 
-            scope.launch {
+            currentGenJob = scope.launch {
                 val res = onGenerateRequest(
                     typeStr,
                     subject.id,
@@ -145,8 +162,10 @@ fun QuizAiGeneratorScreen(
                     generatedResult = result
                     currentStep = QuizGenStep.VERIFY
                 }.onFailure { err ->
-                    errorMessage = err.message ?: "Gagal menyusun paket kuis CBT dengan AI"
-                    currentStep = QuizGenStep.CONFIGURE
+                    if (err !is kotlinx.coroutines.CancellationException) {
+                        errorMessage = err.message ?: "Gagal menyusun paket kuis CBT dengan AI"
+                        currentStep = QuizGenStep.CONFIGURE
+                    }
                 }
             }
         }
@@ -246,75 +265,35 @@ fun QuizAiGeneratorScreen(
                             }
                         }
 
-                        // 1. Mapel & Kelas
+                        // 1. Mapel
                         item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            Text("Mata Pelajaran (Mapel)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Spacer(Modifier.height(6.dp))
+                            ExposedDropdownMenuBox(
+                                expanded = isSubjectDropdownOpen,
+                                onExpandedChange = { isSubjectDropdownOpen = it }
                             ) {
-                                Column(modifier = Modifier.weight(1.2f)) {
-                                    Text("Mata Pelajaran (Mapel)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Spacer(Modifier.height(6.dp))
-                                    ExposedDropdownMenuBox(
-                                        expanded = isSubjectDropdownOpen,
-                                        onExpandedChange = { isSubjectDropdownOpen = it }
-                                    ) {
-                                        OutlinedTextField(
-                                            value = selectedSubject?.name ?: "Pilih Mapel",
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownOpen) },
-                                            modifier = Modifier.fillMaxWidth().menuAnchor(),
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanPrimary)
-                                        )
-                                        ExposedDropdownMenu(
-                                            expanded = isSubjectDropdownOpen,
-                                            onDismissRequest = { isSubjectDropdownOpen = false }
-                                        ) {
-                                            availableSubjects.forEach { sub ->
-                                                DropdownMenuItem(
-                                                    text = { Text(sub.name, fontSize = 12.sp) },
-                                                    onClick = {
-                                                        selectedSubject = sub
-                                                        isSubjectDropdownOpen = false
-                                                    }
-                                                )
+                                OutlinedTextField(
+                                    value = selectedSubject?.name ?: "Pilih Mapel",
+                                    onValueChange = {},
+                                    readOnly = true,
+                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownOpen) },
+                                    modifier = Modifier.fillMaxWidth().menuAnchor(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanPrimary)
+                                )
+                                ExposedDropdownMenu(
+                                    expanded = isSubjectDropdownOpen,
+                                    onDismissRequest = { isSubjectDropdownOpen = false }
+                                ) {
+                                    availableSubjects.forEach { sub ->
+                                        DropdownMenuItem(
+                                            text = { Text(sub.name, fontSize = 12.sp) },
+                                            onClick = {
+                                                selectedSubject = sub
+                                                isSubjectDropdownOpen = false
                                             }
-                                        }
-                                    }
-                                }
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Kelas Target", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Spacer(Modifier.height(6.dp))
-                                    ExposedDropdownMenuBox(
-                                        expanded = isClassDropdownOpen,
-                                        onExpandedChange = { isClassDropdownOpen = it }
-                                    ) {
-                                        OutlinedTextField(
-                                            value = selectedClass?.name ?: "Pilih Kelas",
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isClassDropdownOpen) },
-                                            modifier = Modifier.fillMaxWidth().menuAnchor(),
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanPrimary)
                                         )
-                                        ExposedDropdownMenu(
-                                            expanded = isClassDropdownOpen,
-                                            onDismissRequest = { isClassDropdownOpen = false }
-                                        ) {
-                                            availableClasses.forEach { cls ->
-                                                DropdownMenuItem(
-                                                    text = { Text(cls.name, fontSize = 12.sp) },
-                                                    onClick = {
-                                                        selectedClass = cls
-                                                        isClassDropdownOpen = false
-                                                    }
-                                                )
-                                            }
-                                        }
                                     }
                                 }
                             }
@@ -509,17 +488,31 @@ fun QuizAiGeneratorScreen(
                                                     )
                                                 }
                                             }
-                                            OutlinedTextField(
-                                                value = customMcqInput,
-                                                onValueChange = {
-                                                    customMcqInput = it
-                                                    it.toIntOrNull()?.let { v -> if (v in 1..30) numMcq = v }
-                                                },
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                modifier = Modifier.width(60.dp).height(46.dp),
-                                                shape = RoundedCornerShape(8.dp),
-                                                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
-                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(54.dp)
+                                                    .height(34.dp)
+                                                    .background(colorScheme.surface, RoundedCornerShape(8.dp))
+                                                    .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                androidx.compose.foundation.text.BasicTextField(
+                                                    value = customMcqInput,
+                                                    onValueChange = {
+                                                        customMcqInput = it
+                                                        it.toIntOrNull()?.let { v -> if (v in 1..30) numMcq = v }
+                                                    },
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true,
+                                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                        color = colorScheme.onSurface
+                                                    ),
+                                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
+                                                )
+                                            }
                                         }
                                     }
 
@@ -559,17 +552,31 @@ fun QuizAiGeneratorScreen(
                                                         )
                                                     }
                                                 }
-                                                OutlinedTextField(
-                                                    value = customEssayInput,
-                                                    onValueChange = {
-                                                        customEssayInput = it
-                                                        it.toIntOrNull()?.let { v -> if (v in 1..20) numEssay = v }
-                                                    },
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                    modifier = Modifier.width(60.dp).height(46.dp),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
-                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(54.dp)
+                                                        .height(34.dp)
+                                                        .background(colorScheme.surface, RoundedCornerShape(8.dp))
+                                                        .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    androidx.compose.foundation.text.BasicTextField(
+                                                        value = customEssayInput,
+                                                        onValueChange = {
+                                                            customEssayInput = it
+                                                            it.toIntOrNull()?.let { v -> if (v in 1..20) numEssay = v }
+                                                        },
+                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                        singleLine = true,
+                                                        textStyle = androidx.compose.ui.text.TextStyle(
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                            color = colorScheme.onSurface
+                                                        ),
+                                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                     }
@@ -648,13 +655,15 @@ fun QuizAiGeneratorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFF0A0F1D))
+                        .background(colorScheme.background),
+                    contentAlignment = Alignment.Center
                 ) {
                     AiGenerationLoadingOverlay(
                         isVisible = true,
                         type = AiGenerationType.QUIZ,
                         subjectName = selectedSubject?.name ?: currentSubjectName,
-                        topic = customTopic.ifBlank { selectedSubject?.name ?: "Umum" }
+                        topic = customTopic.ifBlank { selectedSubject?.name ?: "Umum" },
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }

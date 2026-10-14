@@ -60,12 +60,11 @@ fun TeacherSessionDetailContent(
         }
     }
     val presentCount = effectiveStudents.count { it.status.lowercase() == "present" }
-    val lateCount = effectiveStudents.count { it.status.lowercase() == "late" }
     val absentCount = effectiveStudents.count {
         it.status.lowercase() in listOf("absent", "sick", "excused")
     }
     val totalCount = effectiveStudents.size
-    val attendanceRate = if (totalCount > 0) ((presentCount + lateCount) * 100 / totalCount) else 0
+    val attendanceRate = if (totalCount > 0) (presentCount * 100 / totalCount) else 0
     val sessionPeriod = formatSessionPeriod(session.scheduledAt)
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -133,7 +132,7 @@ fun TeacherSessionDetailContent(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    AttendanceMiniCard("HADIR", "${presentCount + lateCount}", NeonSuccess, Modifier.weight(1f))
+                    AttendanceMiniCard("HADIR", presentCount.toString(), NeonSuccess, Modifier.weight(1f))
                     AttendanceMiniCard("TIDAK HADIR", absentCount.toString(), NeonError, Modifier.weight(1f))
                     AttendanceMiniCard("KEHADIRAN", "$attendanceRate%", accentColor, Modifier.weight(1f))
                 }
@@ -333,9 +332,8 @@ fun TeacherSessionDetailContent(
                         val currentStatus = student.status.lowercase()
                         val statusColor = when (currentStatus) {
                             "present" -> NeonSuccess
-                            "late" -> Color(0xFFFFA040)
-                            "excused" -> NeonWarning
                             "sick" -> NeonBlue
+                            "excused" -> NeonWarning
                             "absent" -> NeonError
                             else -> TextTertiary
                         }
@@ -376,7 +374,7 @@ fun TeacherSessionDetailContent(
                                 )
                             }
 
-                            // Tombol status: H=Hadir, I=Izin, S=Sakit, T=Terlambat, A=Alpa
+                            // 4 Tombol Status Presensi: H=Hadir, S=Sakit, I=Izin, A=Alpa
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 AttendanceStatusButton(
                                     label = "H",
@@ -385,22 +383,16 @@ fun TeacherSessionDetailContent(
                                     onClick = { onUpdateAttendance(student.studentId, "present") }
                                 )
                                 AttendanceStatusButton(
-                                    label = "I",
-                                    selected = currentStatus == "excused",
-                                    color = NeonWarning,
-                                    onClick = { onUpdateAttendance(student.studentId, "excused") }
-                                )
-                                AttendanceStatusButton(
                                     label = "S",
                                     selected = currentStatus == "sick",
                                     color = NeonBlue,
                                     onClick = { onUpdateAttendance(student.studentId, "sick") }
                                 )
                                 AttendanceStatusButton(
-                                    label = "T",
-                                    selected = currentStatus == "late",
-                                    color = Color(0xFFFFA040),
-                                    onClick = { onUpdateAttendance(student.studentId, "late") }
+                                    label = "I",
+                                    selected = currentStatus == "excused",
+                                    color = NeonWarning,
+                                    onClick = { onUpdateAttendance(student.studentId, "excused") }
                                 )
                                 AttendanceStatusButton(
                                     label = "A",

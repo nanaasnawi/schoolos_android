@@ -32,6 +32,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AssignmentChoice
 import com.schoolos.android.domain.model.AssignmentQuestion
+import com.schoolos.android.domain.model.groupParallelClasses
+import com.schoolos.android.domain.model.findClass
 import androidx.compose.ui.window.Dialog
 import java.time.Instant
 import java.time.temporal.ChronoUnit
@@ -55,14 +57,23 @@ fun AssignmentCreatorScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
 
-    val classOptions = remember(state.availableClasses) {
-        state.availableClasses.map { it.name }
+    val unifiedClasses = remember(state.availableClasses) {
+        state.availableClasses.groupParallelClasses()
+    }
+    val classOptions = remember(unifiedClasses) {
+        unifiedClasses.map { it.displayName }
     }
     val subjectOptions = remember(state.availableSubjects) {
         state.availableSubjects.map { it.name }
     }
 
-    var selectedClass by remember { mutableStateOf(initialClass ?: "") }
+    var selectedClass by remember {
+        mutableStateOf(
+            unifiedClasses.findClass(initialClass)?.displayName
+                ?: initialClass
+                ?: ""
+        )
+    }
     var selectedSubject by remember { mutableStateOf(initialSubject ?: "") }
     var isClassMenuExpanded by remember { mutableStateOf(false) }
     var isSubjectMenuExpanded by remember { mutableStateOf(false) }
@@ -70,6 +81,10 @@ fun AssignmentCreatorScreen(
     LaunchedEffect(classOptions) {
         if (selectedClass.isEmpty() && classOptions.isNotEmpty()) {
             selectedClass = classOptions.first()
+        } else if (selectedClass.isNotEmpty()) {
+            unifiedClasses.findClass(selectedClass)?.let {
+                selectedClass = it.displayName
+            }
         }
     }
 
@@ -140,7 +155,9 @@ fun AssignmentCreatorScreen(
 
     if (showPrePublishReview) {
         val calculatedDueDate = Instant.now().plus(selectedDueDays.toLong(), ChronoUnit.DAYS).toString()
-        val targetClassId = state.availableClasses.find { it.name == selectedClass }?.id ?: selectedClass
+        val targetClassId = unifiedClasses.findClass(selectedClass)?.primaryId
+            ?: state.availableClasses.find { it.name == selectedClass }?.id
+            ?: selectedClass
         val parsedScore = customMaxScore.toIntOrNull() ?: 100
         val fullDesc = "$selectedSubject • $selectedClass • $description"
 
@@ -256,7 +273,7 @@ fun AssignmentCreatorScreen(
                     .fillMaxWidth()
                     .clickable { showAiGenerateDialog = true },
                 shape = RoundedCornerShape(16.dp),
-                color = CosmicNavy,
+                color = if (LocalIsDarkTheme.current) CosmicNavy else MaterialTheme.colorScheme.surface,
                 border = androidx.compose.foundation.BorderStroke(
                     1.dp,
                     Brush.horizontalGradient(
@@ -303,33 +320,19 @@ fun AssignmentCreatorScreen(
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = "✨ Generate Tugas (AI NVIDIA NIM)",
+                                text = "✨ Generate Tugas (AI)",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
                             Text(
-                                text = "Sintesis tugas & soal otomatis bertenaga NVIDIA NIM",
+                                text = "Sintesis tugas & soal otomatis berbasis Kurikulum Merdeka",
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f))
-                    ) {
-                        Text(
-                            text = "NVIDIA NIM",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
                     }
                 }
             }
@@ -853,23 +856,33 @@ private fun QuestionBuilderCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text("Poin:", color = TextTertiary, fontSize = 11.sp)
-                    OutlinedTextField(
-                        value = (question.points ?: 10).toString(),
-                        onValueChange = { newVal ->
-                            val p = newVal.filter { it.isDigit() }.toIntOrNull() ?: 10
-                            onPointsChange(p)
-                        },
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                        modifier = Modifier.width(60.dp).height(44.dp),
-                        shape = RoundedCornerShape(8.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = NeonSuccess,
-                            unfocusedBorderColor = GlassBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
-                        ),
-                        singleLine = true
-                    )
+                    Box(
+                        modifier = Modifier
+                            .width(54.dp)
+                            .height(34.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(CosmicSurface)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = (question.points ?: 10).toString(),
+                            onValueChange = { newVal ->
+                                val p = newVal.filter { it.isDigit() }.toIntOrNull() ?: 10
+                                onPointsChange(p)
+                            },
+                            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                            singleLine = true,
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                textAlign = TextAlign.Center,
+                                color = TextPrimary
+                            ),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(NeonSuccess),
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                        )
+                    }
 
                     if (canDelete) {
                         IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {

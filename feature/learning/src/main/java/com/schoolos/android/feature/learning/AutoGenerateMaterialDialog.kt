@@ -132,22 +132,9 @@ fun AutoGenerateMaterialDialog(
                                     fontWeight = FontWeight.Black,
                                     color = colorScheme.onSurface
                                 )
-                                Surface(
-                                    shape = RoundedCornerShape(6.dp),
-                                    color = colorScheme.tertiaryContainer,
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.tertiary.copy(alpha = 0.5f))
-                                ) {
-                                    Text(
-                                        text = "NVIDIA NIM",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = colorScheme.onTertiaryContainer,
-                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                    )
-                                }
                             }
                             Text(
-                                text = "NVIDIA NIM AI • Zero Local Mock",
+                                text = "Sintesis materi berbasis Kurikulum Merdeka",
                                 fontSize = 11.sp,
                                 color = colorScheme.onSurfaceVariant
                             )
@@ -391,7 +378,7 @@ fun AutoGenerateMaterialDialog(
                     ) {
                         Text(text = "⚡", fontSize = 14.sp)
                         Text(
-                            text = "NVIDIA NIM AI: Menyusun narasi, headline, callout dan visual ilustrasi materi siap ajar.",
+                            text = "AI Assistant: Menyusun narasi, headline, callout dan visual ilustrasi materi siap ajar.",
                             fontSize = 11.sp,
                             color = colorScheme.onSecondaryContainer,
                             lineHeight = 15.sp

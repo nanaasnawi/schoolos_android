@@ -49,6 +49,9 @@ import com.schoolos.android.feature.learning.components.InAppVideoPlayer
 import androidx.compose.ui.window.Dialog
 import android.content.Intent
 
+import com.schoolos.android.domain.model.groupParallelClasses
+import com.schoolos.android.domain.model.findClass
+
 private fun queryFileName(context: android.content.Context, uri: Uri): String? {
     var result: String? = null
     if (uri.scheme == "content") {
@@ -90,14 +93,23 @@ fun MaterialCreatorScreen(
     val context = LocalContext.current
     val state by viewModel.state.collectAsState()
 
-    val classOptions = remember(state.availableClasses) {
-        state.availableClasses.map { it.name }
+    val unifiedClasses = remember(state.availableClasses) {
+        state.availableClasses.groupParallelClasses()
+    }
+    val classOptions = remember(unifiedClasses) {
+        unifiedClasses.map { it.displayName }
     }
     val subjectOptions = remember(state.availableSubjects) {
         state.availableSubjects.map { it.name }
     }
 
-    var selectedClass by remember { mutableStateOf(initialClass ?: "") }
+    var selectedClass by remember {
+        mutableStateOf(
+            unifiedClasses.findClass(initialClass)?.displayName
+                ?: initialClass
+                ?: ""
+        )
+    }
     var selectedSubject by remember { mutableStateOf(initialSubject ?: "") }
     var isClassMenuExpanded by remember { mutableStateOf(false) }
     var isSubjectMenuExpanded by remember { mutableStateOf(false) }
@@ -105,6 +117,10 @@ fun MaterialCreatorScreen(
     LaunchedEffect(classOptions) {
         if (selectedClass.isEmpty() && classOptions.isNotEmpty()) {
             selectedClass = classOptions.first()
+        } else if (selectedClass.isNotEmpty()) {
+            unifiedClasses.findClass(selectedClass)?.let {
+                selectedClass = it.displayName
+            }
         }
     }
 
@@ -115,7 +131,8 @@ fun MaterialCreatorScreen(
     }
 
     LaunchedEffect(selectedClass, selectedSubject, state.availableBooks) {
-        viewModel.updateRecommendation(selectedClass, selectedSubject)
+        val resolvedName = unifiedClasses.findClass(selectedClass)?.memberClassNames?.firstOrNull() ?: selectedClass
+        viewModel.updateRecommendation(resolvedName, selectedSubject)
     }
 
     var selectedType by remember { mutableStateOf(MaterialType.DOCUMENT) }
@@ -183,37 +200,45 @@ fun MaterialCreatorScreen(
     }
 
     if (showAiGenerateDialog) {
-        AutoGenerateMaterialDialog(
-            isOpen = showAiGenerateDialog,
-            onDismiss = { showAiGenerateDialog = false },
+        MaterialAiGeneratorScreen(
             availableSubjects = state.availableSubjects,
             availableClasses = state.availableClasses,
             currentSubjectName = selectedSubject,
             currentClassName = selectedClass,
-            isGenerating = state.isGeneratingAi,
-            onGenerate = { mode, subName, topic, gradeLevel ->
-                viewModel.generateMaterialWithAi(
+            onBack = { showAiGenerateDialog = false },
+            onApply = { generated ->
+                title = generated.title
+                description = generated.description
+                selectedType = if (generated.mode == "INFOGRAPHIC") MaterialType.IMAGE else MaterialType.ARTICLE
+                val newBlocks = generated.blocks.map { b ->
+                    ContentBlock(
+                        id = b.id,
+                        type = if (b.type.equals("IMAGE", ignoreCase = true)) ContentBlockType.IMAGE else ContentBlockType.TEXT,
+                        content = b.content
+                    )
+                }
+                if (newBlocks.isNotEmpty()) {
+                    viewModel.contentBlocks.value = newBlocks
+                }
+                showAiGenerateDialog = false
+                Toast.makeText(context, "✓ Materi \"${generated.title}\" berhasil diterapkan!", Toast.LENGTH_SHORT).show()
+            },
+            onGenerateRequest = { mode, subName, topic, gradeLevel ->
+                viewModel.generateMaterialAsync(
                     mode = mode,
                     topic = topic,
                     gradeLevel = gradeLevel,
-                    subjectName = subName,
-                    onSuccess = { genTitle, genDesc ->
-                        title = genTitle
-                        description = genDesc
-                        selectedType = if (mode == "INFOGRAPHIC") MaterialType.IMAGE else MaterialType.ARTICLE
-                        showAiGenerateDialog = false
-                        Toast.makeText(context, "✓ Materi \"$genTitle\" berhasil disusun via NVIDIA NIM!", Toast.LENGTH_SHORT).show()
-                    },
-                    onError = { err ->
-                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
-                    }
+                    subjectName = subName
                 )
             }
         )
+        return
     }
 
     if (showPrePublishDialog) {
-        val targetClassId = state.availableClasses.find { it.name == selectedClass }?.id ?: selectedClass
+        val targetClassId = unifiedClasses.findClass(selectedClass)?.primaryId
+            ?: state.availableClasses.find { it.name == selectedClass }?.id
+            ?: selectedClass
         val targetSubjectId = state.availableSubjects.find { it.name == selectedSubject }?.id
         val startP = startPageInput.toIntOrNull() ?: 1
         val endP = endPageInput.toIntOrNull() ?: minOf(startP + 10, selectedBook?.totalPages ?: 100)
@@ -478,7 +503,7 @@ fun MaterialCreatorScreen(
                     .fillMaxWidth()
                     .clickable { showAiGenerateDialog = true },
                 shape = RoundedCornerShape(16.dp),
-                color = CosmicNavy,
+                color = if (LocalIsDarkTheme.current) CosmicNavy else MaterialTheme.colorScheme.surface,
                 border = BorderStroke(
                     1.dp,
                     Brush.horizontalGradient(
@@ -525,7 +550,7 @@ fun MaterialCreatorScreen(
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = "✨ Generate Materi (AI NVIDIA NIM)",
+                                text = "✨ Generate Materi (AI)",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -538,20 +563,6 @@ fun MaterialCreatorScreen(
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.tertiaryContainer,
-                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.tertiary.copy(alpha = 0.4f))
-                    ) {
-                        Text(
-                            text = "NVIDIA NIM",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onTertiaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
                     }
                 }
             }

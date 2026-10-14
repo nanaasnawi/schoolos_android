@@ -155,16 +155,21 @@ class AssignmentCreatorViewModel @Inject constructor(
 
     fun applyGeneratedAssignment(result: com.schoolos.android.domain.model.GeneratedCurriculumResult) {
         val convertedQuestions = result.questions.mapIndexed { idx, q ->
+            val cleanStem = if (q.questionType.equals("MULTIPLE_CHOICE", ignoreCase = true)) {
+                cleanQuestionStem(q.questionText)
+            } else {
+                q.questionText.trim()
+            }
             AssignmentQuestion(
                 id = null,
-                questionText = q.questionText,
+                questionText = cleanStem,
                 questionType = q.questionType,
                 points = q.points,
                 orderIndex = idx + 1,
                 choices = q.choices.mapIndexed { cIdx, c ->
                     AssignmentChoice(
                         id = null,
-                        choiceText = c.choiceText,
+                        choiceText = cleanChoiceText(c.choiceText),
                         isCorrect = c.isCorrect,
                         orderIndex = cIdx + 1
                     )
@@ -195,6 +200,15 @@ class AssignmentCreatorViewModel @Inject constructor(
 
     fun setAssignmentFormat(format: String) {
         _state.value = _state.value.copy(assignmentFormat = format)
+    }
+
+    fun resetState() {
+        _state.value = _state.value.copy(
+            isLoading = false,
+            success = false,
+            error = null,
+            questions = listOf(defaultMultipleChoiceQuestion(1))
+        )
     }
 
     fun addMultipleChoiceQuestion() {
@@ -317,12 +331,47 @@ class AssignmentCreatorViewModel @Inject constructor(
         }
     }
 
-    fun resetState() {
-        _state.value = _state.value.copy(
-            isLoading = false,
-            success = false,
-            error = null,
-            questions = listOf(defaultMultipleChoiceQuestion(1)),
-        )
+    private fun cleanChoiceText(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.length >= 2) {
+            val first = trimmed[0]
+            if (first.isLetter()) {
+                val punct = trimmed[1]
+                if (punct == '.' || punct == ')' || punct == ':' || punct == '-') {
+                    return trimmed.substring(2).trimStart()
+                }
+            }
+        }
+        return trimmed
+    }
+
+    private fun cleanQuestionStem(raw: String): String {
+        val lines = raw.lines()
+        if (lines.size <= 1) return raw.trim()
+
+        var cutIdx = lines.size
+        for (i in lines.indices.reversed()) {
+            val line = lines[i].trim()
+            if (line.isEmpty()) continue
+            val isChoiceLine = if (line.length >= 2) {
+                val first = line[0]
+                if (first.isLetter()) {
+                    val punct = line[1]
+                    punct == '.' || punct == ')' || punct == ':' || punct == '-'
+                } else false
+            } else false
+
+            if (isChoiceLine) {
+                cutIdx = i
+            } else {
+                break
+            }
+        }
+
+        return if (cutIdx in 1 until lines.size) {
+            lines.subList(0, cutIdx).joinToString("\n").trim()
+        } else {
+            raw.trim()
+        }
     }
 }

@@ -252,19 +252,16 @@ fun StudentSessionDetailContent(
                     attendance.forEach { att ->
                         val statusColor = when (att.status.lowercase()) {
                             "present" -> NeonSuccess
-                            "late" -> Color(0xFFFFA040)
                             "excused" -> NeonWarning
                             "sick" -> NeonBlue
                             else -> NeonError
                         }
                         val statusIcon = when (att.status.lowercase()) {
                             "present" -> Icons.Default.CheckCircle
-                            "late" -> Icons.Default.Schedule
                             else -> Icons.Default.Schedule
                         }
                         val statusLabel = when (att.status.lowercase()) {
                             "present" -> "Hadir (Daring / Luring)"
-                            "late" -> "Terlambat"
                             "excused" -> "Izin"
                             "sick" -> "Sakit"
                             "absent" -> "Alpa (Tidak Hadir)"
