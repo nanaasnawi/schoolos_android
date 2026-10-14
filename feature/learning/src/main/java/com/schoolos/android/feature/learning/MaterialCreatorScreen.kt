@@ -243,7 +243,7 @@ fun MaterialCreatorScreen(
         val startP = startPageInput.toIntOrNull() ?: 1
         val endP = endPageInput.toIntOrNull() ?: minOf(startP + 10, selectedBook?.totalPages ?: 100)
 
-        PrePublishMaterialReviewDialog(
+        MaterialReviewAndPublishScreen(
             title = title.trim(),
             description = description.trim(),
             selectedType = selectedType,
@@ -255,7 +255,7 @@ fun MaterialCreatorScreen(
             startPage = startP.toString(),
             endPage = endP.toString(),
             isLoading = state.isLoading,
-            onDismiss = { showPrePublishDialog = false },
+            onBackToEdit = { showPrePublishDialog = false },
             onConfirmPublish = {
                 if (selectedType == MaterialType.DOCUMENT && pdfSourceMode == "SIBI" && selectedBook != null) {
                     viewModel.assignReadingBook(
@@ -279,6 +279,7 @@ fun MaterialCreatorScreen(
                 }
             }
         )
+        return
     }
 
     val documentPickerLauncher = rememberLauncherForActivityResult(
@@ -1772,7 +1773,7 @@ private fun LibraryBookCatalogSheetContent(
 }
 
 @Composable
-private fun PrePublishMaterialReviewDialog(
+private fun MaterialReviewAndPublishScreen(
     title: String,
     description: String,
     selectedType: MaterialType,
@@ -1784,235 +1785,47 @@ private fun PrePublishMaterialReviewDialog(
     startPage: String,
     endPage: String,
     isLoading: Boolean,
-    onDismiss: () -> Unit,
+    onBackToEdit: () -> Unit,
     onConfirmPublish: () -> Unit,
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = CosmicNavy,
-            border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.5f))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
+    androidx.activity.compose.BackHandler(onBack = onBackToEdit)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) CosmicNavy else MaterialTheme.colorScheme.surface
+    val cardBorder = if (isDark) GlassBorder else MaterialTheme.colorScheme.outlineVariant
+    val itemBg = if (isDark) CosmicSurface2 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+
+    Scaffold(
+        containerColor = if (isDark) CosmicBlack else MaterialTheme.colorScheme.background,
+        topBar = {
+            ExecutiveTopBar(
+                title = "Pratinjau Materi & Modul",
+                subtitle = "Peninjauan Akhir Sebelum Resmi Diterbitkan",
+                onBack = onBackToEdit
+            )
+        },
+        bottomBar = {
+            Surface(
+                color = cardBg,
+                tonalElevation = 8.dp,
+                shadowElevation = 12.dp,
+                border = BorderStroke(0.5.dp, cardBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Header
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(EmeraldGlow.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Visibility, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(20.dp))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Pratinjau Tampilan Siswa", color = TextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                            Text("Realtime tampilan modul sebelum diterbitkan", color = TextSecondary, fontSize = 11.sp)
-                        }
-                    }
-                    IconButton(onClick = onDismiss, enabled = !isLoading) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextPrimary)
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                // Scrollable Simulated Student View
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    // Target Rombel & Subject Banner
-                    Surface(
-                        color = CosmicSurface2,
-                        shape = RoundedCornerShape(14.dp),
-                        border = BorderStroke(0.5.dp, GlassBorder),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("🎯", fontSize = 18.sp)
-                            Column {
-                                Text("Akan Diterbitkan Untuk:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
-                                Text(
-                                    text = "Kelas $selectedClass • $selectedSubject",
-                                    color = EmeraldGlow,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    // Student Material Card Simulator
-                    Surface(
-                        color = CosmicBlack,
-                        shape = RoundedCornerShape(18.dp),
-                        border = BorderStroke(1.dp, GlassBorder),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            // Badge Row
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    color = EmeraldGlow.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = when (selectedType) {
-                                            MaterialType.VIDEO -> "VIDEO PEMBELAJARAN"
-                                            MaterialType.DOCUMENT -> if (selectedBook != null) "BUKU SIBI KEMENDIKBUD" else "MODUL PDF"
-                                            MaterialType.IMAGE -> "INFOGRAFIS / GAMBAR"
-                                            MaterialType.ARTICLE -> "ARTIKEL BACAAN"
-                                        },
-                                        color = EmeraldGlow,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Black,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-
-                                Text("Status: Segera Terbit", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            // Title & Description
-                            Text(
-                                text = title.ifBlank { "(Tanpa Judul)" },
-                                color = TextPrimary,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 22.sp
-                            )
-
-                            if (description.isNotBlank()) {
-                                Text(
-                                    text = description,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp
-                                )
-                            }
-
-                            HorizontalDivider(color = GlassBorder)
-
-                            // Media preview
-                            if (selectedBook != null) {
-                                Surface(
-                                    color = CosmicSurface2,
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.4f)),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                    ) {
-                                        Text("📕", fontSize = 24.sp)
-                                        Column(modifier = Modifier.weight(1f)) {
-                                            Text(selectedBook.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                            Text(
-                                                "Siswa membaca Hal. $startPage s/d $endPage",
-                                                color = EmeraldGlow,
-                                                fontWeight = FontWeight.SemiBold,
-                                                fontSize = 11.sp
-                                            )
-                                        }
-                                    }
-                                }
-                            } else if (selectedType == MaterialType.VIDEO && mediaUrl.isNotBlank()) {
-                                Surface(
-                                    color = CosmicSurface2,
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(0.5.dp, GlassBorder),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            Text("▶️", fontSize = 16.sp)
-                                            Text("Tautan Video Pembelajaran:", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
-                                        }
-                                        Text(mediaUrl, color = NeonBlue, fontSize = 11.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                    }
-                                }
-                            } else if (selectedType == MaterialType.ARTICLE && contentBody.isNotBlank()) {
-                                Surface(
-                                    color = CosmicSurface2,
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Text(
-                                        contentBody,
-                                        color = TextSecondary,
-                                        fontSize = 12.sp,
-                                        lineHeight = 18.sp,
-                                        modifier = Modifier.padding(12.dp)
-                                    )
-                                }
-                            } else if (mediaUrl.isNotBlank()) {
-                                Surface(
-                                    color = CosmicSurface2,
-                                    shape = RoundedCornerShape(12.dp),
-                                    modifier = Modifier.fillMaxWidth()
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Text("📎", fontSize = 18.sp)
-                                        Text("Berkas Lampiran Digital Tersedia", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // Action Footer
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
                     OutlinedButton(
-                        onClick = onDismiss,
+                        onClick = onBackToEdit,
                         enabled = !isLoading,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(48.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                        border = BorderStroke(1.dp, GlassBorder)
+                        border = BorderStroke(1.dp, cardBorder)
                     ) {
                         Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
@@ -2036,6 +1849,194 @@ private fun PrePublishMaterialReviewDialog(
                     }
                 }
             }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Target Rombel & Subject Banner
+            Surface(
+                color = cardBg,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, cardBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("🎯", fontSize = 22.sp)
+                    Column {
+                        Text("Akan Diterbitkan Untuk:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Kelas $selectedClass • $selectedSubject",
+                            color = EmeraldGlow,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // Student Material Card Simulator
+            Surface(
+                color = cardBg,
+                shape = RoundedCornerShape(18.dp),
+                border = BorderStroke(1.dp, cardBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Badge Row
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            color = EmeraldGlow.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = when (selectedType) {
+                                    MaterialType.VIDEO -> "VIDEO PEMBELAJARAN"
+                                    MaterialType.DOCUMENT -> if (selectedBook != null) "BUKU SIBI KEMENDIKBUD" else "MODUL PDF"
+                                    MaterialType.IMAGE -> "INFOGRAFIS / GAMBAR"
+                                    MaterialType.ARTICLE -> "ARTIKEL BACAAN"
+                                },
+                                color = EmeraldGlow,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+
+                        Text("Status: Siap Terbit", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    // Title & Description
+                    Text(
+                        text = title.ifBlank { "(Tanpa Judul)" },
+                        color = TextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 24.sp
+                    )
+
+                    if (description.isNotBlank()) {
+                        Surface(
+                            color = itemBg,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("Deskripsi / Petunjuk Belajar:", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = description,
+                                    color = TextSecondary,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+                    }
+
+                    HorizontalDivider(color = cardBorder)
+
+                    // Media preview
+                    if (selectedBook != null) {
+                        Surface(
+                            color = itemBg,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.4f)),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Text("📕", fontSize = 26.sp)
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(selectedBook.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        "Siswa diarahkan membaca Hal. $startPage s/d $endPage",
+                                        color = EmeraldGlow,
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            }
+                        }
+                    } else if (selectedType == MaterialType.VIDEO && mediaUrl.isNotBlank()) {
+                        Surface(
+                            color = itemBg,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(0.5.dp, cardBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Text("▶️", fontSize = 16.sp)
+                                    Text("Tautan Video Pembelajaran:", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                                }
+                                Text(mediaUrl, color = NeonBlue, fontSize = 11.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            }
+                        }
+                    } else if (selectedType == MaterialType.ARTICLE && contentBody.isNotBlank()) {
+                        Surface(
+                            color = itemBg,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(0.5.dp, cardBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("Isi Konten Artikel:", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    contentBody,
+                                    color = TextSecondary,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+                    } else if (mediaUrl.isNotBlank()) {
+                        Surface(
+                            color = itemBg,
+                            shape = RoundedCornerShape(12.dp),
+                            border = BorderStroke(0.5.dp, cardBorder),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text("📎", fontSize = 20.sp)
+                                Column {
+                                    Text("Berkas Lampiran Digital Tersedia", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                    Text(mediaUrl, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
         }
     }
 }

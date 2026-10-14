@@ -97,8 +97,12 @@ fun QuizBuilderScreen(
         return
     }
 
-    androidx.activity.compose.BackHandler(enabled = state.currentStep == 2) {
-        viewModel.goToStep(1)
+    androidx.activity.compose.BackHandler(enabled = state.currentStep > 1) {
+        if (state.currentStep == 3) {
+            viewModel.goToStep(2)
+        } else if (state.currentStep == 2) {
+            viewModel.goToStep(1)
+        }
     }
 
     Scaffold(
@@ -106,20 +110,25 @@ fun QuizBuilderScreen(
         topBar = {
             Column(modifier = Modifier.fillMaxWidth().background(CosmicNavy)) {
                 ExecutiveTopBar(
-                    title = if (state.currentStep == 1) "Konfigurasi Kuis CBT" else "Bank Soal & Kunci Jawaban",
-                    subtitle = if (state.currentStep == 1)
-                        "Langkah 1/2 • Pengaturan Evaluasi"
-                    else
-                        "Langkah 2/2 • Penyusunan Butir Soal",
+                    title = when (state.currentStep) {
+                        1 -> "Konfigurasi Kuis CBT"
+                        2 -> "Bank Soal & Kunci Jawaban"
+                        else -> "Pratinjau Kuis & Terbitkan"
+                    },
+                    subtitle = when (state.currentStep) {
+                        1 -> "Langkah 1/3 • Pengaturan Evaluasi"
+                        2 -> "Langkah 2/3 • Penyusunan Butir Soal"
+                        else -> "Langkah 3/3 • Peninjauan Akhir & Publikasi"
+                    },
                     onBack = {
-                        if (state.currentStep == 2) {
-                            viewModel.goToStep(1)
-                        } else {
-                            onBack()
+                        when (state.currentStep) {
+                            3 -> viewModel.goToStep(2)
+                            2 -> viewModel.goToStep(1)
+                            else -> onBack()
                         }
                     },
                 )
-                // Sleek Step Progress Indicator
+                // Sleek Step Progress Indicator (3 segments)
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -142,7 +151,18 @@ fun QuizBuilderScreen(
                             .height(4.dp)
                             .clip(RoundedCornerShape(2.dp))
                             .background(
-                                if (state.currentStep == 2) TeacherNeon
+                                if (state.currentStep >= 2) TeacherNeon
+                                else CosmicSurface3
+                            )
+                    )
+                    // Step 3 Segment
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(4.dp)
+                            .clip(RoundedCornerShape(2.dp))
+                            .background(
+                                if (state.currentStep >= 3) TeacherNeon
                                 else CosmicSurface3
                             )
                     )
@@ -156,10 +176,18 @@ fun QuizBuilderScreen(
             label = "quiz_step",
             modifier = Modifier.padding(padding)
         ) { step ->
-            if (step == 1) {
-                QuizInfoForm(viewModel, onOpenAiGenerator = { showAiGenerateDialog = true })
-            } else {
-                QuizQuestionForm(viewModel, onFinish = onFinish, onOpenAiGenerator = { showAiGenerateDialog = true })
+            when (step) {
+                1 -> QuizInfoForm(viewModel, onOpenAiGenerator = { showAiGenerateDialog = true })
+                2 -> QuizQuestionForm(
+                    viewModel = viewModel,
+                    onGoToPreview = { viewModel.goToStep(3) },
+                    onOpenAiGenerator = { showAiGenerateDialog = true }
+                )
+                else -> QuizReviewAndPublishPage(
+                    viewModel = viewModel,
+                    onBackToEdit = { viewModel.goToStep(2) },
+                    onFinish = onFinish
+                )
             }
         }
     }
@@ -468,7 +496,7 @@ private fun QuizInfoForm(
 @Composable
 private fun QuizQuestionForm(
     viewModel: QuizBuilderViewModel,
-    onFinish: () -> Unit,
+    onGoToPreview: () -> Unit,
     onOpenAiGenerator: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsState()
@@ -480,7 +508,6 @@ private fun QuizQuestionForm(
     var points by remember { mutableStateOf("10") }
     var correctOptionIndex by remember { mutableIntStateOf(0) }
     val options = remember { mutableStateListOf("Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D") }
-    var showPrePublishReview by remember { mutableStateOf(false) }
 
     // Indeks butir soal yang sedang dilihat / diedit
     var selectedQuestionIndex by remember { mutableIntStateOf(0) }
@@ -559,19 +586,6 @@ private fun QuizQuestionForm(
                 }
             )
         }
-    }
-
-    if (showPrePublishReview) {
-        PrePublishQuizReviewDialog(
-            state = state,
-            onDismiss = { showPrePublishReview = false },
-            onConfirmPublish = {
-                viewModel.publishCreatedQuiz {
-                    Toast.makeText(context, "✓ Kuis CBT berhasil diterbitkan!", Toast.LENGTH_SHORT).show()
-                    onFinish()
-                }
-            }
-        )
     }
 
     Column(
@@ -1255,7 +1269,7 @@ private fun QuizQuestionForm(
                         onClick = {
                             if (qText.isNotBlank() && !isViewingExisting) {
                                 saveCurrentDraft(notify = false) {
-                                    showPrePublishReview = true
+                                    onGoToPreview()
                                 }
                             } else if (state.questionsList.isEmpty()) {
                                 Toast.makeText(context, "Silakan buat setidaknya 1 butir soal terlebih dahulu!", Toast.LENGTH_SHORT).show()
@@ -1263,7 +1277,7 @@ private fun QuizQuestionForm(
                                 if (qText.isNotBlank() && isViewingExisting) {
                                     saveCurrentDraft(notify = false)
                                 }
-                                showPrePublishReview = true
+                                onGoToPreview()
                             }
                         },
                         enabled = !state.isLoading,
@@ -1414,225 +1428,282 @@ private fun QuizTextField(
 }
 
 @Composable
-private fun PrePublishQuizReviewDialog(
-    state: QuizBuilderUiState,
-    onDismiss: () -> Unit,
-    onConfirmPublish: () -> Unit,
+private fun QuizReviewAndPublishPage(
+    viewModel: QuizBuilderViewModel,
+    onBackToEdit: () -> Unit,
+    onFinish: () -> Unit,
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+    val state by viewModel.state.collectAsState()
+    val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) CosmicNavy else MaterialTheme.colorScheme.surface
+    val cardBorder = if (isDark) GlassBorder else MaterialTheme.colorScheme.outlineVariant
+    val itemBg = if (isDark) CosmicSurface2 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(if (isDark) CosmicBlack else MaterialTheme.colorScheme.background)
     ) {
-        Surface(
+        // Scrollable content
+        Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = CosmicNavy,
-            border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.5f))
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
+            // Summary Card
+            Surface(
+                color = cardBg,
+                shape = RoundedCornerShape(18.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Header
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f, fill = false)
+                        ) {
+                            Text("🎯", fontSize = 18.sp)
+                            Column {
+                                Text(
+                                    "Kelas ${state.className.ifBlank { "Semua" }} • ${state.subjectName.ifBlank { "Umum" }}",
+                                    color = TeacherNeon,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(
+                                    state.createdQuizTitle.ifBlank { "Kuis CBT Terjadwal" },
+                                    color = TextPrimary,
+                                    fontSize = 15.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(TeacherNeon.copy(alpha = 0.15f)),
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(NeonWarning.copy(alpha = 0.15f))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                "⏱️ ${state.timeLimitMinutes} Menit",
+                                color = NeonWarning,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    // 3 Stats Metrics
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(itemBg)
+                                .padding(10.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Visibility, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(20.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Total Soal", fontSize = 10.sp, color = TextTertiary)
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "${state.questionsList.size}",
+                                    color = TextPrimary,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
                         }
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Pratinjau Kuis & CBT", color = TextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                            Text("Periksa butir soal & kunci jawaban sebelum terbit", color = TextSecondary, fontSize = 11.sp)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(itemBg)
+                                .padding(10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("Total Skor", fontSize = 10.sp, color = TextTertiary)
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "${state.totalPoints} Poin",
+                                    color = if (state.totalPoints == 100) NeonSuccess else Color(0xFFF59E0B),
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
                         }
-                    }
-                    IconButton(onClick = onDismiss, enabled = !state.isLoading) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextPrimary)
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(itemBg)
+                                .padding(10.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Text("KKM Lulus", fontSize = 10.sp, color = TextTertiary)
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    "${state.passingScore}",
+                                    color = NeonBlue,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
                     }
                 }
+            }
 
-                Spacer(Modifier.height(14.dp))
-
-                // Scrollable Simulated Student View
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
+            // Info notice callout
+            Surface(
+                color = TeacherNeon.copy(alpha = 0.08f),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    // Summary Banner
-                    Surface(
-                        color = CosmicSurface2,
-                        shape = RoundedCornerShape(14.dp),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("🎯", fontSize = 18.sp)
-                                    Text(
-                                        "Kelas ${state.className.ifBlank { "Semua" }} • ${state.subjectName.ifBlank { "Umum" }}",
-                                        color = TeacherNeon,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(6.dp))
-                                        .background(NeonWarning.copy(alpha = 0.15f))
-                                        .padding(horizontal = 8.dp, vertical = 3.dp)
-                                ) {
-                                    Text("⏱️ ${state.timeLimitMinutes} Menit", color = NeonWarning, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(CosmicBlack)
-                                        .padding(8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("Total Soal", fontSize = 10.sp, color = TextTertiary)
-                                        Text("${state.questionsList.size}", color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(CosmicBlack)
-                                        .padding(8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("Total Skor", fontSize = 10.sp, color = TextTertiary)
-                                        Text("${state.totalPoints} Poin", color = NeonSuccess, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                                Box(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(CosmicBlack)
-                                        .padding(8.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text("KKM Lulus", fontSize = 10.sp, color = TextTertiary)
-                                        Text("${state.passingScore}", color = NeonBlue, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Questions List
+                    Text("💡", fontSize = 16.sp)
                     Text(
-                        "Daftar Butir Soal Terkonfigurasi:",
-                        color = TextPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
+                        "Periksa seluruh butir soal dan kunci jawaban di bawah ini. Setelah tombol 'Terbitkan Kuis CBT' ditekan, paket kuis akan aktif dan siap dikerjakan oleh siswa di rombel sasaran.",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                        lineHeight = 16.sp
                     )
+                }
+            }
 
-                    for (q in state.questionsList) {
-                        val isPg = q.type == "MULTIPLE_CHOICE"
-                        Surface(
-                            color = CosmicBlack,
-                            shape = RoundedCornerShape(14.dp),
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-                            modifier = Modifier.fillMaxWidth()
+            // Section Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Daftar Butir Soal Terkonfigurasi:",
+                    color = TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black
+                )
+                Text(
+                    "${state.questionsList.size} Butir Siap Terbit",
+                    color = TeacherNeon,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            // Questions list
+            for (q in state.questionsList) {
+                val isPg = q.type == "MULTIPLE_CHOICE"
+                Surface(
+                    color = cardBg,
+                    shape = RoundedCornerShape(14.dp),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(if (isPg) NeonBlue.copy(alpha = 0.15f) else TeacherNeon.copy(alpha = 0.15f))
-                                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isPg) NeonBlue.copy(alpha = 0.15f) else TeacherNeon.copy(alpha = 0.15f))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text(
+                                    "Soal #${q.number} • ${if (isPg) "Pilihan Ganda" else "Esai / Uraian"}",
+                                    color = if (isPg) NeonBlue else TeacherNeon,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                "${q.points} Poin",
+                                color = NeonSuccess,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        Text(
+                            q.text,
+                            color = TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium,
+                            lineHeight = 18.sp
+                        )
+
+                        if (isPg && q.choices.isNotEmpty()) {
+                            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                for ((cIdx, choiceText) in q.choices.withIndex()) {
+                                    val isCorrect = cIdx == q.correctIndex
+                                    val letter = ('A' + cIdx).toString()
+                                    Surface(
+                                        color = if (isCorrect) NeonSuccess.copy(alpha = 0.12f) else itemBg,
+                                        shape = RoundedCornerShape(8.dp),
+                                        border = androidx.compose.foundation.BorderStroke(
+                                            0.5.dp,
+                                            if (isCorrect) NeonSuccess else cardBorder
+                                        ),
+                                        modifier = Modifier.fillMaxWidth()
                                     ) {
-                                        Text(
-                                            "Soal #${q.number} • ${if (isPg) "Pilihan Ganda" else "Esai"}",
-                                            color = if (isPg) NeonBlue else TeacherNeon,
-                                            fontSize = 10.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                    Text("${q.points} Poin", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-
-                                Text(q.text, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-
-                                if (isPg && q.choices.isNotEmpty()) {
-                                    for ((cIdx, choiceText) in q.choices.withIndex()) {
-                                        val isCorrect = cIdx == q.correctIndex
-                                        val letter = ('A' + cIdx).toString()
-                                        Surface(
-                                            color = if (isCorrect) NeonSuccess.copy(alpha = 0.12f) else CosmicSurface2,
-                                            shape = RoundedCornerShape(8.dp),
-                                            border = androidx.compose.foundation.BorderStroke(
-                                                0.5.dp,
-                                                if (isCorrect) NeonSuccess else GlassBorder
-                                            ),
-                                            modifier = Modifier.fillMaxWidth()
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(22.dp)
+                                                    .clip(CircleShape)
+                                                    .background(if (isCorrect) NeonSuccess else CosmicSurface3),
+                                                contentAlignment = Alignment.Center
                                             ) {
-                                                Box(
-                                                    modifier = Modifier
-                                                        .size(20.dp)
-                                                        .clip(CircleShape)
-                                                        .background(if (isCorrect) NeonSuccess else CosmicSurface3),
-                                                    contentAlignment = Alignment.Center
-                                                ) {
-                                                    Text(
-                                                        letter,
-                                                        color = if (isCorrect) Color.Black else TextSecondary,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Black
-                                                    )
-                                                }
                                                 Text(
-                                                    choiceText,
-                                                    color = if (isCorrect) NeonSuccess else TextPrimary,
+                                                    letter,
+                                                    color = if (isCorrect) Color.White else TextSecondary,
                                                     fontSize = 11.sp,
-                                                    fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
-                                                    modifier = Modifier.weight(1f)
+                                                    fontWeight = FontWeight.Black
                                                 )
-                                                if (isCorrect) {
-                                                    Text("✓ Kunci", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                                }
+                                            }
+                                            Text(
+                                                choiceText,
+                                                color = if (isCorrect) NeonSuccess else TextPrimary,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
+                                                modifier = Modifier.weight(1f)
+                                            )
+                                            if (isCorrect) {
+                                                Text("✓ Kunci", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Black)
                                             }
                                         }
                                     }
@@ -1641,41 +1712,55 @@ private fun PrePublishQuizReviewDialog(
                         }
                     }
                 }
+            }
 
-                Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(10.dp))
+        }
 
-                // Action Footer
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+        // Sticky Bottom Bar
+        Surface(
+            color = cardBg,
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, cardBorder),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedButton(
+                    onClick = onBackToEdit,
+                    enabled = !state.isLoading,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1f).height(48.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
                 ) {
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        enabled = !state.isLoading,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
-                    ) {
-                        Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Koreksi / Edit", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(6.dp))
+                    Text("Koreksi / Edit", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
 
-                    Button(
-                        onClick = onConfirmPublish,
-                        enabled = !state.isLoading,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1.3f).height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White)
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
-                        } else {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Terbitkan Kuis CBT", fontWeight = FontWeight.Black, fontSize = 12.sp)
+                Button(
+                    onClick = {
+                        viewModel.publishCreatedQuiz {
+                            Toast.makeText(context, "✓ Kuis CBT berhasil diterbitkan!", Toast.LENGTH_SHORT).show()
+                            onFinish()
                         }
+                    },
+                    enabled = !state.isLoading,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.weight(1.3f).height(48.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White)
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                    } else {
+                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Terbitkan Kuis CBT", fontWeight = FontWeight.Black, fontSize = 12.sp)
                     }
                 }
             }
