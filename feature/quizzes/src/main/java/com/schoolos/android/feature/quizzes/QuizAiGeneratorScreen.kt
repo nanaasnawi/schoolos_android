@@ -729,7 +729,7 @@ fun QuizAiGeneratorScreen(
                                     ) {
                                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Ubah Parameter", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text("Ubah", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                     Button(
                                         onClick = { onApply(res) },
@@ -742,7 +742,7 @@ fun QuizAiGeneratorScreen(
                                     ) {
                                         Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("✓ Terapkan ke Kuis", fontSize = 13.sp, fontWeight = FontWeight.Black)
+                                        Text("Terapkan ke Kuis", fontSize = 13.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
