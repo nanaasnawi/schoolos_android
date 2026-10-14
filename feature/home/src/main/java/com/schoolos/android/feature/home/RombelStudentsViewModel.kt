@@ -55,10 +55,10 @@ data class RombelStudentsUiState(
     val maleCount: Int get() = filteredStudents.count { it.gender?.trim()?.uppercase() == "L" }
     val femaleCount: Int get() = filteredStudents.count { it.gender?.trim()?.uppercase() == "P" }
 
-    val hadirCount: Int get() = filteredStudents.count { (attendanceMap[it.id] ?: "HADIR").uppercase() == "HADIR" }
-    val sakitCount: Int get() = filteredStudents.count { attendanceMap[it.id]?.uppercase() == "SAKIT" }
-    val izinCount: Int get() = filteredStudents.count { attendanceMap[it.id]?.uppercase() == "IZIN" }
-    val alpaCount: Int get() = filteredStudents.count { attendanceMap[it.id]?.uppercase() == "ALPA" }
+    val hadirCount: Int get() = filteredStudents.count { (attendanceMap[it.id] ?: "present").lowercase() in listOf("present", "hadir") }
+    val sakitCount: Int get() = filteredStudents.count { attendanceMap[it.id]?.lowercase() in listOf("sick", "sakit") }
+    val izinCount: Int get() = filteredStudents.count { attendanceMap[it.id]?.lowercase() in listOf("excused", "izin") }
+    val alpaCount: Int get() = filteredStudents.count { attendanceMap[it.id]?.lowercase() in listOf("absent", "alpa") }
 }
 
 @HiltViewModel
@@ -92,9 +92,15 @@ class RombelStudentsViewModel @Inject constructor(
     }
 
     fun setStudentAttendance(studentId: String, status: String) {
+        val norm = when (status.lowercase()) {
+            "present", "hadir" -> "present"
+            "sick", "sakit" -> "sick"
+            "excused", "izin" -> "excused"
+            else -> "absent"
+        }
         _uiState.update {
             val updated = it.attendanceMap.toMutableMap()
-            updated[studentId] = status
+            updated[studentId] = norm
             it.copy(attendanceMap = updated)
         }
     }
@@ -103,7 +109,7 @@ class RombelStudentsViewModel @Inject constructor(
         val current = _uiState.value.filteredStudents
         _uiState.update {
             val updated = it.attendanceMap.toMutableMap()
-            current.forEach { s -> updated[s.id] = "HADIR" }
+            current.forEach { s -> updated[s.id] = "present" }
             it.copy(attendanceMap = updated)
         }
     }
@@ -113,37 +119,75 @@ class RombelStudentsViewModel @Inject constructor(
             _uiState.update { it.copy(isSavingAttendance = true) }
             val currentFiltered = _uiState.value.filteredStudents
             val currentAttendance = _uiState.value.attendanceMap
-            try {
-                val sessionsResult = sessionRepository.getSessions()
-                val activeSession = sessionsResult.getOrNull()?.firstOrNull { it.status.equals("active", ignoreCase = true) }
-                    ?: sessionsResult.getOrNull()?.firstOrNull()
+            val classes = _uiState.value.availableClasses
+            val selectedFilter = _uiState.value.selectedClassFilter
 
-                if (activeSession != null) {
-                    val items = currentFiltered.map { s ->
-                        val st = currentAttendance[s.id] ?: "HADIR"
-                        val statusBackend = when (st.uppercase()) {
-                            "HADIR" -> "present"
-                            "SAKIT" -> "sick"
-                            "IZIN" -> "permit"
-                            "ALPA" -> "absent"
-                            else -> "present"
-                        }
-                        RecordAttendanceItem(
-                            studentId = s.id,
-                            status = statusBackend,
-                            checkedInAt = Instant.now().toString()
-                        )
-                    }
-                    sessionRepository.recordAttendanceBulk(activeSession.id, items)
+            val studentsByClass = currentFiltered.groupBy { student ->
+                student.classId.ifBlank {
+                    classes.firstOrNull { it.name.equals(student.className, ignoreCase = true) }?.id ?: ""
                 }
-            } catch (e: Exception) {
-                Timber.e(e, "Error saving session attendance")
             }
-            delay(250)
+
+            var totalSaved = 0
+            var saveError: String? = null
+
+            for ((classId, classStudents) in studentsByClass) {
+                if (classId.isBlank()) continue
+                val items = classStudents.map { s ->
+                    val st = currentAttendance[s.id] ?: "present"
+                    val validStatus = when (st.lowercase()) {
+                        "present", "hadir" -> "present"
+                        "sick", "sakit" -> "sick"
+                        "excused", "izin" -> "excused"
+                        else -> "absent"
+                    }
+                    RecordAttendanceItem(
+                        studentId = s.id,
+                        status = validStatus,
+                        checkedInAt = if (validStatus == "present") Instant.now().toString() else null
+                    )
+                }
+                val res = sessionRepository.recordAttendanceBulk(classId, items)
+                if (res.isSuccess) {
+                    totalSaved += items.size
+                } else {
+                    saveError = res.exceptionOrNull()?.message
+                    Timber.e(res.exceptionOrNull(), "Error saving attendance for class $classId")
+                }
+            }
+
+            delay(200)
             _uiState.update { it.copy(isSavingAttendance = false) }
-            val targetLabel = if (_uiState.value.selectedClassFilter == "ALL") "semua kelas diampu" else "kelas ${_uiState.value.selectedClassFilter}"
-            onSuccess("✓ Presensi ${currentFiltered.size} siswa ($targetLabel) berhasil disimpan!")
+
+            if (totalSaved > 0) {
+                val targetLabel = if (selectedFilter == "ALL") "semua kelas diampu" else "kelas $selectedFilter"
+                onSuccess("✓ Presensi $totalSaved siswa ($targetLabel) berhasil disimpan ke database!")
+                val refreshed = fetchAttendanceForClasses(classes)
+                if (refreshed.isNotEmpty()) {
+                    _uiState.update { it.copy(attendanceMap = refreshed) }
+                }
+            } else {
+                onSuccess("Gagal menyimpan presensi: ${saveError ?: "Kelas tidak ditemukan"}")
+            }
         }
+    }
+
+    private suspend fun fetchAttendanceForClasses(classes: List<AcademicClass>): Map<String, String> {
+        val map = mutableMapOf<String, String>()
+        for (cls in classes) {
+            sessionRepository.getAttendance(cls.id).onSuccess { records ->
+                for (r in records) {
+                    val norm = when (r.status.lowercase()) {
+                        "present", "hadir", "h" -> "present"
+                        "sick", "sakit", "s" -> "sick"
+                        "excused", "izin", "i" -> "excused"
+                        else -> "absent"
+                    }
+                    map[r.studentId] = norm
+                }
+            }
+        }
+        return map
     }
 
     fun loadStudents(classNameOverride: String? = null) {
@@ -155,14 +199,16 @@ class RombelStudentsViewModel @Inject constructor(
             val classesResult = academicRepository.getClasses()
             val classes = classesResult.getOrDefault(emptyList())
 
+            val realAttendance = fetchAttendanceForClasses(classes)
+
             val studentsResult = academicRepository.getClassStudents("")
             studentsResult.onSuccess { studentList ->
-                val initialAttendance = studentList.associate { it.id to "HADIR" }
+                val mergedAttendance = studentList.associate { it.id to (realAttendance[it.id] ?: "present") }
                 _uiState.update { current ->
                     current.copy(
                         availableClasses = classes,
                         allStudents = studentList,
-                        attendanceMap = if (current.attendanceMap.isEmpty()) initialAttendance else current.attendanceMap,
+                        attendanceMap = mergedAttendance,
                         isLoading = false,
                         errorMessage = null
                     )
@@ -177,12 +223,12 @@ class RombelStudentsViewModel @Inject constructor(
                 }
                 val distinct = fallbackList.distinctBy { it.id }
                 if (distinct.isNotEmpty()) {
-                    val initialAttendance = distinct.associate { it.id to "HADIR" }
+                    val mergedAttendance = distinct.associate { it.id to (realAttendance[it.id] ?: "present") }
                     _uiState.update { current ->
                         current.copy(
                             availableClasses = classes,
                             allStudents = distinct,
-                            attendanceMap = if (current.attendanceMap.isEmpty()) initialAttendance else current.attendanceMap,
+                            attendanceMap = mergedAttendance,
                             isLoading = false,
                             errorMessage = null
                         )

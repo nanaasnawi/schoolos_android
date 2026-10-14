@@ -56,6 +56,10 @@ class QuizBuilderViewModel @Inject constructor(
         loadAcademicData()
     }
 
+    fun goToStep(step: Int) {
+        _state.value = _state.value.copy(currentStep = step)
+    }
+
     fun generateQuizWithAi(
         type: String,
         subjectId: String,
@@ -189,18 +193,51 @@ class QuizBuilderViewModel @Inject constructor(
         onSuccess: () -> Unit = {},
         onError: (String) -> Unit = {}
     ) {
+        val summaries = generated.questions.mapIndexed { idx, q ->
+            val correctIdx = q.choices.indexOfFirst { it.isCorrect }.let { if (it >= 0) it else 0 }
+            QuestionSummary(
+                number = idx + 1,
+                text = q.questionText,
+                type = q.questionType,
+                points = q.points,
+                choicesCount = q.choices.size,
+                choices = q.choices.map { it.choiceText },
+                correctIndex = correctIdx
+            )
+        }
+
+        // 1. Instantly update UI state so all generated questions appear immediately in Bank Soal
+        _state.value = _state.value.copy(
+            isLoading = false,
+            quizCreated = true,
+            createdQuizId = null,
+            createdQuizTitle = generated.title,
+            className = className,
+            subjectName = generated.subjectName,
+            timeLimitMinutes = generated.timeLimitMinutes,
+            passingScore = generated.passingScore,
+            questionsList = summaries,
+            totalPoints = summaries.sumOf { it.points },
+            currentStep = 2,
+            error = null
+        )
+        onSuccess()
+
+        // 2. Persist draft quiz and questions to server in the background
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
-            val totalComputedScore = generated.questions.sumOf { it.points }.let { if (it > 0) it else 100 }
+            val totalComputedScore = summaries.sumOf { it.points }.let { if (it > 0) it else 100 }
+            val targetClassId = classId ?: _state.value.availableClasses.find { it.name == className }?.id
+                ?: _state.value.availableClasses.firstOrNull()?.id ?: ""
+
             repository.createQuiz(
                 title = generated.title,
                 description = generated.description ?: "Kuis Otomatis • ${generated.subjectName} • $className",
-                classId = classId ?: "",
+                classId = targetClassId,
                 timeLimitMinutes = generated.timeLimitMinutes,
                 passingScore = generated.passingScore,
                 maxScore = totalComputedScore
             ).onSuccess { createdQuiz ->
-                val summaries = ArrayList<QuestionSummary>()
+                _state.value = _state.value.copy(createdQuizId = createdQuiz.id)
                 for (q in generated.questions) {
                     val choicesInputs = if (q.questionType == "MULTIPLE_CHOICE") {
                         q.choices.mapIndexed { idx, c ->
@@ -213,8 +250,6 @@ class QuizBuilderViewModel @Inject constructor(
                     } else {
                         emptyList()
                     }
-                    val correctIdx = q.choices.indexOfFirst { it.isCorrect }.let { if (it >= 0) it else 0 }
-
                     repository.addQuestion(
                         quizId = createdQuiz.id,
                         questionText = q.questionText,
@@ -223,37 +258,9 @@ class QuizBuilderViewModel @Inject constructor(
                         imageUrl = null,
                         choices = choicesInputs
                     )
-
-                    summaries.add(
-                        QuestionSummary(
-                            number = summaries.size + 1,
-                            text = q.questionText,
-                            type = q.questionType,
-                            points = q.points,
-                            choicesCount = q.choices.size,
-                            choices = q.choices.map { it.choiceText },
-                            correctIndex = correctIdx
-                        )
-                    )
                 }
-
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    quizCreated = true,
-                    createdQuizId = createdQuiz.id,
-                    createdQuizTitle = generated.title,
-                    className = className,
-                    subjectName = generated.subjectName,
-                    timeLimitMinutes = generated.timeLimitMinutes,
-                    passingScore = generated.passingScore,
-                    questionsList = summaries,
-                    totalPoints = summaries.sumOf { it.points },
-                    currentStep = 2
-                )
-                onSuccess()
             }.onFailure { err ->
-                _state.value = _state.value.copy(isLoading = false, error = err.message)
-                onError(err.message ?: "Gagal membuat draft kuis di server")
+                android.util.Log.w("QuizBuilderVM", "Background draft quiz creation failed: ${err.message}")
             }
         }
     }
@@ -393,14 +400,54 @@ class QuizBuilderViewModel @Inject constructor(
     }
 
     fun publishCreatedQuiz(onComplete: () -> Unit = {}) {
-        val quizId = _state.value.createdQuizId
-        if (quizId.isNullOrBlank()) {
-            onComplete()
-            return
-        }
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true)
-            repository.publishQuiz(quizId)
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val existingQuizId = _state.value.createdQuizId
+            val finalQuizId = if (existingQuizId.isNullOrBlank()) {
+                val targetClassId = _state.value.availableClasses.find { it.name == _state.value.className }?.id
+                    ?: _state.value.availableClasses.firstOrNull()?.id ?: ""
+                val totalComputedScore = _state.value.questionsList.sumOf { it.points }.let { if (it > 0) it else 100 }
+                val title = _state.value.createdQuizTitle.ifBlank { "Paket Soal CBT: ${_state.value.subjectName}" }
+                val desc = "Kuis Otomatis • ${_state.value.subjectName} • ${_state.value.className}"
+                val createRes = repository.createQuiz(
+                    title = title,
+                    description = desc,
+                    classId = targetClassId,
+                    timeLimitMinutes = _state.value.timeLimitMinutes,
+                    passingScore = _state.value.passingScore,
+                    maxScore = totalComputedScore
+                )
+                val newQuiz = createRes.getOrNull()
+                if (newQuiz != null) {
+                    _state.value = _state.value.copy(createdQuizId = newQuiz.id)
+                    for (q in _state.value.questionsList) {
+                        val choicesInputs = if (q.type == "MULTIPLE_CHOICE") {
+                            q.choices.mapIndexed { idx, cText ->
+                                ChoiceInput(choiceText = cText, orderIndex = idx + 1, isCorrect = idx == q.correctIndex)
+                            }
+                        } else emptyList()
+                        repository.addQuestion(
+                            quizId = newQuiz.id,
+                            questionText = q.text,
+                            questionType = if (q.type == "MULTIPLE_CHOICE") "multiple_choice" else "essay",
+                            points = q.points,
+                            imageUrl = null,
+                            choices = choicesInputs
+                        )
+                    }
+                    newQuiz.id
+                } else {
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = createRes.exceptionOrNull()?.message ?: "Gagal membuat kuis di server"
+                    )
+                    return@launch
+                }
+            } else {
+                existingQuizId
+            }
+
+            repository.publishQuiz(finalQuizId)
                 .onSuccess {
                     _state.value = _state.value.copy(isLoading = false)
                     onComplete()

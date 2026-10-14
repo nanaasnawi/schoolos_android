@@ -453,7 +453,7 @@ fun RombelStudentsScreen(
                             enter = fadeIn(tween(140 + index * 15)) +
                                     slideInVertically(tween(140 + index * 15)) { it / 4 }
                         ) {
-                            val currentStatus = uiState.attendanceMap[student.id] ?: "HADIR"
+                            val currentStatus = uiState.attendanceMap[student.id] ?: "present"
                             StudentAttendanceCard(
                                 student = student,
                                 currentStatus = currentStatus,
@@ -601,33 +601,33 @@ private fun StudentAttendanceCard(
                 AttendanceStatusOption(
                     label = "Hadir",
                     shortLabel = "H",
-                    isSelected = currentStatus.equals("HADIR", ignoreCase = true),
+                    isSelected = currentStatus.equals("present", ignoreCase = true) || currentStatus.equals("HADIR", ignoreCase = true),
                     activeColor = NeonSuccess,
-                    onClick = { onStatusChange("HADIR") },
+                    onClick = { onStatusChange("present") },
                     modifier = Modifier.weight(1f)
                 )
                 AttendanceStatusOption(
                     label = "Sakit",
                     shortLabel = "S",
-                    isSelected = currentStatus.equals("SAKIT", ignoreCase = true),
+                    isSelected = currentStatus.equals("sick", ignoreCase = true) || currentStatus.equals("SAKIT", ignoreCase = true),
                     activeColor = NeonBlue,
-                    onClick = { onStatusChange("SAKIT") },
+                    onClick = { onStatusChange("sick") },
                     modifier = Modifier.weight(1f)
                 )
                 AttendanceStatusOption(
                     label = "Izin",
                     shortLabel = "I",
-                    isSelected = currentStatus.equals("IZIN", ignoreCase = true),
+                    isSelected = currentStatus.equals("excused", ignoreCase = true) || currentStatus.equals("IZIN", ignoreCase = true),
                     activeColor = NeonWarning,
-                    onClick = { onStatusChange("IZIN") },
+                    onClick = { onStatusChange("excused") },
                     modifier = Modifier.weight(1f)
                 )
                 AttendanceStatusOption(
                     label = "Alpa",
                     shortLabel = "A",
-                    isSelected = currentStatus.equals("ALPA", ignoreCase = true),
+                    isSelected = currentStatus.equals("absent", ignoreCase = true) || currentStatus.equals("ALPA", ignoreCase = true),
                     activeColor = NeonError,
-                    onClick = { onStatusChange("ALPA") },
+                    onClick = { onStatusChange("absent") },
                     modifier = Modifier.weight(1f)
                 )
             }

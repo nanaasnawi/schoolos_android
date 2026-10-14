@@ -55,6 +55,50 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
         return "$rootBase/api/v1"
     }
 
+    private fun cleanChoiceText(raw: String): String {
+        val trimmed = raw.trim()
+        if (trimmed.length >= 2) {
+            val first = trimmed[0]
+            if (first.isLetter()) {
+                val punct = trimmed[1]
+                if (punct == '.' || punct == ')' || punct == ':' || punct == '-') {
+                    return trimmed.substring(2).trimStart()
+                }
+            }
+        }
+        return trimmed
+    }
+
+    private fun cleanQuestionStem(raw: String): String {
+        val lines = raw.lines()
+        if (lines.size <= 1) return raw.trim()
+
+        var cutIdx = lines.size
+        for (i in lines.indices.reversed()) {
+            val line = lines[i].trim()
+            if (line.isEmpty()) continue
+            val isChoiceLine = if (line.length >= 2) {
+                val first = line[0]
+                if (first.isLetter()) {
+                    val punct = line[1]
+                    punct == '.' || punct == ')' || punct == ':' || punct == '-'
+                } else false
+            } else false
+
+            if (isChoiceLine) {
+                cutIdx = i
+            } else {
+                break
+            }
+        }
+
+        return if (cutIdx in 1 until lines.size) {
+            lines.subList(0, cutIdx).joinToString("\n").trim()
+        } else {
+            raw.trim()
+        }
+    }
+
     private fun parseQuizFromJson(
         quizObj: JSONObject,
         type: String,
@@ -76,14 +120,14 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                     if (choiceItem is JSONObject) {
                         choicesList.add(
                             GeneratedCurriculumChoice(
-                                choiceText = choiceItem.optString("choice_text", choiceItem.optString("text", "")),
+                                choiceText = cleanChoiceText(choiceItem.optString("choice_text", choiceItem.optString("text", ""))),
                                 isCorrect = choiceItem.optBoolean("is_correct", choiceItem.optBoolean("isCorrect", false)),
                             )
                         )
                     } else if (choiceItem is String) {
                         choicesList.add(
                             GeneratedCurriculumChoice(
-                                choiceText = choiceItem,
+                                choiceText = cleanChoiceText(choiceItem),
                                 isCorrect = (j == 0)
                             )
                         )
@@ -100,10 +144,13 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                 "ESSAY"
             }
 
+            val rawQText = qObj.optString("question_text", qObj.optString("text", ""))
+            val cleanQText = if (qType == "MULTIPLE_CHOICE") cleanQuestionStem(rawQText) else rawQText.trim()
+
             questionsList.add(
                 GeneratedCurriculumQuestion(
                     id = qObj.optString("id", "q-${i + 1}"),
-                    questionText = qObj.optString("question_text", qObj.optString("text", "")),
+                    questionText = cleanQText,
                     questionType = qType,
                     points = qObj.optInt("points", if (qType == "ESSAY") 20 else (if (isExam) 10 else 10)),
                     choices = choicesList,
@@ -148,14 +195,14 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                         if (choiceItem is JSONObject) {
                             choicesList.add(
                                 GeneratedCurriculumChoice(
-                                    choiceText = choiceItem.optString("choice_text", choiceItem.optString("text", "")),
+                                    choiceText = cleanChoiceText(choiceItem.optString("choice_text", choiceItem.optString("text", ""))),
                                     isCorrect = choiceItem.optBoolean("is_correct", choiceItem.optBoolean("isCorrect", false)),
                                 )
                             )
                         } else if (choiceItem is String) {
                             choicesList.add(
                                 GeneratedCurriculumChoice(
-                                    choiceText = choiceItem,
+                                    choiceText = cleanChoiceText(choiceItem),
                                     isCorrect = (j == 0)
                                 )
                             )
@@ -173,10 +220,13 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                 }
 
                 val defaultPoints = if (qType == "MULTIPLE_CHOICE") 10 else 20
+                val rawQText = qObj.optString("question_text", qObj.optString("text", ""))
+                val cleanQText = if (qType == "MULTIPLE_CHOICE") cleanQuestionStem(rawQText) else rawQText.trim()
+
                 questionsList.add(
                     GeneratedCurriculumQuestion(
                         id = qObj.optString("id", "asg-q-${i + 1}"),
-                        questionText = qObj.optString("question_text", qObj.optString("text", "")),
+                        questionText = cleanQText,
                         questionType = qType,
                         points = qObj.optInt("points", defaultPoints),
                         choices = choicesList,

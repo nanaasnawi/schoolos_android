@@ -97,6 +97,26 @@ fun AssignmentAiGeneratorScreen(
     var isSubjectDropdownOpen by remember { mutableStateOf(false) }
     var isGradeDropdownOpen by remember { mutableStateOf(false) }
 
+    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
+    val emeraldContainerBg = if (isDark) colorScheme.primaryContainer.copy(alpha = 0.35f) else Color(0xFFF0FDF4)
+    val purpleContainerBg = if (isDark) colorScheme.secondaryContainer.copy(alpha = 0.35f) else Color(0xFFFAF5FF)
+    val context = androidx.compose.ui.platform.LocalContext.current
+
+    var lastBackPressTime by remember { mutableLongStateOf(0L) }
+    var currentGenJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+
+    androidx.activity.compose.BackHandler(enabled = currentStep == GeneratorStep.GENERATING) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - lastBackPressTime < 2000L) {
+            currentGenJob?.cancel()
+            currentStep = GeneratorStep.CONFIGURE
+            android.widget.Toast.makeText(context, "Proses AI dibatalkan", android.widget.Toast.LENGTH_SHORT).show()
+        } else {
+            lastBackPressTime = currentTime
+            android.widget.Toast.makeText(context, "Tekan sekali lagi untuk membatalkan proses AI", android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val handleStartGeneration = {
         val subject = selectedSubject
         if (subject == null) {
@@ -109,7 +129,7 @@ fun AssignmentAiGeneratorScreen(
             val finalEssay = numEssay
             val effectiveTopic = customTopic.trim().ifBlank { subject.name }
 
-            scope.launch {
+            currentGenJob = scope.launch {
                 val res = onGenerateRequest(
                     selectedFormat,
                     subject.id,
@@ -125,8 +145,10 @@ fun AssignmentAiGeneratorScreen(
                     generatedResult = result
                     currentStep = GeneratorStep.VERIFY
                 }.onFailure { err ->
-                    errorMessage = err.message ?: "Gagal menyusun tugas dengan AI"
-                    currentStep = GeneratorStep.CONFIGURE
+                    if (err !is kotlinx.coroutines.CancellationException) {
+                        errorMessage = err.message ?: "Gagal menyusun tugas dengan AI"
+                        currentStep = GeneratorStep.CONFIGURE
+                    }
                 }
             }
         }
@@ -466,17 +488,31 @@ fun AssignmentAiGeneratorScreen(
                                                         )
                                                     }
                                                 }
-                                                OutlinedTextField(
-                                                    value = customMcqInput,
-                                                    onValueChange = {
-                                                        customMcqInput = it
-                                                        it.toIntOrNull()?.let { v -> if (v in 1..20) numMcq = v }
-                                                    },
-                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                    modifier = Modifier.width(60.dp).height(46.dp),
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
-                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .width(54.dp)
+                                                        .height(34.dp)
+                                                        .background(colorScheme.surface, RoundedCornerShape(8.dp))
+                                                        .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    androidx.compose.foundation.text.BasicTextField(
+                                                        value = customMcqInput,
+                                                        onValueChange = {
+                                                            customMcqInput = it
+                                                            it.toIntOrNull()?.let { v -> if (v in 1..20) numMcq = v }
+                                                        },
+                                                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                        singleLine = true,
+                                                        textStyle = androidx.compose.ui.text.TextStyle(
+                                                            fontSize = 13.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                            color = colorScheme.onSurface
+                                                        ),
+                                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
+                                                    )
+                                                }
                                             }
                                         }
                                         HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.5f))
@@ -522,17 +558,31 @@ fun AssignmentAiGeneratorScreen(
                                                     )
                                                 }
                                             }
-                                            OutlinedTextField(
-                                                value = customEssayInput,
-                                                onValueChange = {
-                                                    customEssayInput = it
-                                                    it.toIntOrNull()?.let { v -> if (v in 1..15) numEssay = v }
-                                                },
-                                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                                modifier = Modifier.width(60.dp).height(46.dp),
-                                                shape = RoundedCornerShape(8.dp),
-                                                textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
-                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .width(54.dp)
+                                                    .height(34.dp)
+                                                    .background(colorScheme.surface, RoundedCornerShape(8.dp))
+                                                    .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                androidx.compose.foundation.text.BasicTextField(
+                                                    value = customEssayInput,
+                                                    onValueChange = {
+                                                        customEssayInput = it
+                                                        it.toIntOrNull()?.let { v -> if (v in 1..15) numEssay = v }
+                                                    },
+                                                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                                                    singleLine = true,
+                                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                        color = colorScheme.onSurface
+                                                    ),
+                                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -575,13 +625,15 @@ fun AssignmentAiGeneratorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(Color(0xFF0A0F1D))
+                        .background(colorScheme.background),
+                    contentAlignment = Alignment.Center
                 ) {
                     AiGenerationLoadingOverlay(
                         isVisible = true,
                         type = AiGenerationType.ASSIGNMENT,
                         subjectName = selectedSubject?.name ?: currentSubjectName,
-                        topic = customTopic.ifBlank { selectedSubject?.name ?: "Umum" }
+                        topic = customTopic.ifBlank { selectedSubject?.name ?: "Umum" },
+                        modifier = Modifier.fillMaxSize()
                     )
                 }
             }

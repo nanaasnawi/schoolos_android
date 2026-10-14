@@ -78,7 +78,7 @@ fun AiGenerationLoadingOverlay(
     topic: String = "",
     gradeLevel: String = "",
     difficulty: String = "Sedang",
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier.fillMaxSize()
 ) {
     AnimatedVisibility(
         visible = isVisible,
@@ -114,7 +114,7 @@ fun AiGenerationLoadingOverlay(
             when (type) {
                 AiGenerationType.MATERIAL -> listOf(
                     AiStepData(
-                        title = "Menghubungkan ke Engine NVIDIA NIM & Edu AI",
+                        title = "Menghubungkan ke Engine AI Kurikulum Merdeka",
                         subtitle = "Menginisialisasi parameter model kecerdasan buatan kurikulum..."
                     ),
                     AiStepData(
@@ -160,7 +160,7 @@ fun AiGenerationLoadingOverlay(
 
                 AiGenerationType.QUIZ -> listOf(
                     AiStepData(
-                        title = "Menghubungkan ke Engine Bank Soal NVIDIA NIM",
+                        title = "Menghubungkan ke Engine Bank Soal CBT AI",
                         subtitle = "Mempersiapkan taksonomi Bloom dan parameter CBT..."
                     ),
                     AiStepData(
@@ -183,24 +183,35 @@ fun AiGenerationLoadingOverlay(
             }
         }
 
+        val colorScheme = androidx.compose.material3.MaterialTheme.colorScheme
+
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .wrapContentHeight()
-                .background(Color(0xFA0A0F1D))
+                .fillMaxSize()
+                .background(colorScheme.background)
                 .padding(vertical = 24.dp, horizontal = 20.dp),
             contentAlignment = Alignment.Center
         ) {
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .wrapContentHeight(),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.Center
             ) {
                 // Dual-Ring Radar HUD
-                AiDualRingRadar(modifier = Modifier.padding(bottom = 20.dp))
+                AiDualRingRadar(
+                    primaryColor = colorScheme.primary,
+                    secondaryColor = colorScheme.tertiary,
+                    modifier = Modifier.padding(bottom = 20.dp)
+                )
 
                 // Pulsing LED Status Badge
-                AiStatusLedBadge(text = badgeText, modifier = Modifier.padding(bottom = 14.dp))
+                AiStatusLedBadge(
+                    text = badgeText,
+                    badgeColor = colorScheme.primary,
+                    modifier = Modifier.padding(bottom = 14.dp)
+                )
 
                 // Dynamic Stepped Title
                 val current = stepData.getOrElse(currentStep) { stepData[0] }
@@ -209,7 +220,7 @@ fun AiGenerationLoadingOverlay(
                     text = current.title,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.White,
+                    color = colorScheme.onBackground,
                     textAlign = TextAlign.Center,
                     lineHeight = 20.sp,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
@@ -219,7 +230,7 @@ fun AiGenerationLoadingOverlay(
                     text = current.subtitle,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color(0xB8FFFFFF),
+                    color = colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center,
                     lineHeight = 16.sp,
                     minLines = 2,
@@ -228,6 +239,9 @@ fun AiGenerationLoadingOverlay(
 
                 // Flowing Gradient Progress Bar
                 AiFlowingProgressBar(
+                    primaryColor = colorScheme.primary,
+                    secondaryColor = colorScheme.tertiary,
+                    trackColor = colorScheme.outlineVariant.copy(alpha = 0.35f),
                     modifier = Modifier
                         .fillMaxWidth(0.9f)
                         .padding(top = 14.dp, bottom = 12.dp)
@@ -250,7 +264,7 @@ fun AiGenerationLoadingOverlay(
                                 .height(5.dp)
                                 .width(width)
                                 .clip(CircleShape)
-                                .background(if (isActive) Color(0xFF76B900) else Color(0x38FFFFFF))
+                                .background(if (isActive) colorScheme.primary else colorScheme.outlineVariant)
                         )
                     }
                 }
@@ -264,7 +278,7 @@ fun AiGenerationLoadingOverlay(
                 Text(
                     text = footerText,
                     fontSize = 10.sp,
-                    color = Color(0x73FFFFFF),
+                    color = colorScheme.onSurfaceVariant.copy(alpha = 0.75f),
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 16.dp)
                 )
@@ -274,7 +288,11 @@ fun AiGenerationLoadingOverlay(
 }
 
 @Composable
-private fun AiDualRingRadar(modifier: Modifier = Modifier) {
+private fun AiDualRingRadar(
+    primaryColor: Color = Color(0xFF10B981),
+    secondaryColor: Color = Color(0xFF0284C7),
+    modifier: Modifier = Modifier
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "AiRadarTransition")
 
     val pulseScale by infiniteTransition.animateFloat(
@@ -336,7 +354,7 @@ private fun AiDualRingRadar(modifier: Modifier = Modifier) {
 
             // Outer Pulse Ring
             drawCircle(
-                color = Color(0xFF76B900).copy(alpha = pulseAlpha),
+                color = primaryColor.copy(alpha = pulseAlpha),
                 radius = radius * pulseScale,
                 style = Stroke(width = 2.dp.toPx())
             )
@@ -347,9 +365,9 @@ private fun AiDualRingRadar(modifier: Modifier = Modifier) {
                     brush = Brush.sweepGradient(
                         listOf(
                             Color.Transparent,
-                            Color(0xFF76B900).copy(alpha = 0.3f),
-                            Color(0xFF76B900),
-                            Color(0xFF10B981)
+                            primaryColor.copy(alpha = 0.3f),
+                            primaryColor,
+                            secondaryColor
                         )
                     ),
                     startAngle = 0f,
@@ -370,7 +388,7 @@ private fun AiDualRingRadar(modifier: Modifier = Modifier) {
             // Inner Reverse Dashed Ring
             rotate(rotationReverse) {
                 drawCircle(
-                    color = Color(0xFF10B981).copy(alpha = 0.55f),
+                    color = secondaryColor.copy(alpha = 0.55f),
                     radius = (radius - 14.dp.toPx()).coerceAtLeast(1f),
                     style = Stroke(
                         width = 2.dp.toPx(),
@@ -386,7 +404,7 @@ private fun AiDualRingRadar(modifier: Modifier = Modifier) {
         Icon(
             imageVector = Icons.Default.AutoAwesome,
             contentDescription = null,
-            tint = Color(0xFF76B900),
+            tint = primaryColor,
             modifier = Modifier
                 .size(26.dp)
                 .offset(y = floatOffset.dp)
@@ -395,7 +413,11 @@ private fun AiDualRingRadar(modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun AiStatusLedBadge(text: String, modifier: Modifier = Modifier) {
+private fun AiStatusLedBadge(
+    text: String,
+    badgeColor: Color = Color(0xFF10B981),
+    modifier: Modifier = Modifier
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "LedTransition")
     val ledAlpha by infiniteTransition.animateFloat(
         initialValue = 1f,
@@ -409,8 +431,8 @@ private fun AiStatusLedBadge(text: String, modifier: Modifier = Modifier) {
 
     Surface(
         shape = CircleShape,
-        color = Color(0xFF76B900).copy(alpha = 0.15f),
-        border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF76B900).copy(alpha = 0.35f)),
+        color = badgeColor.copy(alpha = 0.12f),
+        border = androidx.compose.foundation.BorderStroke(1.dp, badgeColor.copy(alpha = 0.35f)),
         modifier = modifier
     ) {
         Row(
@@ -422,11 +444,11 @@ private fun AiStatusLedBadge(text: String, modifier: Modifier = Modifier) {
                 modifier = Modifier
                     .size(6.dp)
                     .clip(CircleShape)
-                    .background(Color(0xFF76B900).copy(alpha = ledAlpha))
+                    .background(badgeColor.copy(alpha = ledAlpha))
             )
             Text(
                 text = text,
-                color = Color(0xFF76B900),
+                color = badgeColor,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.ExtraBold,
                 letterSpacing = 0.4.sp
@@ -436,7 +458,12 @@ private fun AiStatusLedBadge(text: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun AiFlowingProgressBar(modifier: Modifier = Modifier) {
+private fun AiFlowingProgressBar(
+    primaryColor: Color = Color(0xFF10B981),
+    secondaryColor: Color = Color(0xFF0284C7),
+    trackColor: Color = Color.Gray.copy(alpha = 0.2f),
+    modifier: Modifier = Modifier
+) {
     val infiniteTransition = rememberInfiniteTransition(label = "FlowProgressTransition")
     val progressShift by infiniteTransition.animateFloat(
         initialValue = 0f,
@@ -455,7 +482,7 @@ private fun AiFlowingProgressBar(modifier: Modifier = Modifier) {
     ) {
         // Track
         drawRoundRect(
-            color = Color.White.copy(alpha = 0.12f),
+            color = trackColor,
             cornerRadius = CornerRadius(size.height / 2f, size.height / 2f)
         )
 
@@ -466,8 +493,8 @@ private fun AiFlowingProgressBar(modifier: Modifier = Modifier) {
             brush = Brush.horizontalGradient(
                 colors = listOf(
                     Color.Transparent,
-                    Color(0xFF76B900),
-                    Color(0xFF10B981),
+                    primaryColor,
+                    secondaryColor,
                     Color.Transparent
                 ),
                 startX = startX,
