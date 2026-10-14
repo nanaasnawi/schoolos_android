@@ -29,6 +29,7 @@ data class QuizBuilderUiState(
     val quizCreated: Boolean = false,
     val createdQuizId: String? = null,
     val createdQuizTitle: String = "",
+    val classId: String? = null,
     val className: String = "",
     val subjectName: String = "",
     val timeLimitMinutes: Int = 30,
@@ -304,6 +305,7 @@ class QuizBuilderViewModel @Inject constructor(
                     quizCreated = true,
                     createdQuizId = quiz.id,
                     createdQuizTitle = title,
+                    classId = classId,
                     className = className,
                     subjectName = subjectName,
                     timeLimitMinutes = timeLimit ?: 30,
@@ -393,6 +395,50 @@ class QuizBuilderViewModel @Inject constructor(
                 totalPoints = currentList.sumOf { it.points }
             )
         }
+    }
+
+    fun deleteQuestion(index: Int) {
+        val current = _state.value.questionsList.toMutableList()
+        if (index in current.indices) {
+            current.removeAt(index)
+            val renumbered = current.mapIndexed { idx, q -> q.copy(number = idx + 1) }
+            _state.value = _state.value.copy(
+                questionsList = renumbered,
+                totalPoints = renumbered.sumOf { it.points }
+            )
+        }
+    }
+
+    fun duplicateQuestion(index: Int) {
+        val current = _state.value.questionsList.toMutableList()
+        if (index in current.indices) {
+            val target = current[index]
+            val duplicated = target.copy(
+                number = current.size + 1,
+                text = "${target.text} (Salinan)"
+            )
+            current.add(duplicated)
+            _state.value = _state.value.copy(
+                questionsList = current,
+                totalPoints = current.sumOf { it.points }
+            )
+        }
+    }
+
+    fun balancePoints(targetTotal: Int = 100) {
+        val current = _state.value.questionsList
+        if (current.isEmpty()) return
+        val count = current.size
+        val basePts = targetTotal / count
+        val remainder = targetTotal % count
+        val rebalanced = current.mapIndexed { idx, q ->
+            val pts = basePts + if (idx < remainder) 1 else 0
+            q.copy(points = pts)
+        }
+        _state.value = _state.value.copy(
+            questionsList = rebalanced,
+            totalPoints = targetTotal
+        )
     }
 
     private fun correctOptionIndex(index: Int, size: Int): Int {

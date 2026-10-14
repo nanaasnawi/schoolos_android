@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -53,8 +54,8 @@ fun QuizBuilderScreen(
     var showAiGenerateDialog by remember { mutableStateOf(false) }
 
     if (showAiGenerateDialog) {
-        val selectedSubject = state.availableSubjects.firstOrNull()?.name ?: ""
-        val selectedClass = state.availableClasses.firstOrNull()?.name ?: ""
+        val selectedSubject = state.subjectName.ifBlank { state.availableSubjects.firstOrNull()?.name ?: "" }
+        val selectedClass = state.className.ifBlank { state.availableClasses.firstOrNull()?.name ?: "" }
         QuizAiGeneratorScreen(
             availableSubjects = state.availableSubjects,
             availableClasses = state.availableClasses,
@@ -62,8 +63,8 @@ fun QuizBuilderScreen(
             currentClassName = selectedClass,
             onBack = { showAiGenerateDialog = false },
             onApply = { generated ->
-                val targetClassId = state.availableClasses.firstOrNull()?.id ?: ""
-                val targetClassName = state.availableClasses.firstOrNull()?.name ?: ""
+                val targetClassId = state.classId ?: state.availableClasses.find { it.name == state.className }?.id ?: state.availableClasses.firstOrNull()?.id ?: ""
+                val targetClassName = state.className.ifBlank { state.availableClasses.firstOrNull()?.name ?: "" }
                 viewModel.applyGeneratedQuiz(
                     classId = targetClassId,
                     className = targetClassName,
@@ -476,14 +477,24 @@ private fun QuizQuestionForm(
     var questionType by remember { mutableStateOf("MULTIPLE_CHOICE") }
     var qText by remember { mutableStateOf("") }
     var rubricText by remember { mutableStateOf("") }
-    var points by remember { mutableStateOf("20") }
-    var correctOptionIndex by remember { mutableStateOf(0) }
+    var points by remember { mutableStateOf("10") }
+    var correctOptionIndex by remember { mutableIntStateOf(0) }
     val options = remember { mutableStateListOf("Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D") }
     var showPrePublishReview by remember { mutableStateOf(false) }
 
-    // Indeks butir soal yang sedang dilihat / diedit (0..size-1 adalah soal tersusun, >= size adalah mode tambah baru)
+    // Indeks butir soal yang sedang dilihat / diedit
     var selectedQuestionIndex by remember { mutableIntStateOf(0) }
-    var isExpandedListVisible by remember { mutableStateOf(false) }
+    val chipListState = rememberLazyListState()
+
+    val isViewingExisting = state.questionsList.isNotEmpty() && selectedQuestionIndex in state.questionsList.indices
+
+    // Auto scroll LazyRow saat butir aktif berpindah
+    LaunchedEffect(selectedQuestionIndex) {
+        if (state.questionsList.isNotEmpty()) {
+            val targetScroll = selectedQuestionIndex.coerceIn(0, state.questionsList.size)
+            chipListState.animateScrollToItem(targetScroll)
+        }
+    }
 
     // Sinkronkan form saat memilih chip butir soal yang berbeda
     LaunchedEffect(selectedQuestionIndex, state.questionsList) {
@@ -504,10 +515,49 @@ private fun QuizQuestionForm(
             qText = ""
             rubricText = ""
             questionType = "MULTIPLE_CHOICE"
-            points = "20"
+            points = "10"
             correctOptionIndex = 0
             options.clear()
             options.addAll(listOf("Pilihan A", "Pilihan B", "Pilihan C", "Pilihan D"))
+        }
+    }
+
+    // Helper simpan draft butir aktif
+    fun saveCurrentDraft(notify: Boolean = false, onSaved: () -> Unit = {}) {
+        if (qText.isBlank()) {
+            Toast.makeText(context, "Teks soal tidak boleh kosong!", Toast.LENGTH_SHORT).show()
+            return
+        }
+        val fullNarrative = if (questionType == "ESSAY" && rubricText.isNotBlank())
+            "${qText.trim()}\n\n[Rubrik: ${rubricText.trim()}]"
+        else qText.trim()
+
+        val pts = points.toIntOrNull() ?: 10
+
+        if (isViewingExisting) {
+            viewModel.updateQuestionInState(
+                index = selectedQuestionIndex,
+                text = fullNarrative,
+                type = questionType,
+                choices = if (questionType == "MULTIPLE_CHOICE") options.toList() else emptyList(),
+                correctIndex = correctOptionIndex,
+                points = pts
+            )
+            if (notify) Toast.makeText(context, "✓ Butir #${selectedQuestionIndex + 1} disimpan!", Toast.LENGTH_SHORT).show()
+            onSaved()
+        } else {
+            viewModel.addQuestion(
+                questionText = fullNarrative,
+                questionType = questionType,
+                choices = if (questionType == "MULTIPLE_CHOICE") options.toList() else emptyList(),
+                correctIndex = correctOptionIndex,
+                points = pts,
+                onSuccessCallback = {
+                    val savedNum = state.questionsList.size
+                    if (notify) Toast.makeText(context, "✓ Butir #$savedNum ditambahkan!", Toast.LENGTH_SHORT).show()
+                    onSaved()
+                }
+            )
         }
     }
 
@@ -531,114 +581,178 @@ private fun QuizQuestionForm(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // ── QUESTION CHIPS TRACKER ──
-        if (state.questionsList.isNotEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                    .padding(16.dp)
+        // ── TOP NAVIGATOR: BUTIR SOAL TRACKER ──
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = CosmicNavy,
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+        ) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "Bank Butir Soal (${state.questionsList.size})",
+                            color = TextPrimary,
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Black
+                        )
+                        Text(
+                            "Pilih butir untuk meninjau / menyunting",
+                            color = TextTertiary,
+                            fontSize = 10.sp
+                        )
+                    }
+
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            "Butir Soal Tersusun (${state.questionsList.size} Soal):",
-                            color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        // Total points badge
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(TeacherNeon.copy(alpha = 0.12f))
+                                .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(TeacherNeon.copy(alpha = 0.12f))
-                                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                            ) {
-                                Text(
-                                    "Total: ${state.totalPoints} Poin",
-                                    color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Black
-                                )
-                            }
+                            Text(
+                                "Total: ${state.totalPoints}p",
+                                color = TeacherNeon,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+
+                        // Auto-balance points (100p)
+                        if (state.questionsList.isNotEmpty()) {
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = NeonBlue.copy(alpha = 0.15f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.4f)),
-                                modifier = Modifier.clickable { onOpenAiGenerator() }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = NeonBlue, modifier = Modifier.size(12.dp))
-                                    Text("AI Studio", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                color = CosmicSurface2,
+                                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                                modifier = Modifier.clickable {
+                                    viewModel.balancePoints(100)
+                                    Toast.makeText(context, "Poin otomatis dibagi rata ke 100!", Toast.LENGTH_SHORT).show()
                                 }
+                            ) {
+                                Text(
+                                    "⚖ Rata 100",
+                                    color = TextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        // AI Studio shortcut
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = NeonBlue.copy(alpha = 0.15f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.4f)),
+                            modifier = Modifier.clickable { onOpenAiGenerator() }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = NeonBlue, modifier = Modifier.size(12.dp))
+                                Text("AI Studio", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+
+                // Interactive horizontal question list
+                LazyRow(
+                    state = chipListState,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    itemsIndexed(state.questionsList) { idx, q ->
+                        val isPg = q.type == "MULTIPLE_CHOICE"
+                        val isSelected = selectedQuestionIndex == idx
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) (if (isPg) NeonBlue else TeacherNeon).copy(alpha = 0.22f)
+                            else CosmicSurface2,
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isSelected) 1.5.dp else 0.5.dp,
+                                color = if (isSelected) (if (isPg) NeonBlue else TeacherNeon)
+                                else GlassBorder
+                            ),
+                            modifier = Modifier.clickable {
+                                if (qText.isNotBlank() && isViewingExisting) {
+                                    saveCurrentDraft(notify = false)
+                                }
+                                selectedQuestionIndex = idx
+                            }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                if (isSelected) {
+                                    Text("●", color = if (isPg) NeonBlue else TeacherNeon, fontSize = 8.sp)
+                                }
+                                Text(
+                                    "#${q.number}",
+                                    color = if (isSelected) (if (isPg) NeonBlue else TeacherNeon) else TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                                Text(
+                                    if (isPg) "PG" else "Esai",
+                                    color = if (isSelected) (if (isPg) NeonBlue else TeacherNeon) else TextSecondary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    "(${q.points}p)",
+                                    color = TextTertiary,
+                                    fontSize = 10.sp
+                                )
                             }
                         }
                     }
 
-                    // Interactive Chips: Guru dapat mengklik tiap butir soal untuk melihat / mengedit isinya
-                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        itemsIndexed(state.questionsList) { idx, q ->
-                            val isPg = q.type == "MULTIPLE_CHOICE"
-                            val isSelected = selectedQuestionIndex == idx
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(
-                                        if (isSelected) (if (isPg) NeonBlue else TeacherNeon).copy(alpha = 0.28f)
-                                        else (if (isPg) NeonBlue else TeacherNeon).copy(alpha = 0.08f)
-                                    )
-                                    .border(
-                                        if (isSelected) 2.dp else 1.dp,
-                                        if (isSelected) (if (isPg) NeonBlue else TeacherNeon)
-                                        else (if (isPg) NeonBlue else TeacherNeon).copy(alpha = 0.35f),
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { selectedQuestionIndex = idx }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                ) {
-                                    if (isSelected) {
-                                        Text("●", color = if (isPg) NeonBlue else TeacherNeon, fontSize = 9.sp)
-                                    }
-                                    Text(
-                                        "#${q.number} ${if (isPg) "PG" else "Esai"} (${q.points}p)",
-                                        color = if (isPg) NeonBlue else TeacherNeon,
-                                        fontSize = 11.sp,
-                                        fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold
-                                    )
+                    // Chip Tambah Soal Baru
+                    item {
+                        val isAddNew = selectedQuestionIndex >= state.questionsList.size
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isAddNew) TeacherNeon.copy(alpha = 0.18f) else CosmicSurface2,
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isAddNew) 1.5.dp else 0.8.dp,
+                                color = if (isAddNew) TeacherNeon else GlassBorder
+                            ),
+                            modifier = Modifier.clickable {
+                                if (qText.isNotBlank() && isViewingExisting) {
+                                    saveCurrentDraft(notify = false)
                                 }
+                                selectedQuestionIndex = state.questionsList.size
                             }
-                        }
-
-                        // Chip Tambah Soal Baru
-                        item {
-                            val isAddNew = selectedQuestionIndex >= state.questionsList.size
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(if (isAddNew) TeacherNeon.copy(alpha = 0.2f) else CosmicSurface2)
-                                    .border(
-                                        if (isAddNew) 2.dp else 1.dp,
-                                        if (isAddNew) TeacherNeon else GlassBorder,
-                                        RoundedCornerShape(10.dp)
-                                    )
-                                    .clickable { selectedQuestionIndex = state.questionsList.size }
-                                    .padding(horizontal = 12.dp, vertical = 8.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
+                                Icon(
+                                    Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = if (isAddNew) TeacherNeon else TextSecondary,
+                                    modifier = Modifier.size(14.dp)
+                                )
                                 Text(
-                                    "+ Tambah Baru",
+                                    "Butir Baru",
                                     color = if (isAddNew) TeacherNeon else TextSecondary,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold
@@ -646,186 +760,142 @@ private fun QuizQuestionForm(
                             }
                         }
                     }
+                }
+            }
+        }
 
-                    // Toggle & Ringkasan Daftar Paket Butir Soal Terbentuk
+        // ── CURRENT QUESTION EDITOR CARD ──
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = CosmicNavy,
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Header row: Question Number + Duplicate/Delete
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { isExpandedListVisible = !isExpandedListVisible }
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Text(
-                            if (isExpandedListVisible) "▲ Sembunyikan Rincian Soal" else "▼ Lihat Ringkasan Seluruh Soal (${state.questionsList.size})",
-                            color = NeonBlue,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text("Pilih butir untuk lihat/edit", color = TextTertiary, fontSize = 10.sp)
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(TeacherNeon.copy(alpha = 0.15f))
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
+                            Text(
+                                if (isViewingExisting) "Melihat Butir #${selectedQuestionIndex + 1}"
+                                else "Tambah Butir Baru (#${state.questionsList.size + 1})",
+                                color = TeacherNeon,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+
+                        if (isViewingExisting) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = NeonBlue.copy(alpha = 0.15f),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.35f))
+                            ) {
+                                Text(
+                                    "✨ AI Ready",
+                                    color = NeonBlue,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
                     }
 
-                    if (isExpandedListVisible) {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            state.questionsList.forEachIndexed { idx, q ->
-                                val isSelected = selectedQuestionIndex == idx
-                                Surface(
-                                    color = if (isSelected) CosmicSurface3 else CosmicSurface2,
-                                    shape = RoundedCornerShape(10.dp),
-                                    border = androidx.compose.foundation.BorderStroke(
-                                        if (isSelected) 1.5.dp else 0.5.dp,
-                                        if (isSelected) TeacherNeon else GlassBorder
-                                    ),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { selectedQuestionIndex = idx }
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween
-                                        ) {
-                                            Text(
-                                                "Butir #${q.number} • ${if (q.type == "MULTIPLE_CHOICE") "PG" else "Esai"} (${q.points} Poin)",
-                                                color = TeacherNeon,
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold
-                                            )
-                                            Text(
-                                                if (isSelected) "Sedang Ditinjau" else "Klik untuk Pilih",
-                                                color = if (isSelected) TeacherNeon else TextTertiary,
-                                                fontSize = 10.sp
-                                            )
-                                        }
-                                        Text(
-                                            q.text,
-                                            color = TextPrimary,
-                                            fontSize = 12.sp,
-                                            maxLines = 2,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                        if (q.choices.isNotEmpty()) {
-                                            Text(
-                                                "Kunci Benar: ${q.choices.getOrNull(q.correctIndex) ?: "Pilihan A"}",
-                                                color = NeonSuccess,
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.SemiBold
-                                            )
-                                        }
+                    // Duplicate and Delete actions
+                    if (isViewingExisting) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    viewModel.duplicateQuestion(selectedQuestionIndex)
+                                    Toast.makeText(context, "Butir #${selectedQuestionIndex + 1} diduplikasi!", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ContentCopy,
+                                    contentDescription = "Duplikat Soal",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(17.dp)
+                                )
+                            }
+
+                            IconButton(
+                                onClick = {
+                                    val deletedNum = selectedQuestionIndex + 1
+                                    viewModel.deleteQuestion(selectedQuestionIndex)
+                                    if (state.questionsList.size <= 1) {
+                                        selectedQuestionIndex = 0
+                                    } else if (selectedQuestionIndex >= state.questionsList.size - 1) {
+                                        selectedQuestionIndex = state.questionsList.size - 2
                                     }
-                                }
+                                    Toast.makeText(context, "Butir #$deletedNum telah dihapus", Toast.LENGTH_SHORT).show()
+                                },
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Delete,
+                                    contentDescription = "Hapus Soal",
+                                    tint = NeonError.copy(alpha = 0.85f),
+                                    modifier = Modifier.size(18.dp)
+                                )
                             }
                         }
                     }
                 }
-            }
-        }
 
-        // ── CURRENT QUESTION INFO ──
-        val isViewingExisting = state.questionsList.isNotEmpty() && selectedQuestionIndex in state.questionsList.indices
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(TeacherNeon.copy(alpha = 0.12f))
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    Text(
-                        if (isViewingExisting) "Melihat Butir Soal #${selectedQuestionIndex + 1}"
-                        else "Tambah Butir Soal Baru (#${state.questionsList.size + 1})",
-                        color = TeacherNeon,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Black
-                    )
-                }
-
-                if (isViewingExisting) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = NeonBlue.copy(alpha = 0.15f),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonBlue.copy(alpha = 0.35f))
-                    ) {
-                        Text(
-                            "✨ Disusun AI",
-                            color = NeonBlue,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
-                        )
-                    }
-                }
-            }
-
-            // Points presets inline
-            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                listOf("5", "10", "20", "25").forEach { p ->
-                    val isP = points == p
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isP) TeacherNeon.copy(alpha = 0.15f) else CosmicSurface2)
-                            .border(1.dp, if (isP) TeacherNeon else GlassBorder, RoundedCornerShape(8.dp))
-                            .clickable { points = p }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
-                    ) {
-                        Text("${p}p", color = if (isP) TeacherNeon else TextTertiary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-        }
-
-        // ── FORMAT SOAL TOGGLE & QUESTION TEXT ──
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                .padding(16.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                Text("Format Butir Soal:", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                // Format Soal Segmented Switch
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     listOf(
                         "MULTIPLE_CHOICE" to "🔘  Pilihan Ganda (PG)",
                         "ESSAY" to "📝  Soal Esai / Uraian"
                     ).forEach { (type, label) ->
                         val isSelected = questionType == type
-                        Box(
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isSelected) TeacherNeon.copy(alpha = 0.14f) else CosmicSurface2,
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isSelected) 1.5.dp else 0.5.dp,
+                                color = if (isSelected) TeacherNeon else GlassBorder
+                            ),
                             modifier = Modifier
                                 .weight(1f)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(
-                                    if (isSelected) TeacherNeon.copy(alpha = 0.12f) else CosmicSurface2
-                                )
-                                .border(
-                                    width = if (isSelected) 1.5.dp else 0.5.dp,
-                                    color = if (isSelected) TeacherNeon else GlassBorder,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
                                 .clickable { questionType = type }
-                                .padding(vertical = 12.dp),
-                            contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                label,
-                                color = if (isSelected) TeacherNeon else TextSecondary,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
-                            )
+                            Box(
+                                modifier = Modifier.padding(vertical = 11.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    label,
+                                    color = if (isSelected) TeacherNeon else TextSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Black else FontWeight.Medium
+                                )
+                            }
                         }
                     }
                 }
 
-                // Question text
+                // Question narrative text field
                 OutlinedTextField(
                     value = qText,
                     onValueChange = { qText = it },
@@ -842,24 +912,63 @@ private fun QuizQuestionForm(
                         unfocusedLabelColor = TextTertiary
                     )
                 )
+
+                // Bobot Poin Soal
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Bobot Poin Soal:", color = TextSecondary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        listOf("5", "10", "15", "20", "25").forEach { p ->
+                            val isP = points == p
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (isP) TeacherNeon.copy(alpha = 0.16f) else CosmicSurface2,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    if (isP) TeacherNeon else GlassBorder
+                                ),
+                                modifier = Modifier.clickable { points = p }
+                            ) {
+                                Text(
+                                    "${p}p",
+                                    color = if (isP) TeacherNeon else TextTertiary,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 6.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        // ── OPTIONS / RUBRIC ──
+        // ── OPTIONS / RUBRIC CARD (NO DOUBLE CIRCLE BUG!) ──
         if (questionType == "MULTIPLE_CHOICE") {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                    .padding(16.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Icon(Icons.Default.RadioButtonChecked, null, tint = TeacherNeon, modifier = Modifier.size(16.dp))
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(Icons.Default.CheckCircle, null, tint = TeacherNeon, modifier = Modifier.size(16.dp))
                         Text(
-                            "Pilihan Jawaban (Klik radio untuk Kunci Benar):",
+                            "Pilihan Jawaban (Klik huruf bulat untuk Kunci Benar):",
                             color = TeacherNeon,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -870,53 +979,48 @@ private fun QuizQuestionForm(
                         val isCorrect = correctOptionIndex == index
                         val letter = ('A' + index).toString()
 
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isCorrect) TeacherNeon.copy(alpha = 0.08f) else CosmicSurface2)
-                                .border(
-                                    width = if (isCorrect) 1.2.dp else 0.5.dp,
-                                    color = if (isCorrect) TeacherNeon else GlassBorder,
-                                    shape = RoundedCornerShape(12.dp)
-                                )
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isCorrect) TeacherNeon.copy(alpha = 0.08f) else CosmicSurface2,
+                            border = androidx.compose.foundation.BorderStroke(
+                                width = if (isCorrect) 1.5.dp else 0.5.dp,
+                                color = if (isCorrect) TeacherNeon else GlassBorder
+                            )
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                verticalAlignment = Alignment.CenterVertically
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                RadioButton(
-                                    selected = isCorrect,
-                                    onClick = { correctOptionIndex = index },
-                                    colors = RadioButtonDefaults.colors(
-                                        selectedColor = TeacherNeon,
-                                        unselectedColor = TextTertiary
-                                    )
-                                )
-                                // Letter badge
-                                Box(
+                                // SINGLE CIRCLE SELECTOR BADGE: NO REDUNDANT RADIO BUTTON!
+                                Surface(
+                                    shape = CircleShape,
+                                    color = if (isCorrect) TeacherNeon else CosmicSurface3,
+                                    border = androidx.compose.foundation.BorderStroke(
+                                        1.dp,
+                                        if (isCorrect) TeacherNeon else GlassBorder
+                                    ),
                                     modifier = Modifier
-                                        .size(26.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isCorrect) TeacherNeon
-                                            else CosmicSurface3
-                                        ),
-                                    contentAlignment = Alignment.Center
+                                        .size(34.dp)
+                                        .clickable { correctOptionIndex = index }
                                 ) {
-                                    Text(
-                                        letter,
-                                        color = if (isCorrect) Color.White else TextPrimary,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Black
-                                    )
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Text(
+                                            if (isCorrect) "$letter✓" else letter,
+                                            color = if (isCorrect) Color.White else TextSecondary,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Black
+                                        )
+                                    }
                                 }
-                                Spacer(Modifier.width(8.dp))
+
                                 OutlinedTextField(
                                     value = option,
                                     onValueChange = { options[index] = it },
-                                    placeholder = { Text("Teks pilihan $letter", fontSize = 12.sp) },
+                                    placeholder = { Text("Teks pilihan $letter", fontSize = 12.sp, color = TextTertiary) },
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(10.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
@@ -926,15 +1030,32 @@ private fun QuizQuestionForm(
                                         unfocusedTextColor = TextPrimary
                                     )
                                 )
+
+                                if (isCorrect) {
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = TeacherNeon.copy(alpha = 0.15f),
+                                        border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.5f))
+                                    ) {
+                                        Text(
+                                            "Kunci",
+                                            color = TeacherNeon,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Black,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 3.dp)
+                                        )
+                                    }
+                                }
+
                                 if (options.size > 2) {
                                     IconButton(
                                         onClick = {
                                             options.removeAt(index)
                                             if (correctOptionIndex >= options.size) correctOptionIndex = 0
                                         },
-                                        modifier = Modifier.size(30.dp)
+                                        modifier = Modifier.size(28.dp)
                                     ) {
-                                        Icon(Icons.Default.Close, "Hapus", tint = TextTertiary, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.Close, "Hapus Opsi", tint = TextTertiary, modifier = Modifier.size(16.dp))
                                     }
                                 }
                             }
@@ -954,15 +1075,16 @@ private fun QuizQuestionForm(
                 }
             }
         } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                    .padding(16.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -983,7 +1105,7 @@ private fun QuizQuestionForm(
                         value = rubricText,
                         onValueChange = { rubricText = it },
                         label = { Text("Kunci / Pedoman Penilaian (Opsional)") },
-                        placeholder = { Text("Contoh: Poin penuh jika siswa menyebutkan 3 prinsip utama...") },
+                        placeholder = { Text("Contoh: Poin penuh jika siswa menyebutkan 3 prinsip utama...", fontSize = 12.sp, color = TextTertiary) },
                         modifier = Modifier.fillMaxWidth().heightIn(min = 90.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
@@ -1011,96 +1133,116 @@ private fun QuizQuestionForm(
             }
         }
 
-        // ── ACTION BUTTONS ──
-        Row(
+        // ── NAVIGATION & AUTO-SAVE DOCK ──
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            shape = RoundedCornerShape(16.dp),
+            color = CosmicNavy,
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
         ) {
-            OutlinedButton(
-                onClick = {
-                    if (qText.isBlank()) {
-                        Toast.makeText(context, "Teks soal tidak boleh kosong!", Toast.LENGTH_SHORT).show()
-                        return@OutlinedButton
-                    }
-                    val fullNarrative = if (questionType == "ESSAY" && rubricText.isNotBlank())
-                        "${qText.trim()}\n\n[Rubrik: ${rubricText.trim()}]"
-                    else qText.trim()
-
-                    if (isViewingExisting) {
-                        viewModel.updateQuestionInState(
-                            index = selectedQuestionIndex,
-                            text = fullNarrative,
-                            type = questionType,
-                            choices = if (questionType == "MULTIPLE_CHOICE") options.toList() else emptyList(),
-                            correctIndex = correctOptionIndex,
-                            points = points.toIntOrNull() ?: 10
-                        )
-                        Toast.makeText(context, "✓ Perubahan butir #${selectedQuestionIndex + 1} disimpan!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        viewModel.addQuestion(
-                            questionText = fullNarrative,
-                            questionType = questionType,
-                            choices = if (questionType == "MULTIPLE_CHOICE") options.toList() else emptyList(),
-                            correctIndex = correctOptionIndex,
-                            points = points.toIntOrNull() ?: 10,
-                            onSuccessCallback = {
-                                val savedNum = state.questionsList.size
-                                Toast.makeText(context, "✓ Soal ke-$savedNum tersimpan!", Toast.LENGTH_SHORT).show()
-                                selectedQuestionIndex = state.questionsList.size
-                            }
-                        )
-                    }
-                },
-                enabled = qText.isNotBlank() && !state.isLoading,
-                modifier = Modifier.weight(1f).height(48.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
-                border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.6f))
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                Icon(if (isViewingExisting) Icons.Default.Check else Icons.Default.Add, null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    if (isViewingExisting) "Simpan Edit #${selectedQuestionIndex + 1}" else "+ Soal Baru",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                // Stepper Buttons Row: [← Sebelumnya] [Simpan & Lanjut →]
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            if (qText.isNotBlank()) saveCurrentDraft(notify = false)
+                            if (selectedQuestionIndex > 0) {
+                                selectedQuestionIndex--
+                            }
+                        },
+                        enabled = selectedQuestionIndex > 0 && !state.isLoading,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1f).height(44.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                    ) {
+                        Icon(Icons.Default.ChevronLeft, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Sebelumnya", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    }
 
-            Button(
-                onClick = {
-                    if (qText.isNotBlank() && !isViewingExisting) {
-                        val fullNarrative = if (questionType == "ESSAY" && rubricText.isNotBlank())
-                            "${qText.trim()}\n\n[Rubrik: ${rubricText.trim()}]"
-                        else qText.trim()
-                        viewModel.addQuestion(
-                            questionText = fullNarrative,
-                            questionType = questionType,
-                            choices = if (questionType == "MULTIPLE_CHOICE") options.toList() else emptyList(),
-                            correctIndex = correctOptionIndex,
-                            points = points.toIntOrNull() ?: 10,
-                            onSuccessCallback = {
-                                qText = ""
-                                rubricText = ""
+                    val canGoNext = selectedQuestionIndex < state.questionsList.size - 1
+                    Button(
+                        onClick = {
+                            saveCurrentDraft(notify = true) {
+                                if (canGoNext) {
+                                    selectedQuestionIndex++
+                                }
+                            }
+                        },
+                        enabled = qText.isNotBlank() && !state.isLoading,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1.3f).height(44.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = CosmicSurface3, contentColor = TeacherNeon),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.6f))
+                    ) {
+                        Text(
+                            if (canGoNext) "Simpan & Lanjut ke #${selectedQuestionIndex + 2} →"
+                            else if (isViewingExisting) "Simpan Butir #${selectedQuestionIndex + 1} ✓"
+                            else "+ Simpan Soal Baru",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+
+                // Final Action Buttons: [+ Butir Baru] [Pratinjau & Terbitkan]
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            if (qText.isNotBlank() && isViewingExisting) {
+                                saveCurrentDraft(notify = false)
+                            }
+                            selectedQuestionIndex = state.questionsList.size
+                        },
+                        enabled = !state.isLoading,
+                        modifier = Modifier.weight(1f).height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.5f))
+                    ) {
+                        Icon(Icons.Default.Add, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("+ Butir Baru", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Button(
+                        onClick = {
+                            if (qText.isNotBlank() && !isViewingExisting) {
+                                saveCurrentDraft(notify = false) {
+                                    showPrePublishReview = true
+                                }
+                            } else if (state.questionsList.isEmpty()) {
+                                Toast.makeText(context, "Silakan buat setidaknya 1 butir soal terlebih dahulu!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                if (qText.isNotBlank() && isViewingExisting) {
+                                    saveCurrentDraft(notify = false)
+                                }
                                 showPrePublishReview = true
                             }
-                        )
-                    } else if (state.questionsList.isEmpty()) {
-                        Toast.makeText(context, "Silakan buat setidaknya 1 butir soal terlebih dahulu!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        showPrePublishReview = true
+                        },
+                        enabled = !state.isLoading,
+                        modifier = Modifier.weight(1.3f).height(48.dp),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White)
+                    ) {
+                        if (state.isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        } else {
+                            Icon(Icons.Default.Visibility, null, modifier = Modifier.size(16.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Pratinjau (${state.questionsList.size} Soal)", fontSize = 12.sp, fontWeight = FontWeight.Black)
+                        }
                     }
-                },
-                enabled = !state.isLoading,
-                modifier = Modifier.weight(1.3f).height(48.dp),
-                shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White)
-            ) {
-                if (state.isLoading) {
-                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                } else {
-                    Icon(Icons.Default.Visibility, null, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("Pratinjau (${state.questionsList.size} Soal)", fontSize = 12.sp, fontWeight = FontWeight.Black)
                 }
             }
         }
