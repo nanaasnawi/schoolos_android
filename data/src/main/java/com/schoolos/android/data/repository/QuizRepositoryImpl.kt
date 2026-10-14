@@ -224,6 +224,16 @@ class QuizRepositoryImpl @Inject constructor(
         Result.failure(parseHttpError(e, "Gagal menerbitkan kuis."))
     }
 
+    override suspend fun deleteQuiz(id: String): Result<Unit> = try {
+        api.deleteQuiz(id)
+        try {
+            quizDao.deleteById(id)
+        } catch (_: Exception) {}
+        Result.success(Unit)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal menghapus kuis."))
+    }
+
     override suspend fun startAttempt(quizId: String): Result<QuizAttempt> = try {
         val studentId = authManager.getStudentId() ?: throw Exception("Sesi pengguna tidak valid.")
         val response = api.startAttempt(quizId, StartAttemptRequest(studentId = studentId))

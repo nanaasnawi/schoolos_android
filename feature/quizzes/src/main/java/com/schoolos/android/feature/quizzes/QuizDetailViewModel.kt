@@ -182,6 +182,20 @@ class QuizDetailViewModel @Inject constructor(
         }
     }
 
+    fun deleteQuiz(onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, startError = null)
+            repository.deleteQuiz(quizId)
+                .onSuccess {
+                    _state.value = _state.value.copy(isLoading = false)
+                    onSuccess()
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(isLoading = false, startError = e.message ?: "Gagal menghapus kuis")
+                }
+        }
+    }
+
     fun dismissAttempt() {
         _state.value = _state.value.copy(attempt = null)
     }

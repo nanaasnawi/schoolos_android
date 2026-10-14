@@ -22,6 +22,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Info
@@ -36,6 +38,8 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -99,12 +103,46 @@ fun QuizDetailScreen(
     var selectedFilter by remember { mutableStateOf("Semua") }
     var attemptToGrade by remember { mutableStateOf<com.schoolos.android.domain.model.QuizAttempt?>(null) }
     var tokenInput by remember { mutableStateOf("") }
+    var showDeleteDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(state.attempt) {
         state.attempt?.let { attempt ->
             viewModel.dismissAttempt()
             onAttemptStarted(attempt.id)
         }
+    }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            containerColor = CosmicNavy,
+            title = {
+                Text("Hapus Paket Kuis CBT?", color = TextPrimary, fontWeight = FontWeight.Bold)
+            },
+            text = {
+                Text(
+                    "Apakah Anda yakin ingin menghapus kuis \"${state.quiz?.title}\"? Seluruh butir soal dan data pengerjaan terkait akan diarsipkan.",
+                    color = TextSecondary,
+                    fontSize = 13.sp
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteDialog = false
+                        viewModel.deleteQuiz(onSuccess = onBack)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonError)
+                ) {
+                    Text("Ya, Hapus", color = Color.White, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Batal", color = TextSecondary)
+                }
+            }
+        )
     }
 
     if (attemptToGrade != null) {
@@ -132,8 +170,23 @@ fun QuizDetailScreen(
                 } ?: "Evaluasi Siswa",
                 onBack = onBack,
                 actions = {
-                    state.quiz?.let { q ->
-                        StatusChip(label = q.status)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        state.quiz?.let { q ->
+                            StatusChip(label = q.status)
+                            if (isTeacher) {
+                                IconButton(
+                                    onClick = { showDeleteDialog = true },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.DeleteOutline,
+                                        contentDescription = "Hapus Kuis",
+                                        tint = NeonError,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             )
@@ -390,6 +443,20 @@ fun QuizDetailScreen(
                                         color = if (isDraft) TextPrimary else CosmicBlack,
                                         letterSpacing = 0.5.sp
                                     )
+                                }
+
+                                OutlinedButton(
+                                    onClick = { showDeleteDialog = true },
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonError),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, NeonError.copy(alpha = 0.5f)),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(48.dp)
+                                ) {
+                                    Icon(Icons.Default.Delete, contentDescription = null, tint = NeonError, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(6.dp))
+                                    Text("HAPUS PAKET KUIS CBT", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = NeonError)
                                 }
                             }
 

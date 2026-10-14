@@ -24,6 +24,9 @@ interface QuizDao {
     @Query("DELETE FROM quizzes")
     suspend fun clearAll()
 
+    @Query("DELETE FROM quizzes WHERE id = :id")
+    suspend fun deleteById(id: String)
+
     @Query("SELECT * FROM quiz_questions WHERE quizId = :quizId ORDER BY orderIndex ASC")
     suspend fun getQuestionsForQuiz(quizId: String): List<com.schoolos.android.core.database.entity.QuizQuestionEntity>
 
