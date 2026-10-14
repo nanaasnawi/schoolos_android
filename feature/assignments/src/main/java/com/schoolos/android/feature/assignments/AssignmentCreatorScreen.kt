@@ -161,7 +161,7 @@ fun AssignmentCreatorScreen(
         val parsedScore = customMaxScore.toIntOrNull() ?: 100
         val fullDesc = "$selectedSubject • $selectedClass • $description"
 
-        PrePublishAssignmentReviewDialog(
+        AssignmentReviewAndPublishScreen(
             title = title.trim(),
             description = fullDesc.trim(),
             instructions = instructions.ifBlank { "Kerjakan tugas secara teliti dan kumpulkan sebelum batas waktu berakhir." },
@@ -172,7 +172,7 @@ fun AssignmentCreatorScreen(
             assignmentFormat = state.assignmentFormat,
             questions = state.questions,
             isLoading = state.isLoading,
-            onDismiss = { showPrePublishReview = false },
+            onBackToEdit = { showPrePublishReview = false },
             onConfirmPublish = {
                 viewModel.createAssignment(
                     title = title.trim(),
@@ -184,6 +184,7 @@ fun AssignmentCreatorScreen(
                 )
             }
         )
+        return
     }
 
     Scaffold(
@@ -1149,7 +1150,7 @@ private fun AssignmentTextField(
 }
 
 @Composable
-private fun PrePublishAssignmentReviewDialog(
+private fun AssignmentReviewAndPublishScreen(
     title: String,
     description: String,
     instructions: String,
@@ -1160,227 +1161,47 @@ private fun PrePublishAssignmentReviewDialog(
     assignmentFormat: String,
     questions: List<AssignmentQuestion>,
     isLoading: Boolean,
-    onDismiss: () -> Unit,
+    onBackToEdit: () -> Unit,
     onConfirmPublish: () -> Unit,
 ) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp),
-            shape = RoundedCornerShape(24.dp),
-            color = CosmicNavy,
-            border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.5f))
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(20.dp)
+    androidx.activity.compose.BackHandler(onBack = onBackToEdit)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) CosmicNavy else MaterialTheme.colorScheme.surface
+    val cardBorder = if (isDark) GlassBorder else MaterialTheme.colorScheme.outlineVariant
+    val itemBg = if (isDark) CosmicSurface2 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+
+    Scaffold(
+        containerColor = if (isDark) CosmicBlack else MaterialTheme.colorScheme.background,
+        topBar = {
+            ExecutiveTopBar(
+                title = "Pratinjau Tugas Siswa",
+                subtitle = "Peninjauan Akhir Sebelum Resmi Diterbitkan",
+                onBack = onBackToEdit
+            )
+        },
+        bottomBar = {
+            Surface(
+                color = cardBg,
+                tonalElevation = 8.dp,
+                shadowElevation = 12.dp,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, cardBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                // Header
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(TeacherNeon.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Visibility, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(20.dp))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text("Pratinjau Tugas Siswa", color = TextPrimary, fontWeight = FontWeight.Black, fontSize = 16.sp)
-                            Text("Tampilan realtime tugas sebelum resmi diterbitkan", color = TextSecondary, fontSize = 11.sp)
-                        }
-                    }
-                    IconButton(onClick = onDismiss, enabled = !isLoading) {
-                        Icon(Icons.Default.Close, contentDescription = "Tutup", tint = TextPrimary)
-                    }
-                }
-
-                Spacer(Modifier.height(14.dp))
-
-                // Scrollable Simulated Student View
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState()),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    // Target Rombel & Subject Banner
-                    Surface(
-                        color = CosmicSurface2,
-                        shape = RoundedCornerShape(14.dp),
-                        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 10.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Text("🎯", fontSize = 18.sp)
-                                Column {
-                                    Text("Sasaran Tugas:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
-                                    Text(
-                                        text = "Kelas $selectedClass • $selectedSubject",
-                                        color = TeacherNeon,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                            AssignmentChip("Tenggat: $dueDays Hari", NeonWarning)
-                        }
-                    }
-
-                    // Student Task Simulator Card
-                    Surface(
-                        color = CosmicBlack,
-                        shape = RoundedCornerShape(18.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Surface(
-                                    color = TeacherNeon.copy(alpha = 0.15f),
-                                    shape = RoundedCornerShape(8.dp)
-                                ) {
-                                    Text(
-                                        text = if (assignmentFormat == "HOMEWORK_PR") "TUGAS PEKERJAAN RUMAH (PR)" else "TUGAS SOAL TERSTRUKTUR",
-                                        color = TeacherNeon,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Black,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                                Text("Nilai Maks: $maxScore Poin", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            }
-
-                            Text(
-                                text = title.ifBlank { "(Tanpa Judul)" },
-                                color = TextPrimary,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 22.sp
-                            )
-
-                            if (instructions.isNotBlank()) {
-                                Text(
-                                    text = instructions,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp
-                                )
-                            }
-
-                            if (questions.isNotEmpty()) {
-                                HorizontalDivider(color = GlassBorder)
-                                Text(
-                                    "Daftar Butir Soal (${questions.size} Soal):",
-                                    color = TeacherNeon,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-
-                                questions.forEachIndexed { idx, q ->
-                                    Surface(
-                                        color = CosmicSurface2,
-                                        shape = RoundedCornerShape(10.dp),
-                                        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(
-                                            modifier = Modifier.padding(10.dp),
-                                            verticalArrangement = Arrangement.spacedBy(6.dp)
-                                        ) {
-                                            Row(
-                                                modifier = Modifier.fillMaxWidth(),
-                                                horizontalArrangement = Arrangement.SpaceBetween
-                                            ) {
-                                                Text(
-                                                    "Soal #${idx + 1} (${if (q.questionType == "multiple_choice") "Pilihan Ganda" else "Esai"})",
-                                                    color = CyanAccent,
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 11.sp
-                                                )
-                                                Text("${q.points ?: 10} Poin", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                            }
-                                            Text(q.questionText, color = TextPrimary, fontSize = 12.sp)
-
-                                            if (q.choices.isNotEmpty()) {
-                                                q.choices.forEachIndexed { cIdx, choice ->
-                                                    val letter = ('A' + cIdx).toString()
-                                                    Row(
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                                        modifier = Modifier.padding(start = 6.dp)
-                                                    ) {
-                                                        Box(
-                                                            modifier = Modifier
-                                                                .size(18.dp)
-                                                                .clip(CircleShape)
-                                                                .background(if (choice.isCorrect == true) NeonSuccess.copy(alpha = 0.2f) else CosmicSurface3),
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
-                                                            Text(
-                                                                letter,
-                                                                fontSize = 9.sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = if (choice.isCorrect == true) NeonSuccess else TextSecondary
-                                                            )
-                                                        }
-                                                        Text(
-                                                            choice.choiceText,
-                                                            fontSize = 11.sp,
-                                                            color = if (choice.isCorrect == true) NeonSuccess else TextSecondary,
-                                                            fontWeight = if (choice.isCorrect == true) FontWeight.Bold else FontWeight.Normal
-                                                        )
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                Spacer(Modifier.height(16.dp))
-
-                // Action Footer
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
                     OutlinedButton(
-                        onClick = onDismiss,
+                        onClick = onBackToEdit,
                         enabled = !isLoading,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(48.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
                     ) {
                         Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
@@ -1404,6 +1225,207 @@ private fun PrePublishAssignmentReviewDialog(
                     }
                 }
             }
+        }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            // Target Rombel & Subject Banner
+            Surface(
+                color = cardBg,
+                shape = RoundedCornerShape(16.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text("🎯", fontSize = 22.sp)
+                        Column {
+                            Text("Sasaran Tugas:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = "Kelas $selectedClass • $selectedSubject",
+                                color = TeacherNeon,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    AssignmentChip("Tenggat: $dueDays Hari", NeonWarning)
+                }
+            }
+
+            // Student Task Simulator Card
+            Surface(
+                color = cardBg,
+                shape = RoundedCornerShape(18.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            color = TeacherNeon.copy(alpha = 0.15f),
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = if (assignmentFormat == "HOMEWORK_PR") "TUGAS PEKERJAAN RUMAH (PR)" else "TUGAS SOAL TERSTRUKTUR",
+                                color = TeacherNeon,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                        Text("Nilai Maks: $maxScore Poin", color = NeonSuccess, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    }
+
+                    Text(
+                        text = title.ifBlank { "(Tanpa Judul)" },
+                        color = TextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        lineHeight = 24.sp
+                    )
+
+                    if (instructions.isNotBlank()) {
+                        Surface(
+                            color = itemBg,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(modifier = Modifier.padding(12.dp)) {
+                                Text("Petunjuk Pengerjaan:", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = instructions,
+                                    color = TextSecondary,
+                                    fontSize = 12.sp,
+                                    lineHeight = 18.sp
+                                )
+                            }
+                        }
+                    }
+
+                    if (questions.isNotEmpty()) {
+                        HorizontalDivider(color = cardBorder)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                "Daftar Butir Soal (${questions.size} Soal):",
+                                color = TeacherNeon,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "${questions.sumOf { it.points ?: 10 }} Total Poin",
+                                color = NeonSuccess,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+
+                        questions.forEachIndexed { idx, q ->
+                            Surface(
+                                color = itemBg,
+                                shape = RoundedCornerShape(12.dp),
+                                border = androidx.compose.foundation.BorderStroke(0.5.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(12.dp),
+                                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "Soal #${idx + 1} • ${if (q.questionType == "multiple_choice") "Pilihan Ganda" else "Esai"}",
+                                            color = CyanAccent,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 11.sp
+                                        )
+                                        Text("${q.points ?: 10} Poin", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                    Text(q.questionText, color = TextPrimary, fontSize = 13.sp, lineHeight = 18.sp)
+
+                                    if (q.choices.isNotEmpty()) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                            q.choices.forEachIndexed { cIdx, choice ->
+                                                val letter = ('A' + cIdx).toString()
+                                                val isCorrect = choice.isCorrect == true
+                                                Surface(
+                                                    color = if (isCorrect) NeonSuccess.copy(alpha = 0.12f) else cardBg,
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    border = androidx.compose.foundation.BorderStroke(
+                                                        0.5.dp,
+                                                        if (isCorrect) NeonSuccess else cardBorder
+                                                    ),
+                                                    modifier = Modifier.fillMaxWidth()
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier
+                                                                .size(20.dp)
+                                                                .clip(CircleShape)
+                                                                .background(if (isCorrect) NeonSuccess else CosmicSurface3),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                letter,
+                                                                fontSize = 10.sp,
+                                                                fontWeight = FontWeight.Black,
+                                                                color = if (isCorrect) Color.White else TextSecondary
+                                                            )
+                                                        }
+                                                        Text(
+                                                            choice.choiceText,
+                                                            fontSize = 12.sp,
+                                                            color = if (isCorrect) NeonSuccess else TextPrimary,
+                                                            fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
+                                                            modifier = Modifier.weight(1f)
+                                                        )
+                                                        if (isCorrect) {
+                                                            Text("✓ Kunci", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
         }
     }
 }
