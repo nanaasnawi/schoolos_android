@@ -378,13 +378,13 @@ fun LoginFormCard(
 
         Spacer(Modifier.height(16.dp))
 
-        // 7. Dedicated QR Code Login Action Button
+        // 7. Dedicated QR Code Login Action Button (NO ELEVATION)
         Surface(
             onClick = onOpenQrScanner,
             shape = CircleShape,
             color = CosmicSurface,
             border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-            shadowElevation = 3.dp,
+            shadowElevation = 0.dp,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(52.dp),
@@ -410,26 +410,6 @@ fun LoginFormCard(
                     color = TextPrimary,
                 )
             }
-        }
-
-        Spacer(Modifier.height(22.dp))
-
-        // 8. Bottom Assistance / School Help Footer (Do you have an account removed)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(
-                text = "Pusat Bantuan Sekolah",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = accentColor,
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .clickable { onForgotPasswordClick() }
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-            )
         }
     }
 }
