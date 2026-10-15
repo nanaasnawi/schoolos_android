@@ -11,7 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -22,7 +21,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -36,7 +34,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -45,10 +42,8 @@ import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.core.designsystem.DynamicSchoolLogo
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.SchoolOsBrandLogo
-import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
 
 @Composable
 fun LoginHeaderSection(
@@ -76,26 +71,37 @@ fun LoginHeaderSection(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 1. Top Greeting (Welcome Back / Selamat Datang)
-        Text(
-            text = "Selamat Datang!",
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 28.sp,
-            color = TextPrimary,
-            letterSpacing = (-0.6).sp,
-            textAlign = TextAlign.Center,
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = "Masuk untuk mengakses materi & tugas di ${schoolName ?: "School OS"}",
-            fontSize = 13.sp,
-            color = TextSecondary,
-            fontWeight = FontWeight.Normal,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
+        // 1. Top Greeting (Welcome Back! - Left aligned matching reference mockup)
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.Start,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Welcome ",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp,
+                    color = accentColor,
+                    letterSpacing = (-0.5).sp,
+                )
+                Text(
+                    text = "Back!",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 26.sp,
+                    color = TextPrimary,
+                    letterSpacing = (-0.5).sp,
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Masuk untuk mengakses materi & tugas di ${schoolName ?: "School OS"}",
+                fontSize = 13.sp,
+                color = TextSecondary,
+                fontWeight = FontWeight.Normal,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
 
         Spacer(Modifier.height(14.dp))
 
@@ -199,30 +205,6 @@ fun LoginHeaderSection(
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
-
-            // Floating Pill Tag: "📱 QR Login Siap"
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopEnd)
-                    .offset(x = (-10).dp, y = 20.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(CosmicNavy.copy(alpha = 0.95f))
-                    .border(1.dp, StudentNeon.copy(alpha = 0.5f), RoundedCornerShape(14.dp))
-                    .padding(horizontal = 9.dp, vertical = 5.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
-                ) {
-                    Text(text = "📱", fontSize = 11.sp)
-                    Text(
-                        text = "Login QR Siap",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = StudentNeon,
-                    )
-                }
-            }
         }
     }
 }
