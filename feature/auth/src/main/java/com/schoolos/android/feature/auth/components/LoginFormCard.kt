@@ -24,8 +24,8 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -101,20 +101,20 @@ fun LoginFormCard(
 
         Spacer(Modifier.height(16.dp))
 
-        // 2. Email / Identifier Field (Pill Shape)
+        // 2. Username / Email Field (Pill Shape)
         OutlinedTextField(
             value = state.username,
             onValueChange = onUsernameChange,
             placeholder = {
                 Text(
-                    text = "Email or Phone number",
+                    text = "Username atau Email",
                     fontSize = 14.sp,
                     color = TextTertiary,
                 )
             },
             leadingIcon = {
                 Icon(
-                    imageVector = Icons.Default.Email,
+                    imageVector = Icons.Default.Person,
                     contentDescription = null,
                     tint = TextTertiary,
                     modifier = Modifier
@@ -216,7 +216,7 @@ fun LoginFormCard(
 
         Spacer(Modifier.height(8.dp))
 
-        // 4. Remember Me & Forgot Password Row
+        // 4. Remember Me & Lupa Kata Sandi Row
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -252,7 +252,7 @@ fun LoginFormCard(
                 modifier = Modifier.height(34.dp),
             ) {
                 Text(
-                    text = "Forgot Password ?",
+                    text = "Lupa Kata Sandi?",
                     fontSize = 12.sp,
                     color = accentColor,
                     fontWeight = FontWeight.Bold,
@@ -350,7 +350,7 @@ fun LoginFormCard(
 
         Spacer(Modifier.height(20.dp))
 
-        // 6. Divider: "Login With"
+        // 6. Divider: "Atau Masuk Dengan"
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -362,7 +362,7 @@ fun LoginFormCard(
                     .background(GlassBorder),
             )
             Text(
-                text = "Login With",
+                text = "Atau Masuk Dengan",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextTertiary,
@@ -378,7 +378,7 @@ fun LoginFormCard(
 
         Spacer(Modifier.height(16.dp))
 
-        // 7. Dedicated QR Code Login Action Button (Replaces Google & Facebook)
+        // 7. Dedicated QR Code Login Action Button
         Surface(
             onClick = onOpenQrScanner,
             shape = CircleShape,
@@ -414,26 +414,21 @@ fun LoginFormCard(
 
         Spacer(Modifier.height(22.dp))
 
-        // 8. Bottom Assistance / Registration Footer
+        // 8. Bottom Assistance / School Help Footer (Do you have an account removed)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Do you have an account ? ",
-                fontSize = 12.sp,
-                color = TextTertiary,
-            )
-            Text(
-                text = "Bantuan Sekolah",
-                fontSize = 12.sp,
+                text = "Pusat Bantuan Sekolah",
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = accentColor,
                 modifier = Modifier
-                    .clip(RoundedCornerShape(6.dp))
+                    .clip(RoundedCornerShape(8.dp))
                     .clickable { onForgotPasswordClick() }
-                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
             )
         }
     }

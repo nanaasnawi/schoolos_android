@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -48,6 +49,16 @@ fun LoginScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showHelpDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    // Resolve real dynamic app version name from Android package manager
+    val realAppVersion = remember(context) {
+        try {
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.2.1"
+        } catch (_: Exception) {
+            "1.2.1"
+        }
+    }
 
     LaunchedEffect(state.isLoggedIn) {
         if (state.isLoggedIn) onLoginSuccess()
@@ -117,9 +128,9 @@ fun LoginScreen(
 
                 Spacer(Modifier.height(20.dp))
 
-                // 3. Trust & Security Footer
+                // 3. Trust & Security Footer with real app version
                 Text(
-                    text = "© 2026 ${state.schoolName ?: "SCHOOL OS"} • v2.0",
+                    text = "© 2026 ${state.schoolName ?: "PKBM AS-SALAFIYAH"} • v$realAppVersion",
                     color = TextTertiary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
