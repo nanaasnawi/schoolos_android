@@ -27,7 +27,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
@@ -89,64 +88,56 @@ fun LoginFormCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .shadow(18.dp, RoundedCornerShape(28.dp), spotColor = accentColor.copy(alpha = 0.15f))
+            .shadow(16.dp, RoundedCornerShape(28.dp), spotColor = accentColor.copy(alpha = 0.16f))
             .clip(RoundedCornerShape(28.dp))
             .background(CosmicNavy.copy(alpha = 0.98f))
             .border(1.2.dp, GlassBorder, RoundedCornerShape(28.dp))
-            .padding(16.dp),
+            .padding(horizontal = 20.dp, vertical = 22.dp),
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            // Card Sub-Header
+            // 1. Card Header with Role Indicator
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(accentColor.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Shield,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(14.dp),
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
+                Column {
                     Text(
-                        text = "AUTENTIKASI",
-                        fontWeight = FontWeight.Black,
+                        text = "Login",
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 22.sp,
+                        color = TextPrimary,
+                        letterSpacing = (-0.4).sp,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = "Masuk ke akun pembelajaran Anda",
                         fontSize = 12.sp,
                         color = TextTertiary,
-                        letterSpacing = 1.2.sp,
                     )
                 }
 
-                // Role badge pill
+                // Active Role Badge
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(12.dp))
                         .background(accentColor.copy(alpha = 0.12f))
                         .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                        .padding(horizontal = 10.dp, vertical = 4.dp),
                 ) {
                     Text(
                         text = currentTab.title.uppercase(),
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = accentColor,
+                        letterSpacing = 0.5.sp,
                     )
                 }
             }
 
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(20.dp))
 
-            // Username / Identity Field
+            // 2. Username / Identifier Field (Pill Shape)
             OutlinedTextField(
                 value = state.username,
                 onValueChange = onUsernameChange,
@@ -193,7 +184,7 @@ fun LoginFormCard(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = if (state.selectedRoleTab == 1) KeyboardType.Number else KeyboardType.Text,
@@ -212,7 +203,7 @@ fun LoginFormCard(
                 ),
             )
 
-            // Contextual Hint Banner
+            // Contextual Hint Banner (e.g. 10 digit NISN)
             if (currentTab.hintExample.isNotEmpty()) {
                 Spacer(Modifier.height(8.dp))
                 Row(
@@ -220,6 +211,7 @@ fun LoginFormCard(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
                         .background(CosmicSurface)
+                        .border(0.8.dp, GlassBorder, RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -243,20 +235,20 @@ fun LoginFormCard(
 
             Spacer(Modifier.height(14.dp))
 
-            // Password Field
+            // 3. Password Field (Pill Shape)
             OutlinedTextField(
                 value = state.password,
                 onValueChange = onPasswordChange,
                 label = {
                     Text(
-                        "Kata Sandi",
+                        text = "Kata Sandi",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                     )
                 },
                 placeholder = {
                     Text(
-                        "Masukkan kata sandi akun Anda",
+                        text = "Masukkan kata sandi Anda",
                         fontSize = 12.sp,
                         color = TextTertiary,
                     )
@@ -278,7 +270,7 @@ fun LoginFormCard(
                     }
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(20.dp),
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Password,
@@ -316,7 +308,7 @@ fun LoginFormCard(
 
             Spacer(Modifier.height(12.dp))
 
-            // Remember Me & Help Row
+            // 4. Remember Me & Forgot Password Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -362,14 +354,14 @@ fun LoginFormCard(
 
             Spacer(Modifier.height(20.dp))
 
-            // Login CTA Button
+            // 5. Primary Login Action Button ("Login ->")
             Button(
                 onClick = {
                     focusManager.clearFocus()
                     onLoginClick()
                 },
                 enabled = !state.isLoading,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(26.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.Transparent,
                     disabledContainerColor = Color.Transparent,
@@ -379,10 +371,10 @@ fun LoginFormCard(
                     .height(54.dp)
                     .shadow(
                         elevation = if (state.isLoading) 0.dp else 12.dp,
-                        shape = RoundedCornerShape(18.dp),
+                        shape = RoundedCornerShape(26.dp),
                         spotColor = accentColor.copy(alpha = 0.5f),
                     )
-                    .clip(RoundedCornerShape(18.dp))
+                    .clip(RoundedCornerShape(26.dp))
                     .background(
                         if (state.isLoading) {
                             Brush.horizontalGradient(
@@ -430,27 +422,27 @@ fun LoginFormCard(
                             horizontalArrangement = Arrangement.Center,
                         ) {
                             Text(
-                                text = "Masuk",
-                                fontSize = 15.sp,
+                                text = "Login",
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = Color.White,
-                                letterSpacing = 0.3.sp,
+                                letterSpacing = 0.4.sp,
                             )
                             Spacer(Modifier.width(8.dp))
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                 contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(18.dp),
+                                modifier = Modifier.size(19.dp),
                             )
                         }
                     }
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
-            // Divider: "ATAU MASUK PRAKTIS"
+            // 6. Divider: "Login With"
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -462,12 +454,11 @@ fun LoginFormCard(
                         .background(GlassBorder),
                 )
                 Text(
-                    text = "ATAU MASUK PRAKTIS",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
+                    text = "Login With",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = TextTertiary,
-                    modifier = Modifier.padding(horizontal = 10.dp),
-                    letterSpacing = 1.sp,
+                    modifier = Modifier.padding(horizontal = 12.dp),
                 )
                 Box(
                     modifier = Modifier
@@ -477,47 +468,100 @@ fun LoginFormCard(
                 )
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
-            // QR Code Action Button
+            // 7. Dedicated QR Code Login Action Button (Replaces Google & Facebook)
             Surface(
                 onClick = onOpenQrScanner,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(24.dp),
                 color = CosmicSurface,
-                border = androidx.compose.foundation.BorderStroke(1.2.dp, accentColor.copy(alpha = 0.5f)),
+                border = androidx.compose.foundation.BorderStroke(1.2.dp, accentColor.copy(alpha = 0.45f)),
+                shadowElevation = 3.dp,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(52.dp),
+                    .height(54.dp),
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
+                    horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(36.dp)
+                                .clip(CircleShape)
+                                .background(accentColor.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.QrCodeScanner,
+                                contentDescription = "Pindai QR",
+                                tint = accentColor,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                text = "Login dengan QR Code",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                            )
+                            Text(
+                                text = "Pindai Kartu Siswa / ID Card",
+                                fontSize = 10.sp,
+                                color = TextTertiary,
+                            )
+                        }
+                    }
+
+                    // Instant Badge Pill
                     Box(
                         modifier = Modifier
-                            .size(30.dp)
-                            .clip(CircleShape)
-                            .background(accentColor.copy(alpha = 0.16f)),
-                        contentAlignment = Alignment.Center,
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(accentColor.copy(alpha = 0.12f))
+                            .border(0.8.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = null,
-                            tint = accentColor,
-                            modifier = Modifier.size(18.dp),
+                        Text(
+                            text = "⚡ Instan",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = accentColor,
                         )
                     }
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = "Pindai QR Code",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                    )
                 }
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            // 8. Bottom Assistance / Registration Footer
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "Belum memiliki akun? ",
+                    fontSize = 12.sp,
+                    color = TextTertiary,
+                )
+                Text(
+                    text = "Bantuan Sekolah",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable { onForgotPasswordClick() }
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                )
             }
         }
     }
