@@ -4,6 +4,7 @@ import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.data.mapper.toDomain
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.domain.model.Progress
+import com.schoolos.android.domain.model.WeeklyActivity
 import com.schoolos.android.domain.repository.ProgressRepository
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -48,5 +49,20 @@ class ProgressRepositoryImpl @Inject constructor(
             subjectName = childName,
             calculatedAt = "Hari ini",
         )
+    }
+
+    override suspend fun getWeeklyActivity(studentId: String?): Result<WeeklyActivity> = runCatching {
+        val targetStudentId = studentId 
+            ?: authManager.getChildId()
+            ?: authManager.getStudentId()
+
+        val response = if (!targetStudentId.isNullOrBlank()) {
+            api.getWeeklyActivity(targetStudentId)
+        } else {
+            api.getWeeklyActivity()
+        }
+
+        val data = response.data ?: throw IllegalStateException(response.error?.message ?: "Data aktivitas mingguan tidak ditemukan")
+        data.toDomain()
     }
 }

@@ -16,6 +16,7 @@ import com.schoolos.android.domain.model.LibraryBook
 import com.schoolos.android.domain.model.MaterialType
 import com.schoolos.android.domain.model.Notification
 import com.schoolos.android.domain.model.Progress
+import com.schoolos.android.domain.model.WeeklyActivity
 import com.schoolos.android.domain.model.SubjectGradeSummary
 import com.schoolos.android.domain.model.toSubjectSummary
 import com.schoolos.android.domain.repository.AcademicRepository
@@ -70,6 +71,7 @@ data class HomeUiState(
     val topGradeSubjects: List<SubjectGradeSummary> = emptyList(),
     val studentProgress: Progress? = null,
     val progressPercentage: Float = 0f,
+    val weeklyActivity: WeeklyActivity? = null,
     val assignmentsCount: String = "0",
     val xpCount: String = "0",
     val badgeCount: String = "0",
@@ -491,6 +493,13 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
+            // Real-time Weekly Daily Activity (Senin s/d Sabtu)
+            progressRepository.getWeeklyActivity().onSuccess { weekly ->
+                _state.update { it.copy(weeklyActivity = weekly) }
+            }.onFailure { err ->
+                timber.log.Timber.w(err, "Failed to load student weekly activity")
+            }
+
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
                 _state.update { it.copy(assignmentsCount = assignments.size.toString()) }
             }
@@ -643,6 +652,12 @@ class HomeViewModel @Inject constructor(
                 }
             }
         } else if (isParent) {
+            val targetChildId = auth.childId?.takeIf { it.isNotBlank() }
+            progressRepository.getWeeklyActivity(targetChildId).onSuccess { weekly ->
+                _state.update { it.copy(weeklyActivity = weekly) }
+            }.onFailure { err ->
+                timber.log.Timber.w(err, "Failed to load child weekly activity")
+            }
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
                 _state.update { current ->
                     current.copy(

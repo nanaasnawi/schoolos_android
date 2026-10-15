@@ -38,6 +38,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -65,7 +68,10 @@ import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.domain.model.BookReadingItem
+import com.schoolos.android.domain.model.DailyActivityItem
+import com.schoolos.android.domain.model.DailyActivityStat
 import com.schoolos.android.domain.model.LibraryBook
+import com.schoolos.android.domain.model.WeeklyActivity
 
 fun LazyListScope.studentContent(
     onNavigateToSessions: () -> Unit,
@@ -96,6 +102,7 @@ fun LazyListScope.studentContent(
     onStartReadingSibi: (LibraryBook) -> Unit = {},
     xpCount: String = "0",
     assignmentsCount: String = "0",
+    weeklyActivity: WeeklyActivity? = null,
 ) {
     val currentSubject = todaySessions.firstOrNull { it.status == "active" }?.subjectName
         ?: todaySessions.firstOrNull()?.subjectName
@@ -653,6 +660,25 @@ fun LazyListScope.studentContent(
             }
         }
     }
+
+    // ── 5. REAL-TIME WEEKLY DAILY ACTIVITY (SENIN S/D SABTU) ──────────
+    item {
+        LightSectionHeader(
+            title = "Aktivitas Belajar Minggu Ini",
+            sub = "Senin s/d Sabtu • Real-time progres harian",
+            onSeeAll = onNavigateToProgress,
+        )
+    }
+
+    item {
+        WeeklyActivityChartCard(
+            weeklyActivity = weeklyActivity,
+            onNavigateToMaterials = onNavigateToLearning,
+            onNavigateToAssignments = onNavigateToAssignments,
+            onNavigateToQuizzes = onNavigateToQuizzes,
+            onNavigateToProgress = onNavigateToProgress,
+        )
+    }
 }
 
 private fun formatSessionTime(rawTime: String?): String {
@@ -1030,4 +1056,636 @@ private fun SibiCuratedPlaceholderCard(
         }
     }
 }
+
+// ── WEEKLY ACTIVITY CHART CARD & SUPPORTING COMPONENTS ──────────────────────
+
+@Composable
+fun WeeklyActivityChartCard(
+    weeklyActivity: WeeklyActivity?,
+    onNavigateToMaterials: () -> Unit,
+    onNavigateToAssignments: () -> Unit,
+    onNavigateToQuizzes: () -> Unit,
+    onNavigateToProgress: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    // 6 School Days: Senin s/d Sabtu (dayNumber 1..6)
+    val schoolDays = remember(weeklyActivity) {
+        val daysList = weeklyActivity?.days ?: emptyList()
+        if (daysList.isNotEmpty()) {
+            daysList.filter { it.dayNumber in 1..6 }
+        } else {
+            listOf(
+                DailyActivityStat(date = "", dayName = "Senin", dayShort = "Sen", dayNumber = 1, isToday = true, materialsCount = 0, assignmentsCount = 0, quizzesCount = 0, totalCount = 0, activities = emptyList()),
+                DailyActivityStat(date = "", dayName = "Selasa", dayShort = "Sel", dayNumber = 2, isToday = false, materialsCount = 0, assignmentsCount = 0, quizzesCount = 0, totalCount = 0, activities = emptyList()),
+                DailyActivityStat(date = "", dayName = "Rabu", dayShort = "Rab", dayNumber = 3, isToday = false, materialsCount = 0, assignmentsCount = 0, quizzesCount = 0, totalCount = 0, activities = emptyList()),
+                DailyActivityStat(date = "", dayName = "Kamis", dayShort = "Kam", dayNumber = 4, isToday = false, materialsCount = 0, assignmentsCount = 0, quizzesCount = 0, totalCount = 0, activities = emptyList()),
+                DailyActivityStat(date = "", dayName = "Jumat", dayShort = "Jum", dayNumber = 5, isToday = false, materialsCount = 0, assignmentsCount = 0, quizzesCount = 0, totalCount = 0, activities = emptyList()),
+                DailyActivityStat(date = "", dayName = "Sabtu", dayShort = "Sab", dayNumber = 6, isToday = false, materialsCount = 0, assignmentsCount = 0, quizzesCount = 0, totalCount = 0, activities = emptyList()),
+            )
+        }
+    }
+
+    val defaultSelectedIndex = remember(schoolDays) {
+        val todayIdx = schoolDays.indexOfFirst { it.isToday }
+        if (todayIdx >= 0) todayIdx
+        else {
+            val maxIdx = schoolDays.indices.maxByOrNull { schoolDays[it].totalCount } ?: 0
+            maxIdx
+        }
+    }
+
+    var selectedDayIndex by remember(schoolDays) { mutableIntStateOf(defaultSelectedIndex.coerceIn(0, (schoolDays.size - 1).coerceAtLeast(0))) }
+    val selectedDay = schoolDays.getOrNull(selectedDayIndex) ?: schoolDays.firstOrNull()
+
+    val maxDayCount = remember(schoolDays) {
+        (schoolDays.maxOfOrNull { it.totalCount } ?: 1).coerceAtLeast(4)
+    }
+
+    val totalActs = weeklyActivity?.totalActivities ?: schoolDays.sumOf { it.totalCount }
+    val totalMaterials = weeklyActivity?.totalMaterials ?: schoolDays.sumOf { it.materialsCount }
+    val totalAssignments = weeklyActivity?.totalAssignments ?: schoolDays.sumOf { it.assignmentsCount }
+    val totalQuizzes = weeklyActivity?.totalQuizzes ?: schoolDays.sumOf { it.quizzesCount }
+    val peakDay = weeklyActivity?.peakDay ?: "Senin"
+    val peakCount = weeklyActivity?.peakCount ?: 0
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp))
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        CosmicNavy.copy(alpha = 0.95f),
+                        CosmicSurface2.copy(alpha = 0.90f),
+                    )
+                )
+            )
+            .border(
+                1.dp,
+                Brush.linearGradient(
+                    colors = listOf(
+                        StudentNeon.copy(alpha = 0.35f),
+                        GlassBorder.copy(alpha = 0.6f),
+                        NeonSuccess.copy(alpha = 0.25f),
+                    )
+                ),
+                RoundedCornerShape(20.dp),
+            )
+            .padding(16.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            // ── TOP HEADER ROW ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(7.dp)
+                                .clip(CircleShape)
+                                .background(NeonSuccess),
+                        )
+                        Text(
+                            text = "AKTIVITAS 1 MINGGU • SENIN - SABTU",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonSuccess,
+                            letterSpacing = 0.6.sp,
+                        )
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = "$totalActs Aktivitas Selesai",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                    )
+                    Text(
+                        text = if (!weeklyActivity?.weekStartDate.isNullOrBlank()) {
+                            "${weeklyActivity?.weekStartDate} s/d ${weeklyActivity?.weekEndDate} • Realtime"
+                        } else {
+                            "Minggu Ini • Realtime Database"
+                        },
+                        fontSize = 11.sp,
+                        color = TextTertiary,
+                    )
+                }
+
+                if (peakCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(NeonWarning.copy(alpha = 0.12f))
+                            .border(1.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 8.dp, vertical = 5.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Text(text = "🔥", fontSize = 11.sp)
+                            Column {
+                                Text(
+                                    text = "Hari Puncak",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = NeonWarning,
+                                )
+                                Text(
+                                    text = "$peakDay ($peakCount)",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary,
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── METRIC PILL SUMMARY (Materi, Tugas, Kuis & CBT) ──
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // 1. Materi (Emerald)
+                ActivityCategoryPill(
+                    iconText = "📖",
+                    label = "Materi",
+                    sub = "Modul & Video",
+                    count = totalMaterials,
+                    accentColor = NeonSuccess,
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToMaterials,
+                )
+                // 2. Tugas (Neon Blue)
+                ActivityCategoryPill(
+                    iconText = "📝",
+                    label = "Tugas",
+                    sub = "PR & Proyek",
+                    count = totalAssignments,
+                    accentColor = NeonBlue,
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToAssignments,
+                )
+                // 3. Kuis & CBT (Amber)
+                ActivityCategoryPill(
+                    iconText = "🎯",
+                    label = "Kuis & CBT",
+                    sub = "Ujian & PTS",
+                    count = totalQuizzes,
+                    accentColor = NeonWarning,
+                    modifier = Modifier.weight(1f),
+                    onClick = onNavigateToQuizzes,
+                )
+            }
+
+            // ── 6-DAY BAR CHART (SENIN S/D SABTU) ──
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(CosmicNavy.copy(alpha = 0.5f))
+                    .border(0.5.dp, GlassBorder.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceAround,
+                    verticalAlignment = Alignment.Bottom,
+                ) {
+                    schoolDays.forEachIndexed { idx, dayStat ->
+                        val isSelected = idx == selectedDayIndex
+                        DayBarColumn(
+                            dayStat = dayStat,
+                            maxCount = maxDayCount,
+                            isSelected = isSelected,
+                            onClick = { selectedDayIndex = idx },
+                        )
+                    }
+                }
+            }
+
+            // ── SELECTED DAY DETAIL CARD ──
+            if (selectedDay != null) {
+                SelectedDayDetailCard(
+                    dayStat = selectedDay,
+                    onNavigateToLearning = onNavigateToMaterials,
+                    onNavigateToAssignments = onNavigateToAssignments,
+                    onNavigateToQuizzes = onNavigateToQuizzes,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActivityCategoryPill(
+    iconText: String,
+    label: String,
+    sub: String,
+    count: Int,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(accentColor.copy(alpha = 0.08f))
+            .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp, horizontal = 8.dp),
+    ) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(text = iconText, fontSize = 12.sp)
+                Text(
+                    text = "$count",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                maxLines = 1,
+            )
+            Text(
+                text = sub,
+                fontSize = 9.sp,
+                color = TextTertiary,
+                maxLines = 1,
+            )
+        }
+    }
+}
+
+@Composable
+private fun DayBarColumn(
+    dayStat: DailyActivityStat,
+    maxCount: Int,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+) {
+    val total = dayStat.totalCount
+    val maxH = 100.dp
+    val minH = 6.dp
+
+    val barHeight = if (total > 0) {
+        val ratio = (total.toFloat() / maxCount.toFloat()).coerceIn(0.2f, 1f)
+        maxH * ratio
+    } else {
+        minH
+    }
+
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isSelected) StudentNeon.copy(alpha = 0.12f) else Color.Transparent)
+            .border(
+                1.dp,
+                if (isSelected) StudentNeon.copy(alpha = 0.6f) else Color.Transparent,
+                RoundedCornerShape(10.dp),
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 4.dp, vertical = 6.dp),
+    ) {
+        // Floating Count Number
+        Box(
+            modifier = Modifier.height(16.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            if (total > 0) {
+                Text(
+                    text = "$total",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) StudentNeon else TextPrimary,
+                )
+            } else {
+                Text(
+                    text = "-",
+                    fontSize = 10.sp,
+                    color = TextTertiary.copy(alpha = 0.4f),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(4.dp))
+
+        // Bar Track
+        Box(
+            modifier = Modifier
+                .height(maxH)
+                .width(20.dp),
+            contentAlignment = Alignment.BottomCenter,
+        ) {
+            // Background track
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(CosmicNavy.copy(alpha = 0.45f)),
+            )
+
+            // Segmented or Solid Stacked Bar
+            if (total > 0) {
+                val matRatio = dayStat.materialsCount.toFloat() / total.toFloat()
+                val assRatio = dayStat.assignmentsCount.toFloat() / total.toFloat()
+                val quizRatio = dayStat.quizzesCount.toFloat() / total.toFloat()
+
+                Column(
+                    modifier = Modifier
+                        .height(barHeight)
+                        .width(20.dp)
+                        .clip(RoundedCornerShape(10.dp)),
+                ) {
+                    // Quiz (Amber) at top
+                    if (dayStat.quizzesCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(quizRatio.coerceAtLeast(0.01f))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(NeonWarning, Color(0xFFD97706))
+                                    )
+                                ),
+                        )
+                    }
+                    // Assignment (Blue) in middle
+                    if (dayStat.assignmentsCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(assRatio.coerceAtLeast(0.01f))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(NeonBlue, Color(0xFF2563EB))
+                                    )
+                                ),
+                        )
+                    }
+                    // Material (Green) at bottom
+                    if (dayStat.materialsCount > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(matRatio.coerceAtLeast(0.01f))
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(NeonSuccess, Color(0xFF059669))
+                                    )
+                                ),
+                        )
+                    }
+                }
+            } else {
+                // Subtle empty dash
+                Box(
+                    modifier = Modifier
+                        .height(4.dp)
+                        .width(12.dp)
+                        .clip(CircleShape)
+                        .background(TextTertiary.copy(alpha = 0.25f)),
+                )
+            }
+        }
+
+        Spacer(Modifier.height(6.dp))
+
+        // Day Name & Today Indicator
+        Text(
+            text = dayStat.dayShort,
+            fontSize = 11.sp,
+            fontWeight = if (dayStat.isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = when {
+                dayStat.isToday -> NeonSuccess
+                isSelected      -> StudentNeon
+                else            -> TextSecondary
+            },
+        )
+
+        // Date day number e.g. "12", "13"
+        val dateDayNum = dayStat.date.takeLast(2)
+        Text(
+            text = if (dateDayNum.isNotBlank()) dateDayNum else "${dayStat.dayNumber}",
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Normal,
+            color = if (dayStat.isToday) NeonSuccess.copy(alpha = 0.8f) else TextTertiary,
+        )
+
+        // Today active dot
+        if (dayStat.isToday) {
+            Spacer(Modifier.height(2.dp))
+            Box(
+                modifier = Modifier
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(NeonSuccess),
+            )
+        } else {
+            Spacer(Modifier.height(6.dp))
+        }
+    }
+}
+
+@Composable
+private fun SelectedDayDetailCard(
+    dayStat: DailyActivityStat,
+    onNavigateToLearning: () -> Unit,
+    onNavigateToAssignments: () -> Unit,
+    onNavigateToQuizzes: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy.copy(alpha = 0.6f))
+            .border(0.5.dp, GlassBorder.copy(alpha = 0.5f), RoundedCornerShape(12.dp))
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        // Detail Header
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            ) {
+                Text(
+                    text = "${dayStat.dayName}, ${dayStat.date}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                )
+                if (dayStat.isToday) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(NeonSuccess.copy(alpha = 0.2f))
+                            .padding(horizontal = 4.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            text = "HARI INI",
+                            fontSize = 8.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonSuccess,
+                        )
+                    }
+                }
+            }
+
+            Text(
+                text = "${dayStat.totalCount} Selesai",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (dayStat.totalCount > 0) StudentNeon else TextTertiary,
+            )
+        }
+
+        if (dayStat.activities.isNotEmpty()) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                dayStat.activities.forEach { act ->
+                    DailyActivityItemRow(
+                        item = act,
+                        onNavigate = {
+                            when (act.category) {
+                                "MATERIAL"   -> onNavigateToLearning()
+                                "ASSIGNMENT" -> onNavigateToAssignments()
+                                "QUIZ"       -> onNavigateToQuizzes()
+                            }
+                        },
+                    )
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(StudentNeon.copy(alpha = 0.1f)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(text = "💡", fontSize = 14.sp)
+                }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Belum ada aktivitas pada hari ${dayStat.dayName}",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextPrimary,
+                    )
+                    Text(
+                        text = "Yuk buka modul materi, kerjakan tugas, atau kuis harian!",
+                        fontSize = 10.sp,
+                        color = TextTertiary,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun DailyActivityItemRow(
+    item: DailyActivityItem,
+    onNavigate: () -> Unit,
+) {
+    val (accentColor, iconChar) = when (item.category) {
+        "MATERIAL"   -> Pair(NeonSuccess, "📖")
+        "ASSIGNMENT" -> Pair(NeonBlue, "📝")
+        "QUIZ"       -> Pair(NeonWarning, "🎯")
+        else         -> Pair(StudentNeon, "📌")
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(CosmicSurface2.copy(alpha = 0.5f))
+            .border(0.5.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+            .clickable(onClick = onNavigate)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(RoundedCornerShape(6.dp))
+                .background(accentColor.copy(alpha = 0.15f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(text = iconChar, fontSize = 12.sp)
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                val subjName = item.subjectName
+                if (!subjName.isNullOrBlank()) {
+                    Text(
+                        text = subjName,
+                        fontSize = 10.sp,
+                        color = accentColor,
+                        maxLines = 1,
+                    )
+                    Text(text = "•", fontSize = 10.sp, color = TextTertiary)
+                }
+                Text(
+                    text = item.categoryLabel,
+                    fontSize = 10.sp,
+                    color = TextTertiary,
+                )
+            }
+        }
+
+        if (item.time.isNotBlank()) {
+            Text(
+                text = "${item.time} WIB",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextTertiary,
+            )
+        }
+    }
+}
+
 
