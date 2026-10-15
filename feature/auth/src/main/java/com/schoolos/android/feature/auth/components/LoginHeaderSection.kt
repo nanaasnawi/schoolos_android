@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,8 +34,11 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.CosmicNavy
@@ -93,8 +97,20 @@ fun LoginHeaderSection(
                 )
             }
             Spacer(Modifier.height(4.dp))
+
+            // Subtitle with slightly bold school name (PKBM AS-SALAFIYAH)
+            val displaySchoolName = schoolName?.takeIf { it.isNotBlank() } ?: "PKBM AS-SALAFIYAH"
+            val schoolTextColor = TextPrimary
+            val annotatedGreeting = remember(displaySchoolName, schoolTextColor) {
+                buildAnnotatedString {
+                    append("Masuk untuk mengakses materi & tugas di ")
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = schoolTextColor)) {
+                        append(displaySchoolName)
+                    }
+                }
+            }
             Text(
-                text = "Masuk untuk mengakses materi & tugas di ${schoolName ?: "School OS"}",
+                text = annotatedGreeting,
                 fontSize = 13.sp,
                 color = TextSecondary,
                 fontWeight = FontWeight.Normal,
@@ -105,17 +121,17 @@ fun LoginHeaderSection(
 
         Spacer(Modifier.height(14.dp))
 
-        // 2. 3D Student Illustration with School Logo Halo Backdrop
+        // 2. 3D Student Illustration with School Logo Halo Backdrop (Enlarged Character & Logo)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(240.dp),
+                .height(275.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             // Ambient Radial Glow in Background
             Box(
                 modifier = Modifier
-                    .size(230.dp)
+                    .size(260.dp)
                     .align(Alignment.Center)
                     .offset(y = (-10).dp)
                     .clip(CircleShape)
@@ -130,12 +146,12 @@ fun LoginHeaderSection(
                     ),
             )
 
-            // Luminous Orbital Halo Ring
+            // Luminous Orbital Halo Ring (Enlarged)
             Box(
                 modifier = Modifier
-                    .size(105.dp)
+                    .size(125.dp)
                     .align(Alignment.TopCenter)
-                    .offset(y = (-4).dp)
+                    .offset(y = (-6).dp)
                     .scale(0.95f + auraAnim * 0.05f)
                     .clip(CircleShape)
                     .border(
@@ -152,13 +168,13 @@ fun LoginHeaderSection(
                     ),
             )
 
-            // School Logo Crest (Elevated behind the student's head, completely unobstructed and clearly visible)
+            // School Logo Crest (Enlarged to 80dp, elevated behind the student's head, completely unobstructed)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = 8.dp)
                     .scale(0.97f + auraAnim * 0.03f)
-                    .shadow(16.dp, CircleShape, spotColor = accentColor.copy(alpha = 0.45f))
+                    .shadow(18.dp, CircleShape, spotColor = accentColor.copy(alpha = 0.45f))
                     .clip(CircleShape)
                     .background(
                         Brush.linearGradient(
@@ -186,22 +202,21 @@ fun LoginHeaderSection(
                 DynamicSchoolLogo(
                     logoUrl = schoolLogoUrl,
                     modifier = Modifier
-                        .size(64.dp)
+                        .size(70.dp)
                         .clip(CircleShape),
                     fallback = {
-                        SchoolOsBrandLogo(size = 56)
+                        SchoolOsBrandLogo(size = 64)
                     },
                 )
             }
 
-            // 3D Student Character Image
-            // The upper portion above the boy's head is transparent, framing the school logo directly behind him
+            // 3D Student Character Image (Enlarged to 225dp)
             Image(
                 painter = painterResource(id = CoreR.drawable.img_login_student_hero),
                 contentDescription = "Siswa School OS",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(188.dp),
+                    .height(225.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
