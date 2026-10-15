@@ -121,17 +121,17 @@ fun LoginHeaderSection(
 
         Spacer(Modifier.height(14.dp))
 
-        // 2. 3D Student Illustration with School Logo Halo Backdrop (Enlarged Character & Logo)
+        // 2. 3D Student Illustration with School Logo Halo Backdrop (Substantially Enlarged Character & Logo)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(275.dp),
+                .height(295.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             // Ambient Radial Glow in Background
             Box(
                 modifier = Modifier
-                    .size(260.dp)
+                    .size(280.dp)
                     .align(Alignment.Center)
                     .offset(y = (-10).dp)
                     .clip(CircleShape)
@@ -149,7 +149,7 @@ fun LoginHeaderSection(
             // Luminous Orbital Halo Ring (Enlarged)
             Box(
                 modifier = Modifier
-                    .size(125.dp)
+                    .size(145.dp)
                     .align(Alignment.TopCenter)
                     .offset(y = (-6).dp)
                     .scale(0.95f + auraAnim * 0.05f)
@@ -168,7 +168,7 @@ fun LoginHeaderSection(
                     ),
             )
 
-            // School Logo Crest (Enlarged to 80dp, elevated behind the student's head, completely unobstructed)
+            // School Logo Crest (Substantially Enlarged to 92dp, elevated behind the student's head)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -202,21 +202,21 @@ fun LoginHeaderSection(
                 DynamicSchoolLogo(
                     logoUrl = schoolLogoUrl,
                     modifier = Modifier
-                        .size(70.dp)
+                        .size(80.dp)
                         .clip(CircleShape),
                     fallback = {
-                        SchoolOsBrandLogo(size = 64)
+                        SchoolOsBrandLogo(size = 72)
                     },
                 )
             }
 
-            // 3D Student Character Image (Enlarged to 225dp)
+            // 3D Student Character Image (Substantially Enlarged to 245dp)
             Image(
                 painter = painterResource(id = CoreR.drawable.img_login_student_hero),
                 contentDescription = "Siswa School OS",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(225.dp),
+                    .height(245.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
