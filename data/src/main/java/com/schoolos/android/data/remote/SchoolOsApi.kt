@@ -236,6 +236,16 @@ interface SchoolOsApi {
     @GET("learning/progress/me")
     suspend fun getMyProgress(): ApiResponse<ProgressDto>
 
+    @GET("learning/progress/weekly-activity")
+    suspend fun getWeeklyActivity(
+        @Query("student_id") studentId: String? = null
+    ): ApiResponse<WeeklyActivityDto>
+
+    @GET("learning/progress/student/{student_id}/weekly-activity")
+    suspend fun getStudentWeeklyActivity(
+        @Path("student_id") studentId: String
+    ): ApiResponse<WeeklyActivityDto>
+
     @GET("learning/progress/student/{student_id}")
     suspend fun getStudentProgress(
         @Path("student_id") studentId: String

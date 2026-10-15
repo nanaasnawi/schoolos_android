@@ -627,6 +627,7 @@ fun HomeScreen(
                         },
                         xpCount                  = state.xpCount,
                         assignmentsCount         = state.assignmentsCount,
+                        weeklyActivity           = state.weeklyActivity,
                     )
                 }
             }
