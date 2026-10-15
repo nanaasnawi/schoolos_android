@@ -42,15 +42,20 @@ class TodayViewModel @Inject constructor(
 
     private var allSessionsCache: List<LearningSession> = emptyList()
     private var hasLoadedInitialData: Boolean = false
+    private var currentAuth: com.schoolos.android.core.auth.AuthState = com.schoolos.android.core.auth.AuthState()
 
     init {
         viewModelScope.launch {
             authManager.authState.collect { auth ->
+                currentAuth = auth
                 _state.value = _state.value.copy(
                     userRole = auth.role ?: "student",
                     className = auth.className ?: "",
                     classId = auth.classId,
                 )
+                if (allSessionsCache.isNotEmpty()) {
+                    filterAndGroupSessions(allSessionsCache, _state.value.selectedDate, _state.value.selectedFilter)
+                }
             }
         }
         load(_state.value.selectedDate)
@@ -84,7 +89,10 @@ class TodayViewModel @Inject constructor(
                 isLoading = !hasLoadedInitialData && allSessionsCache.isEmpty(),
                 error = null
             )
-            repository.getSessions(_state.value.classId)
+            val role = _state.value.userRole.lowercase()
+            val isTeacherOrStaff = role.contains("teacher") || role.contains("guru") || role.contains("principal") || role.contains("kepala")
+            val targetClassId = if (isTeacherOrStaff) null else _state.value.classId
+            repository.getSessions(targetClassId)
                 .onSuccess { sessions ->
                     hasLoadedInitialData = true
                     allSessionsCache = sessions
@@ -106,9 +114,41 @@ class TodayViewModel @Inject constructor(
         targetDate: LocalDate,
         filter: String,
     ) {
+        val role = _state.value.userRole.lowercase()
+        val isTeacherOrStaff = role.contains("teacher") || role.contains("guru") || role.contains("principal") || role.contains("kepala")
+        val teacherUserId = currentAuth.userId ?: ""
+        val teacherName = currentAuth.name ?: ""
+
+        // For teachers: strictly filter sessions to those taught by this teacher
+        val scopedSessions = if (isTeacherOrStaff && (teacherUserId.isNotBlank() || teacherName.isNotBlank())) {
+            allSessions.filter { s ->
+                val uidMatch = teacherUserId.isNotBlank() && (
+                    s.teacherId.equals(teacherUserId, ignoreCase = true) ||
+                    s.substituteTeacherId?.equals(teacherUserId, ignoreCase = true) == true
+                )
+                val sTeacher = s.teacherName?.trim()
+                val sSubTeacher = s.substituteTeacherName?.trim()
+                val nameMatch = teacherName.isNotBlank() && (
+                    (!sTeacher.isNullOrBlank() && (
+                        sTeacher.equals(teacherName, ignoreCase = true) ||
+                        sTeacher.contains(teacherName, ignoreCase = true) ||
+                        teacherName.contains(sTeacher, ignoreCase = true)
+                    )) ||
+                    (!sSubTeacher.isNullOrBlank() && (
+                        sSubTeacher.equals(teacherName, ignoreCase = true) ||
+                        sSubTeacher.contains(teacherName, ignoreCase = true) ||
+                        teacherName.contains(sSubTeacher, ignoreCase = true)
+                    ))
+                )
+                uidMatch || nameMatch
+            }
+        } else {
+            allSessions
+        }
+
         // Compute schedule count per date for weekly calendar indicator dots
         val dateCounts = mutableMapOf<LocalDate, Int>()
-        allSessions.forEach { s ->
+        scopedSessions.forEach { s ->
             val d = extractSessionDate(s)
             if (d != null) {
                 dateCounts[d] = (dateCounts[d] ?: 0) + 1
@@ -116,7 +156,7 @@ class TodayViewModel @Inject constructor(
         }
 
         // Filter sessions that belong to targetDate
-        val targetSessions = allSessions.filter { s ->
+        val targetSessions = scopedSessions.filter { s ->
             extractSessionDate(s) == targetDate
         }
 

@@ -148,7 +148,7 @@ fun TodayScreen(
                     item {
                         ScreenTopNavigation(
                             title = if (isPrincipal) "Monitoring Agenda Sekolah" else if (isTeacher) "Agenda Mengajar" else "Jadwal Pelajaran",
-                            subtitle = if (isPrincipal) "Pengawasan sesi & tatap muka seluruh kelas" else if (state.className.isNotBlank()) "Kelas ${state.className}" else null,
+                            subtitle = if (isPrincipal) "Pengawasan sesi & tatap muka seluruh kelas" else if (isTeacher) "Jadwal tatap muka & agenda mengajar" else if (state.className.isNotBlank()) "Kelas ${state.className}" else null,
                             isViewingToday = isViewingToday,
                             onBack = onBack,
                             onJumpToToday = { viewModel.onDateSelected(LocalDate.now()) },
