@@ -39,6 +39,7 @@ data class LoginResponse(
     @SerialName("child_name") val childName: String? = null,
     @SerialName("child_id") val childId: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    val subject: String? = null,
 )
 
 @Serializable
@@ -90,6 +91,7 @@ data class UserDto(
     @SerialName("child_name") val childName: String? = null,
     @SerialName("child_id") val childId: String? = null,
     @SerialName("avatar_url") val avatarUrl: String? = null,
+    val subject: String? = null,
 )
 
 @Serializable

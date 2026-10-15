@@ -54,6 +54,7 @@ fun QuizAiGeneratorScreen(
     availableClasses: List<AcademicClass>,
     currentSubjectName: String,
     currentClassName: String,
+    isSubjectLocked: Boolean = false,
     onBack: () -> Unit,
     onApply: (GeneratedCurriculumResult) -> Unit,
     onGenerateRequest: suspend (
@@ -267,33 +268,58 @@ fun QuizAiGeneratorScreen(
 
                         // 1. Mapel
                         item {
-                            Text("Mata Pelajaran (Mapel)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Mata Pelajaran (Mapel)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                if (isSubjectLocked) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Surface(
+                                        color = CyanPrimary.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            "🔒 Terkunci (Guru Pengampu)",
+                                            fontSize = 10.sp,
+                                            color = CyanPrimary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
                             Spacer(Modifier.height(6.dp))
                             ExposedDropdownMenuBox(
-                                expanded = isSubjectDropdownOpen,
-                                onExpandedChange = { isSubjectDropdownOpen = it }
+                                expanded = if (isSubjectLocked) false else isSubjectDropdownOpen,
+                                onExpandedChange = { if (!isSubjectLocked) isSubjectDropdownOpen = it }
                             ) {
                                 OutlinedTextField(
                                     value = selectedSubject?.name ?: "Pilih Mapel",
                                     onValueChange = {},
                                     readOnly = true,
-                                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownOpen) },
+                                    trailingIcon = {
+                                        if (isSubjectLocked) {
+                                            Icon(Icons.Default.Lock, contentDescription = null, tint = CyanPrimary)
+                                        } else {
+                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownOpen)
+                                        }
+                                    },
                                     modifier = Modifier.fillMaxWidth().menuAnchor(),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanPrimary)
                                 )
-                                ExposedDropdownMenu(
-                                    expanded = isSubjectDropdownOpen,
-                                    onDismissRequest = { isSubjectDropdownOpen = false }
-                                ) {
-                                    availableSubjects.forEach { sub ->
-                                        DropdownMenuItem(
-                                            text = { Text(sub.name, fontSize = 12.sp) },
-                                            onClick = {
-                                                selectedSubject = sub
-                                                isSubjectDropdownOpen = false
-                                            }
-                                        )
+                                if (!isSubjectLocked) {
+                                    ExposedDropdownMenu(
+                                        expanded = isSubjectDropdownOpen,
+                                        onDismissRequest = { isSubjectDropdownOpen = false }
+                                    ) {
+                                        availableSubjects.forEach { sub ->
+                                            DropdownMenuItem(
+                                                text = { Text(sub.name, fontSize = 12.sp) },
+                                                onClick = {
+                                                    selectedSubject = sub
+                                                    isSubjectDropdownOpen = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }

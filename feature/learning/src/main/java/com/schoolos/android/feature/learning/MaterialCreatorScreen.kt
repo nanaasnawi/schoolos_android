@@ -124,8 +124,11 @@ fun MaterialCreatorScreen(
         }
     }
 
-    LaunchedEffect(subjectOptions) {
-        if (selectedSubject.isEmpty() && subjectOptions.isNotEmpty()) {
+    LaunchedEffect(subjectOptions, state.isSubjectLocked, state.teacherSubject) {
+        if (state.isSubjectLocked && !state.teacherSubject.isNullOrBlank()) {
+            val matched = subjectOptions.firstOrNull { it.contains(state.teacherSubject!!, ignoreCase = true) || state.teacherSubject!!.contains(it, ignoreCase = true) }
+            selectedSubject = matched ?: state.teacherSubject!!
+        } else if (selectedSubject.isEmpty() && subjectOptions.isNotEmpty()) {
             selectedSubject = subjectOptions.first()
         }
     }
@@ -165,9 +168,11 @@ fun MaterialCreatorScreen(
         title = "Materi Bacaan: ${book.title} (Hal. $sInt–$eInt)"
         description = "Buku Teks Kurikulum SIBI: ${book.title}. Diterbitkan oleh ${book.author ?: book.publisher ?: "Kemdikdasmen"}. Pelajari materi pada halaman $sInt sampai $eInt."
         mediaUrl = book.fileUrl ?: ""
-        book.subjectName?.let { subj ->
-            if (subjectOptions.any { it.equals(subj, ignoreCase = true) }) {
-                selectedSubject = subjectOptions.first { it.equals(subj, ignoreCase = true) }
+        if (!state.isSubjectLocked) {
+            book.subjectName?.let { subj ->
+                if (subjectOptions.any { it.equals(subj, ignoreCase = true) }) {
+                    selectedSubject = subjectOptions.first { it.equals(subj, ignoreCase = true) }
+                }
             }
         }
     }
@@ -205,6 +210,7 @@ fun MaterialCreatorScreen(
             availableClasses = state.availableClasses,
             currentSubjectName = selectedSubject,
             currentClassName = selectedClass,
+            isSubjectLocked = state.isSubjectLocked,
             onBack = { showAiGenerateDialog = false },
             onApply = { generated ->
                 title = generated.title
@@ -599,11 +605,17 @@ fun MaterialCreatorScreen(
 
                     ModernDropdown(
                         value = selectedSubject,
-                        label = "Mata Pelajaran",
-                        icon = Icons.Default.School,
-                        expanded = isSubjectMenuExpanded,
+                        label = if (state.isSubjectLocked) "Mata Pelajaran (🔒 Terkunci)" else "Mata Pelajaran",
+                        icon = if (state.isSubjectLocked) Icons.Default.Lock else Icons.Default.School,
+                        expanded = if (state.isSubjectLocked && subjectOptions.size <= 1) false else isSubjectMenuExpanded,
                         accentColor = EmeraldGlow,
-                        onExpand = { isSubjectMenuExpanded = true },
+                        onExpand = {
+                            if (state.isSubjectLocked && subjectOptions.size <= 1) {
+                                Toast.makeText(context, "Mata pelajaran dikunci untuk guru pengampu: $selectedSubject", Toast.LENGTH_SHORT).show()
+                            } else {
+                                isSubjectMenuExpanded = true
+                            }
+                        },
                         onDismiss = { isSubjectMenuExpanded = false },
                         options = subjectOptions,
                         onSelect = { selectedSubject = it }
@@ -1240,9 +1252,11 @@ fun MaterialCreatorScreen(
                     description = "Buku Teks: ${book.title} oleh ${book.author ?: book.publisher ?: "Kemendikbudristek"}. Silakan pelajari dan baca halaman $sInt sampai $eInt."
                     selectedType = MaterialType.DOCUMENT
                     mediaUrl = book.fileUrl ?: ""
-                    book.subjectName?.let { subj ->
-                        if (subjectOptions.any { it.equals(subj, ignoreCase = true) }) {
-                            selectedSubject = subjectOptions.first { it.equals(subj, ignoreCase = true) }
+                    if (!state.isSubjectLocked) {
+                        book.subjectName?.let { subj ->
+                            if (subjectOptions.any { it.equals(subj, ignoreCase = true) }) {
+                                selectedSubject = subjectOptions.first { it.equals(subj, ignoreCase = true) }
+                            }
                         }
                     }
                     showBookCatalogSheet = false

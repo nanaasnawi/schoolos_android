@@ -61,6 +61,7 @@ fun QuizBuilderScreen(
             availableClasses = state.availableClasses,
             currentSubjectName = selectedSubject,
             currentClassName = selectedClass,
+            isSubjectLocked = state.isSubjectLocked,
             onBack = { showAiGenerateDialog = false },
             onApply = { generated ->
                 val targetClassId = state.classId ?: state.availableClasses.find { it.name == state.className }?.id ?: state.availableClasses.firstOrNull()?.id ?: ""
@@ -224,8 +225,13 @@ private fun QuizInfoForm(
             }
         }
     }
-    LaunchedEffect(subjectOptions) {
-        if (selectedSubject.isEmpty() && subjectOptions.isNotEmpty()) selectedSubject = subjectOptions.first()
+    LaunchedEffect(subjectOptions, state.isSubjectLocked, state.teacherSubject) {
+        if (state.isSubjectLocked && !state.teacherSubject.isNullOrBlank()) {
+            val matched = subjectOptions.firstOrNull { it.contains(state.teacherSubject!!, ignoreCase = true) || state.teacherSubject!!.contains(it, ignoreCase = true) }
+            selectedSubject = matched ?: state.teacherSubject!!
+        } else if (selectedSubject.isEmpty() && subjectOptions.isNotEmpty()) {
+            selectedSubject = subjectOptions.first()
+        }
     }
 
     var title by remember { mutableStateOf("") }
@@ -340,11 +346,17 @@ private fun QuizInfoForm(
 
                 QuizDropdown(
                     value = selectedSubject,
-                    label = "Mata Pelajaran",
-                    icon = Icons.Default.School,
-                    expanded = isSubjectMenuExpanded,
+                    label = if (state.isSubjectLocked) "Mata Pelajaran (🔒 Terkunci)" else "Mata Pelajaran",
+                    icon = if (state.isSubjectLocked) Icons.Default.Lock else Icons.Default.School,
+                    expanded = if (state.isSubjectLocked && subjectOptions.size <= 1) false else isSubjectMenuExpanded,
                     accentColor = TeacherNeon,
-                    onExpand = { isSubjectMenuExpanded = true },
+                    onExpand = {
+                        if (state.isSubjectLocked && subjectOptions.size <= 1) {
+                            Toast.makeText(context, "Mata pelajaran dikunci untuk guru pengampu: $selectedSubject", Toast.LENGTH_SHORT).show()
+                        } else {
+                            isSubjectMenuExpanded = true
+                        }
+                    },
                     onDismiss = { isSubjectMenuExpanded = false },
                     options = subjectOptions,
                     onSelect = { selectedSubject = it }
