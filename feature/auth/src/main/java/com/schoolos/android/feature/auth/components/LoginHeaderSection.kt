@@ -121,17 +121,17 @@ fun LoginHeaderSection(
 
         Spacer(Modifier.height(14.dp))
 
-        // 2. 3D Student Illustration with School Logo Halo Backdrop (Substantially Enlarged Character & Logo)
+        // 2. 3D Student Illustration with Grand School Logo Backdrop (Behind head, space-saving)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(295.dp),
+                .height(235.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             // Ambient Radial Glow in Background
             Box(
                 modifier = Modifier
-                    .size(280.dp)
+                    .size(230.dp)
                     .align(Alignment.Center)
                     .offset(y = (-10).dp)
                     .clip(CircleShape)
@@ -146,15 +146,14 @@ fun LoginHeaderSection(
                     ),
             )
 
-
-
-            // School Logo Crest (Substantially Enlarged to 92dp, elevated behind the student's head)
+            // Grand School Logo Crest (Substantially Enlarged to 156dp, sitting grandly behind student's head)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .offset(y = 8.dp)
+                    .size(156.dp)
                     .scale(0.97f + auraAnim * 0.03f)
-                    .shadow(18.dp, CircleShape, spotColor = accentColor.copy(alpha = 0.45f))
+                    .shadow(16.dp, CircleShape, spotColor = accentColor.copy(alpha = 0.40f))
                     .clip(CircleShape)
                     .background(
                         Brush.linearGradient(
@@ -176,27 +175,27 @@ fun LoginHeaderSection(
                         ),
                         CircleShape,
                     )
-                    .padding(5.dp),
+                    .padding(6.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 DynamicSchoolLogo(
                     logoUrl = schoolLogoUrl,
                     modifier = Modifier
-                        .size(80.dp)
+                        .size(142.dp)
                         .clip(CircleShape),
                     fallback = {
-                        SchoolOsBrandLogo(size = 72)
+                        SchoolOsBrandLogo(size = 126)
                     },
                 )
             }
 
-            // 3D Student Character Image (Substantially Enlarged to 245dp)
+            // 3D Student Character Image (Drawn directly in front of the logo)
             Image(
                 painter = painterResource(id = CoreR.drawable.img_login_student_hero),
                 contentDescription = "Siswa School OS",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(245.dp),
+                    .height(220.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
