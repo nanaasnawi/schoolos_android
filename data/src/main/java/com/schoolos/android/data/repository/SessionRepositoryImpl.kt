@@ -25,9 +25,7 @@ class SessionRepositoryImpl @Inject constructor(
             val response = api.getSessions(cleanClassId)
             val sessions = response.data?.map { it.toDomain() } ?: emptyList()
             try {
-                if (cleanClassId == null) {
-                    sessionDao.clearAll()
-                }
+                sessionDao.clearAll()
                 if (sessions.isNotEmpty()) {
                     sessionDao.insertAll(sessions.map { it.toEntity() })
                 }
