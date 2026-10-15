@@ -52,6 +52,7 @@ fun MaterialAiGeneratorScreen(
     availableClasses: List<AcademicClass>,
     currentSubjectName: String,
     currentClassName: String,
+    isSubjectLocked: Boolean = false,
     onBack: () -> Unit,
     onApply: (GeneratedMaterialResult) -> Unit,
     onGenerateRequest: suspend (
@@ -281,13 +282,30 @@ fun MaterialAiGeneratorScreen(
 
                         // 2. MATA PELAJARAN
                         item {
-                            Text("Mata Pelajaran", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Mata Pelajaran", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                if (isSubjectLocked) {
+                                    Spacer(Modifier.width(6.dp))
+                                    Surface(
+                                        color = EmeraldPrimary.copy(alpha = 0.15f),
+                                        shape = RoundedCornerShape(6.dp)
+                                    ) {
+                                        Text(
+                                            "🔒 Terkunci (Guru Pengampu)",
+                                            fontSize = 10.sp,
+                                            color = EmeraldPrimary,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            }
                             Spacer(Modifier.height(8.dp))
                             Box(modifier = Modifier.fillMaxWidth()) {
                                 OutlinedCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable { isSubjectDropdownOpen = true },
+                                        .clickable(enabled = !isSubjectLocked) { isSubjectDropdownOpen = true },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = CardDefaults.outlinedCardColors(containerColor = colorScheme.surface)
                                 ) {
@@ -302,28 +320,34 @@ fun MaterialAiGeneratorScreen(
                                             fontWeight = FontWeight.Medium,
                                             color = if (selectedSubject != null || currentSubjectName.isNotBlank()) colorScheme.onSurface else colorScheme.onSurfaceVariant
                                         )
-                                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = colorScheme.onSurfaceVariant)
+                                        Icon(
+                                            if (isSubjectLocked) Icons.Default.Lock else Icons.Default.ArrowDropDown,
+                                            contentDescription = null,
+                                            tint = colorScheme.onSurfaceVariant
+                                        )
                                     }
                                 }
-                                DropdownMenu(
-                                    expanded = isSubjectDropdownOpen,
-                                    onDismissRequest = { isSubjectDropdownOpen = false },
-                                    modifier = Modifier.fillMaxWidth(0.9f)
-                                ) {
-                                    availableSubjects.forEach { sub ->
-                                        DropdownMenuItem(
-                                            text = { Text(sub.name, fontSize = 13.sp) },
-                                            onClick = {
-                                                selectedSubject = sub
-                                                isSubjectDropdownOpen = false
-                                            }
-                                        )
+                                if (!isSubjectLocked) {
+                                    DropdownMenu(
+                                        expanded = isSubjectDropdownOpen,
+                                        onDismissRequest = { isSubjectDropdownOpen = false },
+                                        modifier = Modifier.fillMaxWidth(0.9f)
+                                    ) {
+                                        availableSubjects.forEach { sub ->
+                                            DropdownMenuItem(
+                                                text = { Text(sub.name, fontSize = 13.sp) },
+                                                onClick = {
+                                                    selectedSubject = sub
+                                                    isSubjectDropdownOpen = false
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
 
                             // Quick subject chips
-                            if (availableSubjects.isNotEmpty()) {
+                            if (!isSubjectLocked && availableSubjects.isNotEmpty()) {
                                 Spacer(Modifier.height(8.dp))
                                 Row(
                                     horizontalArrangement = Arrangement.spacedBy(6.dp),

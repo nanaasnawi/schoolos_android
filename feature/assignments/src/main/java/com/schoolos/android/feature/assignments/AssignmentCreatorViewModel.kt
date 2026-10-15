@@ -12,6 +12,8 @@ import com.schoolos.android.domain.repository.CurriculumGeneratorRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
+import com.schoolos.android.core.auth.AuthManager
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -23,6 +25,8 @@ data class AssignmentCreatorUiState(
     val availableClasses: List<AcademicClass> = emptyList(),
     val availableSubjects: List<AcademicSubject> = emptyList(),
     val isLoadingAcademicData: Boolean = false,
+    val teacherSubject: String? = null,
+    val isSubjectLocked: Boolean = false,
     val assignmentFormat: String = "STRUCTURED_QUESTIONS", // "STRUCTURED_QUESTIONS", "HOMEWORK_PR", "HYBRID"
     val questions: List<AssignmentQuestion> = listOf(defaultMultipleChoiceQuestion(1)),
 )
@@ -55,6 +59,7 @@ class AssignmentCreatorViewModel @Inject constructor(
     private val repository: AssignmentRepository,
     private val academicRepository: AcademicRepository,
     private val generatorRepository: CurriculumGeneratorRepository,
+    private val authManager: AuthManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AssignmentCreatorUiState())
@@ -187,13 +192,38 @@ class AssignmentCreatorViewModel @Inject constructor(
     fun loadAcademicData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingAcademicData = true)
+            val auth = authManager.authState.first()
             val classesResult = academicRepository.getClasses()
             val subjectsResult = academicRepository.getSubjects()
+            val rawSubjects = subjectsResult.getOrDefault(emptyList())
+
+            val isTeacher = auth.isSubjectLockedTeacher
+            val teacherSubj = auth.subject?.trim()
+            val isLocked = isTeacher && !teacherSubj.isNullOrBlank()
+
+            val finalSubjects = if (isLocked && teacherSubj != null) {
+                val tokens = teacherSubj.split(Regex("[/,]"))
+                    .map { it.trim().lowercase() }
+                    .filter { it.isNotEmpty() }
+                val matched = rawSubjects.filter { s ->
+                    val sName = s.name.lowercase()
+                    tokens.any { t -> sName == t || sName.contains(t) || t.contains(sName) }
+                }
+                if (matched.isNotEmpty()) {
+                    matched
+                } else {
+                    listOf(AcademicSubject(id = "teacher_subj", name = teacherSubj, code = "GURU"))
+                }
+            } else {
+                rawSubjects
+            }
 
             _state.value = _state.value.copy(
                 isLoadingAcademicData = false,
                 availableClasses = classesResult.getOrDefault(emptyList()),
-                availableSubjects = subjectsResult.getOrDefault(emptyList()),
+                availableSubjects = finalSubjects,
+                teacherSubject = if (isLocked) teacherSubj else null,
+                isSubjectLocked = isLocked,
             )
         }
     }

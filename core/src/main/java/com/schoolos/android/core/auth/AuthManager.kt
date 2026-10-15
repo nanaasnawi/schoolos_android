@@ -44,6 +44,13 @@ fun isPrincipalRole(role: String?): Boolean {
     return l.contains("principal") || l.contains("kepala") || l.contains("headmaster") || l.contains("rektor") || l.contains("direktur")
 }
 
+fun isSubjectLockedTeacher(role: String?): Boolean {
+    if (role.isNullOrBlank()) return false
+    val l = role.lowercase()
+    return !isParentRole(role) && (l.contains("teacher") || l.contains("guru") || l.contains("pengajar")) &&
+        !l.contains("admin") && !l.contains("operator") && !l.contains("kepala") && !l.contains("principal")
+}
+
 data class AuthState(
     val accessToken: String? = null,
     val refreshToken: String? = null,
@@ -63,11 +70,13 @@ data class AuthState(
     val childName: String? = null,
     val childId: String? = null,
     val avatarUrl: String? = null,
+    val subject: String? = null,
 ) {
     val isParent: Boolean get() = isParentRole(role)
     val isPrincipal: Boolean get() = isPrincipalRole(role)
     val isTeacher: Boolean get() = isTeacherRole(role) || isPrincipal
     val isStudent: Boolean get() = !isParent && !isTeacher && !isPrincipal
+    val isSubjectLockedTeacher: Boolean get() = isSubjectLockedTeacher(role)
 }
 
 @Singleton
@@ -94,6 +103,7 @@ class AuthManager @Inject constructor(
         private val KEY_SCHOOL_NAME = stringPreferencesKey("school_name")
         private val KEY_SCHOOL_LOGO_URL = stringPreferencesKey("school_logo_url")
         private val KEY_CUSTOM_SERVER_URL = stringPreferencesKey("custom_server_url")
+        private val KEY_SUBJECT = stringPreferencesKey("user_subject")
     }
 
     val authState: Flow<AuthState> = context.dataStore.data.map { prefs ->
@@ -116,6 +126,7 @@ class AuthManager @Inject constructor(
             isLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false,
             schoolName = prefs[KEY_SCHOOL_NAME],
             schoolLogoUrl = prefs[KEY_SCHOOL_LOGO_URL],
+            subject = prefs[KEY_SUBJECT],
         )
     }.distinctUntilChanged()
 
@@ -195,6 +206,7 @@ class AuthManager @Inject constructor(
         childName: String? = null,
         childId: String? = null,
         avatarUrl: String? = null,
+        subject: String? = null,
     ) {
         cachedAccessToken = accessToken
         cachedRefreshToken = refreshToken
@@ -213,6 +225,7 @@ class AuthManager @Inject constructor(
             if (!childName.isNullOrBlank()) prefs[KEY_CHILD_NAME] = childName
             if (!childId.isNullOrBlank()) prefs[KEY_CHILD_ID] = childId
             if (!avatarUrl.isNullOrBlank()) prefs[KEY_AVATAR_URL] = avatarUrl
+            if (!subject.isNullOrBlank()) prefs[KEY_SUBJECT] = subject
             prefs[KEY_IS_LOGGED_IN] = true
         }
     }
@@ -227,6 +240,7 @@ class AuthManager @Inject constructor(
         childName: String? = null,
         childId: String? = null,
         avatarUrl: String? = null,
+        subject: String? = null,
     ) {
         context.dataStore.edit { prefs ->
             if (name.isNotBlank()) prefs[KEY_NAME] = name
@@ -238,6 +252,7 @@ class AuthManager @Inject constructor(
             if (!childName.isNullOrBlank()) prefs[KEY_CHILD_NAME] = childName
             if (!childId.isNullOrBlank()) prefs[KEY_CHILD_ID] = childId
             if (!avatarUrl.isNullOrBlank()) prefs[KEY_AVATAR_URL] = avatarUrl
+            if (!subject.isNullOrBlank()) prefs[KEY_SUBJECT] = subject
         }
     }
 
@@ -308,6 +323,7 @@ class AuthManager @Inject constructor(
             it.remove(KEY_CLASS_ID)
             it.remove(KEY_CHILD_NAME)
             it.remove(KEY_CHILD_ID)
+            it.remove(KEY_SUBJECT)
             it.remove(KEY_IS_LOGGED_IN)
             // intentionally NOT clearing school profile so the login screen still shows it
         }

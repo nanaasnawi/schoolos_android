@@ -88,8 +88,11 @@ fun AssignmentCreatorScreen(
         }
     }
 
-    LaunchedEffect(subjectOptions) {
-        if (selectedSubject.isEmpty() && subjectOptions.isNotEmpty()) {
+    LaunchedEffect(subjectOptions, state.isSubjectLocked, state.teacherSubject) {
+        if (state.isSubjectLocked && !state.teacherSubject.isNullOrBlank()) {
+            val matched = subjectOptions.firstOrNull { it.contains(state.teacherSubject!!, ignoreCase = true) || state.teacherSubject!!.contains(it, ignoreCase = true) }
+            selectedSubject = matched ?: state.teacherSubject!!
+        } else if (selectedSubject.isEmpty() && subjectOptions.isNotEmpty()) {
             selectedSubject = subjectOptions.first()
         }
     }
@@ -127,11 +130,14 @@ fun AssignmentCreatorScreen(
         AssignmentAiGeneratorScreen(
             availableSubjects = state.availableSubjects,
             currentSubjectName = selectedSubject,
+            isSubjectLocked = state.isSubjectLocked,
             onBack = { showAiGenerateDialog = false },
             onApply = { generated ->
                 title = generated.title
                 instructions = generated.instructions ?: instructions
-                selectedSubject = generated.subjectName.ifBlank { selectedSubject }
+                if (!state.isSubjectLocked) {
+                    selectedSubject = generated.subjectName.ifBlank { selectedSubject }
+                }
                 viewModel.applyGeneratedAssignment(generated)
                 showAiGenerateDialog = false
                 Toast.makeText(context, "✓ Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
@@ -412,11 +418,17 @@ fun AssignmentCreatorScreen(
 
                     AssignmentDropdown(
                         value = selectedSubject,
-                        label = "Mata Pelajaran *",
-                        icon = Icons.Default.School,
-                        expanded = isSubjectMenuExpanded,
+                        label = if (state.isSubjectLocked) "Mata Pelajaran * (🔒 Terkunci)" else "Mata Pelajaran *",
+                        icon = if (state.isSubjectLocked) Icons.Default.Lock else Icons.Default.School,
+                        expanded = if (state.isSubjectLocked && subjectOptions.size <= 1) false else isSubjectMenuExpanded,
                         accentColor = TeacherNeon,
-                        onExpand = { isSubjectMenuExpanded = true },
+                        onExpand = {
+                            if (state.isSubjectLocked && subjectOptions.size <= 1) {
+                                Toast.makeText(context, "Mata pelajaran dikunci untuk guru pengampu: $selectedSubject", Toast.LENGTH_SHORT).show()
+                            } else {
+                                isSubjectMenuExpanded = true
+                            }
+                        },
                         onDismiss = { isSubjectMenuExpanded = false },
                         options = subjectOptions,
                         onSelect = { selectedSubject = it }

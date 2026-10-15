@@ -49,6 +49,7 @@ class AuthRepositoryImpl @Inject constructor(
             childName = data.childName,
             childId = data.childId,
             avatarUrl = data.avatarUrl,
+            subject = data.subject,
         )
 
         if (!data.schoolName.isNullOrBlank()) {
@@ -87,6 +88,7 @@ class AuthRepositoryImpl @Inject constructor(
             childName = data.childName,
             childId = data.childId,
             avatarUrl = data.avatarUrl,
+            subject = data.subject,
         )
 
         if (!data.schoolName.isNullOrBlank()) {
@@ -141,6 +143,7 @@ class AuthRepositoryImpl @Inject constructor(
             childName = data.childName,
             childId = data.childId,
             avatarUrl = data.avatarUrl,
+            subject = data.subject,
         )
         authManager.updateUserEditableDetails(
             email = data.email.takeIf { it.isNotBlank() },

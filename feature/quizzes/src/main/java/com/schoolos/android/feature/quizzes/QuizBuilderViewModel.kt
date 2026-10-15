@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.schoolos.android.core.auth.AuthManager
+import kotlinx.coroutines.flow.first
 
 data class QuestionSummary(
     val number: Int,
@@ -32,6 +34,8 @@ data class QuizBuilderUiState(
     val classId: String? = null,
     val className: String = "",
     val subjectName: String = "",
+    val teacherSubject: String? = null,
+    val isSubjectLocked: Boolean = false,
     val timeLimitMinutes: Int = 30,
     val passingScore: Int = 70,
     val error: String? = null,
@@ -48,6 +52,7 @@ class QuizBuilderViewModel @Inject constructor(
     private val repository: QuizRepository,
     private val academicRepository: AcademicRepository,
     private val generatorRepository: com.schoolos.android.domain.repository.CurriculumGeneratorRepository,
+    private val authManager: AuthManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(QuizBuilderUiState())
@@ -269,13 +274,43 @@ class QuizBuilderViewModel @Inject constructor(
     fun loadAcademicData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingAcademicData = true)
+            val auth = authManager.authState.first()
             val classesResult = academicRepository.getClasses()
             val subjectsResult = academicRepository.getSubjects()
+            val rawSubjects = subjectsResult.getOrDefault(emptyList())
+
+            val isTeacher = auth.isSubjectLockedTeacher
+            val teacherSubj = auth.subject?.trim()
+            val isLocked = isTeacher && !teacherSubj.isNullOrBlank()
+
+            val finalSubjects = if (isLocked && teacherSubj != null) {
+                val tokens = teacherSubj.split(Regex("[/,]"))
+                    .map { it.trim().lowercase() }
+                    .filter { it.isNotEmpty() }
+                val matched = rawSubjects.filter { s ->
+                    val sName = s.name.lowercase()
+                    tokens.any { t -> sName == t || sName.contains(t) || t.contains(sName) }
+                }
+                if (matched.isNotEmpty()) {
+                    matched
+                } else {
+                    listOf(AcademicSubject(id = "teacher_subj", name = teacherSubj, code = "GURU"))
+                }
+            } else {
+                rawSubjects
+            }
 
             _state.value = _state.value.copy(
                 isLoadingAcademicData = false,
                 availableClasses = classesResult.getOrDefault(emptyList()),
-                availableSubjects = subjectsResult.getOrDefault(emptyList()),
+                availableSubjects = finalSubjects,
+                teacherSubject = if (isLocked) teacherSubj else null,
+                isSubjectLocked = isLocked,
+                subjectName = if (isLocked && teacherSubj != null && _state.value.subjectName.isBlank()) {
+                    finalSubjects.firstOrNull()?.name ?: teacherSubj
+                } else {
+                    _state.value.subjectName
+                }
             )
         }
     }
