@@ -146,27 +146,7 @@ fun LoginHeaderSection(
                     ),
             )
 
-            // Luminous Orbital Halo Ring (Enlarged)
-            Box(
-                modifier = Modifier
-                    .size(145.dp)
-                    .align(Alignment.TopCenter)
-                    .offset(y = (-6).dp)
-                    .scale(0.95f + auraAnim * 0.05f)
-                    .clip(CircleShape)
-                    .border(
-                        1.2.dp,
-                        Brush.sweepGradient(
-                            listOf(
-                                accentColor.copy(alpha = 0.55f),
-                                secondaryColor.copy(alpha = 0.20f),
-                                NeonBlue.copy(alpha = 0.40f),
-                                accentColor.copy(alpha = 0.55f),
-                            ),
-                        ),
-                        CircleShape,
-                    ),
-            )
+
 
             // School Logo Crest (Substantially Enlarged to 92dp, elevated behind the student's head)
             Box(
