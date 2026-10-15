@@ -103,13 +103,13 @@ fun LoginHeaderSection(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(230.dp),
+                .height(240.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             // Ambient Radial Glow in Background
             Box(
                 modifier = Modifier
-                    .size(220.dp)
+                    .size(230.dp)
                     .align(Alignment.Center)
                     .offset(y = (-10).dp)
                     .clip(CircleShape)
@@ -129,7 +129,7 @@ fun LoginHeaderSection(
                 modifier = Modifier
                     .size(105.dp)
                     .align(Alignment.TopCenter)
-                    .offset(y = (-7).dp)
+                    .offset(y = (-4).dp)
                     .scale(0.95f + auraAnim * 0.05f)
                     .clip(CircleShape)
                     .border(
@@ -195,7 +195,7 @@ fun LoginHeaderSection(
                 contentDescription = "Siswa School OS",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(185.dp),
+                    .height(188.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
