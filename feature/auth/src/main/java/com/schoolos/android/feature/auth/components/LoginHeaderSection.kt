@@ -131,9 +131,9 @@ fun LoginHeaderSection(
             // Ambient Radial Glow in Background
             Box(
                 modifier = Modifier
-                    .size(230.dp)
+                    .size(240.dp)
                     .align(Alignment.Center)
-                    .offset(y = (-10).dp)
+                    .offset(x = (-20).dp, y = (-5).dp)
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
@@ -146,11 +146,11 @@ fun LoginHeaderSection(
                     ),
             )
 
-            // Grand School Logo Crest (Substantially Enlarged to 156dp, sitting grandly behind student's head)
+            // Grand School Logo Crest (Substantially Enlarged to 156dp, sitting behind student's shoulder & head)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .offset(y = 8.dp)
+                    .offset(x = (-26).dp, y = 8.dp)
                     .size(156.dp)
                     .scale(0.97f + auraAnim * 0.03f)
                     .shadow(16.dp, CircleShape, spotColor = accentColor.copy(alpha = 0.40f))
@@ -189,13 +189,14 @@ fun LoginHeaderSection(
                 )
             }
 
-            // 3D Student Character Image (Drawn directly in front of the logo)
+            // 3D Student Character Image (Positioned slightly to the right of the logo)
             Image(
                 painter = painterResource(id = CoreR.drawable.img_login_student_hero),
                 contentDescription = "Siswa School OS",
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(220.dp),
+                    .height(220.dp)
+                    .offset(x = 26.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
