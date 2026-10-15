@@ -319,12 +319,16 @@ class HomeViewModel @Inject constructor(
             sessionRepository.getSessions(targetClassId).onSuccess { sessions ->
             val today = LocalDate.now()
             val todaySessions = sessions.filter { s ->
-                // Active sessions are always relevant today
-                if (s.status.equals("active", ignoreCase = true)) return@filter true
-
                 val scheduled = s.scheduledAt?.let { parseDate(it) }
                 val started = s.startedAt?.let { parseDate(it) }
-                scheduled == today || started == today
+                val sDate = s.sessionDate?.let { try { LocalDate.parse(it.substringBefore("T")) } catch (_: Exception) { null } }
+                
+                val isDateToday = scheduled == today || started == today || sDate == today
+                if (s.status.equals("active", ignoreCase = true)) {
+                    isDateToday || (scheduled == null && started == null && sDate == null)
+                } else {
+                    isDateToday
+                }
             }.sortedWith(
                 compareBy<LearningSession> {
                     if (it.status.equals("active", ignoreCase = true)) 0 else 1
@@ -342,29 +346,33 @@ class HomeViewModel @Inject constructor(
             cachedClassMap = classMap
             cachedSubjectMap = subjectMap
 
-            if (isTeacher && todaySessions.isNotEmpty()) {
-                val teacherUserId = currentAuth.userId ?: ""
-                val teacherName = currentAuth.name ?: ""
-                val mySessions = todaySessions.filter { s ->
-                    (teacherUserId.isNotBlank() && (s.teacherId == teacherUserId || s.substituteTeacherId == teacherUserId)) ||
-                    (teacherName.isNotBlank() && s.teacherName?.equals(teacherName, ignoreCase = true) == true)
+            val teacherUserId = currentAuth.userId ?: ""
+            val teacherName = currentAuth.name ?: ""
+
+            // STRICT: Teachers must ONLY receive sessions they are assigned to teach.
+            // Never fallback to all school sessions when the teacher has no classes scheduled today.
+            val effectiveTodaySessions = if (isTeacher) {
+                todaySessions.filter { s ->
+                    isTeacherSession(s, teacherUserId, teacherName)
                 }
-                if (mySessions.isNotEmpty()) {
-                    TeacherScheduleReminderManager.scheduleReminders(context, mySessions)
-                }
+            } else {
+                todaySessions
+            }
+
+            if (isTeacher && effectiveTodaySessions.isNotEmpty()) {
+                TeacherScheduleReminderManager.scheduleReminders(context, effectiveTodaySessions)
             }
 
             val urgentSession = if (isTeacher) {
-                evaluateUrgentSession(todaySessions, classMap, subjectMap, homeroom)
+                evaluateUrgentSession(effectiveTodaySessions, classMap, subjectMap, homeroom)
             } else null
 
-            // Real-time active session check: must actually have status == "active"
-            val liveSession = todaySessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
-                ?: sessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
+            // Real-time active session check: must belong to the teacher / effective sessions and have status == "active"
+            val liveSession = effectiveTodaySessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
             val isLive = liveSession != null
 
-            val upcomingSession = todaySessions.firstOrNull { it.status.equals("scheduled", ignoreCase = true) }
-                ?: todaySessions.firstOrNull()
+            val upcomingSession = effectiveTodaySessions.firstOrNull { it.status.equals("scheduled", ignoreCase = true) }
+                ?: effectiveTodaySessions.firstOrNull()
 
             val displaySession = liveSession ?: upcomingSession
 
@@ -389,7 +397,7 @@ class HomeViewModel @Inject constructor(
                 "-"
             }
 
-            val activeTeacherSession = liveSession ?: todaySessions.firstOrNull { it.status.equals("active", ignoreCase = true) }
+            val activeTeacherSession = liveSession
             val activeSubj = if (activeTeacherSession != null) {
                 cleanSubjectName(activeTeacherSession.lessonId, activeTeacherSession.subjectName, activeTeacherSession.notes, subjectMap)
             } else {
@@ -404,19 +412,7 @@ class HomeViewModel @Inject constructor(
                 "-"
             }
 
-            val effectiveTodaySessions = if (isTeacher) {
-                val teacherUserId = currentAuth.userId ?: ""
-                val teacherName = currentAuth.name ?: ""
-                val mySessions = todaySessions.filter { s ->
-                    (teacherUserId.isNotBlank() && (s.teacherId == teacherUserId || s.substituteTeacherId == teacherUserId)) ||
-                    (teacherName.isNotBlank() && s.teacherName?.equals(teacherName, ignoreCase = true) == true)
-                }
-                if (mySessions.isNotEmpty()) mySessions else todaySessions
-            } else {
-                todaySessions
-            }
-
-            val scheduleCount = if (effectiveTodaySessions.isNotEmpty()) effectiveTodaySessions.size else if (todaySessions.isNotEmpty()) todaySessions.size else sessions.size
+            val scheduleCount = effectiveTodaySessions.size
             val attendanceRate = if (effectiveTodaySessions.isNotEmpty()) {
                 val completedOrActive = effectiveTodaySessions.count {
                     it.status.equals("completed", ignoreCase = true) || it.status.equals("active", ignoreCase = true)
@@ -427,10 +423,8 @@ class HomeViewModel @Inject constructor(
                 } else {
                     "100%"
                 }
-            } else if (sessions.isNotEmpty()) {
-                "100%"
             } else {
-                "0%"
+                "100%"
             }
 
             _state.update { current ->
@@ -664,6 +658,35 @@ class HomeViewModel @Inject constructor(
         isSyncInProgress = false
     }
 }
+
+    private fun isTeacherSession(session: LearningSession, teacherUserId: String, teacherName: String): Boolean {
+        val cleanUserId = teacherUserId.trim()
+        val cleanName = teacherName.trim().lowercase()
+
+        // 1. Direct ID matches
+        if (cleanUserId.isNotBlank()) {
+            if (session.teacherId.equals(cleanUserId, ignoreCase = true)) return true
+            if (session.substituteTeacherId?.equals(cleanUserId, ignoreCase = true) == true) return true
+        }
+
+        // 2. Name matches
+        if (cleanName.isNotBlank()) {
+            val sTeacher = session.teacherName?.trim()?.lowercase()
+            if (!sTeacher.isNullOrBlank()) {
+                if (sTeacher == cleanName || sTeacher.contains(cleanName) || cleanName.contains(sTeacher)) {
+                    return true
+                }
+            }
+            val sSubTeacher = session.substituteTeacherName?.trim()?.lowercase()
+            if (!sSubTeacher.isNullOrBlank()) {
+                if (sSubTeacher == cleanName || sSubTeacher.contains(cleanName) || cleanName.contains(sSubTeacher)) {
+                    return true
+                }
+            }
+        }
+
+        return false
+    }
 
     private fun cleanClassName(cid: String?, cname: String?, classMap: Map<String, String>, homeroom: String): String {
         if (!cname.isNullOrBlank() && !isUuid(cname)) return cname
