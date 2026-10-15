@@ -2,8 +2,6 @@
 
 package com.schoolos.android.feature.auth
 
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -27,20 +25,20 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.CosmicBlack
+import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.feature.auth.components.LoginBackgroundCanvas
 import com.schoolos.android.feature.auth.components.LoginErrorToast
 import com.schoolos.android.feature.auth.components.LoginFormCard
 import com.schoolos.android.feature.auth.components.LoginHeaderSection
 import com.schoolos.android.feature.auth.components.LoginHelpDialog
-import com.schoolos.android.feature.auth.components.RoleTabsBar
-import com.schoolos.android.feature.auth.components.rememberRoleTabs
 import kotlinx.coroutines.delay
 
 @Composable
@@ -63,13 +61,8 @@ fun LoginScreen(
         }
     }
 
-    val roleTabs = rememberRoleTabs()
-    val currentTab = roleTabs.getOrElse(state.selectedRoleTab) { roleTabs[0] }
-    val animatedAccentColor by animateColorAsState(
-        targetValue = currentTab.accentColor,
-        animationSpec = tween(400),
-        label = "accentColorAnim",
-    )
+    val accentColor = NeonBlue
+    val secondaryColor = Color(0xFF6366F1)
 
     Box(
         modifier = Modifier
@@ -78,8 +71,8 @@ fun LoginScreen(
     ) {
         // High-end ambient canvas
         LoginBackgroundCanvas(
-            accentColor = animatedAccentColor,
-            secondaryColor = currentTab.secondaryColor,
+            accentColor = accentColor,
+            secondaryColor = secondaryColor,
         )
 
         // Scrollable content
@@ -87,42 +80,33 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState()),
-            contentAlignment = Alignment.Center,
+            contentAlignment = Alignment.TopCenter,
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .navigationBarsPadding()
-                    .padding(horizontal = 14.dp)
-                    .padding(top = 24.dp, bottom = 32.dp),
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 20.dp, bottom = 32.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center,
+                verticalArrangement = Arrangement.Top,
             ) {
                 // 1. School Crest & Typography Header
                 LoginHeaderSection(
                     schoolName = state.schoolName,
                     schoolLogoUrl = state.schoolLogoUrl,
-                    accentColor = animatedAccentColor,
-                    secondaryColor = currentTab.secondaryColor,
+                    accentColor = accentColor,
+                    secondaryColor = secondaryColor,
                 )
 
-                Spacer(Modifier.height(22.dp))
+                Spacer(Modifier.height(20.dp))
 
-                // 2. Role Selector Tabs
-                RoleTabsBar(
-                    roleTabs = roleTabs,
-                    selectedTabIndex = state.selectedRoleTab,
-                    onTabSelected = viewModel::onRoleTabChanged,
-                )
-
-                Spacer(Modifier.height(18.dp))
-
-                // 3. Main Authentication Form Card
+                // 2. Main Authentication Form (Flat on canvas, no enclosing card container, no role tabs)
                 LoginFormCard(
                     state = state,
-                    currentTab = currentTab,
-                    accentColor = animatedAccentColor,
+                    accentColor = accentColor,
+                    secondaryColor = secondaryColor,
                     onUsernameChange = viewModel::onUsernameChanged,
                     onPasswordChange = viewModel::onPasswordChanged,
                     onRememberMeChange = viewModel::onRememberMeChanged,
@@ -131,9 +115,9 @@ fun LoginScreen(
                     onForgotPasswordClick = { showHelpDialog = true },
                 )
 
-                Spacer(Modifier.height(24.dp))
+                Spacer(Modifier.height(20.dp))
 
-                // 4. Trust & Security Footer
+                // 3. Trust & Security Footer
                 Text(
                     text = "© 2026 ${state.schoolName ?: "SCHOOL OS"} • v2.0",
                     color = TextTertiary,
@@ -145,22 +129,22 @@ fun LoginScreen(
             }
         }
 
-        // 5. Solid Opaque Error Toast Floating Overlay
+        // 4. Solid Opaque Error Toast Floating Overlay
         LoginErrorToast(
             errorMessage = state.error,
             onDismiss = viewModel::clearError,
             modifier = Modifier.align(Alignment.BottomCenter),
         )
 
-        // 6. Help & Support Dialog
+        // 5. Help & Support Dialog
         if (showHelpDialog) {
             LoginHelpDialog(
-                accentColor = animatedAccentColor,
+                accentColor = accentColor,
                 onDismissRequest = { showHelpDialog = false },
             )
         }
 
-        // 7. QR Scanner Modal Bottom Sheet
+        // 6. QR Scanner Modal Bottom Sheet
         if (state.showQrScanner) {
             QrScannerModalBottomSheet(
                 onDismissRequest = viewModel::closeQrScanner,
