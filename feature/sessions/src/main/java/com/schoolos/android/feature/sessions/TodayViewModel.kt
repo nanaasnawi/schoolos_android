@@ -53,12 +53,9 @@ class TodayViewModel @Inject constructor(
                     className = auth.className ?: "",
                     classId = auth.classId,
                 )
-                if (allSessionsCache.isNotEmpty()) {
-                    filterAndGroupSessions(allSessionsCache, _state.value.selectedDate, _state.value.selectedFilter)
-                }
+                load(_state.value.selectedDate)
             }
         }
-        load(_state.value.selectedDate)
     }
 
     fun refresh(isPullRefresh: Boolean = false) {
@@ -212,13 +209,18 @@ class TodayViewModel @Inject constructor(
     }
 
     private fun extractSessionDate(s: LearningSession): LocalDate? {
-        return s.sessionDate?.let { dateStr ->
-            try {
-                LocalDate.parse(dateStr.substringBefore("T"))
-            } catch (_: Exception) {
-                null
+        val fromSessionDate = s.sessionDate?.let { dateStr ->
+            if (dateStr.contains("T")) {
+                parseDate(dateStr)
+            } else {
+                try {
+                    LocalDate.parse(dateStr)
+                } catch (_: Exception) {
+                    null
+                }
             }
-        } ?: s.scheduledAt?.let { parseDate(it) } ?: s.startedAt?.let { parseDate(it) }
+        }
+        return fromSessionDate ?: s.scheduledAt?.let { parseDate(it) } ?: s.startedAt?.let { parseDate(it) }
     }
 
     private fun parseDate(iso: String): LocalDate? {
