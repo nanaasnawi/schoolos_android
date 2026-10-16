@@ -75,7 +75,7 @@ fun SchoolAffiliationCard(
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = schoolName?.ifBlank { "School OS" } ?: "School OS",
+                        text = schoolName?.ifBlank { "Akselerasi-Edu" } ?: "Akselerasi-Edu",
                         fontWeight = FontWeight.ExtraBold,
                         fontSize = 15.sp,
                         color = TextPrimary,

@@ -62,7 +62,7 @@ fun WhatsAppProfileCard(
         ProfileInfoRow(
             icon = Icons.Default.Person,
             label = "Nama",
-            value = userName.ifBlank { "Pengguna SchoolOS" },
+            value = userName.ifBlank { "Pengguna Akselerasi-Edu" },
             roleNeon = roleNeon,
             isEditable = false,
             footerNote = "Nama ini diatur oleh administrator sekolah dan tidak dapat diubah.",
@@ -74,7 +74,7 @@ fun WhatsAppProfileCard(
         ProfileInfoRow(
             icon = Icons.Default.Info,
             label = "Tentang",
-            value = about.ifBlank { "Ada di SchoolOS" },
+            value = about.ifBlank { "Ada di Akselerasi-Edu" },
             roleNeon = roleNeon,
             isEditable = true,
             onClick = { onEditField("about") },

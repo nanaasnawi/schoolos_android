@@ -14,7 +14,7 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "SchoolOS"
+rootProject.name = "Akselerasi-Edu"
 
 include(":app")
 include(":core")

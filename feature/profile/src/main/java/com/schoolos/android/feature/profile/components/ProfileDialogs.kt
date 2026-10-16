@@ -302,7 +302,7 @@ fun ProfileAboutDialog(
                 }
                 Spacer(Modifier.width(10.dp))
                 Column {
-                    Text("Tentang SchoolOS", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    Text("Tentang Akselerasi-Edu", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
                     Text("Sistem Operasi Manajemen Sekolah", color = TextTertiary, fontSize = 11.sp)
                 }
             }
@@ -326,7 +326,7 @@ fun ProfileAboutDialog(
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("SchoolOS Mobile", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black)
+                            Text("Akselerasi-Edu Mobile", color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black)
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(8.dp))
@@ -385,7 +385,7 @@ fun ProfileAboutDialog(
                 }
 
                 Text(
-                    "Lembaga: ${schoolName?.ifBlank { "Lembaga Pendidikan Terdaftar" } ?: "Lembaga Pendidikan Terdaftar"}\n© 2026 SchoolOS. Seluruh hak cipta dilindungi.",
+                    "Lembaga: ${schoolName?.ifBlank { "Lembaga Pendidikan Terdaftar" } ?: "Lembaga Pendidikan Terdaftar"}\n© 2026 Akselerasi-Edu. Seluruh hak cipta dilindungi.",
                     color = TextTertiary,
                     fontSize = 10.sp,
                     lineHeight = 14.sp,

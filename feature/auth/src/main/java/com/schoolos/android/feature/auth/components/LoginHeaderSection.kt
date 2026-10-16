@@ -193,7 +193,7 @@ fun LoginHeaderSection(
             // 3D Student Character Image (Exact 120dp x 125dp, lower down & touching the username/email field)
             Image(
                 painter = painterResource(id = CoreR.drawable.img_login_student_hero),
-                contentDescription = "Siswa School OS",
+                contentDescription = "Siswa Akselerasi-Edu",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 20.dp)

@@ -130,7 +130,7 @@ fun AboutAppScreen(
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.School,
-                                    contentDescription = "SchoolOS Logo",
+                                    contentDescription = "Akselerasi-Edu Logo",
                                     tint = NeonBlue,
                                     modifier = Modifier.size(26.dp),
                                 )
@@ -144,7 +144,7 @@ fun AboutAppScreen(
                                     letterSpacing = 0.8.sp,
                                 )
                                 Text(
-                                    text = "SchoolOS Mobile",
+                                    text = "Akselerasi-Edu Mobile",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextPrimary,
@@ -392,7 +392,7 @@ fun AboutAppScreen(
                         title = "Kebijakan Privasi Data Pengguna",
                         onClick = {
                             activeDialogDoc = "Kebijakan Privasi Data" to
-                                "SchoolOS memproses data profil, aktivitas akademik, dan hasil nilai secara aman sesuai dengan Undang-Undang Perlindungan Data Pribadi (UU PDP). Data Anda tidak diperjualbelikan kepada pihak ketiga manapun dan hanya dipergunakan untuk keperluan operasional sekolah tempat Anda terdaftar."
+                                "Akselerasi-Edu memproses data profil, aktivitas akademik, dan hasil nilai secara aman sesuai dengan Undang-Undang Perlindungan Data Pribadi (UU PDP). Data Anda tidak diperjualbelikan kepada pihak ketiga manapun dan hanya dipergunakan untuk keperluan operasional sekolah tempat Anda terdaftar."
                         },
                     )
 
@@ -402,7 +402,7 @@ fun AboutAppScreen(
                         title = "Syarat & Ketentuan Layanan",
                         onClick = {
                             activeDialogDoc = "Syarat & Ketentuan" to
-                                "Aplikasi SchoolOS disediakan untuk menunjang kegiatan belajar-mengajar. Pengguna dilarang menyalahgunakan akun, melakukan kecurangan selama ujian CBT, atau membocorkan materi pembelajaran berhak cipta ke luar lingkungan sekolah."
+                                "Aplikasi Akselerasi-Edu disediakan untuk menunjang kegiatan belajar-mengajar. Pengguna dilarang menyalahgunakan akun, melakukan kecurangan selama ujian CBT, atau membocorkan materi pembelajaran berhak cipta ke luar lingkungan sekolah."
                         },
                     )
 
@@ -412,7 +412,7 @@ fun AboutAppScreen(
                         title = "Lisensi Perangkat Lunak & Open Source",
                         onClick = {
                             activeDialogDoc = "Lisensi Komponen Terbuka" to
-                                "SchoolOS Android dibangun dengan komponen sumber terbuka berkualitas tinggi: Android Jetpack Compose, Kotlin Coroutines & Flow, Google Dagger-Hilt, Retrofit2 & OkHttp, Coil Image Loader, Room Persistence Library, serta Material 3 Components."
+                                "Akselerasi-Edu Android dibangun dengan komponen sumber terbuka berkualitas tinggi: Android Jetpack Compose, Kotlin Coroutines & Flow, Google Dagger-Hilt, Retrofit2 & OkHttp, Coil Image Loader, Room Persistence Library, serta Material 3 Components."
                         },
                     )
                 }
@@ -437,7 +437,7 @@ fun AboutAppScreen(
                         modifier = Modifier.size(16.dp),
                     )
                     Text(
-                        text = "SchoolOS Educational Ecosystem",
+                        text = "Akselerasi-Edu Educational Ecosystem",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,

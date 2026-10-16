@@ -1,4 +1,4 @@
-﻿package com.schoolos.android.feature.home
+package com.schoolos.android.feature.home
 
 import android.content.Context
 import android.content.Intent
@@ -246,7 +246,7 @@ private fun StudentHeroCard(
 
             Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    text = student.fullName.ifBlank { "Siswa SchoolOS" },
+                    text = student.fullName.ifBlank { "Siswa Akselerasi-Edu" },
                     fontSize = 18.sp,
                     fontWeight = FontWeight.ExtraBold,
                     color = TextPrimary,
@@ -921,7 +921,7 @@ private fun ContactTab(
             accentColor = NeonSuccess,
             enabled = cleanPhone.isNotBlank(),
             onClick = {
-                val message = "Halo Bapak/Ibu wali dari ${student.fullName} (${student.className}), saya dari pihak guru School OS ingin berkoordinasi mengenai perkembangan siswa."
+                val message = "Halo Bapak/Ibu wali dari ${student.fullName} (${student.className}), saya dari pihak guru Akselerasi-Edu ingin berkoordinasi mengenai perkembangan siswa."
                 val intent = Intent(Intent.ACTION_VIEW).apply {
                     data = Uri.parse("https://api.whatsapp.com/send?phone=$waPhone&text=${Uri.encode(message)}")
                 }

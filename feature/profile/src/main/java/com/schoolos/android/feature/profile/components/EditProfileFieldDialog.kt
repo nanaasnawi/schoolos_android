@@ -46,7 +46,7 @@ fun EditProfileFieldDialog(
     var textValue by remember { mutableStateOf(currentValue) }
 
     val (title, helperText) = when (fieldKey) {
-        "username" -> "Masukkan Nama Pengguna" to "Nama pengguna dapat digunakan untuk login dan identitas akun SchoolOS."
+        "username" -> "Masukkan Nama Pengguna" to "Nama pengguna dapat digunakan untuk login dan identitas akun Akselerasi-Edu."
         "email" -> "Masukkan Alamat Email" to "Email ini digunakan untuk notifikasi dan pemulihan akun."
         "phone" -> "Masukkan Nomor Telepon" to "Nomor telepon aktif untuk komunikasi dan WhatsApp sekolah."
         "about" -> "Ubah Status / Tentang" to "Tuliskan status atau informasi singkat mengenai aktivitas sekolah Anda."

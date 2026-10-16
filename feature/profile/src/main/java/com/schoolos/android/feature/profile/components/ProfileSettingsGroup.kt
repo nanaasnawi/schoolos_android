@@ -88,7 +88,7 @@ fun ProfileSettingsGroup(
                     iconRes = CoreR.drawable.ic_modern_lock,
                     color = NeonBlue,
                     title = "Keamanan & Kata Sandi",
-                    sub = "Perbarui kata sandi akun SchoolOS",
+                    sub = "Perbarui kata sandi akun Akselerasi-Edu",
                     onClick = onSecurityClick,
                 )
 
@@ -169,7 +169,7 @@ fun ProfileSettingsGroup(
                 ProfileSettingRow(
                     icon = Icons.Default.Info,
                     color = NeonBlue,
-                    title = "Tentang SchoolOS",
+                    title = "Tentang Akselerasi-Edu",
                     sub = "Informasi versi aplikasi dan lisensi",
                     onClick = onAboutClick,
                 )

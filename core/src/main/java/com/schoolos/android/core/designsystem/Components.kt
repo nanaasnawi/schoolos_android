@@ -155,7 +155,7 @@ private fun DefaultBrandLogoContent(
         ) {
             Icon(
                 imageVector = Icons.Default.School,
-                contentDescription = "School OS Logo",
+                contentDescription = "Akselerasi-Edu Logo",
                 tint = Color.White,
                 modifier = Modifier.size((size * 0.58).dp),
             )

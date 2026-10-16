@@ -151,14 +151,14 @@ fun ProfileQrCard(
             Spacer(Modifier.height(12.dp))
 
             Text(
-                text = userName.ifBlank { "Pengguna SchoolOS" },
+                text = userName.ifBlank { "Pengguna Akselerasi-Edu" },
                 fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
             )
 
             Text(
-                text = schoolName.ifBlank { "SchoolOS Education" },
+                text = schoolName.ifBlank { "Akselerasi-Edu Education" },
                 fontSize = 12.sp,
                 color = TextSecondary,
             )
@@ -255,7 +255,7 @@ private fun saveQrCardToGallery(
             textSize = 24f
             textAlign = Paint.Align.CENTER
         }
-        canvas.drawText(schoolName.ifBlank { "SchoolOS Platform" }, width / 2f, 145f, subPaint)
+        canvas.drawText(schoolName.ifBlank { "Akselerasi-Edu Platform" }, width / 2f, 145f, subPaint)
 
         // White QR Box
         val qrBoxSize = 480f
@@ -282,7 +282,7 @@ private fun saveQrCardToGallery(
             isFakeBoldText = true
             textAlign = Paint.Align.CENTER
         }
-        canvas.drawText(userName.ifBlank { "Pengguna SchoolOS" }, width / 2f, 750f, namePaint)
+        canvas.drawText(userName.ifBlank { "Pengguna Akselerasi-Edu" }, width / 2f, 750f, namePaint)
 
         // Role Badge
         val rolePaint = Paint().apply {
@@ -303,12 +303,12 @@ private fun saveQrCardToGallery(
         canvas.drawText("Simpan dan jaga kerahasiaan kartu QR Anda.", width / 2f, 920f, footerPaint)
 
         // Save Bitmap to MediaStore
-        val filename = "SchoolOS_QR_${System.currentTimeMillis()}.png"
+        val filename = "AkselerasiEdu_QR_${System.currentTimeMillis()}.png"
         val values = ContentValues().apply {
             put(MediaStore.Images.Media.DISPLAY_NAME, filename)
             put(MediaStore.Images.Media.MIME_TYPE, "image/png")
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/SchoolOS")
+                put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/AkselerasiEdu")
                 put(MediaStore.Images.Media.IS_PENDING, 1)
             }
         }
@@ -325,7 +325,7 @@ private fun saveQrCardToGallery(
                 values.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(uri, values, null, null)
             }
-            Toast.makeText(context, "✅ Kartu QR Login berhasil disimpan ke Galeri (Pictures/SchoolOS)!", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "✅ Kartu QR Login berhasil disimpan ke Galeri (Pictures/AkselerasiEdu)!", Toast.LENGTH_LONG).show()
         } else {
             Toast.makeText(context, "Gagal menyimpan Kartu QR ke Galeri.", Toast.LENGTH_SHORT).show()
         }

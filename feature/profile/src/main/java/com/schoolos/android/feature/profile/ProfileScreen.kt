@@ -236,9 +236,9 @@ fun ProfileScreen(
 
             // 4. Downloadable QR Code Login Card
             ProfileQrCard(
-                userName = user?.name ?: "Pengguna SchoolOS",
+                userName = user?.name ?: "Pengguna Akselerasi-Edu",
                 roleLabel = roleLabel,
-                schoolName = state.schoolName.ifBlank { "SchoolOS Platform" },
+                schoolName = state.schoolName.ifBlank { "Akselerasi-Edu Platform" },
                 qrToken = state.qrToken,
                 roleNeon = roleNeon,
             )
