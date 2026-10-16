@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -53,6 +54,9 @@ import com.schoolos.android.core.designsystem.subjectGradient
 import com.schoolos.android.core.designsystem.subjectIcon
 import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
+
+import com.schoolos.android.core.designsystem.CosmicSurface2
+import com.schoolos.android.core.designsystem.GlassOverlay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -130,13 +134,14 @@ fun GradeDetailScreen(
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
+                                .shadow(2.dp, RoundedCornerShape(18.dp), spotColor = GlassOverlay)
+                                .clip(RoundedCornerShape(18.dp))
                                 .background(
                                     Brush.linearGradient(
-                                        listOf(CosmicNavy, CosmicSurface)
+                                        listOf(CosmicNavy, CosmicSurface2.copy(alpha = 0.7f))
                                     )
                                 )
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                                .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
                                 .padding(16.dp)
                         ) {
                             Row(
@@ -147,8 +152,7 @@ fun GradeDetailScreen(
                                     modifier = Modifier
                                         .size(52.dp)
                                         .clip(RoundedCornerShape(14.dp))
-                                        .background(Brush.linearGradient(gradient))
-                                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
+                                        .background(Brush.linearGradient(gradient)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
