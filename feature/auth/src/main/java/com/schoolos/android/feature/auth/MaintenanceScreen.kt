@@ -299,7 +299,7 @@ fun MaintenanceScreen(
                         Spacer(Modifier.width(8.dp))
                         Text("Infrastruktur", fontSize = 12.sp, color = TextSecondary)
                     }
-                    Text("School OS Cloud v2.4", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("Akselerasi-Edu Cloud v2.4", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 }
             }
 
@@ -415,7 +415,7 @@ fun MaintenanceScreen(
 
             // ── Footer Assistance Text ──────────────────────────────
             Text(
-                text = "Hubungi Administrator TI Sekolah jika membutuhkan akses darurat.\nSchool OS Enterprise \u2022 v2.4.0",
+                text = "Hubungi Administrator TI Sekolah jika membutuhkan akses darurat.\nAkselerasi-Edu Enterprise \u2022 v2.4.0",
                 fontSize = 10.5.sp,
                 color = TextTertiary.copy(alpha = 0.7f),
                 textAlign = TextAlign.Center,

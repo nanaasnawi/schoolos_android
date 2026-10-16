@@ -338,7 +338,7 @@ fun SchoolHelpContactScreen(
                                     if (hasEmail) {
                                         val intent = Intent(Intent.ACTION_SENDTO).apply {
                                             data = Uri.parse("mailto:${state.schoolEmail}")
-                                            putExtra(Intent.EXTRA_SUBJECT, "Pertanyaan Layanan Akademik - SchoolOS")
+                                            putExtra(Intent.EXTRA_SUBJECT, "Pertanyaan Layanan Akademik - Akselerasi-Edu")
                                         }
                                         try {
                                             context.startActivity(intent)

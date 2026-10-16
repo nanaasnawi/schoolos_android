@@ -658,7 +658,7 @@ fun TeacherAssignmentDetailContent(
                         color = TextSecondary
                     )
                     Text(
-                        "Siswa ini belum mengumpulkan tugas. Siswa dapat mengerjakan tugas ini melalui aplikasi School OS Siswa.",
+                        "Siswa ini belum mengumpulkan tugas. Siswa dapat mengerjakan tugas ini melalui aplikasi Akselerasi-Edu Siswa.",
                         fontSize = 12.sp,
                         color = TextSecondary,
                         lineHeight = 17.sp

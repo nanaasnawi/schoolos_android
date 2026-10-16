@@ -96,7 +96,7 @@ fun InAppPdfViewer(
                         connection.connectTimeout = 15000
                         connection.readTimeout = 60000
                         connection.instanceFollowRedirects = true
-                        connection.setRequestProperty("User-Agent", "SchoolOS-Android-Client/1.0")
+                        connection.setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
                         connection.connect()
 
                         val code = connection.responseCode

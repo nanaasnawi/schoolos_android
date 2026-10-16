@@ -215,7 +215,7 @@ fun HomeScreen(
                                 verticalArrangement = Arrangement.Center,
                             ) {
                                 Text(
-                                    text = if (state.schoolName.isNotBlank()) state.schoolName else "School OS",
+                                    text = if (state.schoolName.isNotBlank()) state.schoolName else "Akselerasi-Edu",
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextPrimary,

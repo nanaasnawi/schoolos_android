@@ -320,7 +320,8 @@ class LoginViewModel @Inject constructor(
                 val endIdx = sub.indexOfFirst { !it.isLetterOrDigit() && it != '_' }
                 if (endIdx != -1) sub.substring(0, endIdx) else sub
             }
-            trimmed.startsWith("schoolos://auth?token=", ignoreCase = true) -> {
+            trimmed.startsWith("schoolos://auth?token=", ignoreCase = true) ||
+            trimmed.startsWith("akselerasi-edu://auth?token=", ignoreCase = true) -> {
                 trimmed.substringAfter("token=")
             }
             else -> trimmed

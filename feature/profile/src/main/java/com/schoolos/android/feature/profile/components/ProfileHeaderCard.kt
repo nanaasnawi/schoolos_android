@@ -220,7 +220,7 @@ fun ProfileHeaderCard(
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = user?.name?.ifBlank { "Pengguna SchoolOS" } ?: "Pengguna SchoolOS",
+                        text = user?.name?.ifBlank { "Pengguna Akselerasi-Edu" } ?: "Pengguna Akselerasi-Edu",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
