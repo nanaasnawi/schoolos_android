@@ -71,6 +71,7 @@ import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.GlassBorder2
 import com.schoolos.android.core.designsystem.LoadingState
 import com.schoolos.android.core.designsystem.NeonBlue
+import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.NeonWarning
@@ -385,9 +386,14 @@ private fun StudentProgressHeroCard(progress: Progress) {
         else if (progress.overallProgress >= 60.0) "Baik & Konsisten"
         else "Perlu Penguatan"
 
-    val statusColor = if (progress.overallProgress >= 80.0) NeonSuccess
-        else if (progress.overallProgress >= 60.0) NeonBlue
-        else NeonWarning
+    val isDark = LocalIsDarkTheme.current
+    val statusColor = if (progress.overallProgress >= 80.0) {
+        if (isDark) NeonSuccess else Color(0xFF047857)
+    } else if (progress.overallProgress >= 60.0) {
+        if (isDark) NeonBlue else Color(0xFF1D4ED8)
+    } else {
+        if (isDark) NeonWarning else Color(0xFFB45309)
+    }
 
     Box(
         modifier = Modifier
@@ -424,7 +430,7 @@ private fun StudentProgressHeroCard(progress: Progress) {
                     text = progress.subjectName.ifEmpty { "Kurikulum 2026" },
                     fontWeight = FontWeight.Black,
                     fontSize = 18.sp,
-                    color = Color.White,
+                    color = TextPrimary,
                     lineHeight = 22.sp,
                 )
 
@@ -456,6 +462,7 @@ private fun StudentProgressHeroCard(progress: Progress) {
             Spacer(Modifier.width(14.dp))
 
             // Animated Circular Ring with Dual Gradient
+            val trackColor = GlassBorder2
             Box(
                 modifier = Modifier.size(90.dp),
                 contentAlignment = Alignment.Center,
@@ -468,7 +475,7 @@ private fun StudentProgressHeroCard(progress: Progress) {
 
                     // Background track
                     drawArc(
-                        color = Color.White.copy(alpha = 0.08f),
+                        color = trackColor.copy(alpha = 0.45f),
                         startAngle = -90f,
                         sweepAngle = 360f,
                         useCenter = false,
@@ -497,7 +504,7 @@ private fun StudentProgressHeroCard(progress: Progress) {
                         text = "${(animatedPct * 100).toInt()}%",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color.White,
+                        color = TextPrimary,
                         letterSpacing = (-0.5).sp,
                     )
                     Text(
@@ -787,6 +794,15 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
         else "Anak Anda"
     val className = progress.className.orEmpty()
 
+    val isDark = LocalIsDarkTheme.current
+    val statusColor = if (progress.overallProgress >= 80.0) {
+        if (isDark) NeonSuccess else Color(0xFF047857)
+    } else if (progress.overallProgress >= 60.0) {
+        if (isDark) NeonBlue else Color(0xFF1D4ED8)
+    } else {
+        if (isDark) NeonWarning else Color(0xFFB45309)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -804,7 +820,7 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "PERFORMA AKADEMIK",
-                        color = Color.White.copy(alpha = 0.75f),
+                        color = TextTertiary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp,
@@ -814,13 +830,13 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
                         displayName,
                         fontWeight = FontWeight.Black,
                         fontSize = 19.sp,
-                        color = Color.White,
+                        color = TextPrimary,
                         lineHeight = 24.sp,
                     )
                     Text(
                         if (className.isNotBlank()) "Kelas $className" else "Siswa Aktif",
                         fontSize = 12.sp,
-                        color = Color.White.copy(alpha = 0.85f),
+                        color = TextSecondary,
                         fontWeight = FontWeight.Medium,
                     )
                 }
@@ -828,11 +844,11 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.2f))
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        .background(statusColor.copy(alpha = 0.12f))
+                        .border(1.dp, statusColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                 ) {
-                    Text(statusText, color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(statusText, color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -848,13 +864,13 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
                         String.format(java.util.Locale.US, "%.1f", progress.overallProgress),
                         fontSize = 38.sp,
                         fontWeight = FontWeight.Black,
-                        color = Color.White,
+                        color = TextPrimary,
                         letterSpacing = (-1).sp,
                     )
                     Text(
                         "/ 100",
                         fontSize = 14.sp,
-                        color = Color.White.copy(alpha = 0.75f),
+                        color = TextTertiary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 6.dp, start = 4.dp),
                     )
@@ -863,14 +879,14 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
-                        .background(Color.White.copy(alpha = 0.18f))
-                        .border(1.dp, Color.White.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                        .background(NeonBlue.copy(alpha = 0.12f))
+                        .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Download, null, tint = Color.White, modifier = Modifier.size(15.dp))
+                        Icon(Icons.Default.Download, null, tint = NeonBlue, modifier = Modifier.size(15.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("PDF RAPOR", color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                        Text("PDF RAPOR", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
                     }
                 }
             }
