@@ -89,19 +89,7 @@ fun LoginFormCard(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        // 1. "Login" Section Title (Left aligned matching mockup)
-        Text(
-            text = "Login",
-            fontWeight = FontWeight.Bold,
-            fontSize = 24.sp,
-            color = TextPrimary,
-            letterSpacing = (-0.5).sp,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        Spacer(Modifier.height(16.dp))
-
-        // 2. Username / Email Field (Pill Shape)
+        // 1. Username / Email Field (Pill Shape)
         OutlinedTextField(
             value = state.username,
             onValueChange = onUsernameChange,

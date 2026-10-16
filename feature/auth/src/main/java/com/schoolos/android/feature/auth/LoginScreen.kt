@@ -111,7 +111,7 @@ fun LoginScreen(
                     secondaryColor = secondaryColor,
                 )
 
-                Spacer(Modifier.height(20.dp))
+                Spacer(Modifier.height(2.dp))
 
                 // 2. Main Authentication Form (Flat on canvas, no enclosing card container, no role tabs)
                 LoginFormCard(

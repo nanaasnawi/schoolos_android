@@ -71,6 +71,8 @@ fun LoginHeaderSection(
         label = "headerPulse",
     )
 
+    val displaySchoolName = schoolName?.takeIf { it.isNotBlank() } ?: "PKBM AS-SALAFIYAH"
+
     Column(
         modifier = modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -99,11 +101,10 @@ fun LoginHeaderSection(
             Spacer(Modifier.height(4.dp))
 
             // Subtitle with slightly bold school name (PKBM AS-SALAFIYAH)
-            val displaySchoolName = schoolName?.takeIf { it.isNotBlank() } ?: "PKBM AS-SALAFIYAH"
             val schoolTextColor = TextPrimary
             val annotatedGreeting = remember(displaySchoolName, schoolTextColor) {
                 buildAnnotatedString {
-                    append("Masuk untuk mengakses materi & tugas di ")
+                    append("Masuk untuk mengakses materi dan tugas di\n")
                     withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = schoolTextColor)) {
                         append(displaySchoolName)
                     }
@@ -114,18 +115,18 @@ fun LoginHeaderSection(
                 fontSize = 13.sp,
                 color = TextSecondary,
                 fontWeight = FontWeight.Normal,
-                maxLines = 2,
+                maxLines = 3,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(12.dp))
 
-        // 2. 3D Student Illustration with Grand School Logo Backdrop (Behind head, space-saving)
+        // 2. School Logo (195x195) and Student Hero Character (120x125) touching the login form
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(235.dp),
+                .height(210.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             // Ambient Radial Glow in Background
@@ -133,38 +134,31 @@ fun LoginHeaderSection(
                 modifier = Modifier
                     .size(240.dp)
                     .align(Alignment.Center)
-                    .offset(x = (-20).dp, y = (-5).dp)
+                    .offset(y = (-5).dp)
                     .clip(CircleShape)
                     .background(
                         Brush.radialGradient(
                             listOf(
-                                accentColor.copy(alpha = 0.28f * particlePulse),
-                                secondaryColor.copy(alpha = 0.10f),
+                                accentColor.copy(alpha = 0.22f * particlePulse),
+                                secondaryColor.copy(alpha = 0.08f),
                                 Color.Transparent,
                             ),
                         ),
                     ),
             )
 
-            // Grand School Logo Crest (Substantially Enlarged to 156dp, sitting behind student's shoulder & head)
+            // Grand School Logo Crest (Exact 195dp x 195dp as requested)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .offset(x = (-26).dp, y = 8.dp)
-                    .size(156.dp)
-                    .scale(0.97f + auraAnim * 0.03f)
-                    .shadow(16.dp, CircleShape, spotColor = accentColor.copy(alpha = 0.40f))
+                    .offset(y = 2.dp)
+                    .size(195.dp)
+                    .scale(0.98f + auraAnim * 0.02f)
+                    .shadow(12.dp, CircleShape, spotColor = accentColor.copy(alpha = 0.28f))
                     .clip(CircleShape)
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                CosmicNavy,
-                                CosmicSurface2,
-                            ),
-                        ),
-                    )
+                    .background(Color.White)
                     .border(
-                        2.5.dp,
+                        1.5.dp,
                         Brush.sweepGradient(
                             listOf(
                                 accentColor,
@@ -175,28 +169,35 @@ fun LoginHeaderSection(
                         ),
                         CircleShape,
                     )
-                    .padding(6.dp),
+                    .padding(3.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 DynamicSchoolLogo(
                     logoUrl = schoolLogoUrl,
                     modifier = Modifier
-                        .size(142.dp)
+                        .size(189.dp)
                         .clip(CircleShape),
                     fallback = {
-                        SchoolOsBrandLogo(size = 126)
+                        Image(
+                            painter = painterResource(id = CoreR.drawable.img_school_logo_default),
+                            contentDescription = displaySchoolName,
+                            modifier = Modifier
+                                .size(189.dp)
+                                .clip(CircleShape),
+                            contentScale = ContentScale.Fit,
+                        )
                     },
                 )
             }
 
-            // 3D Student Character Image (Positioned slightly to the right of the logo)
+            // 3D Student Character Image (Exact 120dp x 125dp, touching the username/email field)
             Image(
                 painter = painterResource(id = CoreR.drawable.img_login_student_hero),
                 contentDescription = "Siswa School OS",
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .height(220.dp)
-                    .offset(x = 26.dp),
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 24.dp)
+                    .size(width = 120.dp, height = 125.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
