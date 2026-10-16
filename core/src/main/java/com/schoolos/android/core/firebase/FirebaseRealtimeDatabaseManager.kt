@@ -66,12 +66,19 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
     /**
      * Push a message to a thread in Realtime Database.
      */
-    fun pushMessage(threadId: String, message: ChatMessage) {
+    fun pushMessage(
+        threadId: String,
+        message: ChatMessage,
+        studentId: String? = null,
+        studentName: String? = null,
+        teacherId: String? = null,
+        teacherName: String? = null,
+    ) {
         try {
             val threadRef = rootRef.child("inquiries").child(threadId)
             val msgRef = threadRef.child("messages").child(message.id)
 
-            val msgMap = mapOf(
+            val msgMap = mutableMapOf<String, Any>(
                 "id" to message.id,
                 "threadId" to threadId,
                 "senderId" to message.senderId,
@@ -86,15 +93,36 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
             msgRef.setValue(msgMap)
 
             // Update thread last message summary
-            val summaryMap = mapOf(
+            val summaryMap = mutableMapOf<String, Any>(
                 "lastMessageContent" to message.content,
                 "lastMessageAt" to message.timestamp,
                 "status" to if (message.isFromTeacher) "ANSWERED" else "WAITING_REPLY",
                 "lastSenderName" to message.senderName,
+                "lastSenderId" to message.senderId,
+                "lastSenderRole" to message.senderRole,
                 "readStatusLabel" to if (message.isFromTeacher) "✓ Dijawab Guru" else "Menunggu Dibaca Guru",
                 "teacherLastReadAt" to if (message.isFromTeacher) message.timestamp else 0L,
             )
+            if (!studentId.isNullOrBlank()) summaryMap["studentId"] = studentId
+            if (!studentName.isNullOrBlank()) summaryMap["studentName"] = studentName
+            if (!teacherId.isNullOrBlank()) summaryMap["teacherId"] = teacherId
+            if (!teacherName.isNullOrBlank()) summaryMap["teacherName"] = teacherName
+
             threadRef.child("summary").updateChildren(summaryMap)
+
+            // If teacher replied, ensure metadata also holds the correct teacher name & ID
+            if (message.isFromTeacher && message.senderName.isNotBlank() &&
+                !message.senderName.equals("Bapak/Ibu Guru", ignoreCase = true) &&
+                !message.senderName.equals("Guru Pengampu", ignoreCase = true)
+            ) {
+                threadRef.child("metadata").updateChildren(
+                    mapOf(
+                        "teacherName" to message.senderName,
+                        "teacherId" to message.senderId,
+                        "lastUpdated" to message.timestamp,
+                    )
+                )
+            }
         } catch (e: Exception) {
             Timber.e(e, "Failed to push message to Firebase RTDB for thread $threadId")
         }
@@ -115,6 +143,129 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
             )
         } catch (e: Exception) {
             Timber.e(e, "Failed to mark thread read by teacher in RTDB: $threadId")
+        }
+    }
+
+    /**
+     * Set user online presence in Firebase RTDB (global and thread-scoped).
+     */
+    fun setUserPresence(userId: String, userName: String, role: String, isOnline: Boolean) {
+        if (userId.isBlank()) return
+        try {
+            val presenceRef = rootRef.child("inquiries").child("presence").child(userId)
+            if (isOnline) {
+                val onlineData = mapOf(
+                    "userId" to userId,
+                    "name" to userName,
+                    "role" to role,
+                    "status" to "online",
+                    "lastSeen" to com.google.firebase.database.ServerValue.TIMESTAMP,
+                )
+                val offlineData = mapOf(
+                    "userId" to userId,
+                    "name" to userName,
+                    "role" to role,
+                    "status" to "offline",
+                    "lastSeen" to com.google.firebase.database.ServerValue.TIMESTAMP,
+                )
+                presenceRef.onDisconnect().setValue(offlineData)
+                presenceRef.setValue(onlineData)
+            } else {
+                presenceRef.updateChildren(
+                    mapOf(
+                        "status" to "offline",
+                        "lastSeen" to com.google.firebase.database.ServerValue.TIMESTAMP,
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to set user presence for $userId")
+        }
+    }
+
+    /**
+     * Set presence for a specific inquiry thread.
+     */
+    fun setThreadPresence(threadId: String, role: String, userId: String, userName: String, isOnline: Boolean) {
+        if (threadId.isBlank()) return
+        try {
+            val roleKey = role.lowercase()
+            val threadPresenceRef = rootRef.child("inquiries").child(threadId).child("presence").child(roleKey)
+            if (isOnline) {
+                val onlineData = mapOf(
+                    "userId" to userId,
+                    "name" to userName,
+                    "status" to "online",
+                    "lastSeen" to com.google.firebase.database.ServerValue.TIMESTAMP,
+                )
+                val offlineData = mapOf(
+                    "userId" to userId,
+                    "name" to userName,
+                    "status" to "offline",
+                    "lastSeen" to com.google.firebase.database.ServerValue.TIMESTAMP,
+                )
+                threadPresenceRef.onDisconnect().setValue(offlineData)
+                threadPresenceRef.setValue(onlineData)
+            } else {
+                threadPresenceRef.updateChildren(
+                    mapOf(
+                        "status" to "offline",
+                        "lastSeen" to com.google.firebase.database.ServerValue.TIMESTAMP,
+                    )
+                )
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to set thread presence for thread $threadId")
+        }
+    }
+
+    /**
+     * Observe online presence for a specific thread participant in real time.
+     */
+    fun observeThreadPresence(threadId: String, targetRole: String, targetUserId: String? = null): Flow<Boolean> = callbackFlow {
+        val roleKey = targetRole.lowercase()
+        val threadPresenceRef = rootRef.child("inquiries").child(threadId).child("presence").child(roleKey)
+        val userPresenceRef = if (!targetUserId.isNullOrBlank()) {
+            rootRef.child("inquiries").child("presence").child(targetUserId)
+        } else null
+
+        var isThreadPresenceOnline = false
+        var isUserPresenceOnline = false
+
+        fun evaluate() {
+            trySend(isThreadPresenceOnline || isUserPresenceOnline)
+        }
+
+        val threadListener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val status = snapshot.child("status").getValue(String::class.java)
+                val lastSeen = snapshot.child("lastSeen").getValue(Long::class.java) ?: 0L
+                val isFresh = (System.currentTimeMillis() - lastSeen) < 180_000L // 3 minutes timeout
+                isThreadPresenceOnline = status.equals("online", ignoreCase = true) && isFresh
+                evaluate()
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        }
+        threadPresenceRef.addValueEventListener(threadListener)
+
+        val userListener = if (userPresenceRef != null) {
+            object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val status = snapshot.child("status").getValue(String::class.java)
+                    val lastSeen = snapshot.child("lastSeen").getValue(Long::class.java) ?: 0L
+                    val isFresh = (System.currentTimeMillis() - lastSeen) < 180_000L
+                    isUserPresenceOnline = status.equals("online", ignoreCase = true) && isFresh
+                    evaluate()
+                }
+                override fun onCancelled(error: DatabaseError) {}
+            }.also { userPresenceRef.addValueEventListener(it) }
+        } else null
+
+        awaitClose {
+            threadPresenceRef.removeEventListener(threadListener)
+            if (userPresenceRef != null && userListener != null) {
+                userPresenceRef.removeEventListener(userListener)
+            }
         }
     }
 

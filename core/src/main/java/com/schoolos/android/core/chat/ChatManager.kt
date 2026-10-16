@@ -645,17 +645,26 @@ class ChatManager @Inject constructor(
             isRead = false,
         )
 
+        val currentThread = _threads.value.find { it.id == threadId }
+        val updatedTeacherName = if (isTeacher && effectiveSenderName.isNotBlank() && !effectiveSenderName.equals("Guru Pengampu", ignoreCase = true)) {
+            effectiveSenderName
+        } else {
+            currentThread?.teacherName ?: ""
+        }
+
         // Single Source of Truth: Push directly to Firebase Realtime Database
-        firebaseRtdbManager.pushMessage(threadId, localMsg)
+        firebaseRtdbManager.pushMessage(
+            threadId = threadId,
+            message = localMsg,
+            studentId = currentThread?.studentId,
+            studentName = currentThread?.studentName,
+            teacherId = currentThread?.teacherId,
+            teacherName = updatedTeacherName,
+        )
 
         // Optimistically update in-memory thread
         _threads.value = _threads.value.map { thread ->
             if (thread.id == threadId) {
-                val updatedTeacherName = if (isTeacher && effectiveSenderName.isNotBlank() && !effectiveSenderName.equals("Guru Pengampu", ignoreCase = true)) {
-                    effectiveSenderName
-                } else {
-                    thread.teacherName
-                }
                 val alreadyHas = thread.messages.any { it.id == clientUuid }
                 val updatedMsgs = if (alreadyHas) thread.messages else thread.messages + localMsg
                 thread.copy(
@@ -928,4 +937,27 @@ class ChatManager @Inject constructor(
             }
         }
     }
+
+    /**
+     * Update active presence for user in thread and globally in Firebase RTDB.
+     */
+    fun setPresence(threadId: String, isOnline: Boolean) {
+        val auth = cachedAuth ?: return
+        val userId = auth.userId ?: return
+        val userName = auth.name ?: "User"
+        val role = if (auth.isTeacher) "TEACHER" else "STUDENT"
+        firebaseRtdbManager.setUserPresence(userId, userName, role, isOnline)
+        if (threadId.isNotBlank()) {
+            firebaseRtdbManager.setThreadPresence(threadId, role, userId, userName, isOnline)
+        }
+    }
+
+    /**
+     * Observe real-time online presence for participant in a thread.
+     */
+    fun observeThreadPresence(threadId: String, isTeacherMode: Boolean, targetUserId: String? = null): kotlinx.coroutines.flow.Flow<Boolean> {
+        val targetRole = if (isTeacherMode) "STUDENT" else "TEACHER"
+        return firebaseRtdbManager.observeThreadPresence(threadId, targetRole, targetUserId)
+    }
 }
+
