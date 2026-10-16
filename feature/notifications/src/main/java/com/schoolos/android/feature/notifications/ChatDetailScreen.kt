@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -111,19 +112,29 @@ fun ChatDetailScreen(
     val focusManager = LocalFocusManager.current
 
     LaunchedEffect(threadId) { chatManager.loadThreadDetail(threadId) }
-    androidx.compose.runtime.DisposableEffect(chatManager) {
+    androidx.compose.runtime.DisposableEffect(chatManager, threadId) {
         chatManager.startPolling()
+        chatManager.setPresence(threadId, isOnline = true)
         onDispose {
             chatManager.stopPolling()
+            chatManager.setPresence(threadId, isOnline = false)
         }
     }
+
+    val isParticipantOnline by chatManager.observeThreadPresence(
+        threadId = threadId,
+        isTeacherMode = isTeacherMode,
+        targetUserId = if (isTeacherMode) thread?.studentId else thread?.teacherId,
+    ).collectAsState(initial = false)
+
     LaunchedEffect(thread?.messages?.size) {
         val size = thread?.messages?.size ?: 0
         if (size > 0) listState.animateScrollToItem(size - 1)
     }
-    // Dismiss keyboard on scroll or touch drag in chat list
-    LaunchedEffect(listState.isScrollInProgress) {
-        if (listState.isScrollInProgress) {
+    // Dismiss keyboard ONLY when user actively drags the chat list with finger
+    val isListDragged by listState.interactionSource.collectIsDraggedAsState()
+    LaunchedEffect(isListDragged) {
+        if (isListDragged) {
             focusManager.clearFocus()
         }
     }
@@ -136,7 +147,7 @@ fun ChatDetailScreen(
         if (isKeyboardOpen.value) {
             val size = thread?.messages?.size ?: 0
             if (size > 0) {
-                listState.animateScrollToItem(size - 1)
+                listState.scrollToItem(size - 1)
             }
         }
     }
@@ -145,17 +156,18 @@ fun ChatDetailScreen(
         thread?.studentName?.ifBlank { null } ?: initialRecipientName.ifBlank { null } ?: "Siswa"
     } else {
         val tName = thread?.teacherName
-        if (!tName.isNullOrBlank() && !tName.equals("Guru Pengampu", ignoreCase = true)) {
+        if (!tName.isNullOrBlank() && !tName.equals("Guru Pengampu", ignoreCase = true) && !tName.equals("Bapak/Ibu Guru", ignoreCase = true)) {
             tName
-        } else if (initialRecipientName.isNotBlank() && !initialRecipientName.equals("Guru Pengampu", ignoreCase = true)) {
+        } else if (initialRecipientName.isNotBlank() && !initialRecipientName.equals("Guru Pengampu", ignoreCase = true) && !initialRecipientName.equals("Bapak/Ibu Guru", ignoreCase = true)) {
             initialRecipientName
         } else {
             "Guru Mata Pelajaran"
         }
     }
     val contactInitial = contactName.trim().take(1).uppercase().ifBlank { "?" }
-    val contactSubtitle = if (isTeacherMode) "Siswa • ${thread?.studentClass?.ifBlank { "Rombel" } ?: "Rombel"}"
-                          else "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • Aktif"
+    val statusText = if (isParticipantOnline) "Aktif" else "Tidak Aktif"
+    val contactSubtitle = if (isTeacherMode) "Siswa • ${thread?.studentClass?.ifBlank { "Rombel" } ?: "Rombel"} • $statusText"
+                          else "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • $statusText"
     val roleNeon = if (isTeacherMode) StudentNeon else TeacherNeon
 
     val rawAvatarUrl = if (isTeacherMode) thread?.studentAvatarUrl else thread?.teacherAvatarUrl
@@ -285,13 +297,13 @@ fun ChatDetailScreen(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
-                                .background(NeonSuccess),
+                                .background(if (isParticipantOnline) NeonSuccess else TextTertiary.copy(alpha = 0.5f)),
                         )
                         Spacer(Modifier.width(5.dp))
                         Text(
                             text = contactSubtitle,
                             fontSize = 10.sp,
-                            color = TextTertiary,
+                            color = if (isParticipantOnline) NeonSuccess.copy(alpha = 0.9f) else TextTertiary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -428,6 +440,7 @@ fun ChatDetailScreen(
                         isMe = isMe,
                         isTeacherMode = isTeacherMode,
                         roleNeon = roleNeon,
+                        fallbackTeacherName = contactName,
                         isReadByRecipient = isReadByOther,
                     )
                 }
@@ -685,6 +698,7 @@ private fun MessageBubble(
     isMe: Boolean,
     isTeacherMode: Boolean,
     roleNeon: Color,
+    fallbackTeacherName: String = "",
     isReadByRecipient: Boolean = false,
 ) {
     val align = if (isMe) Alignment.End else Alignment.Start
@@ -731,12 +745,33 @@ private fun MessageBubble(
                         message.isFromTeacher -> "Guru"
                         else -> "Siswa"
                     }
+                    val rawName = message.senderName.trim()
+                    val effectiveSenderName = when {
+                        isAi -> "Asisten AI"
+                        message.isFromTeacher -> {
+                            if (rawName.isNotBlank() &&
+                                !rawName.equals("Bapak/Ibu Guru", ignoreCase = true) &&
+                                !rawName.equals("Guru Pengampu", ignoreCase = true) &&
+                                !rawName.equals("Guru", ignoreCase = true)
+                            ) {
+                                rawName
+                            } else if (fallbackTeacherName.isNotBlank() &&
+                                !fallbackTeacherName.equals("Guru Pengampu", ignoreCase = true) &&
+                                !fallbackTeacherName.equals("Bapak/Ibu Guru", ignoreCase = true)
+                            ) {
+                                fallbackTeacherName
+                            } else {
+                                "Guru"
+                            }
+                        }
+                        else -> if (rawName.isNotBlank()) rawName else "Siswa"
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(bottom = 3.dp),
                     ) {
                         Text(
-                            text = message.senderName,
+                            text = effectiveSenderName,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = senderColor,
