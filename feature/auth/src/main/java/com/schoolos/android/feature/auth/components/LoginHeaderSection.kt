@@ -122,18 +122,18 @@ fun LoginHeaderSection(
 
         Spacer(Modifier.height(12.dp))
 
-        // 2. School Logo (195x195) and Student Hero Character (120x125) touching the login form
+        // 2. School Logo (150x150) and Student Hero Character (120x125) touching the login form
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(210.dp),
+                .height(248.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             // Ambient Radial Glow in Background
             Box(
                 modifier = Modifier
-                    .size(240.dp)
-                    .align(Alignment.Center)
+                    .size(200.dp)
+                    .align(Alignment.TopCenter)
                     .offset(y = (-5).dp)
                     .clip(CircleShape)
                     .background(
@@ -147,12 +147,12 @@ fun LoginHeaderSection(
                     ),
             )
 
-            // Grand School Logo Crest (Exact 195dp x 195dp as requested)
+            // Grand School Logo Crest (Exact 150dp x 150dp as requested)
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .offset(y = 2.dp)
-                    .size(195.dp)
+                    .offset(y = 4.dp)
+                    .size(150.dp)
                     .scale(0.98f + auraAnim * 0.02f)
                     .shadow(12.dp, CircleShape, spotColor = accentColor.copy(alpha = 0.28f))
                     .clip(CircleShape)
@@ -175,14 +175,14 @@ fun LoginHeaderSection(
                 DynamicSchoolLogo(
                     logoUrl = schoolLogoUrl,
                     modifier = Modifier
-                        .size(189.dp)
+                        .size(144.dp)
                         .clip(CircleShape),
                     fallback = {
                         Image(
                             painter = painterResource(id = CoreR.drawable.img_school_logo_default),
                             contentDescription = displaySchoolName,
                             modifier = Modifier
-                                .size(189.dp)
+                                .size(144.dp)
                                 .clip(CircleShape),
                             contentScale = ContentScale.Fit,
                         )
@@ -190,13 +190,13 @@ fun LoginHeaderSection(
                 )
             }
 
-            // 3D Student Character Image (Exact 120dp x 125dp, touching the username/email field)
+            // 3D Student Character Image (Exact 120dp x 125dp, lower down & touching the username/email field)
             Image(
                 painter = painterResource(id = CoreR.drawable.img_login_student_hero),
                 contentDescription = "Siswa School OS",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 24.dp)
+                    .padding(end = 20.dp)
                     .size(width = 120.dp, height = 125.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
