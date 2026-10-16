@@ -79,6 +79,7 @@ data class CreateInquiryRequestDto(
     @SerialName("reference_title") val referenceTitle: String,
     @SerialName("reference_id") val referenceId: String? = null,
     @SerialName("initial_message") val initialMessage: String,
+    @SerialName("client_message_id") val clientMessageId: String? = null,
 )
 
 @Serializable

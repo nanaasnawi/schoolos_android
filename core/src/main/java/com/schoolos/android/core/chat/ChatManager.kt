@@ -70,9 +70,28 @@ data class ChatThread(
     val teacherAvatarUrl: String? = null,
     val isRead: Boolean = false,
     val readStatusLabel: String? = null,
+    val lastMessageContent: String? = null,
+    val lastSenderName: String? = null,
+    val messageCount: Int = 0,
+    val teacherLastReadAt: Long? = null,
+    val studentLastReadAt: Long? = null,
 ) {
-    val lastMessage: ChatMessage? get() = messages.lastOrNull()
+    val lastMessage: ChatMessage? get() = messages.lastOrNull() ?: if (!lastMessageContent.isNullOrBlank()) {
+        ChatMessage(
+            id = "preview-$id",
+            threadId = id,
+            senderId = "",
+            senderName = lastSenderName ?: (if (status == InquiryStatus.ANSWERED) teacherName else studentName),
+            senderRole = if (status == InquiryStatus.ANSWERED) "TEACHER" else "STUDENT",
+            content = lastMessageContent,
+            timestamp = lastUpdated,
+            isFromTeacher = status == InquiryStatus.ANSWERED,
+            isRead = isRead,
+        )
+    } else null
+
     val isAwaitingReply: Boolean get() = status == InquiryStatus.WAITING_REPLY
+    val effectiveMessageCount: Int get() = if (messages.isNotEmpty()) messages.size else messageCount.coerceAtLeast(if (!lastMessageContent.isNullOrBlank()) 1 else 0)
 }
 
 @Singleton
@@ -194,14 +213,25 @@ class ChatManager @Inject constructor(
                             }
                             val rtdbLastMsg = rtdbData["lastMessageContent"] as? String
                             val rtdbLastMsgAt = (rtdbData["lastMessageAt"] as? Number)?.toLong() ?: thread.lastUpdated
+                            val rtdbLastSender = rtdbData["lastSenderName"] as? String
+                            val rtdbTeacherReadAt = (rtdbData["teacherLastReadAt"] as? Number)?.toLong()
+                            val rtdbReadStatusLabel = rtdbData["readStatusLabel"] as? String
 
                             val isStatusChanged = thread.status != rtdbStatus
                             val isMsgChanged = rtdbLastMsg != null && thread.lastMessage?.content != rtdbLastMsg
-                            if (isStatusChanged || isMsgChanged) {
+                            val isReadChanged = rtdbTeacherReadAt != null && rtdbTeacherReadAt != thread.teacherLastReadAt
+                            val isLabelChanged = rtdbReadStatusLabel != null && rtdbReadStatusLabel != thread.readStatusLabel
+
+                            if (isStatusChanged || isMsgChanged || isReadChanged || isLabelChanged) {
                                 hasChanges = true
                                 thread.copy(
                                     status = rtdbStatus,
-                                    lastUpdated = rtdbLastMsgAt.coerceAtLeast(thread.lastUpdated)
+                                    lastUpdated = rtdbLastMsgAt.coerceAtLeast(thread.lastUpdated),
+                                    lastMessageContent = rtdbLastMsg ?: thread.lastMessageContent,
+                                    lastSenderName = rtdbLastSender ?: thread.lastSenderName,
+                                    teacherLastReadAt = rtdbTeacherReadAt ?: thread.teacherLastReadAt,
+                                    readStatusLabel = rtdbReadStatusLabel ?: thread.readStatusLabel,
+                                    messageCount = if (thread.messages.isNotEmpty()) thread.messages.size else (thread.messageCount.coerceAtLeast(if (rtdbLastMsg != null) 1 else 0)),
                                 )
                             } else {
                                 thread
@@ -347,6 +377,11 @@ class ChatManager @Inject constructor(
                     InquiryStatus.WAITING_REPLY
                 }
 
+                val lastMsgText = messages.lastOrNull()?.content ?: dto.lastMessageContent ?: existing?.lastMessageContent
+                val count = if (messages.isNotEmpty()) messages.size else dto.messageCount.toInt().coerceAtLeast(existing?.messageCount ?: 0)
+                val tReadAt = dto.teacherLastReadAt?.let { parseIsoTimestamp(it) } ?: existing?.teacherLastReadAt
+                val sReadAt = dto.studentLastReadAt?.let { parseIsoTimestamp(it) } ?: existing?.studentLastReadAt
+
                 ChatThread(
                     id = dto.id,
                     studentId = dto.studentId,
@@ -364,7 +399,12 @@ class ChatManager @Inject constructor(
                     studentAvatarUrl = dto.studentAvatarUrl ?: existing?.studentAvatarUrl,
                     teacherAvatarUrl = dto.teacherAvatarUrl ?: existing?.teacherAvatarUrl,
                     isRead = dto.isRead,
-                    readStatusLabel = dto.readStatusLabel,
+                    readStatusLabel = dto.readStatusLabel ?: existing?.readStatusLabel,
+                    lastMessageContent = lastMsgText,
+                    lastSenderName = messages.lastOrNull()?.senderName ?: existing?.lastSenderName,
+                    messageCount = count,
+                    teacherLastReadAt = tReadAt,
+                    studentLastReadAt = sReadAt,
                 )
             }
 
@@ -422,11 +462,19 @@ class ChatManager @Inject constructor(
                         th.copy(
                             messages = rtdbMsgs,
                             status = updatedStatus,
-                            lastUpdated = lastMsg?.timestamp ?: th.lastUpdated
+                            lastUpdated = lastMsg?.timestamp ?: th.lastUpdated,
+                            lastMessageContent = lastMsg?.content ?: th.lastMessageContent,
+                            lastSenderName = lastMsg?.senderName ?: th.lastSenderName,
+                            messageCount = rtdbMsgs.size,
                         )
                     } else th
                 }
             }
+        }
+
+        // If teacher is viewing, immediately mark thread as read in Firebase RTDB
+        if (cachedAuth?.isTeacher == true) {
+            firebaseRtdbManager.markThreadReadByTeacher(threadId)
         }
 
         scope.launch {
@@ -594,10 +642,10 @@ class ChatManager @Inject constructor(
             content = content.trim(),
             timestamp = now,
             isFromTeacher = isTeacher,
+            isRead = false,
         )
 
         // Single Source of Truth: Push directly to Firebase Realtime Database
-        // No local disk caching and no PostgreSQL message writes to prevent duplication
         firebaseRtdbManager.pushMessage(threadId, localMsg)
 
         // Optimistically update in-memory thread
@@ -615,9 +663,32 @@ class ChatManager @Inject constructor(
                     status = if (isTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
                     lastUpdated = now,
                     teacherName = updatedTeacherName,
+                    lastMessageContent = content.trim(),
+                    lastSenderName = effectiveSenderName,
+                    messageCount = updatedMsgs.size,
+                    readStatusLabel = if (isTeacher) "✓ Dijawab Guru" else "Menunggu Dibaca Guru",
+                    teacherLastReadAt = if (isTeacher) now else 0L,
                 )
             } else {
                 thread
+            }
+        }
+
+        // Asynchronously persist to backend API so PostgreSQL stays 100% synchronized
+        scope.launch {
+            try {
+                api.sendMessage(
+                    threadId = threadId,
+                    request = SendInquiryMessageRequestDto(
+                        clientMessageId = clientUuid,
+                        senderId = effectiveSenderId,
+                        senderName = effectiveSenderName,
+                        senderRole = effectiveRole,
+                        content = content.trim(),
+                    )
+                )
+            } catch (e: Exception) {
+                Timber.w(e, "Async persist of message to server database failed")
             }
         }
 
@@ -666,9 +737,10 @@ class ChatManager @Inject constructor(
 
         val newThreadId = UUID.randomUUID().toString()
         val now = System.currentTimeMillis()
+        val initialMsgId = UUID.randomUUID().toString()
 
         val initialMsg = ChatMessage(
-            id = UUID.randomUUID().toString(),
+            id = initialMsgId,
             threadId = newThreadId,
             senderId = effectiveStudentId,
             senderName = effectiveStudentName,
@@ -676,6 +748,7 @@ class ChatManager @Inject constructor(
             content = initialQuestion.trim(),
             timestamp = now,
             isFromTeacher = false,
+            isRead = false,
         )
 
         val newThread = ChatThread(
@@ -691,6 +764,11 @@ class ChatManager @Inject constructor(
             messages = listOf(initialMsg),
             status = InquiryStatus.WAITING_REPLY,
             lastUpdated = now,
+            lastMessageContent = initialQuestion.trim(),
+            lastSenderName = effectiveStudentName,
+            messageCount = 1,
+            readStatusLabel = "Menunggu Dibaca Guru",
+            teacherLastReadAt = 0L,
         )
 
         _threads.value = listOf(newThread) + _threads.value
@@ -700,7 +778,7 @@ class ChatManager @Inject constructor(
         firebaseRtdbManager.syncThreadMetadata(newThread)
         firebaseRtdbManager.pushMessage(newThreadId, initialMsg)
 
-        // Persist to database
+        // Persist to database with client_message_id matching initialMsgId to prevent duplication
         scope.launch {
             try {
                 val req = CreateInquiryRequestDto(
@@ -713,7 +791,8 @@ class ChatManager @Inject constructor(
                     inquiryType = inquiryType.name,
                     referenceTitle = referenceTitle,
                     referenceId = referenceId,
-                    initialMessage = initialQuestion.trim()
+                    initialMessage = initialQuestion.trim(),
+                    clientMessageId = initialMsgId,
                 )
                 val resp = api.createInquiry(req)
                 if (resp.success && resp.data != null) {
@@ -751,6 +830,12 @@ class ChatManager @Inject constructor(
                     put("referenceId", thread.referenceId ?: JSONObject.NULL)
                     put("status", thread.status.name)
                     put("lastUpdated", thread.lastUpdated)
+                    put("lastMessageContent", thread.lastMessageContent ?: JSONObject.NULL)
+                    put("lastSenderName", thread.lastSenderName ?: JSONObject.NULL)
+                    put("messageCount", thread.effectiveMessageCount)
+                    put("readStatusLabel", thread.readStatusLabel ?: JSONObject.NULL)
+                    put("teacherLastReadAt", thread.teacherLastReadAt ?: JSONObject.NULL)
+                    put("studentLastReadAt", thread.studentLastReadAt ?: JSONObject.NULL)
 
                     // Chat messages are managed exclusively via Firebase RTDB (no disk cache)
                     put("messages", JSONArray())
@@ -814,6 +899,12 @@ class ChatManager @Inject constructor(
                         messages = msgs,
                         status = inqStatus,
                         lastUpdated = tObj.optLong("lastUpdated", System.currentTimeMillis()),
+                        lastMessageContent = if (tObj.isNull("lastMessageContent")) null else tObj.optString("lastMessageContent"),
+                        lastSenderName = if (tObj.isNull("lastSenderName")) null else tObj.optString("lastSenderName"),
+                        messageCount = tObj.optInt("messageCount", 0),
+                        readStatusLabel = if (tObj.isNull("readStatusLabel")) null else tObj.optString("readStatusLabel"),
+                        teacherLastReadAt = if (tObj.isNull("teacherLastReadAt")) null else tObj.optLong("teacherLastReadAt"),
+                        studentLastReadAt = if (tObj.isNull("studentLastReadAt")) null else tObj.optLong("studentLastReadAt"),
                     )
                 )
             }

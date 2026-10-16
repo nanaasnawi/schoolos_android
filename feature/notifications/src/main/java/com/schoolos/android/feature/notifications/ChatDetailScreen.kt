@@ -121,6 +121,12 @@ fun ChatDetailScreen(
         val size = thread?.messages?.size ?: 0
         if (size > 0) listState.animateScrollToItem(size - 1)
     }
+    // Dismiss keyboard on scroll or touch drag in chat list
+    LaunchedEffect(listState.isScrollInProgress) {
+        if (listState.isScrollInProgress) {
+            focusManager.clearFocus()
+        }
+    }
     val imeInsets = WindowInsets.ime
     val density = LocalDensity.current
     val isKeyboardOpen = remember {
@@ -342,6 +348,7 @@ fun ChatDetailScreen(
                     thread = thread,
                     onOpenReference = onOpenReference,
                     roleNeon = roleNeon,
+                    isTeacherMode = isTeacherMode,
                 )
             }
 
@@ -402,8 +409,7 @@ fun ChatDetailScreen(
                 state = listState,
                 modifier = Modifier
                     .weight(1f)
-                    .fillMaxWidth()
-                    .imeNestedScroll(),
+                    .fillMaxWidth(),
                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
@@ -411,12 +417,18 @@ fun ChatDetailScreen(
                     val isMe = if (isTeacherMode) msg.isFromTeacher else !msg.isFromTeacher
                     val prevMsg = if (index > 0) messages[index - 1] else null
                     val isNewDay = prevMsg == null || !isSameDay(prevMsg.timestamp, msg.timestamp)
+                    val isReadByOther = if (isTeacherMode) {
+                        (thread?.studentLastReadAt ?: 0L) >= msg.timestamp
+                    } else {
+                        (thread?.teacherLastReadAt ?: 0L) >= msg.timestamp
+                    }
                     if (isNewDay) DatePill(dateText = formatDateGroup(msg.timestamp))
                     MessageBubble(
                         message = msg,
                         isMe = isMe,
                         isTeacherMode = isTeacherMode,
                         roleNeon = roleNeon,
+                        isReadByRecipient = isReadByOther,
                     )
                 }
             }
@@ -540,6 +552,7 @@ private fun TopicContextBanner(
     thread: ChatThread,
     onOpenReference: (type: InquiryType, refId: String?) -> Unit,
     roleNeon: Color,
+    isTeacherMode: Boolean,
 ) {
     Row(
         modifier = Modifier
@@ -592,20 +605,26 @@ private fun TopicContextBanner(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                val label = thread.readStatusLabel
-                if (!label.isNullOrBlank()) {
-                    val isReadDone = label.contains("Dibaca")
-                    val badgeColor = if (isReadDone) Color(0xFF10B981) else Color(0xFFF59E0B)
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = label,
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = badgeColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
+                val lastMsgTime = thread.messages.lastOrNull()?.timestamp ?: thread.lastUpdated
+                val isTeacherRead = (thread.teacherLastReadAt ?: 0L) >= lastMsgTime
+                val isAnswered = thread.status == InquiryStatus.ANSWERED
+                val effectiveLabel = when {
+                    isAnswered -> if (isTeacherMode) "✓ Selesai Dijawab" else "✓ Jawaban Tersedia"
+                    isTeacherMode -> "Perlu Ditanggapi"
+                    isTeacherRead -> "✓ Dibaca Guru"
+                    else -> "Menunggu Dibaca Guru"
                 }
+                val isSuccessColor = isAnswered || (isTeacherRead && !isTeacherMode)
+                val badgeColor = if (isSuccessColor) Color(0xFF10B981) else Color(0xFFF59E0B)
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = effectiveLabel,
+                    fontSize = 9.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = badgeColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
             }
         }
 
@@ -666,6 +685,7 @@ private fun MessageBubble(
     isMe: Boolean,
     isTeacherMode: Boolean,
     roleNeon: Color,
+    isReadByRecipient: Boolean = false,
 ) {
     val align = if (isMe) Alignment.End else Alignment.Start
     val timeStr = remember(message.timestamp) {
@@ -750,7 +770,8 @@ private fun MessageBubble(
                     )
                     if (isMe) {
                         Spacer(Modifier.width(4.dp))
-                        if (message.isRead) {
+                        val isMessageRead = message.isRead || isReadByRecipient
+                        if (isMessageRead) {
                             Text(
                                 text = "✓✓ Dibaca",
                                 fontSize = 9.5.sp,

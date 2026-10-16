@@ -1016,7 +1016,7 @@ private fun ThreadCard(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
-                        text = "${thread.messages.size} pesan",
+                        text = "${thread.effectiveMessageCount} pesan",
                         fontSize = 10.sp,
                         color = TextTertiary,
                     )

@@ -80,6 +80,7 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                 "content" to message.content,
                 "timestamp" to message.timestamp,
                 "isFromTeacher" to message.isFromTeacher,
+                "isRead" to message.isRead,
             )
 
             msgRef.setValue(msgMap)
@@ -90,10 +91,30 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                 "lastMessageAt" to message.timestamp,
                 "status" to if (message.isFromTeacher) "ANSWERED" else "WAITING_REPLY",
                 "lastSenderName" to message.senderName,
+                "readStatusLabel" to if (message.isFromTeacher) "✓ Dijawab Guru" else "Menunggu Dibaca Guru",
+                "teacherLastReadAt" to if (message.isFromTeacher) message.timestamp else 0L,
             )
             threadRef.child("summary").updateChildren(summaryMap)
         } catch (e: Exception) {
             Timber.e(e, "Failed to push message to Firebase RTDB for thread $threadId")
+        }
+    }
+
+    /**
+     * Mark thread as read by teacher in Firebase RTDB in real time.
+     */
+    fun markThreadReadByTeacher(threadId: String) {
+        try {
+            val now = System.currentTimeMillis()
+            val summaryRef = rootRef.child("inquiries").child(threadId).child("summary")
+            summaryRef.updateChildren(
+                mapOf(
+                    "teacherLastReadAt" to now,
+                    "readStatusLabel" to "✓ Dibaca Guru"
+                )
+            )
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to mark thread read by teacher in RTDB: $threadId")
         }
     }
 
@@ -142,6 +163,8 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                         val timestamp = child.child("timestamp").getValue(Long::class.java) ?: System.currentTimeMillis()
                         val isFromTeacher = child.child("isFromTeacher").getValue(Boolean::class.java)
                             ?: senderRole.equals("TEACHER", ignoreCase = true)
+                        val isRead = child.child("isRead").getValue(Boolean::class.java) ?: false
+                        val readAt = child.child("readAt").getValue(Long::class.java)
 
                         messagesList.add(
                             ChatMessage(
@@ -153,14 +176,29 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                                 content = content,
                                 timestamp = timestamp,
                                 isFromTeacher = isFromTeacher,
+                                isRead = isRead,
+                                readAt = readAt,
                             )
                         )
                     } catch (e: Exception) {
                         Timber.w(e, "Failed to parse RTDB message node")
                     }
                 }
-                messagesList.sortBy { it.timestamp }
-                trySend(messagesList)
+                // Deduplicate messages by ID or identical sender, content and close timestamp (< 8s)
+                val deduplicated = mutableListOf<ChatMessage>()
+                for (msg in messagesList.sortedBy { it.timestamp }) {
+                    val isDuplicate = deduplicated.any { existing ->
+                        existing.id == msg.id || (
+                            existing.senderRole == msg.senderRole &&
+                            existing.content.trim() == msg.content.trim() &&
+                            Math.abs(existing.timestamp - msg.timestamp) < 8000L
+                        )
+                    }
+                    if (!isDuplicate) {
+                        deduplicated.add(msg)
+                    }
+                }
+                trySend(deduplicated)
             }
 
             override fun onCancelled(error: DatabaseError) {
