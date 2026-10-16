@@ -54,9 +54,9 @@ fun LoginScreen(
     // Resolve real dynamic app version name from Android package manager
     val realAppVersion = remember(context) {
         try {
-            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.2.1"
+            context.packageManager.getPackageInfo(context.packageName, 0).versionName ?: "1.2.2"
         } catch (_: Exception) {
-            "1.2.1"
+            "1.2.2"
         }
     }
 
