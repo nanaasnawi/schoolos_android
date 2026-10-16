@@ -192,29 +192,32 @@ private fun ProgressContent(
 
             item {
                 ParentMonitoringCard(
-                    "Penyelesaian Materi",
-                    progress.lessonCompleted,
-                    progress.lessonTotal,
-                    lessonInsight,
-                    StudentNeon,
+                    label = "Penyelesaian Materi",
+                    completed = progress.lessonCompleted,
+                    total = progress.lessonTotal,
+                    insight = lessonInsight,
+                    color = StudentNeon,
+                    emoji = "📖",
                 )
             }
             item {
                 ParentMonitoringCard(
-                    "Ketepatan Kumpul Tugas",
-                    progress.assignmentCompleted,
-                    progress.assignmentTotal,
-                    assignmentInsight,
-                    NeonBlue,
+                    label = "Ketepatan Kumpul Tugas",
+                    completed = progress.assignmentCompleted,
+                    total = progress.assignmentTotal,
+                    insight = assignmentInsight,
+                    color = NeonBlue,
+                    emoji = "📝",
                 )
             }
             item {
                 ParentMonitoringCard(
-                    "Partisipasi Kelas",
-                    progress.sessionAttended,
-                    progress.sessionTotal,
-                    sessionInsight,
-                    NeonSuccess,
+                    label = "Partisipasi Kelas",
+                    completed = progress.sessionAttended,
+                    total = progress.sessionTotal,
+                    insight = sessionInsight,
+                    color = NeonSuccess,
+                    emoji = "🗓️",
                 )
             }
 
@@ -252,7 +255,7 @@ private fun ProgressContent(
                         completed = progress.lessonCompleted,
                         total = progress.lessonTotal,
                         subtitle = lessonSub,
-                        icon = Icons.Default.Book,
+                        emoji = "📖",
                         color = StudentNeon,
                         onClick = onNavigateToMaterials,
                         modifier = Modifier.weight(1f),
@@ -263,7 +266,7 @@ private fun ProgressContent(
                         completed = progress.assignmentCompleted,
                         total = progress.assignmentTotal,
                         subtitle = assignmentSub,
-                        icon = Icons.AutoMirrored.Filled.Assignment,
+                        emoji = "📝",
                         color = NeonBlue,
                         onClick = onNavigateToAssignments,
                         modifier = Modifier.weight(1f),
@@ -287,7 +290,7 @@ private fun ProgressContent(
                         completed = progress.quizCompleted,
                         total = progress.quizTotal,
                         subtitle = quizSub,
-                        icon = Icons.Default.Quiz,
+                        emoji = "🎯",
                         color = NeonSuccess,
                         onClick = onNavigateToQuizzes,
                         modifier = Modifier.weight(1f),
@@ -298,7 +301,7 @@ private fun ProgressContent(
                         completed = progress.sessionAttended,
                         total = progress.sessionTotal,
                         subtitle = sessionSub,
-                        icon = Icons.Default.CalendarMonth,
+                        emoji = "🗓️",
                         color = NeonWarning,
                         onClick = null,
                         modifier = Modifier.weight(1f),
@@ -525,7 +528,7 @@ private fun StudentBentoProgressTile(
     completed: Int,
     total: Int,
     subtitle: String,
-    icon: ImageVector,
+    emoji: String,
     color: Color,
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -540,6 +543,14 @@ private fun StudentBentoProgressTile(
         label = "tilePct",
     )
     LaunchedEffect(pct) { animTarget = pct }
+
+    val isDark = LocalIsDarkTheme.current
+    val badgeTextColor = when (color) {
+        NeonSuccess -> if (isDark) NeonSuccess else Color(0xFF047857)
+        NeonWarning -> if (isDark) NeonWarning else Color(0xFFB45309)
+        NeonBlue -> if (isDark) NeonBlue else Color(0xFF1D4ED8)
+        else -> if (isDark) color else Color(0xFF4338CA)
+    }
 
     Box(
         modifier = modifier
@@ -557,25 +568,26 @@ private fun StudentBentoProgressTile(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
+                        .size(36.dp)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(color.copy(alpha = 0.12f)),
+                        .background(color.copy(alpha = if (isDark) 0.14f else 0.10f))
+                        .border(1.dp, color.copy(alpha = if (isDark) 0.35f else 0.22f), RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
+                    Text(text = emoji, fontSize = 17.sp)
                 }
 
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(color.copy(alpha = 0.1f))
+                        .background(color.copy(alpha = if (isDark) 0.12f else 0.08f))
                         .padding(horizontal = 6.dp, vertical = 2.dp),
                 ) {
                     Text(
                         text = "${(pct * 100).toInt()}%",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
-                        color = color,
+                        color = badgeTextColor,
                     )
                 }
             }
@@ -652,6 +664,11 @@ private fun StudentActionableInsightsCard(
     val missingLessons = (progress.lessonTotal - progress.lessonCompleted).coerceAtLeast(0)
     val sessionPct = if (progress.sessionTotal > 0) (progress.sessionAttended * 100 / progress.sessionTotal) else 100
 
+    val isDark = LocalIsDarkTheme.current
+    val errorColor = if (isDark) NeonError else Color(0xFFDC2626)
+    val successColor = if (isDark) NeonSuccess else Color(0xFF047857)
+    val lessonColor = if (isDark) StudentNeon else Color(0xFF4338CA)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -665,8 +682,8 @@ private fun StudentActionableInsightsCard(
             // Item 1: Prioritas Tugas
             if (missingAssignments > 0) {
                 InsightRow(
-                    icon = Icons.Default.AssignmentLate,
-                    iconColor = NeonError,
+                    emoji = "📝",
+                    iconColor = errorColor,
                     title = "$missingAssignments Tugas Perlu Diselesaikan",
                     description = "Ada tugas aktif yang belum dikumpulkan. Selesaikan sebelum tenggat untuk menjaga nilai semester.",
                     actionText = "Buka Daftar Tugas →",
@@ -674,8 +691,8 @@ private fun StudentActionableInsightsCard(
                 )
             } else {
                 InsightRow(
-                    icon = Icons.Default.CheckCircle,
-                    iconColor = NeonSuccess,
+                    emoji = "✅",
+                    iconColor = successColor,
                     title = "Semua Tugas Tuntas Dikumpulkan",
                     description = "Seluruh penugasan pada semester ini telah diserahkan dengan lengkap.",
                     actionText = null,
@@ -688,8 +705,8 @@ private fun StudentActionableInsightsCard(
             // Item 2: Penguatan Materi
             if (missingLessons > 0) {
                 InsightRow(
-                    icon = Icons.Default.Book,
-                    iconColor = StudentNeon,
+                    emoji = "📖",
+                    iconColor = lessonColor,
                     title = "$missingLessons Modul Materi Belum Dipelajari",
                     description = "Buka materi digital dan rangkuman modul untuk persiapan menghadapi kuis dan ujian.",
                     actionText = "Buka Bahan Ajar →",
@@ -697,8 +714,8 @@ private fun StudentActionableInsightsCard(
                 )
             } else {
                 InsightRow(
-                    icon = Icons.Default.CheckCircle,
-                    iconColor = NeonSuccess,
+                    emoji = "✅",
+                    iconColor = successColor,
                     title = "Modul Ajar Tuntas Dipelajari",
                     description = "Kamu telah menyelesaikan semua bahan materi digital semester ini.",
                     actionText = null,
@@ -715,10 +732,14 @@ private fun StudentActionableInsightsCard(
             } else {
                 "Tingkat kehadiran tercatat $sessionPct%. Pastikan selalu hadir dan mengisi absensi pada sesi berikutnya."
             }
-            val presensiColor = if (sessionPct >= 85) NeonBlue else NeonWarning
+            val presensiColor = if (sessionPct >= 85) {
+                if (isDark) NeonBlue else Color(0xFF1D4ED8)
+            } else {
+                if (isDark) NeonWarning else Color(0xFFB45309)
+            }
 
             InsightRow(
-                icon = Icons.AutoMirrored.Filled.TrendingUp,
+                emoji = "📈",
                 iconColor = presensiColor,
                 title = presensiTitle,
                 description = presensiDesc,
@@ -731,25 +752,27 @@ private fun StudentActionableInsightsCard(
 
 @Composable
 private fun InsightRow(
-    icon: ImageVector,
+    emoji: String,
     iconColor: Color,
     title: String,
     description: String,
     actionText: String? = null,
     onAction: (() -> Unit)? = null,
 ) {
+    val isDark = LocalIsDarkTheme.current
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
     ) {
         Box(
             modifier = Modifier
-                .size(34.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(iconColor.copy(alpha = 0.12f)),
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(iconColor.copy(alpha = if (isDark) 0.14f else 0.10f))
+                .border(1.dp, iconColor.copy(alpha = if (isDark) 0.35f else 0.22f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, null, tint = iconColor, modifier = Modifier.size(18.dp))
+            Text(text = emoji, fontSize = 17.sp)
         }
 
         Spacer(Modifier.width(12.dp))
@@ -926,7 +949,7 @@ private fun CriticalMonitoringCard(
                     .background(iconBg),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(Icons.Default.AssignmentLate, null, tint = iconColor, modifier = Modifier.size(24.dp))
+                Text(text = if (isAlert) "🚨" else "✅", fontSize = 22.sp)
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -956,6 +979,7 @@ private fun ParentMonitoringCard(
     total: Int,
     insight: String,
     color: Color,
+    emoji: String = "📊",
 ) {
     val pct = (completed.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f)
 
@@ -973,7 +997,20 @@ private fun ParentMonitoringCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(30.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(color.copy(alpha = 0.12f))
+                            .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(text = emoji, fontSize = 14.sp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                }
                 Text("${(pct * 100).toInt()}%", fontWeight = FontWeight.Black, fontSize = 15.sp, color = color)
             }
             Spacer(Modifier.height(10.dp))
