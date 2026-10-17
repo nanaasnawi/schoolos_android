@@ -218,11 +218,21 @@ class LearningViewModel @Inject constructor(
         }
     }
 
-    fun toggleMaterialCompletion(id: String) {
+    /**
+     * Menandai materi selesai dipelajari (Permanen / Terkunci).
+     * Sesuai integritas akademik anti-kecurangan, materi yang telah selesai TIDAK DAPAT dibatalkan.
+     */
+    fun markMaterialAsCompleted(id: String, onResult: ((Boolean, String?) -> Unit)? = null) {
         viewModelScope.launch {
             val currentMat = selectedMaterial.value
             val currentCompleted = currentMat?.isCompleted ?: allMaterials.find { it.id == id }?.isCompleted ?: false
-            val newCompleted = !currentCompleted
+            if (currentCompleted) {
+                // Status sudah selesai dan terkunci permanen - tolak pembatalan
+                onResult?.invoke(true, null)
+                return@launch
+            }
+
+            val newCompleted = true
 
             // Optimistic update
             if (currentMat != null && currentMat.id == id) {
@@ -236,38 +246,38 @@ class LearningViewModel @Inject constructor(
             // Network sync
             repository.toggleMaterialCompletion(id)
                 .onSuccess { serverIsCompleted ->
+                    val finalCompleted = if (serverIsCompleted) true else true // Always locked to true
                     if (selectedMaterial.value?.id == id) {
-                        selectedMaterial.value = selectedMaterial.value?.copy(isCompleted = serverIsCompleted)
+                        selectedMaterial.value = selectedMaterial.value?.copy(isCompleted = finalCompleted)
                     }
                     allMaterials = allMaterials.map {
-                        if (it.id == id) it.copy(isCompleted = serverIsCompleted) else it
+                        if (it.id == id) it.copy(isCompleted = finalCompleted) else it
                     }
                     filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
                     loadMaterialCompletions(id)
 
-                    if (serverIsCompleted) {
-                        viewModelScope.launch {
-                            gamificationRepository.awardXp(
-                                actionType = "READ_MATERIAL",
-                                referenceId = id,
-                                description = "Membaca materi: ${selectedMaterial.value?.title ?: "Materi Pelajaran"}",
-                            ).onSuccess { res ->
-                                if (res.awarded || res.alreadyAwarded) {
-                                    xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
-                                        xpEarned = res.xpEarned,
-                                        newTotalXp = res.totalXp.toInt(),
-                                        level = res.level,
-                                        title = if (res.alreadyAwarded) "Materi Telah Dipelajari ⭐" else "Materi Selesai Dibaca! 📖",
-                                        description = if (res.alreadyAwarded) "Anda telah menyelesaikan materi ini sebelumnya." else "Hebat! Anda mendapatkan +${res.xpEarned} XP dan pemahaman materi Anda semakin mendalam.",
-                                        actionType = "READ_MATERIAL",
-                                    )
-                                }
+                    viewModelScope.launch {
+                        gamificationRepository.awardXp(
+                            actionType = "READ_MATERIAL",
+                            referenceId = id,
+                            description = "Membaca materi: ${selectedMaterial.value?.title ?: "Materi Pelajaran"}",
+                        ).onSuccess { res ->
+                            if (res.awarded || res.alreadyAwarded) {
+                                xpRewardEvent.value = com.schoolos.android.core.designsystem.XpRewardData(
+                                    xpEarned = res.xpEarned,
+                                    newTotalXp = res.totalXp.toInt(),
+                                    level = res.level,
+                                    title = if (res.alreadyAwarded) "Materi Telah Dipelajari ⭐" else "Materi Selesai Dibaca! 📖",
+                                    description = if (res.alreadyAwarded) "Anda telah menyelesaikan materi ini sebelumnya." else "Hebat! Anda mendapatkan +${res.xpEarned} XP dan pemahaman materi Anda semakin mendalam.",
+                                    actionType = "READ_MATERIAL",
+                                )
                             }
                         }
                     }
+                    onResult?.invoke(true, null)
                 }
-                .onFailure {
-                    // Revert on error
+                .onFailure { err ->
+                    // Revert on network error
                     if (selectedMaterial.value?.id == id) {
                         selectedMaterial.value = currentMat?.copy(isCompleted = currentCompleted)
                     }
@@ -275,8 +285,14 @@ class LearningViewModel @Inject constructor(
                         if (it.id == id) it.copy(isCompleted = currentCompleted) else it
                     }
                     filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
+                    onResult?.invoke(false, err.message ?: "Gagal menandai materi selesai")
                 }
         }
+    }
+
+    @Deprecated("Gunakan markMaterialAsCompleted karena materi yang selesai tidak boleh dibatalkan")
+    fun toggleMaterialCompletion(id: String) {
+        markMaterialAsCompleted(id)
     }
 
     fun clearSubjectFilter() {
