@@ -825,7 +825,7 @@ fun MaterialCreatorScreen(
                                                         maxLines = 1
                                                     )
                                                     Text(
-                                                        text = "${selectedBook!!.publisher ?: "Kemendikbudristek"} • Total ${selectedBook!!.totalPages} Hal.",
+                                                        text = "${selectedBook!!.publisher ?: "Kemendikdasmen"} • Total ${selectedBook!!.totalPages} Hal.",
                                                         fontSize = 10.sp,
                                                         color = TextSecondary
                                                     )
@@ -950,7 +950,7 @@ fun MaterialCreatorScreen(
                                                 color = TextPrimary
                                             )
                                             Text(
-                                                text = "${primaryBook.publisher ?: "Kemendikbudristek"} • ${primaryBook.totalPages} Halaman",
+                                                text = "${primaryBook.publisher ?: "Kemendikdasmen"} • ${primaryBook.totalPages} Halaman",
                                                 fontSize = 10.sp,
                                                 color = TextSecondary
                                             )
@@ -1249,7 +1249,7 @@ fun MaterialCreatorScreen(
                     val sInt = startP.toIntOrNull() ?: 1
                     val eInt = endP.toIntOrNull() ?: minOf(sInt + 10, book.totalPages)
                     title = "Materi Bacaan: ${book.title} (Hal. $sInt–$eInt)"
-                    description = "Buku Teks: ${book.title} oleh ${book.author ?: book.publisher ?: "Kemendikbudristek"}. Silakan pelajari dan baca halaman $sInt sampai $eInt."
+                    description = "Buku Teks: ${book.title} oleh ${book.author ?: book.publisher ?: "Kemendikdasmen"}. Silakan pelajari dan baca halaman $sInt sampai $eInt."
                     selectedType = MaterialType.DOCUMENT
                     mediaUrl = book.fileUrl ?: ""
                     if (!state.isSubjectLocked) {
@@ -1668,7 +1668,7 @@ private fun LibraryBookCatalogSheetContent(
                                         color = TextPrimary
                                     )
                                     Text(
-                                        text = "${book.author ?: "Tim Penulis"} • ${book.publisher ?: "Kemendikbudristek"}",
+                                        text = "${book.author ?: "Tim Penulis"} • ${book.publisher ?: "Kemendikdasmen"}",
                                         fontSize = 11.sp,
                                         color = TextSecondary
                                     )
@@ -1924,7 +1924,7 @@ private fun MaterialReviewAndPublishScreen(
                             Text(
                                 text = when (selectedType) {
                                     MaterialType.VIDEO -> "VIDEO PEMBELAJARAN"
-                                    MaterialType.DOCUMENT -> if (selectedBook != null) "BUKU SIBI KEMENDIKBUD" else "MODUL PDF"
+                                    MaterialType.DOCUMENT -> if (selectedBook != null) "BUKU SIBI KEMENDIKDASMEN" else "MODUL PDF"
                                     MaterialType.IMAGE -> "INFOGRAFIS / GAMBAR"
                                     MaterialType.ARTICLE -> "ARTIKEL BACAAN"
                                 },

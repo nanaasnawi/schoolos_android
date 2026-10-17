@@ -50,7 +50,7 @@ fun StudentOfficialProfileScreen(
         topBar = {
             ExecutiveTopBar(
                 title = "Biodata Resmi Siswa",
-                subtitle = "Data Sinkronisasi Dapodik Kemendikbudristek",
+                subtitle = "Data Sinkronisasi Dapodik Kemendikdasmen",
                 onBack = onBack,
                 actions = {
                     Box(
