@@ -1,5 +1,6 @@
 package com.schoolos.android.domain.repository
 
+import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.SchoolContactInfo
 import com.schoolos.android.domain.model.User
 
@@ -22,5 +23,6 @@ interface AuthRepository {
         about: String? = null,
     ): Result<Unit>
     suspend fun getMyQrBadge(): Result<String>
+    suspend fun getOfficialBiodata(): Result<OfficialStudentBiodata>
 }
 

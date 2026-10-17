@@ -36,6 +36,7 @@ import com.schoolos.android.feature.profile.NotificationSettingsScreen
 import com.schoolos.android.feature.profile.ProfileScreen
 import com.schoolos.android.feature.profile.SchoolHelpContactScreen
 import com.schoolos.android.feature.profile.SecuritySettingsScreen
+import com.schoolos.android.feature.profile.StudentOfficialProfileScreen
 import com.schoolos.android.feature.progress.ProgressScreen
 import com.schoolos.android.feature.quizzes.QuizAttemptScreen
 import com.schoolos.android.feature.quizzes.QuizBuilderScreen
@@ -616,6 +617,9 @@ fun NavGraph(
                     onNavigateToAbout = {
                         navController.navigate(Screen.ProfileAbout.route)
                     },
+                    onNavigateToOfficialBiodata = {
+                        navController.navigate(Screen.OfficialBiodata.route)
+                    },
                 )
             }
             composable(Screen.ProfileSecurity.route) {
@@ -635,6 +639,11 @@ fun NavGraph(
             }
             composable(Screen.ProfileAbout.route) {
                 AboutAppScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.OfficialBiodata.route) {
+                StudentOfficialProfileScreen(
                     onBack = { navController.popBackStack() }
                 )
             }

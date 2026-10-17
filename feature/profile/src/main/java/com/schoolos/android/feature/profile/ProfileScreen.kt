@@ -39,6 +39,7 @@ import com.schoolos.android.core.designsystem.ParentNeon
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.feature.profile.components.EditProfileFieldDialog
+import com.schoolos.android.feature.profile.components.OfficialBiodataNavigationCard
 import com.schoolos.android.feature.profile.components.ParentStudentCard
 import com.schoolos.android.feature.profile.components.ProfileAvatarActionDialog
 import com.schoolos.android.feature.profile.components.ProfileAvatarPreviewDialog
@@ -59,6 +60,7 @@ fun ProfileScreen(
     onNavigateToNotifications: () -> Unit = {},
     onNavigateToHelp: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
+    onNavigateToOfficialBiodata: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -229,10 +231,18 @@ fun ProfileScreen(
                 email = user?.email ?: "",
                 phone = if (state.phone.isNotBlank()) state.phone else state.identifier,
                 roleNeon = roleNeon,
+                isStudent = !isTeacher && !isParent,
                 onEditField = { fieldKey ->
                     activeEditFieldKey = fieldKey
                 },
             )
+
+            // 3.5 Dedicated Navigation Button: "Lihat Detail Biodata Resmi" (Khusus Portal Murid / Siswa)
+            if (!isTeacher && !isParent) {
+                OfficialBiodataNavigationCard(
+                    onClick = onNavigateToOfficialBiodata,
+                )
+            }
 
             // 4. Downloadable QR Code Login Card
             ProfileQrCard(
