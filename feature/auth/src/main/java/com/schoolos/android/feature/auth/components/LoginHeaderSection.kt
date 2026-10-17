@@ -122,11 +122,11 @@ fun LoginHeaderSection(
 
         Spacer(Modifier.height(12.dp))
 
-        // 2. School Logo (150x150) and Student Hero Character (120x125) touching the login form
+        // 2. School Logo (150x150) and Student Hero Character positioned below logo and touching the login form
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(248.dp),
+                .height(304.dp),
             contentAlignment = Alignment.BottomCenter,
         ) {
             // Ambient Radial Glow in Background
@@ -190,14 +190,14 @@ fun LoginHeaderSection(
                 )
             }
 
-            // 3D Student Character Image (Exact 120dp x 125dp, lower down & touching the username/email field)
+            // 3D Student Character Image (Lowered down to sit cleanly below logo and touching top of username field)
             Image(
                 painter = painterResource(id = CoreR.drawable.img_login_student_hero),
                 contentDescription = "Siswa Akselerasi-Edu",
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 20.dp)
-                    .size(width = 120.dp, height = 125.dp),
+                    .padding(end = 16.dp)
+                    .size(width = 124.dp, height = 130.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
