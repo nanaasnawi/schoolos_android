@@ -99,7 +99,7 @@ fun LearningMaterialDetailScreen(
 
     var elapsedReadingSeconds by rememberSaveable(material.id) { mutableStateOf(0L) }
     val isDurationSufficient = elapsedReadingSeconds >= minRequiredReadingSeconds
-    var showCheatingWarningDialog by remember { mutableStateOf(false) }
+    var showDurationWarningDialog by remember { mutableStateOf(false) }
 
     // Pause timer when app is not in foreground to ensure authentic student reading engagement
     var isAppInForeground by remember { mutableStateOf(true) }
@@ -298,113 +298,81 @@ fun LearningMaterialDetailScreen(
                         }
                     } else {
                         // ── STUDENT: learning progress + mark-as-done ──
-                        Column(
-                            modifier = Modifier
-                                .weight(1f)
-                                .padding(end = 12.dp)
-                        ) {
-                            Text(
-                                if (isCompleted) "Status Pembelajaran" else "Waktu Membaca (Min. 60%)",
-                                color = TextTertiary,
-                                fontSize = 10.sp
-                            )
-                            Spacer(Modifier.height(2.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(8.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isCompleted) NeonSuccess
-                                            else if (isDurationSufficient) NeonSuccess
-                                            else NeonWarning
-                                        )
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                if (isCompleted) {
-                                    Text(
-                                        "✓ Selesai (Terkunci)",
-                                        color = NeonSuccess,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.ExtraBold
+                        if (isCompleted) {
+                            Column {
+                                Text("Status Pembelajaran", color = TextTertiary, fontSize = 11.sp)
+                                Spacer(Modifier.height(2.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(8.dp)
+                                            .clip(CircleShape)
+                                            .background(NeonSuccess)
                                     )
-                                } else {
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        "✓ Selesai",
+                                        color = NeonSuccess,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(end = 14.dp)
+                            ) {
+                                Text(
+                                    "Waktu Membaca (Min. 60%)",
+                                    color = TextTertiary,
+                                    fontSize = 10.sp
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(7.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isDurationSufficient) NeonSuccess else NeonBlue
+                                            )
+                                    )
+                                    Spacer(Modifier.width(6.dp))
                                     val currentMins = elapsedReadingSeconds / 60
                                     val currentSecs = elapsedReadingSeconds % 60
                                     Text(
                                         String.format("%02d:%02d / %02d:%02d", currentMins, currentSecs, minRequiredMinutes, minRequiredRemSec),
                                         color = if (isDurationSufficient) NeonSuccess else TextPrimary,
                                         fontSize = 12.sp,
-                                        fontWeight = FontWeight.ExtraBold
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
-                            }
-                            if (!isCompleted) {
                                 Spacer(Modifier.height(3.dp))
                                 val progressFraction = (elapsedReadingSeconds.toFloat() / minRequiredReadingSeconds.toFloat()).coerceIn(0f, 1f)
                                 LinearProgressIndicator(
                                     progress = { progressFraction },
                                     modifier = Modifier
-                                        .fillMaxWidth(0.85f)
+                                        .fillMaxWidth(0.9f)
                                         .height(3.dp)
                                         .clip(RoundedCornerShape(2.dp)),
                                     color = if (isDurationSufficient) NeonSuccess else NeonBlue,
                                     trackColor = CosmicDark,
                                 )
                             }
-                        }
 
-                        if (isCompleted) {
-                            // ── PERMANENTLY LOCKED: NO BATAL / CANCEL BUTTON ALLOWED ──
-                            Surface(
-                                color = NeonSuccess.copy(alpha = 0.15f),
-                                shape = RoundedCornerShape(14.dp),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, NeonSuccess.copy(alpha = 0.4f)),
-                                modifier = Modifier
-                                    .height(44.dp)
-                                    .clickable {
-                                        Toast.makeText(
-                                            context,
-                                            "Materi ini telah Anda selesaikan dan status terkunci secara permanen.",
-                                            Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 14.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.Center
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = "Terkunci",
-                                        tint = NeonSuccess,
-                                        modifier = Modifier.size(16.dp)
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Text(
-                                        text = "Selesai (Terkunci)",
-                                        color = NeonSuccess,
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            }
-                        } else {
-                            // ── UNCOMPLETED: Anti-cheating duration gate on click ──
                             Button(
                                 onClick = {
                                     if (!isDurationSufficient) {
-                                        // REJECT IMMEDIATELY! Show anti-cheating warning dialog
-                                        showCheatingWarningDialog = true
+                                        showDurationWarningDialog = true
                                     } else {
-                                        // ELIGIBLE! Mark complete permanently
                                         viewModel.markMaterialAsCompleted(material.id) { success, err ->
                                             if (success) {
                                                 Toast.makeText(
                                                     context,
-                                                    "✓ Hebat! Materi berhasil diselesaikan dan status sekarang terkunci.",
-                                                    Toast.LENGTH_LONG
+                                                    "✓ Materi berhasil diselesaikan!",
+                                                    Toast.LENGTH_SHORT
                                                 ).show()
                                             } else {
                                                 Toast.makeText(
@@ -428,7 +396,7 @@ fun LearningMaterialDetailScreen(
                                     imageVector = if (isDurationSufficient) Icons.Default.CheckCircle else Icons.Default.HourglassTop,
                                     contentDescription = null,
                                     modifier = Modifier.size(16.dp),
-                                    tint = if (isDurationSufficient) Color.White else NeonWarning
+                                    tint = if (isDurationSufficient) Color.White else NeonBlue
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
@@ -566,26 +534,6 @@ fun LearningMaterialDetailScreen(
                                     )
                                 }
                             }
-
-                            if (isCompleted) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(NeonSuccess.copy(alpha = 0.14f))
-                                        .border(1.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
-                                        .padding(horizontal = 8.dp, vertical = 4.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.Lock,
-                                        contentDescription = null,
-                                        tint = NeonSuccess,
-                                        modifier = Modifier.size(12.dp)
-                                    )
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("✓ Selesai (Terkunci)", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
-                                }
-                            }
                         }
 
                         Spacer(Modifier.height(12.dp))
@@ -666,171 +614,6 @@ fun LearningMaterialDetailScreen(
                                     ) {
                                         Text("Modul Aktif", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                                     }
-                            }
-                        }
-                    }
-                }
-
-                // ── STUDENT: PERMANENTLY COMPLETED & LOCKED CARD ──────────────────────
-                if (!isTeacher && isCompleted) {
-                    Surface(
-                        color = NeonSuccess.copy(alpha = 0.08f),
-                        shape = RoundedCornerShape(16.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, NeonSuccess.copy(alpha = 0.35f)),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(14.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(NeonSuccess.copy(alpha = 0.18f)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Lock,
-                                    contentDescription = null,
-                                    tint = NeonSuccess,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column {
-                                Text(
-                                    text = "Modul Selesai Dipelajari (Terkunci)",
-                                    color = NeonSuccess,
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    text = "Status tervalidasi dan terkunci permanen untuk menjaga integritas belajar siswa.",
-                                    color = TextSecondary,
-                                    fontSize = 11.sp,
-                                    lineHeight = 15.sp
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ── STUDENT: ANTI-CHEATING READING DURATION GATE ────────────────────────
-                if (!isTeacher && !isCompleted) {
-                    Surface(
-                        color = CosmicNavy,
-                        shape = RoundedCornerShape(16.dp),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (isDurationSufficient) NeonSuccess.copy(alpha = 0.4f) else NeonBlue.copy(alpha = 0.3f)
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { showCheatingWarningDialog = true }
-                    ) {
-                        Column(modifier = Modifier.padding(14.dp)) {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(28.dp)
-                                            .clip(CircleShape)
-                                            .background(if (isDurationSufficient) NeonSuccess.copy(alpha = 0.15f) else NeonBlue.copy(alpha = 0.15f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isDurationSufficient) Icons.Default.CheckCircle else Icons.Default.HourglassTop,
-                                            contentDescription = null,
-                                            tint = if (isDurationSufficient) NeonSuccess else NeonBlue,
-                                            modifier = Modifier.size(16.dp)
-                                        )
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    Column {
-                                        Text(
-                                            text = if (isDurationSufficient) "Syarat Durasi Baca Terpenuhi ✓" else "Pencegahan Kecurangan Belajar",
-                                            color = if (isDurationSufficient) NeonSuccess else TextPrimary,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                        Text(
-                                            text = if (isDurationSufficient) "Anda siap menandai selesai modul ini" else "Wajib baca min. 60% (${minRequiredMinutes}m) dari estimasi (${estimatedReadingMinutes}m)",
-                                            color = TextTertiary,
-                                            fontSize = 10.sp
-                                        )
-                                    }
-                                }
-
-                                Surface(
-                                    color = if (isDurationSufficient) NeonSuccess.copy(alpha = 0.15f) else CosmicSurface2,
-                                    shape = RoundedCornerShape(8.dp),
-                                    border = androidx.compose.foundation.BorderStroke(
-                                        0.5.dp,
-                                        if (isDurationSufficient) NeonSuccess.copy(alpha = 0.4f) else GlassBorder
-                                    )
-                                ) {
-                                    Text(
-                                        text = if (isDurationSufficient) "60% Terpenuhi" else "Min. 60%",
-                                        color = if (isDurationSufficient) NeonSuccess else NeonWarning,
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                                    )
-                                }
-                            }
-
-                            Spacer(Modifier.height(10.dp))
-
-                            val progressFraction = (elapsedReadingSeconds.toFloat() / minRequiredReadingSeconds.toFloat()).coerceIn(0f, 1f)
-                            LinearProgressIndicator(
-                                progress = { progressFraction },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(6.dp)
-                                    .clip(RoundedCornerShape(3.dp)),
-                                color = if (isDurationSufficient) NeonSuccess else NeonBlue,
-                                trackColor = CosmicDark
-                            )
-
-                            Spacer(Modifier.height(8.dp))
-
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                val curMin = elapsedReadingSeconds / 60
-                                val curSec = elapsedReadingSeconds % 60
-                                Text(
-                                    text = "Waktu membaca: ${curMin}m ${curSec}s",
-                                    color = if (isDurationSufficient) NeonSuccess else TextSecondary,
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                                if (!isDurationSufficient) {
-                                    val remTotal = (minRequiredReadingSeconds - elapsedReadingSeconds).coerceAtLeast(0L)
-                                    val remM = remTotal / 60
-                                    val remS = remTotal % 60
-                                    Text(
-                                        text = "Sisa: ${remM}m ${remS}s lagi",
-                                        color = NeonWarning,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                } else {
-                                    Text(
-                                        text = "Siap Selesai 🔓",
-                                        color = NeonSuccess,
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
                             }
                         }
                     }
@@ -1152,8 +935,8 @@ fun LearningMaterialDetailScreen(
             )
         }
 
-        // ── ANTI-CHEATING WARNING ALERT DIALOG ──
-        if (showCheatingWarningDialog) {
+        // ── READING DURATION INFORMATION DIALOG ──
+        if (showDurationWarningDialog) {
             val currentMins = elapsedReadingSeconds / 60
             val currentSecs = elapsedReadingSeconds % 60
             val remainingSeconds = (minRequiredReadingSeconds - elapsedReadingSeconds).coerceAtLeast(0L)
@@ -1162,7 +945,7 @@ fun LearningMaterialDetailScreen(
             val progressFraction = (elapsedReadingSeconds.toFloat() / minRequiredReadingSeconds.toFloat()).coerceIn(0f, 1f)
 
             AlertDialog(
-                onDismissRequest = { showCheatingWarningDialog = false },
+                onDismissRequest = { showDurationWarningDialog = false },
                 containerColor = CosmicNavy,
                 shape = RoundedCornerShape(20.dp),
                 title = {
@@ -1172,31 +955,31 @@ fun LearningMaterialDetailScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(NeonWarning.copy(alpha = 0.18f))
-                                .border(1.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(10.dp)),
+                                .background(NeonBlue.copy(alpha = 0.15f))
+                                .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Security,
+                                imageVector = Icons.Default.HourglassTop,
                                 contentDescription = null,
-                                tint = NeonWarning,
-                                modifier = Modifier.size(24.dp)
+                                tint = NeonBlue,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                         Column {
                             Text(
-                                "Peringatan Anti-Kecurangan",
+                                "Pelajari Materinya Dulu",
                                 color = TextPrimary,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                "Durasi Belajar Belum Mencukupi",
-                                color = NeonWarning,
+                                "Waktu baca minimal belum tercapai",
+                                color = NeonBlue,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.Medium
                             )
                         }
                     }
@@ -1207,7 +990,7 @@ fun LearningMaterialDetailScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Text(
-                            text = "Penandaan selesai DITOLAK! Sistem mendeteksi Anda baru membuka materi beberapa saat. Untuk mencegah kecurangan dan menjaga integritas belajar, Anda wajib membaca minimal 60% dari estimasi durasi belajar.",
+                            text = "Silakan luangkan waktu sejenak untuk membaca isi materi ini sebelum menandai selesai (minimal 60% dari estimasi durasi belajar).",
                             color = TextSecondary,
                             fontSize = 12.sp,
                             lineHeight = 17.sp
@@ -1235,7 +1018,7 @@ fun LearningMaterialDetailScreen(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
-                                    Text("Batas Wajib Minimal (60%):", color = TextTertiary, fontSize = 11.sp)
+                                    Text("Waktu Baca Minimal (60%):", color = TextTertiary, fontSize = 11.sp)
                                     Text("${minRequiredMinutes}m ${if (minRequiredRemSec > 0) "${minRequiredRemSec}s" else ""}", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                                 Row(
@@ -1243,14 +1026,14 @@ fun LearningMaterialDetailScreen(
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text("Waktu Membaca Anda:", color = TextTertiary, fontSize = 11.sp)
-                                    Text("${currentMins}m ${currentSecs}s", color = NeonWarning, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                    Text("${currentMins}m ${currentSecs}s", color = TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
                                     horizontalArrangement = Arrangement.SpaceBetween
                                 ) {
                                     Text("Sisa Waktu yang Diperlukan:", color = TextTertiary, fontSize = 11.sp)
-                                    Text("${remMins}m ${remSecs}s lagi", color = NeonError, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold)
+                                    Text("${remMins}m ${remSecs}s lagi", color = NeonWarning, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
 
                                 Spacer(Modifier.height(4.dp))
@@ -1267,7 +1050,7 @@ fun LearningMaterialDetailScreen(
                         }
 
                         Text(
-                            text = "💡 Pelajari materi dengan sungguh-sungguh. Setelah syarat 60% terpenuhi, Anda dapat menyelesaikan modul dan status akan terkunci secara permanen (tidak dapat dibatalkan).",
+                            text = "💡 Setelah waktu membaca minimal terpenuhi, tombol Tandai Selesai akan aktif.",
                             color = TextTertiary,
                             fontSize = 11.sp,
                             lineHeight = 15.sp
@@ -1276,7 +1059,7 @@ fun LearningMaterialDetailScreen(
                 },
                 confirmButton = {
                     Button(
-                        onClick = { showCheatingWarningDialog = false },
+                        onClick = { showDurationWarningDialog = false },
                         colors = ButtonDefaults.buttonColors(containerColor = NeonBlue, contentColor = Color.White),
                         shape = RoundedCornerShape(10.dp)
                     ) {
@@ -1509,7 +1292,7 @@ private fun EditMaterialDialog(
 }
 
 /**
- * Menghitung estimasi durasi membaca (dalam menit) berdasarkan tipe materi dan kuantitas konten.
+ * Menghitung estimasi durasi membaca (dalam menit) secara realistis berdasarkan tipe materi dan kuantitas konten.
  */
 fun calculateEstimatedReadingMinutes(material: LearningMaterial): Int {
     return when (material.materialType) {
@@ -1518,8 +1301,12 @@ fun calculateEstimatedReadingMinutes(material: LearningMaterial): Int {
             val end = material.endPage
             if (start != null && end != null) {
                 val pages = (end - start + 1).coerceAtLeast(1)
-                // Realistis 2 menit per halaman materi modul/akademik, minimal 2 menit
-                (pages * 2).coerceIn(2, 45)
+                when {
+                    pages <= 3 -> 2
+                    pages <= 7 -> 3
+                    pages <= 12 -> 4
+                    else -> 5
+                }
             } else {
                 3
             }
@@ -1527,14 +1314,13 @@ fun calculateEstimatedReadingMinutes(material: LearningMaterial): Int {
         MaterialType.ARTICLE -> {
             val content = material.contentBody ?: material.description ?: ""
             val wordCount = content.split(Regex("\\s+")).count { it.isNotBlank() }
-            if (wordCount > 30) {
-                // Kecepatan membaca komprehensif ~130 kata per menit
-                ((wordCount / 130.0).roundToInt()).coerceIn(2, 30)
-            } else {
-                2
+            when {
+                wordCount <= 100 -> 2
+                wordCount <= 300 -> 3
+                else -> 4
             }
         }
-        MaterialType.VIDEO -> 5
+        MaterialType.VIDEO -> 4
         MaterialType.IMAGE -> 2
     }
 }

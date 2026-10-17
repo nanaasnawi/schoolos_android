@@ -120,7 +120,7 @@ fun LoginHeaderSection(
             )
         }
 
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(15.dp))
 
         // 2. School Logo (150x150) and Student Hero Character positioned below logo and touching the login form
         Box(
@@ -147,7 +147,7 @@ fun LoginHeaderSection(
                     ),
             )
 
-            // Grand School Logo Crest (Exact 150dp x 150dp as requested)
+            // Grand School Logo
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
@@ -197,7 +197,7 @@ fun LoginHeaderSection(
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
                     .padding(end = 16.dp)
-                    .size(width = 124.dp, height = 130.dp),
+                    .size(width = 144.dp, height = 150.dp),
                 contentScale = ContentScale.Fit,
                 alignment = Alignment.BottomCenter,
             )
