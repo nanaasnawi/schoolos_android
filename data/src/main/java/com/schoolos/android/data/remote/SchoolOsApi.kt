@@ -43,6 +43,10 @@ interface SchoolOsApi {
     @GET("auth/qr-tokens/my-badge")
     suspend fun getMyQrBadge(): ApiResponse<QrBadgeDto>
 
+    // Official Verified Dapodik Biodata
+    @GET("students/me/official-profile")
+    suspend fun getMyOfficialBiodata(): ApiResponse<OfficialStudentBiodataDto>
+
     // Academic (Classes & Subjects)
     @GET("academic/classes")
     suspend fun getClasses(

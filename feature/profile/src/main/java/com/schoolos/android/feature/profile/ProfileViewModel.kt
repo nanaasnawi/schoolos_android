@@ -8,6 +8,7 @@ import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.common.Settings
 import com.schoolos.android.core.common.SettingsManager
 import com.schoolos.android.domain.model.GamificationStatus
+import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.User
 import com.schoolos.android.domain.repository.AuthRepository
 import com.schoolos.android.domain.repository.GamificationRepository
@@ -47,6 +48,10 @@ data class ProfileUiState(
     // Gamification Level & XP
     val gamificationStatus: GamificationStatus? = null,
     val gamificationLoading: Boolean = false,
+    // Verified Dapodik Official Biodata
+    val officialBiodata: OfficialStudentBiodata? = null,
+    val officialBiodataLoading: Boolean = false,
+    val officialBiodataError: String? = null,
 )
 
 @HiltViewModel
@@ -121,6 +126,28 @@ class ProfileViewModel @Inject constructor(
                     }
                     .onFailure {
                         _state.value = _state.value.copy(gamificationLoading = false)
+                    }
+            }
+        }
+    }
+
+    fun loadOfficialBiodata() {
+        viewModelScope.launch {
+            if (authManager.isLoggedIn) {
+                _state.value = _state.value.copy(officialBiodataLoading = true, officialBiodataError = null)
+                authRepository.getOfficialBiodata()
+                    .onSuccess { biodata ->
+                        _state.value = _state.value.copy(
+                            officialBiodata = biodata,
+                            officialBiodataLoading = false,
+                            officialBiodataError = null,
+                        )
+                    }
+                    .onFailure { err ->
+                        _state.value = _state.value.copy(
+                            officialBiodataLoading = false,
+                            officialBiodataError = err.localizedMessage ?: "Gagal memuat biodata resmi Dapodik.",
+                        )
                     }
             }
         }

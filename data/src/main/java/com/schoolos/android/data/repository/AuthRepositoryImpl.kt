@@ -6,6 +6,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.data.remote.dto.LoginRequest
+import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.SchoolContactInfo
 import com.schoolos.android.domain.model.User
 import com.schoolos.android.domain.repository.AuthRepository
@@ -257,5 +258,54 @@ class AuthRepositoryImpl @Inject constructor(
             throw Exception("QR Badge token kosong.")
         }
         data.rawToken
+    }
+
+    override suspend fun getOfficialBiodata(): Result<OfficialStudentBiodata> = runCatching {
+        val response = api.getMyOfficialBiodata()
+        val data = response.data ?: throw Exception(
+            response.error?.message ?: "Gagal memuat biodata resmi Dapodik dari database."
+        )
+        OfficialStudentBiodata(
+            id = data.id,
+            nisn = data.nisn,
+            fullName = data.fullName,
+            nik = data.nik,
+            nipd = data.nipd,
+            gender = data.gender,
+            placeOfBirth = data.placeOfBirth,
+            dateOfBirth = data.dateOfBirth,
+            religion = data.religion,
+            className = data.className,
+            alamatJalan = data.alamatJalan,
+            rt = data.rt,
+            rw = data.rw,
+            dusun = data.dusun,
+            kelurahan = data.kelurahan,
+            kecamatan = data.kecamatan,
+            kodePos = data.kodePos,
+            noHp = data.noHp,
+            email = data.email,
+            namaAyah = data.namaAyah,
+            pekerjaanAyah = data.pekerjaanAyah,
+            penghasilanAyah = data.penghasilanAyah,
+            namaIbu = data.namaIbu,
+            pekerjaanIbu = data.pekerjaanIbu,
+            penghasilanIbu = data.penghasilanIbu,
+            namaWali = data.namaWali,
+            pekerjaanWali = data.pekerjaanWali,
+            penghasilanWali = data.penghasilanWali,
+            penerimaKps = data.penerimaKps,
+            noKps = data.noKps,
+            penerimaKip = data.penerimaKip,
+            nomorKip = data.nomorKip,
+            namaDiKip = data.namaDiKip,
+            nomorKks = data.nomorKks,
+            layakPip = data.layakPip,
+            alasanLayakPip = data.alasanLayakPip,
+            bank = data.bank,
+            nomorRekeningBank = data.nomorRekeningBank,
+            rekeningAtasNama = data.rekeningAtasNama,
+            fotoProfile = data.fotoProfile,
+        )
     }
 }

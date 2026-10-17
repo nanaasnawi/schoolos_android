@@ -1,0 +1,48 @@
+package com.schoolos.android.data.remote.dto
+
+import kotlinx.serialization.SerialName
+import kotlinx.serialization.Serializable
+
+@Serializable
+data class OfficialStudentBiodataDto(
+    val id: String,
+    val nisn: String,
+    @SerialName("full_name") val fullName: String,
+    val nik: String? = null,
+    val nipd: String? = null,
+    val gender: String? = null,
+    @SerialName("place_of_birth") val placeOfBirth: String? = null,
+    @SerialName("date_of_birth") val dateOfBirth: String? = null,
+    val religion: String? = null,
+    @SerialName("class_name") val className: String? = null,
+    @SerialName("alamat_jalan") val alamatJalan: String? = null,
+    val rt: String? = null,
+    val rw: String? = null,
+    val dusun: String? = null,
+    val kelurahan: String? = null,
+    val kecamatan: String? = null,
+    @SerialName("kode_pos") val kodePos: String? = null,
+    @SerialName("no_hp") val noHp: String? = null,
+    val email: String? = null,
+    @SerialName("nama_ayah") val namaAyah: String? = null,
+    @SerialName("pekerjaan_ayah") val pekerjaanAyah: String? = null,
+    @SerialName("penghasilan_ayah") val penghasilanAyah: String? = null,
+    @SerialName("nama_ibu") val namaIbu: String? = null,
+    @SerialName("pekerjaan_ibu") val pekerjaanIbu: String? = null,
+    @SerialName("penghasilan_ibu") val penghasilanIbu: String? = null,
+    @SerialName("nama_wali") val namaWali: String? = null,
+    @SerialName("pekerjaan_wali") val pekerjaanWali: String? = null,
+    @SerialName("penghasilan_wali") val penghasilanWali: String? = null,
+    @SerialName("penerima_kps") val penerimaKps: Boolean = false,
+    @SerialName("no_kps") val noKps: String? = null,
+    @SerialName("penerima_kip") val penerimaKip: Boolean = false,
+    @SerialName("nomor_kip") val nomorKip: String? = null,
+    @SerialName("nama_di_kip") val namaDiKip: String? = null,
+    @SerialName("nomor_kks") val nomorKks: String? = null,
+    @SerialName("layak_pip") val layakPip: Boolean = false,
+    @SerialName("alasan_layak_pip") val alasanLayakPip: String? = null,
+    val bank: String? = null,
+    @SerialName("nomor_rekening_bank") val nomorRekeningBank: String? = null,
+    @SerialName("rekening_atas_nama") val rekeningAtasNama: String? = null,
+    @SerialName("foto_profile") val fotoProfile: String? = null,
+)

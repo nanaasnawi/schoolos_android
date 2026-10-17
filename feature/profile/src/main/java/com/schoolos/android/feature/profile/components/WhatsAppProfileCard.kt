@@ -49,6 +49,7 @@ fun WhatsAppProfileCard(
     roleNeon: Color,
     onEditField: (fieldKey: String) -> Unit,
     modifier: Modifier = Modifier,
+    isStudent: Boolean = false,
 ) {
     Column(
         modifier = modifier
@@ -65,36 +66,38 @@ fun WhatsAppProfileCard(
             value = userName.ifBlank { "Pengguna Akselerasi-Edu" },
             roleNeon = roleNeon,
             isEditable = false,
-            footerNote = "Nama ini diatur oleh administrator sekolah dan tidak dapat diubah.",
+            footerNote = "Nama ini sinkron dengan data Dapodik resmi dan tidak dapat diubah.",
         )
 
         ProfileDivider()
 
-        // 2. Tentang / Status (Editable)
+        // 2. Tentang / Status (Siswa: Terkunci di Dapodik)
         ProfileInfoRow(
             icon = Icons.Default.Info,
-            label = "Tentang",
+            label = "Tentang / Domisili",
             value = about.ifBlank { "Ada di Akselerasi-Edu" },
             roleNeon = roleNeon,
-            isEditable = true,
-            onClick = { onEditField("about") },
+            isEditable = !isStudent,
+            footerNote = if (isStudent) "Alamat domisili terdaftar resmi di Dapodik." else null,
+            onClick = { if (!isStudent) onEditField("about") },
         )
 
         ProfileDivider()
 
-        // 3. Pengguna / Username (Editable)
+        // 3. Pengguna / Username (Siswa: Terkunci di Dapodik)
         ProfileInfoRow(
             icon = Icons.Default.AccountCircle,
             label = "Pengguna",
             value = if (username.isNotBlank()) "@$username" else "@user",
             roleNeon = roleNeon,
-            isEditable = true,
-            onClick = { onEditField("username") },
+            isEditable = !isStudent,
+            footerNote = if (isStudent) "Username resmi ditetapkan oleh sistem satuan pendidikan." else null,
+            onClick = { if (!isStudent) onEditField("username") },
         )
 
         ProfileDivider()
 
-        // 4. Email (Editable)
+        // 4. Email (Dapat diubah oleh siswa)
         ProfileInfoRow(
             icon = Icons.Default.Email,
             label = "Email",
@@ -106,7 +109,7 @@ fun WhatsAppProfileCard(
 
         ProfileDivider()
 
-        // 5. Telepon (Editable)
+        // 5. Telepon (Dapat diubah oleh siswa)
         ProfileInfoRow(
             icon = Icons.Default.Phone,
             label = "Telepon",
