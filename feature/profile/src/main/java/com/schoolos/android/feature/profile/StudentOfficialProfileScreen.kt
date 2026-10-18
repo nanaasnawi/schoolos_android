@@ -257,7 +257,7 @@ fun StudentOfficialProfileScreen(
                     // 5. Bantuan PIP & Kesiapan Rekening
                     item {
                         OfficialSectionCard(
-                            title = "Bantuan Sosial PIP & Rekening",
+                            title = "Program Indonesia Pintar (PIP) & Rekening",
                             icon = Icons.Default.AccountBalance,
                             accent = NeonSuccess
                         ) {
@@ -354,7 +354,7 @@ fun StudentOfficialProfileScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = "🔒 Sesuai regulasi sistem, hanya Email dan Nomor Telepon yang dapat diperbarui secara mandiri oleh siswa pada halaman Profil. Perubahan identitas pokok, domisili, orang tua, dan bantuan sosial wajib melalui Operator Dapodik Sekolah.",
+                                        text = "🔒 Sesuai regulasi sistem, hanya Email dan Nomor Telepon yang dapat diperbarui secara mandiri oleh siswa pada halaman Profil. Perubahan identitas pokok, domisili, orang tua, dan data PIP wajib melalui Operator Dapodik Sekolah.",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp, lineHeight = 16.sp),
                                         color = TextSecondary
                                     )
