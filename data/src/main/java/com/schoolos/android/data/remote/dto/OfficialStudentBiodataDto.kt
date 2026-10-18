@@ -45,4 +45,6 @@ data class OfficialStudentBiodataDto(
     @SerialName("nomor_rekening_bank") val nomorRekeningBank: String? = null,
     @SerialName("rekening_atas_nama") val rekeningAtasNama: String? = null,
     @SerialName("foto_profile") val fotoProfile: String? = null,
+    val status: String? = null,
+    @SerialName("is_active") val isActive: Boolean = true,
 )
