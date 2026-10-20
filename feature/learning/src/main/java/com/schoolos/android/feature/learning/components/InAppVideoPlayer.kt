@@ -188,6 +188,10 @@ fun InAppVideoPlayer(
                         null
                     )
                 }
+            },
+            onRelease = { webView ->
+                webView.stopLoading()
+                webView.destroy()
             }
         )
 
