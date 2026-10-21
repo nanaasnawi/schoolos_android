@@ -98,6 +98,7 @@ data class HomeUiState(
     val parentPermitDays: String = "-",
     val parentAbsentDays: String = "-",
     val parentAssignmentsCount: String = "0",
+    val parentActivities: List<ActivityItem> = emptyList(),
     val teacherClasses: List<AcademicClass> = emptyList(),
     val teacherSubjects: List<AcademicSubject> = emptyList(),
     val activeReadingHistory: List<BookReadingItem> = emptyList(),
@@ -654,7 +655,28 @@ class HomeViewModel @Inject constructor(
         } else if (isParent) {
             val targetChildId = auth.childId?.takeIf { it.isNotBlank() }
             progressRepository.getWeeklyActivity(targetChildId).onSuccess { weekly ->
-                _state.update { it.copy(weeklyActivity = weekly) }
+                val activityItems = weekly.days.flatMap { day ->
+                    day.activities.map { act ->
+                        ActivityItem(
+                            title = act.title,
+                            description = "${act.categoryLabel} • ${act.subjectName ?: "Mata Pelajaran"}",
+                            timestamp = "${day.dayName}, ${act.time}",
+                            type = when (act.category) {
+                                "ASSIGNMENT" -> ActivityType.ASSIGNMENT
+                                "QUIZ" -> ActivityType.GRADE
+                                "MATERIAL" -> ActivityType.INFO
+                                else -> ActivityType.INFO
+                            }
+                        )
+                    }
+                }.take(10)
+
+                _state.update {
+                    it.copy(
+                        weeklyActivity = weekly,
+                        parentActivities = activityItems,
+                    )
+                }
             }.onFailure { err ->
                 timber.log.Timber.w(err, "Failed to load child weekly activity")
             }

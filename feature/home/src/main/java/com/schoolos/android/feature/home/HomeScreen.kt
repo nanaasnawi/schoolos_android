@@ -583,6 +583,7 @@ fun HomeScreen(
                         permitDays               = state.parentPermitDays,
                         absentDays               = state.parentAbsentDays,
                         assignmentsCount         = state.parentAssignmentsCount,
+                        activities               = state.parentActivities,
                         onNavigateToProgress     = onNavigateToProgress,
                         onNavigateToNotifications= onNavigateToNotifications,
                         onNavigateToAssignments  = onNavigateToAssignments,

@@ -529,17 +529,48 @@ private fun processQrFromUri(
     onSuccess: (String) -> Unit,
     onError: (String) -> Unit,
 ) {
+    var decodedBitmap: android.graphics.Bitmap? = null
     try {
-        val inputStream = context.contentResolver.openInputStream(uri)
-        val bitmap = BitmapFactory.decodeStream(inputStream)
-        inputStream?.close()
+        val resolver = context.contentResolver
 
-        if (bitmap == null) {
+        // Pass 1: Decode image bounds only without allocating pixel memory
+        val boundsOptions = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        resolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, boundsOptions)
+        }
+
+        if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) {
+            onError("Gagal mengidentifikasi dimensi gambar dari galeri.")
+            return
+        }
+
+        // Pass 2: Calculate inSampleSize to downsample image to optimal target size (~1280px max)
+        val maxTargetDimension = 1280
+        val maxDimension = maxOf(boundsOptions.outWidth, boundsOptions.outHeight)
+        var calculatedSampleSize = 1
+        while ((maxDimension / calculatedSampleSize) > maxTargetDimension) {
+            calculatedSampleSize *= 2
+        }
+
+        val decodeOptions = BitmapFactory.Options().apply {
+            inJustDecodeBounds = false
+            inSampleSize = calculatedSampleSize
+            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+        }
+
+        decodedBitmap = resolver.openInputStream(uri)?.use { stream ->
+            BitmapFactory.decodeStream(stream, null, decodeOptions)
+        }
+
+        if (decodedBitmap == null) {
             onError("Gagal memuat file gambar dari galeri.")
             return
         }
 
-        val inputImage = InputImage.fromBitmap(bitmap, 0)
+        val bitmapToScan = decodedBitmap
+        val inputImage = InputImage.fromBitmap(bitmapToScan, 0)
         val scanner = BarcodeScanning.getClient(
             BarcodeScannerOptions.Builder()
                 .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
@@ -558,7 +589,21 @@ private fun processQrFromUri(
             .addOnFailureListener { e ->
                 onError("Gagal memindai gambar: ${e.localizedMessage ?: "Error tidak diketahui"}")
             }
+            .addOnCompleteListener {
+                // Prevent memory leak by recycling native bitmap pixels once ML Kit is done
+                if (!bitmapToScan.isRecycled) {
+                    bitmapToScan.recycle()
+                }
+            }
+    } catch (oom: OutOfMemoryError) {
+        if (decodedBitmap != null && !decodedBitmap.isRecycled) {
+            decodedBitmap.recycle()
+        }
+        onError("Memori perangkat tidak mencukupi untuk memproses gambar beresolusi tinggi ini.")
     } catch (e: Exception) {
+        if (decodedBitmap != null && !decodedBitmap.isRecycled) {
+            decodedBitmap.recycle()
+        }
         onError("Terjadi kesalahan saat memproses gambar: ${e.localizedMessage}")
     }
 }
