@@ -34,17 +34,20 @@ import kotlinx.coroutines.withContext
  * Resolves full avatar URL from a relative or absolute path, pointing directly
  * to the PostgreSQL-backed avatar endpoint or a base64 Data URI.
  */
-fun resolveAvatarUrl(avatarUrl: String?): String? {
+fun resolveAvatarUrl(avatarUrl: String?, serverBaseUrl: String? = null): String? {
     if (avatarUrl.isNullOrBlank()) return null
     val raw = avatarUrl.trim()
     return if (raw.startsWith("data:image", ignoreCase = true) ||
+        raw.startsWith("data:", ignoreCase = true) ||
         raw.startsWith("http://", ignoreCase = true) ||
         raw.startsWith("https://", ignoreCase = true)
     ) {
         raw
     } else {
-        val host = BuildConfig.API_BASE_URL.trimEnd('/')
-        "$host/${raw.trimStart('/')}"
+        val base = serverBaseUrl?.takeIf { it.isNotBlank() } ?: BuildConfig.API_BASE_URL
+        val host = base.substringBefore("/api/").trimEnd('/')
+        val path = if (raw.startsWith("/")) raw else "/$raw"
+        "$host$path"
     }
 }
 
@@ -56,8 +59,9 @@ fun resolveAvatarUrl(avatarUrl: String?): String? {
 fun buildNoCacheAvatarImageRequest(
     context: android.content.Context,
     avatarUrl: String?,
+    serverBaseUrl: String? = null,
 ): ImageRequest? {
-    val fullUrl = resolveAvatarUrl(avatarUrl) ?: return null
+    val fullUrl = resolveAvatarUrl(avatarUrl, serverBaseUrl) ?: return null
     return ImageRequest.Builder(context)
         .data(fullUrl)
         // CRITICAL: Jangan simpan foto profil ke local disk storage atau cache!
@@ -81,6 +85,7 @@ fun UserProfileAvatar(
     placeholderIcon: ImageVector = Icons.Default.Person,
     placeholderTint: Color = NeonBlue,
     placeholderBg: Color = CosmicSurface2,
+    serverBaseUrl: String? = null,
 ) {
     if (avatarUrl.isNullOrBlank()) {
         Box(
@@ -101,7 +106,7 @@ fun UserProfileAvatar(
     val raw = avatarUrl.trim()
 
     // 1. Direct PostgreSQL Base64 Data URI: decoded in-memory without any disk storage
-    if (raw.startsWith("data:image", ignoreCase = true)) {
+    if (raw.startsWith("data:", ignoreCase = true)) {
         val imageBitmapState = produceState<ImageBitmap?>(initialValue = null, key1 = raw) {
             value = withContext(Dispatchers.Default) {
                 try {
@@ -118,12 +123,19 @@ fun UserProfileAvatar(
 
         val bitmap = imageBitmapState.value
         if (bitmap != null) {
-            Image(
-                bitmap = bitmap,
-                contentDescription = contentDescription,
-                modifier = modifier.clip(CircleShape),
-                contentScale = contentScale,
-            )
+            Box(
+                modifier = modifier
+                    .clip(CircleShape)
+                    .background(placeholderBg),
+                contentAlignment = Alignment.Center,
+            ) {
+                Image(
+                    bitmap = bitmap,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = contentScale,
+                )
+            }
         } else {
             Box(
                 modifier = modifier
@@ -142,7 +154,7 @@ fun UserProfileAvatar(
     }
 
     // 2. Direct PostgreSQL Streaming Endpoint (/api/v1/auth/avatar/{id})
-    val fullUrl = remember(raw) { resolveAvatarUrl(raw) }
+    val fullUrl = remember(raw, serverBaseUrl) { resolveAvatarUrl(raw, serverBaseUrl) }
     val context = LocalContext.current
     val imageRequest = remember(fullUrl) {
         if (fullUrl != null) {
@@ -157,13 +169,20 @@ fun UserProfileAvatar(
     }
 
     if (imageRequest != null) {
-        AsyncImage(
-            model = imageRequest,
-            contentDescription = contentDescription,
-            modifier = modifier.clip(CircleShape),
-            contentScale = contentScale,
-            error = rememberVectorPainter(placeholderIcon),
-        )
+        Box(
+            modifier = modifier
+                .clip(CircleShape)
+                .background(placeholderBg),
+            contentAlignment = Alignment.Center,
+        ) {
+            AsyncImage(
+                model = imageRequest,
+                contentDescription = contentDescription,
+                modifier = Modifier.fillMaxSize(),
+                contentScale = contentScale,
+                error = rememberVectorPainter(placeholderIcon),
+            )
+        }
     } else {
         Box(
             modifier = modifier
