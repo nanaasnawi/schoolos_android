@@ -4,12 +4,16 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import com.schoolos.android.core.auth.AuthManager
+import com.schoolos.android.core.database.AppDatabase
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.data.remote.dto.LoginRequest
 import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.SchoolContactInfo
 import com.schoolos.android.domain.model.User
 import com.schoolos.android.domain.repository.AuthRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -17,6 +21,7 @@ import javax.inject.Singleton
 class AuthRepositoryImpl @Inject constructor(
     private val api: SchoolOsApi,
     private val authManager: AuthManager,
+    private val appDatabase: AppDatabase,
 ) : AuthRepository {
 
     private suspend fun resolveClassId(explicitClassId: String?, className: String?): String? {
@@ -109,8 +114,15 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout() {
-
-        authManager.clearSession()
+        withContext(Dispatchers.IO) {
+            authManager.clearSession()
+            try {
+                appDatabase.clearAllTables()
+                Timber.i("Local database tables successfully purged on logout")
+            } catch (e: Exception) {
+                Timber.e(e, "Error clearing local database tables during logout")
+            }
+        }
     }
 
     override suspend fun refreshToken(): Result<String> = runCatching {

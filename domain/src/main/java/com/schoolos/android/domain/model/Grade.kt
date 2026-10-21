@@ -52,18 +52,13 @@ fun List<GradeEntry>.toSubjectSummary(
     val entries = this.filter { it.subjectId == subjectId }
     val graded = entries.filter { it.rawScore != null || it.weightedScore != null }
     
+    // SSOT: Perhitungan nilai rapor mutlak dieksekusi oleh backend Rust Axum (ADR-0011).
+    // Client Android hanya memvisualisasikan data dari server tanpa formula bayangan.
     val finalScore = backendFinalScore 
         ?: entries.firstOrNull { it.weightedScore != null }?.weightedScore
-        ?: graded.mapNotNull { it.rawScore }.average().takeIf { !it.isNaN() }
         ?: 0.0
 
-    val letter = backendLetterGrade ?: when {
-        finalScore >= passingThreshold + 10.0 -> "A"
-        finalScore >= passingThreshold -> "B"
-        finalScore >= passingThreshold - 10.0 -> "C"
-        finalScore > 0.0 -> "D"
-        else -> "-"
-    }
+    val letter = backendLetterGrade ?: if (finalScore > 0.0) "" else "-"
     val completion = if (entries.isEmpty()) 0.0 else (graded.size.toDouble() / entries.size) * 100.0
     return SubjectGradeSummary(
         subjectId = subjectId,

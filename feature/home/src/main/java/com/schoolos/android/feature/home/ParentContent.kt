@@ -286,6 +286,104 @@ fun LazyListScope.parentContent(
             }
         }
     }
+
+    // ── 4. RECENT ACTIVITY & AUDIT TRAIL ─────────────────────────────────────────
+    item {
+        LightSectionHeader(
+            title = "Aktivitas & Riwayat Terkini",
+            sub = "Log pembelajaran & pembiasaan ananda",
+        )
+    }
+
+    if (activities.isNotEmpty()) {
+        items(activities, key = { "${it.title}_${it.timestamp}" }) { act ->
+            val iconTint = when (act.type) {
+                ActivityType.ATTENDANCE -> NeonSuccess
+                ActivityType.ASSIGNMENT -> NeonBlue
+                ActivityType.GRADE -> NeonWarning
+                ActivityType.ACHIEVEMENT -> ParentNeon
+                ActivityType.INFO -> TextSecondary
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .padding(14.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(iconTint.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(10.dp)
+                                .clip(CircleShape)
+                                .background(iconTint)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = act.title,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = act.timestamp,
+                                fontSize = 11.sp,
+                                color = TextTertiary,
+                            )
+                        }
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            text = act.description,
+                            fontSize = 12.sp,
+                            color = TextSecondary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+    } else {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "Belum ada riwayat aktivitas terbaru hari ini.",
+                    fontSize = 12.sp,
+                    color = TextTertiary,
+                )
+            }
+        }
+    }
 }
 
 @Composable

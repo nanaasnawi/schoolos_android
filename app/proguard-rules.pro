@@ -104,6 +104,10 @@
 -keep interface androidx.lifecycle.** { *; }
 -keep class androidx.compose.runtime.** { *; }
 
-# Keep ALL School OS Application Classes & Members from being stripped
--keep class com.schoolos.android.** { *; }
--keepclassmembers class com.schoolos.android.** { *; }
+# Android Components & Room Entities (Allowing R8 Tree Shaking for Feature Screens & Logic)
+-keep public class com.schoolos.android.SchoolOsApp
+-keep public class com.schoolos.android.MainActivity
+-keep public class * extends android.app.Service
+-keep public class * extends android.content.BroadcastReceiver
+-keep class com.schoolos.android.core.database.entity.** { *; }
+
