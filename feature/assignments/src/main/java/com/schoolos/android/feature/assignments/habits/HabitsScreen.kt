@@ -1,7 +1,11 @@
 package com.schoolos.android.feature.assignments.habits
 
 import androidx.compose.animation.*
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,26 +15,93 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.schoolos.android.core.R as CoreR
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.CanonicalHabit
 import com.schoolos.android.domain.model.CanonicalHabitsList
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+private data class HabitVisualConfig(
+    val icon: ImageVector,
+    val category: String,
+    val timeBadge: String,
+    val accentColor: Color,
+    val lightBgColor: Color,
+)
+
+private val habitVisuals = mapOf(
+    "bangun_pagi" to HabitVisualConfig(
+        icon = Icons.Default.WbSunny,
+        category = "Fajar & Mandiri",
+        timeBadge = "04.30 - 05.30",
+        accentColor = Color(0xFFF59E0B),
+        lightBgColor = Color(0xFFFEF3C7)
+    ),
+    "beribadah" to HabitVisualConfig(
+        icon = Icons.Default.SelfImprovement,
+        category = "Iman & Takwa",
+        timeBadge = "Khusyuk & Tepat Waktu",
+        accentColor = Color(0xFF8B5CF6),
+        lightBgColor = Color(0xFFEDE9FE)
+    ),
+    "berolahraga" to HabitVisualConfig(
+        icon = Icons.AutoMirrored.Filled.DirectionsRun,
+        category = "Kebugaran",
+        timeBadge = "15+ Menit Gerak",
+        accentColor = Color(0xFF10B981),
+        lightBgColor = Color(0xFFD1FAE5)
+    ),
+    "makan_sehat" to HabitVisualConfig(
+        icon = Icons.Default.Restaurant,
+        category = "Gizi Seimbang",
+        timeBadge = "Sayur, Buah & Air",
+        accentColor = Color(0xFF06B6D4),
+        lightBgColor = Color(0xFFCFFAFE)
+    ),
+    "gemar_belajar" to HabitVisualConfig(
+        icon = Icons.Default.AutoStories,
+        category = "Literasi & Nalar",
+        timeBadge = "Membaca & Eksplorasi",
+        accentColor = Color(0xFF3B82F6),
+        lightBgColor = Color(0xFFDBEAFE)
+    ),
+    "bermasyarakat" to HabitVisualConfig(
+        icon = Icons.Default.Diversity3,
+        category = "Gotong Royong",
+        timeBadge = "Bantu Ortu & Sesama",
+        accentColor = Color(0xFFEC4899),
+        lightBgColor = Color(0xFFFCE7F3)
+    ),
+    "tidur_tepat_waktu" to HabitVisualConfig(
+        icon = Icons.Default.Bedtime,
+        category = "Istirahat Cukup",
+        timeBadge = "Sebelum 21.30 WIB",
+        accentColor = Color(0xFF6366F1),
+        lightBgColor = Color(0xFFE0E7FF)
+    )
+)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,7 +112,6 @@ fun HabitsScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isDark = LocalIsDarkTheme.current
-
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state.successSnackbar) {
@@ -63,86 +133,12 @@ fun HabitsScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
-                title = if (state.isParent) "Karakter Ananda" else "Jurnal Karakter (G7KAIH)",
-                subtitle = "Gerakan 7 Kebiasaan Anak Indonesia Hebat",
+                title = if (state.isParent) "Karakter Ananda" else "Jurnal Karakter G7KAIH",
+                subtitle = "7 Kebiasaan Anak Indonesia Hebat",
                 onBack = onBack,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        bottomBar = {
-            if (!state.isLoading) {
-                Surface(
-                    color = if (isDark) CosmicNavy else Color.White,
-                    tonalElevation = 8.dp,
-                    shadowElevation = 16.dp,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        if (state.isParent) {
-                            Button(
-                                onClick = viewModel::openParentVerifyDialog,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
-                                enabled = !state.isVerifying,
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = ParentNeon,
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                if (state.isVerifying) {
-                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Menyimpan Verifikasi...", fontWeight = FontWeight.Bold)
-                                } else {
-                                    Icon(Icons.Default.Verified, contentDescription = null, modifier = Modifier.size(20.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        if (state.verificationStatus == "PARENT_VERIFIED") "Perbarui Verifikasi & Feedback"
-                                        else "Verifikasi Jurnal Ananda Hari Ini",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
-                                    )
-                                }
-                            }
-                        } else {
-                            Button(
-                                onClick = viewModel::saveHabits,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(52.dp),
-                                enabled = !state.isSaving,
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = NeonBlue,
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                if (state.isSaving) {
-                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Menyimpan Jurnal...", fontWeight = FontWeight.Bold)
-                                } else {
-                                    Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(20.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "Simpan Jurnal Karakter (${state.completedCount}/7 Selesai)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
     ) { padding ->
         Box(
             modifier = Modifier
@@ -159,22 +155,21 @@ fun HabitsScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 110.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        // 1. Header Overview & Progress Card
+                        // 1. Hero Overview & Gamified Radial Progress Card
                         item {
-                            HabitsOverviewCard(
+                            HabitsHeroCard(
                                 state = state,
                                 isDark = isDark
                             )
                         }
 
-                        // 2. Quick Link Card to Tasks ("Daftar Tugas Siswa")
+                        // 2. Slim Companion Link to Tasks ("Daftar Tugas & PR Siswa")
                         item {
-                            QuickTasksCard(
+                            QuickTasksStrip(
                                 onNavigateToAssignments = onNavigateToAssignments,
-                                isDark = isDark
                             )
                         }
 
@@ -188,7 +183,7 @@ fun HabitsScreen(
                             }
                         }
 
-                        // 4. Section Title
+                        // 4. Section Title & Pillar Counter
                         item {
                             Row(
                                 modifier = Modifier
@@ -201,35 +196,35 @@ fun HabitsScreen(
                                     Text(
                                         text = "7 Pilar Pembiasaan Harian",
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 16.sp,
-                                        color = if (isDark) Color.White else Color(0xFF1E293B)
+                                        fontSize = 15.sp,
+                                        color = TextPrimary
                                     )
                                     Text(
-                                        text = if (state.isParent) "Pantau & berikan tanda bintang atas capaian ananda" else "Centang kebiasaan yang sudah kamu lakukan hari ini",
-                                        fontSize = 12.sp,
-                                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                                        text = if (state.isParent) "Pantau & verifikasi konsistensi ananda" else "Ketuk kartu kebiasaan yang telah kamu laksanakan",
+                                        fontSize = 11.sp,
+                                        color = TextTertiary
                                     )
                                 }
 
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0),
-                                    modifier = Modifier.padding(start = 8.dp)
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (state.completedCount >= 5) NeonSuccess.copy(alpha = 0.14f) else CosmicSurface2,
+                                    border = BorderStroke(0.5.dp, if (state.completedCount >= 5) NeonSuccess.copy(alpha = 0.35f) else GlassBorder)
                                 ) {
                                     Text(
-                                        text = "${state.completedCount}/7",
+                                        text = "${state.completedCount} dari 7 Selesai",
                                         fontWeight = FontWeight.ExtraBold,
-                                        fontSize = 13.sp,
-                                        color = if (state.completedCount >= 5) AccentNeonGreen else NeonBlue,
-                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                                        fontSize = 11.sp,
+                                        color = if (state.completedCount >= 5) NeonSuccess else NeonBlue,
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
                                     )
                                 }
                             }
                         }
 
-                        // 5. The 7 Canonical Habit Items
+                        // 5. The 7 Canonical Habit Cards
                         items(CanonicalHabitsList.items, key = { it.key }) { habit ->
-                            HabitItemCard(
+                            HabitCardRedesigned(
                                 habit = habit,
                                 isChecked = state.habitChecks[habit.key] ?: false,
                                 note = state.habitNotes[habit.key] ?: "",
@@ -238,13 +233,115 @@ fun HabitsScreen(
                                 onToggle = { viewModel.toggleHabit(habit.key) },
                                 onToggleExpand = { viewModel.toggleNoteExpanded(habit.key) },
                                 onNoteChange = { note -> viewModel.setNote(habit.key, note) },
-                                isDark = isDark
                             )
                         }
+                    }
+                }
+            }
 
-                        // Spacer to prevent content cut by bottom button
-                        item {
-                            Spacer(Modifier.height(16.dp))
+            // ── FLOATING ACTION CAPSULE DOCK (Clean, Non-Intrusive) ───────────
+            if (!state.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(
+                                    Color.Transparent,
+                                    CosmicBlack.copy(alpha = 0.85f),
+                                    CosmicBlack
+                                )
+                            )
+                        )
+                        .navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (state.isParent) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .shadow(12.dp, RoundedCornerShape(25.dp))
+                                .clip(RoundedCornerShape(25.dp))
+                                .clickable(enabled = !state.isVerifying, onClick = viewModel::openParentVerifyDialog),
+                            shape = RoundedCornerShape(25.dp),
+                            color = ParentNeon,
+                            border = BorderStroke(1.dp, ParentLight.copy(alpha = 0.6f))
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxSize(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                if (state.isVerifying) {
+                                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                    Spacer(Modifier.width(8.dp))
+                                    Text("Menyimpan Verifikasi...", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                                } else {
+                                    Icon(Icons.Default.Verified, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        text = if (state.verificationStatus == "PARENT_VERIFIED") "Perbarui Verifikasi Orang Tua" else "Verifikasi Jurnal Ananda (${state.completedCount}/7)",
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White,
+                                        fontSize = 14.sp
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp)
+                                .shadow(12.dp, RoundedCornerShape(25.dp))
+                                .clip(RoundedCornerShape(25.dp))
+                                .clickable(enabled = !state.isSaving, onClick = viewModel::saveHabits),
+                            shape = RoundedCornerShape(25.dp),
+                            color = NeonBlueDark,
+                            border = BorderStroke(1.dp, NeonBlueLight.copy(alpha = 0.5f))
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            listOf(
+                                                Color(0xFF2563EB),
+                                                Color(0xFF3B82F6),
+                                                if (state.completedCount >= 5) Color(0xFF10B981) else Color(0xFF2563EB)
+                                            )
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.Center
+                                ) {
+                                    if (state.isSaving) {
+                                        CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Menyimpan Jurnal...", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                                    } else {
+                                        Icon(
+                                            imageVector = if (state.completedCount >= 5) Icons.Default.CheckCircle else Icons.Default.CloudUpload,
+                                            contentDescription = null,
+                                            tint = Color.White,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = "Simpan Jurnal Karakter (${state.completedCount}/7 Selesai)",
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color.White,
+                                            fontSize = 14.sp
+                                        )
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -257,319 +354,397 @@ fun HabitsScreen(
         AlertDialog(
             onDismissRequest = viewModel::closeParentVerifyDialog,
             shape = RoundedCornerShape(20.dp),
-            containerColor = if (isDark) CosmicNavy else Color.White,
+            containerColor = CosmicNavy,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.Verified, contentDescription = null, tint = ParentNeon, modifier = Modifier.size(24.dp))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "Verifikasi Jurnal Karakter",
+                        text = "Verifikasi Jurnal Karakter",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp,
-                        color = if (isDark) Color.White else Color(0xFF0F172A)
+                        fontSize = 17.sp,
+                        color = TextPrimary
                     )
                 }
             },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text(
-                        "Sebagai orang tua/wali dari ${state.childName}, verifikasi bahwa ananda telah membiasakan ${state.completedCount} dari 7 karakter hebat hari ini.",
-                        fontSize = 13.sp,
-                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF475569)
+                        text = "Sebagai orang tua/wali dari ${state.childName}, verifikasi bahwa ananda telah membiasakan ${state.completedCount} dari 7 karakter hebat hari ini.",
+                        fontSize = 12.sp,
+                        color = TextSecondary,
+                        lineHeight = 17.sp
                     )
 
                     OutlinedTextField(
                         value = state.parentFeedbackInput,
                         onValueChange = viewModel::setParentFeedbackInput,
-                        label = { Text("Catatan / Apresiasi untuk Ananda (Opsional)") },
-                        placeholder = { Text("Contoh: Hebat nak, pertahankan bangun pagi & sholat berjamaah!") },
+                        label = { Text("Catatan / Apresiasi untuk Ananda (Opsional)", fontSize = 11.sp) },
+                        placeholder = { Text("Contoh: Hebat nak, pertahankan bangun pagi & beribadah!", fontSize = 11.sp) },
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         maxLines = 5,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = TextPrimary)
                     )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = viewModel::submitParentVerification,
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ParentNeon)
                 ) {
-                    Text("Simpan Verifikasi", fontWeight = FontWeight.Bold)
+                    Text("Simpan Verifikasi", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::closeParentVerifyDialog) {
-                    Text("Batal")
+                    Text("Batal", fontSize = 13.sp, color = TextSecondary)
                 }
             }
         )
     }
 }
 
+// ── 1. HERO OVERVIEW WITH CIRCULAR PROGRESS RING ──────────────────────────────
+
 @Composable
-fun HabitsOverviewCard(
-    state: HabitsUiState,
-    isDark: Boolean,
+private fun HabitCircularProgress(
+    completed: Int,
+    total: Int = 7,
+    modifier: Modifier = Modifier,
 ) {
-    val gradientBrush = Brush.linearGradient(
-        colors = listOf(
-            Color(0xFF1E3A8A), // Pure Royal Blue
-            Color(0xFF0F172A),
-            Color(0xFF064E3B)  // Subtle Emerald
-        )
+    val progress = (completed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
+    val animatedProgress by animateFloatAsState(
+        targetValue = progress,
+        animationSpec = tween(500, easing = FastOutSlowInEasing),
+        label = "habit_progress"
     )
+    val strokeColor = if (completed >= 5) NeonSuccess else NeonBlue
+    val trackColor = strokeColor.copy(alpha = 0.16f)
 
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
-        tonalElevation = 4.dp,
-        border = BorderStroke(1.dp, if (isDark) GlassOverlay else Color(0xFFE2E8F0))
+    Box(
+        modifier = modifier.size(68.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
-            modifier = Modifier
-                .background(gradientBrush)
-                .padding(18.dp)
-        ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                // Top Tag & Streak
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = Color(0x33FFFFFF)
-                    ) {
-                        Text(
-                            text = "G7KAIH • KURIKULUM MERDEKA",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = Color(0xFF93C5FD),
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            letterSpacing = 0.5.sp
-                        )
-                    }
-
-                    if (state.streakDays > 0) {
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = Color(0x33F59E0B)
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text("🔥", fontSize = 12.sp)
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    text = "${state.streakDays} Hari Beruntun",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFFBBF24)
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Title & Subtitle
-                Column {
-                    Text(
-                        text = if (state.isParent) "Jurnal Karakter ${state.childName}" else "7 Kebiasaan Anak Indonesia Hebat",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = getFormattedTodayDate(),
-                        fontSize = 12.sp,
-                        color = Color(0xFFCBD5E1)
-                    )
-                }
-
-                // Progress Bar & Percentage
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(
-                            text = "Tingkat Kepatuhan Pembiasaan",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = Color(0xFFE2E8F0)
-                        )
-                        Text(
-                            text = "${state.completedCount} dari 7 Selesai (${state.complianceRate.toInt()}%)",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (state.completedCount >= 5) Color(0xFF6EE7B7) else Color(0xFF93C5FD)
-                        )
-                    }
-
-                    LinearProgressIndicator(
-                        progress = { (state.completedCount.toFloat() / 7f).coerceIn(0f, 1f) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(8.dp)
-                            .clip(RoundedCornerShape(4.dp)),
-                        color = if (state.completedCount >= 5) Color(0xFF10B981) else Color(0xFF3B82F6),
-                        trackColor = Color(0x33FFFFFF),
-                    )
-                }
-
-                // Status Verification Badge
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    val statusText = when (state.verificationStatus) {
-                        "PARENT_VERIFIED" -> "Diverifikasi Orang Tua"
-                        "TEACHER_OVERRIDE" -> "Supervisi Wali Kelas"
-                        "PENDING" -> "Menunggu Verifikasi Ortu"
-                        else -> "Belum Dicatat Hari Ini"
-                    }
-                    val statusColor = when (state.verificationStatus) {
-                        "PARENT_VERIFIED" -> Color(0xFF10B981)
-                        "TEACHER_OVERRIDE" -> Color(0xFF3B82F6)
-                        "PENDING" -> Color(0xFFF59E0B)
-                        else -> Color(0xFF94A3B8)
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(8.dp)
-                                .clip(CircleShape)
-                                .background(statusColor)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = statusText,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color.White
-                        )
-                    }
-
-                    Text(
-                        text = "Semester Ganjil 2026/2027",
-                        fontSize = 10.sp,
-                        color = Color(0xFF94A3B8)
-                    )
-                }
+        Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
+            val strokeWidth = 5.5.dp.toPx()
+            // Track
+            drawArc(
+                color = trackColor,
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+            )
+            // Progress arc
+            if (animatedProgress > 0f) {
+                drawArc(
+                    color = strokeColor,
+                    startAngle = -90f,
+                    sweepAngle = animatedProgress * 360f,
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
+                )
             }
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "$completed/$total",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = TextPrimary,
+            )
+            Text(
+                text = "${(progress * 100).toInt()}%",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = strokeColor,
+            )
         }
     }
 }
 
 @Composable
-fun QuickTasksCard(
-    onNavigateToAssignments: () -> Unit,
+private fun HabitsHeroCard(
+    state: HabitsUiState,
     isDark: Boolean,
 ) {
-    Surface(
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onNavigateToAssignments),
-        shape = RoundedCornerShape(16.dp),
-        color = if (isDark) Color(0xFF0F172A) else Color(0xFFF8FAFC),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0))
+            .clip(RoundedCornerShape(18.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(18.dp))
+            .padding(16.dp)
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            // Top Row: Tag & Streak
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Curriculum Badge Pill
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = NeonBlue.copy(alpha = 0.12f),
+                    border = BorderStroke(0.5.dp, NeonBlue.copy(alpha = 0.3f))
+                ) {
+                    Text(
+                        text = "G7KAIH • KEMENDIKDASMEN",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = NeonBlue,
+                        letterSpacing = 0.4.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
+                }
+
+                // Streak Pill
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = AccentNeonAmber.copy(alpha = 0.12f),
+                    border = BorderStroke(0.5.dp, AccentNeonAmber.copy(alpha = 0.35f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocalFireDepartment,
+                            contentDescription = null,
+                            tint = AccentNeonAmber,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = if (state.streakDays > 0) "${state.streakDays} Hari Streak" else "Hari ke-1",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentNeonAmber
+                        )
+                    }
+                }
+            }
+
+            // Middle Row: Title, Motivation Quote & Circular Ring
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
+                    Text(
+                        text = if (state.isParent) "Karakter Harian ${state.childName}" else "7 Kebiasaan Anak Indonesia",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = getFormattedTodayDate(),
+                        fontSize = 11.sp,
+                        color = TextTertiary
+                    )
+                    Spacer(Modifier.height(6.dp))
+
+                    val motivation = when (state.completedCount) {
+                        0 -> "Mulai hari dengan kebiasaan baik!"
+                        in 1..3 -> "Berproses hebat, pertahankan konsistensi!"
+                        in 4..6 -> "Sedikit lagi tuntas seluruh 7 pilar!"
+                        else -> "Luar biasa! Seluruh pilar terlaksana hari ini!"
+                    }
+                    Text(
+                        text = motivation,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (state.completedCount >= 5) NeonSuccess else NeonBlue
+                    )
+                }
+
+                HabitCircularProgress(
+                    completed = state.completedCount,
+                    total = 7
+                )
+            }
+
+            HorizontalDivider(
+                color = GlassBorder,
+                thickness = 0.5.dp
+            )
+
+            // Bottom Metrics: Status & Semester
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                val statusText = when (state.verificationStatus) {
+                    "PARENT_VERIFIED" -> "Diverifikasi Orang Tua"
+                    "TEACHER_OVERRIDE" -> "Supervisi Wali Kelas"
+                    "PENDING" -> "Menunggu Verifikasi"
+                    else -> "Belum Dicatat Hari Ini"
+                }
+                val statusColor = when (state.verificationStatus) {
+                    "PARENT_VERIFIED" -> NeonSuccess
+                    "TEACHER_OVERRIDE" -> NeonBlue
+                    "PENDING" -> NeonWarning
+                    else -> TextTertiary
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(7.dp)
+                            .clip(CircleShape)
+                            .background(statusColor)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = statusText,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = statusColor
+                    )
+                }
+
+                Text(
+                    text = "Semester Ganjil 2026/2027",
+                    fontSize = 10.sp,
+                    color = TextTertiary
+                )
+            }
+        }
+    }
+}
+
+// ── 2. SLIM COMPANION TASKS STRIP ─────────────────────────────────────────────
+
+@Composable
+private fun QuickTasksStrip(
+    onNavigateToAssignments: () -> Unit,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .clickable(onClick = onNavigateToAssignments)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.weight(1f)
             ) {
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = NeonBlue.copy(alpha = 0.15f),
-                    modifier = Modifier.size(38.dp)
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(StudentNeon.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(Icons.Default.Assignment, contentDescription = null, tint = NeonBlue, modifier = Modifier.size(20.dp))
-                    }
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
+                        contentDescription = null,
+                        tint = StudentNeon,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
-
-                Spacer(Modifier.width(12.dp))
-
+                Spacer(Modifier.width(10.dp))
                 Column {
                     Text(
                         text = "Daftar Tugas & PR Siswa",
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isDark) Color.White else Color(0xFF0F172A)
+                        color = TextPrimary
                     )
                     Text(
-                        text = "Pantau batas waktu tugas & kumpulkan tepat waktu",
-                        fontSize = 11.sp,
-                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                        text = "Cek tenggat & kumpulkan tugas tepat waktu",
+                        fontSize = 10.sp,
+                        color = TextTertiary
                     )
                 }
             }
 
-            Icon(
-                Icons.Default.ChevronRight,
-                contentDescription = null,
-                tint = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
-                modifier = Modifier.size(20.dp)
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Lihat",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = StudentNeon
+                )
+                Spacer(Modifier.width(3.dp))
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = null,
+                    tint = StudentNeon,
+                    modifier = Modifier.size(10.dp)
+                )
+            }
         }
     }
 }
 
+// ── 3. PARENT FEEDBACK CARD ───────────────────────────────────────────────────
+
 @Composable
-fun ParentFeedbackCard(
+private fun ParentFeedbackCard(
     feedback: String,
     isDark: Boolean,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = Color(0xFFF43F5E).copy(alpha = 0.08f),
-        border = BorderStroke(1.dp, Color(0xFFF43F5E).copy(alpha = 0.3f))
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(ParentNeon.copy(alpha = 0.08f))
+            .border(0.8.dp, ParentNeon.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+            .padding(14.dp)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Top
         ) {
             Icon(
-                Icons.Default.Favorite,
+                imageVector = Icons.Default.Favorite,
                 contentDescription = null,
-                tint = Color(0xFFF43F5E),
-                modifier = Modifier.size(20.dp)
+                tint = ParentNeon,
+                modifier = Modifier.size(18.dp)
             )
 
             Spacer(Modifier.width(10.dp))
 
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(
                     text = "Catatan & Apresiasi Orang Tua / Wali",
                     fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
-                    color = Color(0xFFF43F5E)
+                    color = ParentNeon
                 )
                 Text(
                     text = "\"$feedback\"",
-                    fontSize = 13.sp,
-                    color = if (isDark) Color(0xFFE2E8F0) else Color(0xFF334155),
-                    lineHeight = 18.sp
+                    fontSize = 12.sp,
+                    color = TextPrimary,
+                    lineHeight = 17.sp
                 )
             }
         }
     }
 }
 
+// ── 4. REDESIGNED HABIT ITEM CARD ─────────────────────────────────────────────
+
 @Composable
-fun HabitItemCard(
+private fun HabitCardRedesigned(
     habit: CanonicalHabit,
     isChecked: Boolean,
     note: String,
@@ -578,159 +753,259 @@ fun HabitItemCard(
     onToggle: () -> Unit,
     onToggleExpand: () -> Unit,
     onNoteChange: (String) -> Unit,
-    isDark: Boolean,
 ) {
-    Surface(
+    val visual = habitVisuals[habit.key] ?: HabitVisualConfig(
+        icon = Icons.Default.Star,
+        category = "Karakter",
+        timeBadge = "Harian",
+        accentColor = NeonBlue,
+        lightBgColor = Color(0xFFDBEAFE)
+    )
+
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isChecked) {
+        if (isDark) visual.accentColor.copy(alpha = 0.08f) else visual.lightBgColor.copy(alpha = 0.45f)
+    } else {
+        CosmicNavy
+    }
+    val cardBorderColor = if (isChecked) {
+        visual.accentColor.copy(alpha = 0.5f)
+    } else {
+        GlassBorder
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .then(
-                if (!isParent) Modifier.clickable(onClick = onToggle) else Modifier
-            ),
-        shape = RoundedCornerShape(16.dp),
-        color = if (isChecked) {
-            if (isDark) Color(0xFF064E3B).copy(alpha = 0.25f) else Color(0xFFECFDF5)
-        } else {
-            if (isDark) Color(0xFF0F172A) else Color.White
-        },
-        border = BorderStroke(
-            1.dp,
-            if (isChecked) {
-                if (isDark) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFF6EE7B7)
-            } else {
-                if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
-            }
-        )
+            .background(cardBg)
+            .border(if (isChecked) 1.dp else 0.5.dp, cardBorderColor, RoundedCornerShape(16.dp))
+            .clickable(onClick = if (!isParent) onToggle else onToggleExpand)
+            .padding(14.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Main Top Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Number Circle Badge
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isChecked) Color(0xFF10B981) else if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
-                        ),
-                    contentAlignment = Alignment.Center
+                // Left: Icon Squircle + Title & Badges
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (isChecked) {
-                        Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
-                    } else {
+                    // Icon Squircle Badge
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(
+                                if (isChecked) visual.accentColor.copy(alpha = 0.2f)
+                                else CosmicSurface2
+                            )
+                            .border(
+                                0.5.dp,
+                                if (isChecked) visual.accentColor.copy(alpha = 0.4f) else GlassBorder,
+                                RoundedCornerShape(12.dp)
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = visual.icon,
+                            contentDescription = null,
+                            tint = visual.accentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = visual.category.uppercase(),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = visual.accentColor,
+                                letterSpacing = 0.5.sp
+                            )
+                            Text(
+                                text = " • ",
+                                fontSize = 9.sp,
+                                color = TextTertiary
+                            )
+                            Text(
+                                text = visual.timeBadge,
+                                fontSize = 9.sp,
+                                color = TextTertiary
+                            )
+                        }
+                        Spacer(Modifier.height(1.dp))
                         Text(
-                            text = habit.number.toString(),
-                            fontWeight = FontWeight.Bold,
+                            text = habit.title,
                             fontSize = 14.sp,
-                            color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = habit.subtitle,
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
                 }
 
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(8.dp))
 
-                // Title and Subtitle
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = habit.title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isDark) Color.White else Color(0xFF0F172A)
-                    )
-                    Text(
-                        text = habit.subtitle,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (isChecked) Color(0xFF10B981) else if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
-                    )
-                }
-
-                // Checkbox / Toggle for Student, or Status for Parent
+                // Right: Check Action (Interactive Circle) or Parent Verification Badge
                 if (!isParent) {
-                    Checkbox(
-                        checked = isChecked,
-                        onCheckedChange = { onToggle() },
-                        colors = CheckboxDefaults.colors(
-                            checkedColor = Color(0xFF10B981),
-                            checkmarkColor = Color.White
-                        )
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isChecked) visual.accentColor else Color.Transparent
+                            )
+                            .border(
+                                width = if (isChecked) 0.dp else 1.5.dp,
+                                color = if (isChecked) Color.Transparent else if (isDark) Color(0xFF3F3F46) else Color(0xFFCBD5E1),
+                                shape = CircleShape
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (isChecked) {
+                            Icon(
+                                imageVector = Icons.Default.Check,
+                                contentDescription = "Tuntas",
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
                 } else {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (isChecked) Color(0x3310B981) else Color(0x2294A3B8)
+                        color = if (isChecked) NeonSuccess.copy(alpha = 0.15f) else Color(0x1594A3B8),
+                        border = BorderStroke(
+                            0.5.dp,
+                            if (isChecked) NeonSuccess.copy(alpha = 0.4f) else GlassBorder
+                        )
                     ) {
                         Text(
-                            text = if (isChecked) "Terlaksana ✓" else "Belum",
+                            text = if (isChecked) "Terlaksana" else "Belum",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isChecked) Color(0xFF10B981) else Color(0xFF94A3B8),
+                            color = if (isChecked) NeonSuccess else TextTertiary,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
                     }
                 }
             }
 
-            // Description
-            Spacer(Modifier.height(8.dp))
+            // Description text
             Text(
                 text = habit.description,
-                fontSize = 12.sp,
-                color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                lineHeight = 16.sp
+                fontSize = 11.sp,
+                color = TextTertiary,
+                lineHeight = 15.sp,
+                modifier = Modifier.padding(start = 54.dp)
             )
 
-            // Existing note or toggle note button
-            if (note.isNotBlank() && !isExpanded) {
-                Spacer(Modifier.height(8.dp))
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onToggleExpand)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically
+            // Note pill or + Catatan button
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 54.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (note.isNotBlank() && !isExpanded) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = CosmicSurface2,
+                        border = BorderStroke(0.5.dp, GlassBorder),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(onClick = onToggleExpand)
                     ) {
-                        Icon(Icons.Default.EditNote, contentDescription = null, tint = NeonBlue, modifier = Modifier.size(16.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Catatan: $note",
-                            fontSize = 12.sp,
-                            color = if (isDark) Color(0xFFE2E8F0) else Color(0xFF334155),
-                            maxLines = 2
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.StickyNote2,
+                                contentDescription = null,
+                                tint = TextSecondary,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = note,
+                                fontSize = 11.sp,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (!isParent) {
+                                Spacer(Modifier.width(6.dp))
+                                Icon(
+                                    imageVector = Icons.Default.Edit,
+                                    contentDescription = "Edit catatan",
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                } else if (!isParent && !isExpanded) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color.Transparent,
+                        border = BorderStroke(0.5.dp, GlassBorder),
+                        modifier = Modifier.clickable(onClick = onToggleExpand)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = null,
+                                tint = visual.accentColor,
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text(
+                                text = "Catatan refleksi (opsional)",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = visual.accentColor
+                            )
+                        }
                     }
                 }
-            } else if (!isParent && !isExpanded) {
-                Spacer(Modifier.height(6.dp))
-                Text(
-                    text = "+ Tambah Catatan Pembiasaan",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = NeonBlue,
-                    modifier = Modifier
-                        .clickable(onClick = onToggleExpand)
-                        .padding(vertical = 2.dp)
-                )
             }
 
             // Expanded Note Input Field
             AnimatedVisibility(visible = isExpanded) {
-                Column(modifier = Modifier.padding(top = 10.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 54.dp, top = 4.dp)
+                ) {
                     OutlinedTextField(
                         value = note,
                         onValueChange = onNoteChange,
-                        label = { Text("Catatan Pelaksanaan ${habit.title}") },
-                        placeholder = { Text("Contoh: ${habit.exampleNote}") },
+                        placeholder = { Text("Contoh: ${habit.exampleNote}", fontSize = 11.sp) },
                         modifier = Modifier.fillMaxWidth(),
-                        maxLines = 3,
+                        maxLines = 2,
                         shape = RoundedCornerShape(10.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp)
+                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = TextPrimary)
                     )
 
                     Row(
@@ -739,8 +1014,11 @@ fun HabitItemCard(
                             .padding(top = 4.dp),
                         horizontalArrangement = Arrangement.End
                     ) {
-                        TextButton(onClick = onToggleExpand) {
-                            Text("Selesai", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        TextButton(
+                            onClick = onToggleExpand,
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                        ) {
+                            Text("Tutup", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = visual.accentColor)
                         }
                     }
                 }
@@ -751,6 +1029,6 @@ fun HabitItemCard(
 
 private fun getFormattedTodayDate(): String {
     val today = LocalDate.now()
-    val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale("id", "ID"))
+    val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.forLanguageTag("id-ID"))
     return today.format(formatter)
 }

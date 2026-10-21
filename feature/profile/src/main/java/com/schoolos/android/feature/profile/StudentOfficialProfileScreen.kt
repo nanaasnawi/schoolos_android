@@ -157,7 +157,10 @@ fun StudentOfficialProfileScreen(
                 ) {
                     // 1. Hero Card
                     item {
-                        OfficialHeroCard(biodata = biodata, fallbackAvatar = state.user?.avatarUrl)
+                        OfficialHeroCard(
+                            biodata = biodata,
+                            userAvatar = state.user?.avatarUrl ?: state.userAvatarUrl ?: biodata.fotoProfile
+                        )
                     }
 
                     // 2. Data Pokok Siswa
@@ -371,8 +374,11 @@ fun StudentOfficialProfileScreen(
 @Composable
 private fun OfficialHeroCard(
     biodata: OfficialStudentBiodata,
-    fallbackAvatar: String?,
+    userAvatar: String?,
 ) {
+    val effectiveAvatar = userAvatar?.takeIf { it.isNotBlank() }
+        ?: biodata.fotoProfile?.takeIf { it.isNotBlank() }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -387,7 +393,7 @@ private fun OfficialHeroCard(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             UserProfileAvatar(
-                avatarUrl = biodata.fotoProfile ?: fallbackAvatar,
+                avatarUrl = effectiveAvatar,
                 modifier = Modifier
                     .size(84.dp)
                     .border(2.dp, StudentNeon, CircleShape),

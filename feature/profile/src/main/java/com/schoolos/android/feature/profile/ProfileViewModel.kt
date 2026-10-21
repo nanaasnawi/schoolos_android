@@ -24,6 +24,7 @@ import javax.inject.Inject
 
 data class ProfileUiState(
     val user: User? = null,
+    val userAvatarUrl: String? = null,
     val username: String = "",
     val phone: String = "",
     val about: String = "",
@@ -91,6 +92,7 @@ class ProfileViewModel @Inject constructor(
                         role = authState.role ?: "",
                         avatarUrl = authState.avatarUrl,
                     ) else null,
+                    userAvatarUrl = authState.avatarUrl,
                     username = identifier.ifBlank { authState.name?.lowercase()?.replace(" ", "_") ?: "user" },
                     phone = authState.phone ?: "",
                     about = authState.about?.ifBlank { null } ?: "",
@@ -206,7 +208,8 @@ class ProfileViewModel @Inject constructor(
                 .onSuccess { newAvatarUrl ->
                     isUploadingPhoto.value = false
                     _state.value = _state.value.copy(
-                        user = _state.value.user?.copy(avatarUrl = newAvatarUrl)
+                        user = _state.value.user?.copy(avatarUrl = newAvatarUrl),
+                        userAvatarUrl = newAvatarUrl,
                     )
                     onComplete(true, null)
                 }
