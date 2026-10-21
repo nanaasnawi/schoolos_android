@@ -145,7 +145,7 @@ fun InAppPdfViewer(
                 val reqEnd = endPage ?: minOf(totalPages, reqStart + 14)
 
                 val startIndex = (reqStart - 1).coerceIn(0, totalPages - 1)
-                val endIndex = (reqEnd - 1).coerceIn(startIndex, totalPages - 1)
+                val endIndex = (reqEnd - 1).coerceIn(startIndex, minOf(totalPages - 1, startIndex + 14))
 
                 val renderedBitmaps = mutableListOf<RenderedPdfPage>()
                 val displayMetrics = context.resources.displayMetrics

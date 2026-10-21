@@ -139,10 +139,11 @@ fun BookReaderDialog(
                 totalDocPages = renderer.pageCount
 
                 val reqStart = startPage ?: 1
-                val reqEnd = endPage ?: totalDocPages
+                val maxAllowedPages = 10
+                val reqEnd = endPage ?: minOf(totalDocPages, reqStart + maxAllowedPages - 1)
 
                 val startIndex = (reqStart - 1).coerceIn(0, totalDocPages - 1)
-                val endIndex = (reqEnd - 1).coerceIn(startIndex, totalDocPages - 1)
+                val endIndex = (reqEnd - 1).coerceIn(startIndex, minOf(totalDocPages - 1, startIndex + maxAllowedPages - 1))
 
                 val renderedBitmaps = mutableListOf<SharedRenderedPdfPage>()
                 val displayMetrics = context.resources.displayMetrics
