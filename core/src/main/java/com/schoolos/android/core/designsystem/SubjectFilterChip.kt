@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun SubjectFilterChip(
     subject: String,
-    onClear: () -> Unit,
+    onClear: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -66,14 +66,16 @@ fun SubjectFilterChip(
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false),
         )
-        Spacer(Modifier.width(8.dp))
-        Icon(
-            Icons.Default.Close,
-            contentDescription = "Hapus filter mata pelajaran",
-            tint = TextTertiary,
-            modifier = Modifier
-                .size(18.dp)
-                .clickable(onClick = onClear),
-        )
+        if (onClear != null) {
+            Spacer(Modifier.width(8.dp))
+            Icon(
+                Icons.Default.Close,
+                contentDescription = "Hapus filter mata pelajaran",
+                tint = TextTertiary,
+                modifier = Modifier
+                    .size(18.dp)
+                    .clickable(onClick = onClear),
+            )
+        }
     }
 }

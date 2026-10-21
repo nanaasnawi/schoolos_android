@@ -43,6 +43,7 @@ sealed class Screen(val route: String) {
     }
     data object Progress : Screen("progress")
     data object Achievements : Screen("achievements")
+    data object Habits : Screen("habits")
     data object Notifications : Screen("notifications")
     data object NotificationDetail : Screen("notifications/{id}?title={title}&body={body}&type={type}&createdAt={createdAt}&referenceType={referenceType}&referenceId={referenceId}") {
         fun createRoute(

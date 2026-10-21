@@ -130,7 +130,7 @@ fun QuizListScreen(
                         item {
                             SubjectFilterChip(
                                 subject = state.subjectFilter!!,
-                                onClear = viewModel::clearSubjectFilter,
+                                onClear = if (subjectId.isNotBlank()) null else viewModel::clearSubjectFilter,
                             )
                         }
                     }
