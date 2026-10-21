@@ -20,6 +20,7 @@ import com.schoolos.android.core.navigation.Screen
 import com.schoolos.android.feature.achievements.AchievementScreen
 import com.schoolos.android.feature.assignments.AssignmentDetailScreen
 import com.schoolos.android.feature.assignments.AssignmentListScreen
+import com.schoolos.android.feature.assignments.habits.HabitsScreen
 import com.schoolos.android.feature.auth.LoginScreen
 import com.schoolos.android.feature.grades.GradeDetailScreen
 import com.schoolos.android.feature.grades.GradebookListScreen
@@ -345,6 +346,14 @@ fun NavGraph(
                         if (subject.isNotBlank()) navController.navigate(Screen.LearningBySubject.createRoute(subject))
                         else navController.navigate(Screen.Learning.route)
                     }
+                )
+            }
+
+            // Character & Habits (G7KAIH)
+            composable(Screen.Habits.route) {
+                HabitsScreen(
+                    onBack = null,
+                    onNavigateToAssignments = { navController.navigate(Screen.Assignments.route) }
                 )
             }
 

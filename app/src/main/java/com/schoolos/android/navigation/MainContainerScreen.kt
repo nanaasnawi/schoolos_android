@@ -110,13 +110,14 @@ fun MainContainerScreen(
         isParent -> listOf(
             BottomNavItem(Screen.Home.route,          "Beranda",  CoreR.drawable.ic_modern_home),
             BottomNavItem(Screen.Progress.route,      "Anak",     CoreR.drawable.ic_modern_child),
+            BottomNavItem(Screen.Habits.route,        "Karakter", CoreR.drawable.ic_modern_habits),
             BottomNavItem(Screen.Notifications.route, "Pesan",    CoreR.drawable.ic_modern_chat),
             BottomNavItem(Screen.Profile.route,       "Profil",   CoreR.drawable.ic_modern_profile),
         )
         else -> listOf(
             BottomNavItem(Screen.Home.route,          "Beranda",     CoreR.drawable.ic_modern_home),
             BottomNavItem(Screen.Sessions.route,      "Jadwal",      CoreR.drawable.ic_modern_calendar),
-            BottomNavItem(Screen.Assignments.route,   "Tugas",       CoreR.drawable.ic_modern_tasks),
+            BottomNavItem(Screen.Habits.route,        "Karakter",    CoreR.drawable.ic_modern_habits),
             BottomNavItem(Screen.Chat.route,          "Tanya Jawab", CoreR.drawable.ic_modern_chat),
             BottomNavItem(Screen.Profile.route,       "Akun",        CoreR.drawable.ic_modern_profile),
         )

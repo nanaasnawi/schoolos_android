@@ -321,6 +321,24 @@ interface SchoolOsApi {
     suspend fun getScheduleCompliance(
         @Query("date") date: String? = null,
     ): ApiResponse<ScheduleComplianceResponseDto>
+
+    // ── G7KAIH (Gerakan 7 Kebiasaan Anak Indonesia Hebat) ───────────────
+    @GET("learning/pedagogy/habits/calendar")
+    suspend fun getHabitsCalendar(
+        @Query("student_id") studentId: String? = null,
+        @Query("entry_date") entryDate: String? = null,
+        @Query("class_id") classId: String? = null,
+    ): ApiResponse<List<HabitEntryDto>>
+
+    @POST("learning/pedagogy/habits/entry")
+    suspend fun recordHabitEntry(
+        @Body request: RecordHabitEntryRequestDto
+    ): ApiResponse<RecordHabitResponseDto>
+
+    @POST("learning/pedagogy/habits/verify-parent")
+    suspend fun verifyHabitParent(
+        @Body request: VerifyHabitParentRequestDto
+    ): ApiResponse<VerifyHabitResponseDto>
 }
 
 @kotlinx.serialization.Serializable

@@ -124,7 +124,7 @@ fun LazyListScope.studentContent(
                     iconRes = CoreR.drawable.ic_modern_tasks,
                     accentColor = StudentNeon,
                     badgeText = "Aktif",
-                    onClick = { onNavigateToAssignmentWithSubject(currentSubjectClean) },
+                    onClick = onNavigateToAssignments,
                     modifier = Modifier.weight(1f),
                 )
 
@@ -134,7 +134,7 @@ fun LazyListScope.studentContent(
                     iconRes = CoreR.drawable.ic_modern_quiz,
                     accentColor = NeonWarning,
                     badgeText = "Online",
-                    onClick = { onNavigateToQuizWithSubject(currentSubjectClean) },
+                    onClick = onNavigateToQuizzes,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -149,7 +149,7 @@ fun LazyListScope.studentContent(
                     subtitle = "Buku digital & modul",
                     iconRes = CoreR.drawable.ic_modern_book,
                     accentColor = NeonBlue,
-                    onClick = { onNavigateToMaterialWithSubject(currentSubjectClean) },
+                    onClick = onNavigateToLearning,
                     modifier = Modifier.weight(1f),
                 )
 
