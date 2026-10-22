@@ -727,7 +727,7 @@ fun AssignmentAiGeneratorScreen(
                                     ) {
                                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Ubah / Regenerate", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text("Regenerate", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                     Button(
                                         onClick = { onApply(res) },
@@ -742,7 +742,7 @@ fun AssignmentAiGeneratorScreen(
                                     ) {
                                         Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("✓ Terapkan ke Studio", fontSize = 13.sp, fontWeight = FontWeight.Black)
+                                        Text("Terapkan ke Studio", fontSize = 13.sp, fontWeight = FontWeight.Black)
                                     }
                                 }
                             }
