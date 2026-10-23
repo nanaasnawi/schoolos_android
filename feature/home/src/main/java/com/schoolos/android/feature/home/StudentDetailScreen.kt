@@ -37,6 +37,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.Achievement
 import com.schoolos.android.domain.model.ClassStudent
+import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.Progress
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -50,13 +51,14 @@ fun StudentDetailScreen(
     val context = LocalContext.current
 
     val student = uiState.student
+    val biodata = uiState.officialBiodata
     val progress = uiState.progress
     val achievements = uiState.achievements
     val isLoading = uiState.isLoading
     val errorMessage = uiState.errorMessage
     val selectedTab = uiState.selectedTab
 
-    val tabs = listOf("Perkembangan", "Metrik", "Pencapaian", "Kontak")
+    val tabs = listOf("Data Dapodik", "Perkembangan", "Metrik", "Pencapaian", "Kontak")
 
     val isFemale = student.gender?.trim()?.uppercase() == "P"
     val genderLabel = if (isFemale) "Perempuan" else "Laki-laki"
@@ -69,7 +71,7 @@ fun StudentDetailScreen(
         topBar = {
             ExecutiveTopBar(
                 title = "Detail Profil Siswa",
-                subtitle = if (student.className.isNotBlank()) "Kelas ${student.className} • Portal Guru" else "Portal Guru",
+                subtitle = if (student.className.isNotBlank()) "Kelas ${student.className} • Data Pokok Pendidikan" else "Data Pokok Pendidikan (Dapodik)",
                 onBack = onBack,
                 actions = {
                     Box(
@@ -151,6 +153,17 @@ fun StudentDetailScreen(
             when (selectedTab) {
                 0 -> {
                     item {
+                        DapodikDetailTab(
+                            student = student,
+                            biodata = biodata,
+                            isLoading = isLoading,
+                            modifier = Modifier.padding(horizontal = 16.dp)
+                        )
+                    }
+                }
+
+                1 -> {
+                    item {
                         AcademicProgressTab(
                             progress = progress,
                             isLoading = isLoading,
@@ -159,7 +172,7 @@ fun StudentDetailScreen(
                     }
                 }
 
-                1 -> {
+                2 -> {
                     item {
                         LearningMetricsTab(
                             progress = progress,
@@ -169,7 +182,7 @@ fun StudentDetailScreen(
                     }
                 }
 
-                2 -> {
+                3 -> {
                     if (achievements.isEmpty() && !isLoading) {
                         item {
                             EmptyAchievementsCard(modifier = Modifier.padding(horizontal = 16.dp))
@@ -184,7 +197,7 @@ fun StudentDetailScreen(
                     }
                 }
 
-                3 -> {
+                4 -> {
                     item {
                         ContactTab(
                             student = student,
@@ -1062,5 +1075,251 @@ private fun ErrorBanner(
                 fontWeight = FontWeight.Medium
             )
         }
+    }
+}
+
+// ─── DAPODIK DETAIL TAB & SECTIONS ───────────────────────────────────────────
+@Composable
+private fun DapodikDetailTab(
+    student: ClassStudent,
+    biodata: OfficialStudentBiodata?,
+    isLoading: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    if (isLoading && biodata == null) {
+        Box(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(32.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                CircularProgressIndicator(
+                    color = StudentNeon,
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 2.5.dp
+                )
+                Text(
+                    text = "Memuat rincian data Dapodik...",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+        }
+        return
+    }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        // 1. Identitas Pokok Dapodik
+        DapodikSectionCard(
+            title = "Identitas Pribadi Pokok Dapodik",
+            icon = Icons.Default.Badge,
+            accent = StudentNeon,
+        ) {
+            DapodikDataRow("Nama Lengkap", biodata?.fullName ?: student.fullName)
+            DapodikDataRow("NISN", biodata?.nisn ?: student.nisn)
+            DapodikDataRow("NIK", biodata?.nik ?: "-")
+            DapodikDataRow("NIPD", biodata?.nipd ?: "-")
+            DapodikDataRow("Rombongan Belajar", biodata?.className ?: student.className)
+            DapodikDataRow("Jenis Kelamin", when (biodata?.gender?.uppercase() ?: student.gender?.uppercase()) {
+                "L" -> "Laki-laki"
+                "P" -> "Perempuan"
+                else -> biodata?.gender ?: student.gender ?: "-"
+            })
+            val ttl = listOfNotNull(biodata?.placeOfBirth, biodata?.dateOfBirth).joinToString(", ")
+            DapodikDataRow("Tempat, Tanggal Lahir", ttl.ifBlank { "-" })
+            DapodikDataRow("Agama", biodata?.religion ?: "-")
+        }
+
+        // 2. Alamat Domisili
+        DapodikSectionCard(
+            title = "Alamat Domisili Terdaftar",
+            icon = Icons.Default.Home,
+            accent = NeonBlue,
+        ) {
+            DapodikDataRow("Alamat Jalan", biodata?.alamatJalan ?: "-")
+            val rtrw = if (!biodata?.rt.isNullOrBlank() || !biodata?.rw.isNullOrBlank()) {
+                "RT ${biodata?.rt ?: "00"} / RW ${biodata?.rw ?: "00"}"
+            } else "-"
+            DapodikDataRow("RT / RW", rtrw)
+            DapodikDataRow("Dusun / Lingkungan", biodata?.dusun ?: "-")
+            DapodikDataRow("Desa / Kelurahan", biodata?.kelurahan ?: "-")
+            DapodikDataRow("Kecamatan", biodata?.kecamatan ?: "-")
+            DapodikDataRow("Kode Pos", biodata?.kodePos ?: "-")
+        }
+
+        // 3. Data Orang Tua & Wali
+        DapodikSectionCard(
+            title = "Data Orang Tua & Wali",
+            icon = Icons.Default.FamilyRestroom,
+            accent = Color(0xFFA855F7),
+        ) {
+            Text(
+                text = "DATA AYAH KANDUNG",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = StudentNeon,
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+            DapodikDataRow("Nama Ayah", biodata?.namaAyah ?: "-")
+            DapodikDataRow("Pekerjaan Ayah", biodata?.pekerjaanAyah ?: "-")
+            DapodikDataRow("Penghasilan Ayah", biodata?.penghasilanAyah ?: "-")
+
+            HorizontalDivider(
+                color = GlassBorder,
+                thickness = 0.5.dp,
+                modifier = Modifier.padding(vertical = 6.dp)
+            )
+
+            Text(
+                text = "DATA IBU KANDUNG",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFEC4899),
+                modifier = Modifier.padding(bottom = 2.dp)
+            )
+            DapodikDataRow("Nama Ibu", biodata?.namaIbu ?: "-")
+            DapodikDataRow("Pekerjaan Ibu", biodata?.pekerjaanIbu ?: "-")
+            DapodikDataRow("Penghasilan Ibu", biodata?.penghasilanIbu ?: "-")
+
+            if (!biodata?.namaWali.isNullOrBlank() && biodata?.namaWali != "-") {
+                HorizontalDivider(
+                    color = GlassBorder,
+                    thickness = 0.5.dp,
+                    modifier = Modifier.padding(vertical = 6.dp)
+                )
+                Text(
+                    text = "DATA WALI MURID",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = NeonWarning,
+                    modifier = Modifier.padding(bottom = 2.dp)
+                )
+                DapodikDataRow("Nama Wali", biodata?.namaWali ?: "-")
+                DapodikDataRow("Pekerjaan Wali", biodata?.pekerjaanWali ?: "-")
+                DapodikDataRow("Penghasilan Wali", biodata?.penghasilanWali ?: "-")
+            }
+        }
+
+        // 4. Kesejahteraan Pendidikan (PIP / KIP / KPS / KKS)
+        DapodikSectionCard(
+            title = "Kesejahteraan & Bantuan Pendidikan",
+            icon = Icons.Default.CardMembership,
+            accent = NeonWarning,
+        ) {
+            DapodikDataRow("Penerima KPS", if (biodata?.penerimaKps == true) "Ya" else "Tidak")
+            if (!biodata?.noKps.isNullOrBlank()) {
+                DapodikDataRow("Nomor KPS", biodata?.noKps ?: "-")
+            }
+            DapodikDataRow("Penerima KIP", if (biodata?.penerimaKip == true) "Ya" else "Tidak")
+            if (!biodata?.nomorKip.isNullOrBlank()) {
+                DapodikDataRow("Nomor KIP", biodata?.nomorKip ?: "-")
+                DapodikDataRow("Nama di KIP", biodata?.namaDiKip ?: "-")
+            }
+            if (!biodata?.nomorKks.isNullOrBlank()) {
+                DapodikDataRow("Nomor KKS", biodata?.nomorKks ?: "-")
+            }
+            DapodikDataRow("Layak PIP", if (biodata?.layakPip == true) "Layak" else "Tidak")
+            if (!biodata?.alasanLayakPip.isNullOrBlank()) {
+                DapodikDataRow("Alasan Layak PIP", biodata?.alasanLayakPip ?: "-")
+            }
+        }
+
+        // 5. Rekening Penyaluran Bantuan
+        DapodikSectionCard(
+            title = "Rekening Bank Penyaluran",
+            icon = Icons.Default.AccountBalance,
+            accent = NeonSuccess,
+        ) {
+            DapodikDataRow("Bank Penyalur", biodata?.bank ?: "-")
+            DapodikDataRow("Nomor Rekening", biodata?.nomorRekeningBank ?: "-")
+            DapodikDataRow("Rekening Atas Nama", biodata?.rekeningAtasNama ?: "-")
+        }
+    }
+}
+
+@Composable
+private fun DapodikSectionCard(
+    title: String,
+    icon: ImageVector,
+    accent: Color,
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = CosmicNavy,
+        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(accent.copy(alpha = 0.15f))
+                        .border(0.5.dp, accent.copy(alpha = 0.35f), RoundedCornerShape(6.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            }
+            HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+            content()
+        }
+    }
+}
+
+@Composable
+private fun DapodikDataRow(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = TextSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
+            textAlign = TextAlign.End,
+            modifier = Modifier.weight(1.2f)
+        )
     }
 }

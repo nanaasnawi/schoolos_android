@@ -683,6 +683,27 @@ fun NavGraph(
                 )
             }
 
+            // Executive Supervision Rombel (Principal & Leadership View)
+            composable(Screen.Supervision.route) {
+                RombelStudentsScreen(
+                    className = "ALL",
+                    onBack = { navController.popBackStack() },
+                    onNavigateToStudentDetail = { student ->
+                        navController.navigate(
+                            Screen.StudentDetail.createRoute(
+                                studentId = student.id,
+                                studentName = student.fullName,
+                                nisn = student.nisn,
+                                gender = student.gender,
+                                className = student.className,
+                                phone = student.noHp,
+                                email = student.email,
+                            )
+                        )
+                    }
+                )
+            }
+
             // Rombel Students List (Homeroom Teacher View)
             composable(
                 route = Screen.RombelStudents.route,

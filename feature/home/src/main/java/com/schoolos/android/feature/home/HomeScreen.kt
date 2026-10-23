@@ -39,11 +39,21 @@ import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import android.widget.Toast
+import com.schoolos.android.domain.model.SchoolAnomaly
+import com.schoolos.android.domain.model.ExecutiveDecisionType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -73,6 +83,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.BookReaderDialog
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.domain.model.BookReadingItem
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.HomeShimmerSkeleton
@@ -109,7 +120,13 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
     var activeReadingBook by remember { mutableStateOf<BookReadingItem?>(null) }
+    var activeDecisionAnomaly by remember { mutableStateOf<SchoolAnomaly?>(null) }
+    var activeDecisionType by remember { mutableStateOf<ExecutiveDecisionType?>(null) }
+    var decisionCustomInstructions by remember { mutableStateOf("") }
+    var showDecisionDialog by remember { mutableStateOf(false) }
+
     val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
     val isParent    = com.schoolos.android.core.auth.isParentRole(state.userRole)
     val isTeacher   = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
@@ -524,24 +541,47 @@ fun HomeScreen(
                 when {
                     isPrincipal -> {
                         principalContent(
-                            onNavigateToSessions     = onNavigateToSessions,
-                            onNavigateToSessionDetail = onNavigateToSessionDetail,
-                            onNavigateToAssignments  = onNavigateToAssignments,
-                            onNavigateToQuizzes      = onNavigateToQuizzes,
-                            onNavigateToGrades       = onNavigateToGrades,
-                            onNavigateToNotifications= onNavigateToNotifications,
+                            onNavigateToSessions        = onNavigateToSessions,
+                            onNavigateToSessionDetail   = onNavigateToSessionDetail,
+                            onNavigateToAssignments     = onNavigateToAssignments,
+                            onNavigateToQuizzes         = onNavigateToQuizzes,
+                            onNavigateToGrades          = onNavigateToGrades,
+                            onNavigateToNotifications   = onNavigateToNotifications,
                             onNavigateToBroadcastCenter = onNavigateToBroadcastCenter,
-                            onNavigateToLearning     = onNavigateToLearning,
-                            onNavigateToRombelStudents = onNavigateToRombelStudents,
-                            schoolClasses            = state.teacherClasses,
-                            totalStudentsCount       = state.totalStudentsCount,
-                            todaySessions            = state.todaySessions,
-                            teacherAssignments       = state.teacherAssignments,
-                            teacherAnnouncements     = state.teacherAnnouncements,
-                            pendingAssignmentsCount  = state.teacherPendingCount,
-                            materialsCount           = state.teacherMaterialsCount,
-                            scheduleCount            = state.teacherScheduleCount,
-                            quizzesCount             = state.teacherQuizzesCount,
+                            onNavigateToLearning        = onNavigateToLearning,
+                            onNavigateToRombelStudents  = onNavigateToRombelStudents,
+                            schoolClasses               = state.teacherClasses,
+                            totalStudentsCount          = state.totalStudentsCount,
+                            todaySessions               = state.todaySessions,
+                            teacherAssignments          = state.teacherAssignments,
+                            teacherAnnouncements        = state.teacherAnnouncements,
+                            pendingAssignmentsCount     = state.teacherPendingCount,
+                            materialsCount              = state.teacherMaterialsCount,
+                            scheduleCount               = state.teacherScheduleCount,
+                            quizzesCount                = state.teacherQuizzesCount,
+                            schoolHealthMetrics         = state.schoolHealthMetrics,
+                            onTriggerDecision           = { anomaly ->
+                                activeDecisionAnomaly = anomaly
+                                activeDecisionType = anomaly.recommendedDecision
+                                decisionCustomInstructions = anomaly.description
+                                showDecisionDialog = true
+                            },
+                            onQuickDecisionAction       = { decisionType ->
+                                activeDecisionType = decisionType
+                                activeDecisionAnomaly = null
+                                decisionCustomInstructions = when (decisionType) {
+                                    ExecutiveDecisionType.ORDER_HOMEROOM_FOLLOW_UP ->
+                                        "Kepada seluruh wali kelas dan BP/BK: Segera laksanakan monitoring siswa yang memiliki absensi tinggi dan jadwalkan pemanggilan orang tua."
+                                    ExecutiveDecisionType.ISSUE_REMEDIAL_MANDATE ->
+                                        "Instruksi Kepala Sekolah: Kepada guru mata pelajaran dengan ketidaktuntasan KKM tinggi, segera jadwalkan program remedial terstruktur."
+                                    ExecutiveDecisionType.DISPATCH_SUBSTITUTE_TEACHER ->
+                                        "Pemberitahuan Darurat: Guru piket diinstruksikan segera memasuki kelas untuk mengisi jam pelajaran yang berhalangan hadir."
+                                    ExecutiveDecisionType.BROADCAST_PRINCIPAL_MEMO ->
+                                        "Maklumat Kepala Sekolah: Dimohon seluruh dewan guru dan staf menghadiri rapat koordinasi evaluasi institusi di ruang guru."
+                                    else -> ""
+                                }
+                                showDecisionDialog = true
+                            }
                         )
                     }
                     isTeacher -> {
@@ -647,6 +687,134 @@ fun HomeScreen(
                     viewModel.recordReadingProgress(activeReadingBook!!.copy(currentPage = newPage))
                 },
                 onDismiss = { activeReadingBook = null },
+            )
+        }
+
+        if (showDecisionDialog && activeDecisionType != null) {
+            val dType = activeDecisionType!!
+            val dialogTitle = when (dType) {
+                ExecutiveDecisionType.DISPATCH_SUBSTITUTE_TEACHER -> "Tugaskan Guru Pengganti / Inval"
+                ExecutiveDecisionType.ISSUE_REMEDIAL_MANDATE -> "Terbitkan Mandat Remedial KKM"
+                ExecutiveDecisionType.ORDER_HOMEROOM_FOLLOW_UP -> "Instruksi Tindak Lanjut Wali Kelas & BK"
+                ExecutiveDecisionType.BROADCAST_PRINCIPAL_MEMO -> "Terbitkan Maklumat Resmi Kepala Sekolah"
+                ExecutiveDecisionType.INSPECT_ROMBEL -> "Audit Rombel Lapangan"
+            }
+            val targetLabel = activeDecisionAnomaly?.affectedTarget ?: "Dewan Guru & Civitas Sekolah"
+
+            AlertDialog(
+                onDismissRequest = { showDecisionDialog = false },
+                containerColor = CosmicNavy,
+                titleContentColor = TextPrimary,
+                textContentColor = TextSecondary,
+                title = {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(TeacherNeon.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Bolt,
+                                contentDescription = null,
+                                tint = TeacherNeon,
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
+                        Text(
+                            text = dialogTitle,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(CosmicSurface2)
+                                .padding(8.dp),
+                        ) {
+                            Text(
+                                text = "Sasaran Intervensi: $targetLabel",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TeacherNeon,
+                            )
+                        }
+
+                        Text(
+                            text = "Rincian Instruksi Resmi Pimpinan:",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextSecondary,
+                        )
+
+                        OutlinedTextField(
+                            value = decisionCustomInstructions,
+                            onValueChange = { decisionCustomInstructions = it },
+                            placeholder = { Text("Tuliskan instruksi arahan kepala sekolah...") },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(110.dp),
+                            shape = RoundedCornerShape(8.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = TeacherNeon,
+                                unfocusedBorderColor = GlassBorder,
+                                focusedTextColor = TextPrimary,
+                                unfocusedTextColor = TextPrimary,
+                                focusedContainerColor = CosmicBlack,
+                                unfocusedContainerColor = CosmicBlack,
+                            ),
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            val instructionsToSend = decisionCustomInstructions.ifBlank {
+                                "Instruksi Kepala Sekolah untuk penanganan darurat stabilitas institusi."
+                            }
+                            viewModel.executePrincipalDecision(
+                                decisionType = dType,
+                                targetId = activeDecisionAnomaly?.targetId ?: "",
+                                targetName = targetLabel,
+                                title = dialogTitle,
+                                instructions = instructionsToSend,
+                                onComplete = { msg ->
+                                    Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+                                }
+                            )
+                            showDecisionDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = TeacherNeon,
+                            contentColor = CosmicBlack,
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                    ) {
+                        Text(
+                            text = "Terbitkan Instruksi",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDecisionDialog = false }) {
+                        Text(
+                            text = "Batal",
+                            color = TextTertiary,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
             )
         }
     }

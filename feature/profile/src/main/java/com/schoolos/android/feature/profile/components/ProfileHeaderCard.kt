@@ -60,10 +60,12 @@ fun ProfileHeaderCard(
     className: String = "",
     serverBaseUrl: String = "",
     isUploading: Boolean = false,
+    isPrincipal: Boolean = false,
     onAvatarClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val roleLabel = when {
+        isPrincipal -> "KEPALA SEKOLAH"
         isTeacher -> "GURU"
         isParent -> "WALI MURID"
         else -> "SISWA"

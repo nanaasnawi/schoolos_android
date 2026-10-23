@@ -70,6 +70,7 @@ sealed class Screen(val route: String) {
             "chat/${Uri.encode(recipientId)}/${Uri.encode(recipientName)}"
     }
     data object Profile : Screen("profile")
+    data object Supervision : Screen("supervision")
     data object RombelStudents : Screen("rombel/{className}/students") {
         fun createRoute(className: String) = "rombel/${Uri.encode(className)}/students"
     }

@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.auth.isParentRole
+import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.ExecutiveTopBar
@@ -154,15 +155,18 @@ fun ProfileScreen(
     val isDarkTheme = LocalIsDarkTheme.current
     val toggleTheme = LocalThemeToggle.current
 
-    val isTeacher = isTeacherRole(user?.role)
+    val isPrincipal = isPrincipalRole(user?.role)
+    val isTeacher = isTeacherRole(user?.role) && !isPrincipal
     val isParent = isParentRole(user?.role)
     val roleNeon = when {
+        isPrincipal -> TeacherNeon
         isTeacher -> TeacherNeon
         isParent -> ParentNeon
         else -> StudentNeon
     }
 
     val roleLabel = when {
+        isPrincipal -> "KEPALA SEKOLAH"
         isTeacher -> "GURU"
         isParent -> "WALI MURID"
         else -> "SISWA"
@@ -206,11 +210,12 @@ fun ProfileScreen(
                 displayContact = displayContact,
                 className = state.className,
                 isUploading = isUploadingPhoto,
+                isPrincipal = isPrincipal,
                 onAvatarClick = { showAvatarPreviewDialog = true },
             )
 
             // 1.5 Student Gamification Level & XP Card (Khusus Portal Murid / Siswa)
-            if (!isTeacher && !isParent) {
+            if (!isTeacher && !isParent && !isPrincipal) {
                 StudentGamificationLevelCard(
                     gamification = state.gamificationStatus,
                     isLoading = state.gamificationLoading,
@@ -231,14 +236,14 @@ fun ProfileScreen(
                 email = user?.email ?: "",
                 phone = if (state.phone.isNotBlank()) state.phone else state.identifier,
                 roleNeon = roleNeon,
-                isStudent = !isTeacher && !isParent,
+                isStudent = !isTeacher && !isParent && !isPrincipal,
                 onEditField = { fieldKey ->
                     activeEditFieldKey = fieldKey
                 },
             )
 
             // 3.5 Dedicated Navigation Button: "Lihat Detail Biodata Resmi" (Khusus Portal Murid / Siswa)
-            if (!isTeacher && !isParent) {
+            if (!isTeacher && !isParent && !isPrincipal) {
                 OfficialBiodataNavigationCard(
                     onClick = onNavigateToOfficialBiodata,
                 )

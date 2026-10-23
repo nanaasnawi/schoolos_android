@@ -41,12 +41,13 @@ fun LazyListScope.teacherGradebookContent(
     className: String,
     totalSubjectCount: Int = subjects.size,
     selectedFilter: String = "Semua Mapel",
+    isPrincipal: Boolean = false,
     onSelectFilter: (String) -> Unit = {},
     onSubjectClick: (String, String) -> Unit,
 ) {
-    // ── TEACHER CLASS HERO BANNER (WALI KELAS RESMI) ─────────────────────
+    // ── TEACHER / PRINCIPAL CLASS HERO BANNER ─────────────────────
     item {
-        TeacherClassHeroHeader(subjects = subjects, className = className)
+        TeacherClassHeroHeader(subjects = subjects, className = className, isPrincipal = isPrincipal)
     }
 
     item {
@@ -57,7 +58,9 @@ fun LazyListScope.teacherGradebookContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                "LEGER NILAI MATA PELAJARAN",
+                if (isPrincipal) "LEGER NILAI SELURUH MAPEL SEKOLAH"
+                else if (className.isNotBlank()) "LEGER NILAI KELAS $className"
+                else "REKAP NILAI MATA PELAJARAN DIAMPU",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 color = TeacherNeon,
@@ -146,6 +149,7 @@ fun LazyListScope.teacherGradebookContent(
 private fun TeacherClassHeroHeader(
     subjects: List<SubjectGradeSummary>,
     className: String,
+    isPrincipal: Boolean = false,
 ) {
     val gradedSubjects = subjects.filter { it.finalScore > 0.0 && it.gradedComponentCount > 0 }
     val hasGrades = gradedSubjects.isNotEmpty()
@@ -156,6 +160,24 @@ private fun TeacherClassHeroHeader(
         avgScore >= 75.0 -> Pair("Predikat B", "Baik")
         avgScore >= 65.0 -> Pair("Predikat C", "Cukup")
         else -> Pair("Predikat D", "Perlu Bimbingan")
+    }
+
+    val headerBadgeText = when {
+        isPrincipal -> "KEPALA SEKOLAH • EKSEKUTIF LEGER SEKOLAH"
+        className.isNotBlank() -> "WALI KELAS • ${DapodikPeriod.getActiveSemester().uppercase()}"
+        else -> "GURU MATA PELAJARAN • ${DapodikPeriod.getActiveSemester().uppercase()}"
+    }
+
+    val headerTitleText = when {
+        isPrincipal -> "Leger Nilai Sekolah"
+        className.isNotBlank() -> "Kelas $className"
+        else -> "Buku Nilai Mata Pelajaran"
+    }
+
+    val headerSubtitleText = when {
+        isPrincipal -> "Monitoring Capaian KKM & Mutu Akademik Sekolah • ${DapodikPeriod.getFullPeriodLabel()}"
+        className.isNotBlank() -> "Leger Nilai Kelas • ${DapodikPeriod.getFullPeriodLabel()}"
+        else -> "Penilaian Komponen & Evaluasi Pembelajaran • ${DapodikPeriod.getFullPeriodLabel()}"
     }
 
     val passRateText = if (hasGrades) {
@@ -218,7 +240,7 @@ private fun TeacherClassHeroHeader(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "WALI KELAS • ${DapodikPeriod.getActiveSemester().uppercase()}",
+                        text = headerBadgeText,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Black,
                         color = TeacherNeon,
@@ -246,14 +268,14 @@ private fun TeacherClassHeroHeader(
 
         // CLASS TITLE & IDENTITY
         Text(
-            text = "Kelas $className",
+            text = headerTitleText,
             fontSize = 22.sp,
             fontWeight = FontWeight.Black,
             color = TextPrimary,
             letterSpacing = (-0.5).sp
         )
         Text(
-            text = "Leger Nilai • ${DapodikPeriod.getFullPeriodLabel()}",
+            text = headerSubtitleText,
             fontSize = 11.sp,
             fontWeight = FontWeight.Medium,
             color = TextSecondary

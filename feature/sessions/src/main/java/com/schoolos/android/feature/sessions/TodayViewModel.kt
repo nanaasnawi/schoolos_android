@@ -112,12 +112,16 @@ class TodayViewModel @Inject constructor(
         filter: String,
     ) {
         val role = _state.value.userRole.lowercase()
-        val isTeacherOrStaff = role.contains("teacher") || role.contains("guru") || role.contains("principal") || role.contains("kepala")
+        val isPrincipal = role.contains("principal") || role.contains("kepala")
+        val isTeacher = (role.contains("teacher") || role.contains("guru")) && !isPrincipal
         val teacherUserId = currentAuth.userId ?: ""
         val teacherName = currentAuth.name ?: ""
 
         // For teachers: strictly filter sessions to those taught by this teacher
-        val scopedSessions = if (isTeacherOrStaff && (teacherUserId.isNotBlank() || teacherName.isNotBlank())) {
+        // For principals: keep all sessions for executive bird's-eye view across all classes
+        val scopedSessions = if (isPrincipal) {
+            allSessions
+        } else if (isTeacher && (teacherUserId.isNotBlank() || teacherName.isNotBlank())) {
             allSessions.filter { s ->
                 val uidMatch = teacherUserId.isNotBlank() && (
                     s.teacherId.equals(teacherUserId, ignoreCase = true) ||

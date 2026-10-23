@@ -19,8 +19,11 @@ import com.schoolos.android.domain.model.Progress
 import com.schoolos.android.domain.model.WeeklyActivity
 import com.schoolos.android.domain.model.SubjectGradeSummary
 import com.schoolos.android.domain.model.toSubjectSummary
+import com.schoolos.android.domain.model.SchoolHealthMetrics
+import com.schoolos.android.domain.model.ExecutiveDecisionType
 import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.AchievementRepository
+import com.schoolos.android.domain.repository.AnalyticsRepository
 import com.schoolos.android.domain.repository.AssignmentRepository
 import com.schoolos.android.domain.repository.AuthRepository
 import com.schoolos.android.domain.repository.GradeRepository
@@ -104,6 +107,8 @@ data class HomeUiState(
     val activeReadingHistory: List<BookReadingItem> = emptyList(),
     val recommendedSibiBook: LibraryBook? = null,
     val totalStudentsCount: String = "0",
+    val schoolHealthMetrics: SchoolHealthMetrics? = null,
+    val isExecutingDecision: Boolean = false,
     val isRefreshing: Boolean = false,
 )
 
@@ -124,6 +129,7 @@ class HomeViewModel @Inject constructor(
     private val readingHistoryManager: ReadingHistoryManager,
     private val firebaseRtdbManager: com.schoolos.android.core.firebase.FirebaseRealtimeDatabaseManager,
     private val gamificationRepository: com.schoolos.android.domain.repository.GamificationRepository,
+    private val analyticsRepository: AnalyticsRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -200,6 +206,36 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             notificationRepository.getUnreadCount().onSuccess { count ->
                 _state.update { it.copy(unreadCount = count) }
+            }
+        }
+    }
+
+    fun executePrincipalDecision(
+        decisionType: ExecutiveDecisionType,
+        targetId: String,
+        targetName: String,
+        title: String,
+        instructions: String,
+        onComplete: (String) -> Unit
+    ) {
+        viewModelScope.launch {
+            _state.update { it.copy(isExecutingDecision = true) }
+            val result = analyticsRepository.executePrincipalDecision(
+                decisionType = decisionType,
+                targetId = targetId,
+                targetName = targetName,
+                title = title,
+                instructions = instructions
+            )
+            _state.update { it.copy(isExecutingDecision = false) }
+            result.onSuccess { msg ->
+                onComplete(msg)
+                // Refresh analytics metrics to reflect immediate decision impact
+                analyticsRepository.getSchoolStabilityMetrics().onSuccess { metrics ->
+                    _state.update { it.copy(schoolHealthMetrics = metrics) }
+                }
+            }.onFailure { err ->
+                onComplete("Gagal mengeksekusi keputusan: ${err.message ?: "Terjadi kesalahan sistem"}")
             }
         }
     }
@@ -309,7 +345,8 @@ class HomeViewModel @Inject constructor(
             lastSyncTimestamp = System.currentTimeMillis()
             val auth = currentAuth
             val isParent = auth.isParent
-            val isTeacher = auth.isTeacher
+            val isPrincipal = auth.isPrincipal
+            val isTeacher = auth.isTeacher && !isPrincipal
             val isStudent = auth.isStudent
             val homeroom = auth.className ?: ""
 
@@ -597,6 +634,37 @@ class HomeViewModel @Inject constructor(
 
                     _state.update { it.copy(activeReadingHistory = emptyList(), recommendedSibiBook = recommended) }
                 }
+            }
+        } else if (isPrincipal) {
+            // ── PRINCIPAL EXECUTIVE SUITE & SCHOOL STABILITY ANALYTICS ──
+            analyticsRepository.getSchoolStabilityMetrics().onSuccess { metrics ->
+                _state.update { it.copy(schoolHealthMetrics = metrics) }
+            }
+            academicRepository.getClassStudents("ALL").onSuccess { students ->
+                _state.update { it.copy(totalStudentsCount = students.size.toString()) }
+            }
+            assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
+                _state.update { it.copy(
+                    teacherPendingCount = assignments.size.toString(),
+                    teacherAssignments = assignments.take(4),
+                ) }
+            }
+            notificationRepository.getNotifications(page = 1).onSuccess { notifs ->
+                _state.update { it.copy(
+                    teacherAnnouncements = notifs.take(3),
+                ) }
+            }
+            learningMaterialRepository.getMaterials().onSuccess { materials ->
+                _state.update { it.copy(teacherMaterialsCount = materials.size.toString()) }
+            }
+            quizRepository.getQuizzes(classId = "").onSuccess { quizzes ->
+                _state.update { it.copy(teacherQuizzesCount = quizzes.size.toString()) }
+            }
+            academicRepository.getClasses().onSuccess { classes ->
+                _state.update { it.copy(teacherClasses = classes.filter { !isUuid(it.name) }) }
+            }
+            academicRepository.getSubjects().onSuccess { subjects ->
+                _state.update { it.copy(teacherSubjects = subjects) }
             }
         } else if (isTeacher) {
             // Fetch total registered students across school from Railway PostgreSQL

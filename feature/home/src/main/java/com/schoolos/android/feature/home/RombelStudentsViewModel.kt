@@ -3,6 +3,8 @@ package com.schoolos.android.feature.home
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.auth.AuthManager
+import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.Achievement
 import com.schoolos.android.domain.model.ClassStudent
@@ -35,6 +37,7 @@ data class RombelStudentsUiState(
     val selectedStudentProgress: Progress? = null,
     val selectedStudentAchievements: List<Achievement> = emptyList(),
     val isLoadingDetail: Boolean = false,
+    val isPrincipal: Boolean = false,
 ) {
     val filteredStudents: List<ClassStudent>
         get() {
@@ -66,6 +69,7 @@ class RombelStudentsViewModel @Inject constructor(
     private val academicRepository: AcademicRepository,
     private val achievementRepository: AchievementRepository,
     private val sessionRepository: SessionRepository,
+    private val authManager: AuthManager,
     savedStateHandle: SavedStateHandle,
 ) : ViewModel() {
 
@@ -80,6 +84,12 @@ class RombelStudentsViewModel @Inject constructor(
     val uiState = _uiState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            authManager.authState.collect { auth ->
+                val isPrin = auth.isPrincipal || isPrincipalRole(auth.role)
+                _uiState.update { it.copy(isPrincipal = isPrin) }
+            }
+        }
         loadStudents(navClassName)
     }
 
