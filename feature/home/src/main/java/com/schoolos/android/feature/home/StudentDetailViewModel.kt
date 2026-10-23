@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.domain.model.Achievement
 import com.schoolos.android.domain.model.ClassStudent
+import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.Progress
 import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.AchievementRepository
@@ -18,6 +19,7 @@ import javax.inject.Inject
 
 data class StudentDetailUiState(
     val student: ClassStudent,
+    val officialBiodata: OfficialStudentBiodata? = null,
     val progress: Progress? = null,
     val achievements: List<Achievement> = emptyList(),
     val isLoading: Boolean = true,
@@ -77,12 +79,30 @@ class StudentDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             try {
+                val profileResult = academicRepository.getStudentProfile(studentId)
                 val progressResult = academicRepository.getStudentProgress(studentId)
                 val achievementsResult = achievementRepository.getStudentAchievements(studentId)
+
+                val biodata = profileResult.getOrNull()
+                val currentStudent = _uiState.value.student
+                val updatedStudent = if (biodata != null) {
+                    currentStudent.copy(
+                        fullName = biodata.fullName.ifBlank { currentStudent.fullName },
+                        nisn = biodata.nisn.ifBlank { currentStudent.nisn },
+                        gender = biodata.gender ?: currentStudent.gender,
+                        className = biodata.className ?: currentStudent.className,
+                        noHp = biodata.noHp ?: currentStudent.noHp,
+                        email = biodata.email ?: currentStudent.email,
+                    )
+                } else {
+                    currentStudent
+                }
 
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        student = updatedStudent,
+                        officialBiodata = biodata,
                         progress = progressResult.getOrNull(),
                         achievements = achievementsResult.getOrDefault(emptyList()),
                         errorMessage = null

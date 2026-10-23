@@ -73,6 +73,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.auth.isParentRole
+import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicDark
@@ -102,14 +103,17 @@ fun SecuritySettingsScreen(
     val state by viewModel.state.collectAsState()
     val isDark = LocalIsDarkTheme.current
 
-    val isTeacher = isTeacherRole(state.user?.role)
+    val isPrincipal = isPrincipalRole(state.user?.role)
+    val isTeacher = isTeacherRole(state.user?.role) && !isPrincipal
     val isParent = isParentRole(state.user?.role)
     val roleNeon = when {
+        isPrincipal -> TeacherNeon
         isTeacher -> TeacherNeon
         isParent -> ParentNeon
         else -> StudentNeon
     }
     val roleLabel = when {
+        isPrincipal -> "Kepala Sekolah"
         isTeacher -> "Guru Pengampu"
         isParent -> "Wali Murid"
         else -> "Siswa Aktif"

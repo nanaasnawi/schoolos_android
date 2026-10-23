@@ -6,25 +6,34 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.filled.Analytics
+import androidx.compose.material.icons.filled.Assignment
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.Class
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SupervisorAccount
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -33,9 +42,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AcademicClass
+import com.schoolos.android.domain.model.AcademicPerformanceSummary
 import com.schoolos.android.domain.model.Assignment
+import com.schoolos.android.domain.model.ExecutiveDecisionType
 import com.schoolos.android.domain.model.LearningSession
 import com.schoolos.android.domain.model.Notification
+import com.schoolos.android.domain.model.SchoolAnomaly
+import com.schoolos.android.domain.model.SchoolHealthMetrics
+import com.schoolos.android.domain.model.SchoolStabilityLevel
 
 private fun isUuid(str: String?): Boolean {
     if (str.isNullOrBlank()) return false
@@ -77,31 +91,262 @@ fun LazyListScope.principalContent(
     materialsCount: String = "0",
     scheduleCount: String = "0",
     quizzesCount: String = "0",
+    schoolHealthMetrics: SchoolHealthMetrics? = null,
+    onTriggerDecision: (SchoolAnomaly) -> Unit = {},
+    onQuickDecisionAction: (ExecutiveDecisionType) -> Unit = {},
 ) {
-    // ── 1. EXECUTIVE PRINCIPAL COCKPIT METRICS (2x2 Grid) ─────────────────────
+    // ── 1. EXECUTIVE SCHOOL STABILITY & HEALTH RADAR (HERO) ───────────────────
+    item {
+        val level = schoolHealthMetrics?.stabilityLevel ?: SchoolStabilityLevel.STABLE
+        val score = schoolHealthMetrics?.stabilityScore ?: 95
+
+        val heroGradient = when (level) {
+            SchoolStabilityLevel.CRITICAL -> listOf(Color(0xFF380808), Color(0xFF5E1313), Color(0xFF7F1D1D))
+            SchoolStabilityLevel.WARNING -> listOf(Color(0xFF381504), Color(0xFF5E2407), Color(0xFF78350F))
+            SchoolStabilityLevel.STABLE -> listOf(Color(0xFF032B20), Color(0xFF064E3B), Color(0xFF047857))
+        }
+
+        val accentBorder = when (level) {
+            SchoolStabilityLevel.CRITICAL -> Color(0xFFEF4444)
+            SchoolStabilityLevel.WARNING -> Color(0xFFF59E0B)
+            SchoolStabilityLevel.STABLE -> NeonSuccess
+        }
+
+        val badgeText = when (level) {
+            SchoolStabilityLevel.CRITICAL -> "STATUS: PERLU INTERVENSI SEGERA"
+            SchoolStabilityLevel.WARNING -> "STATUS: WASPADA / PERHATIAN PIMPINAN"
+            SchoolStabilityLevel.STABLE -> "STATUS: SEKOLAH STABIL & KONDUSIF"
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(Brush.verticalGradient(heroGradient))
+                .border(1.dp, accentBorder.copy(alpha = 0.65f), RoundedCornerShape(16.dp))
+                .padding(16.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                // Header: Badge Status & Live Indicator
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(accentBorder.copy(alpha = 0.2f))
+                            .border(0.5.dp, accentBorder.copy(alpha = 0.5f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(accentBorder)
+                            )
+                            Text(
+                                text = badgeText,
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                letterSpacing = 0.5.sp,
+                            )
+                        }
+                    }
+
+                    Text(
+                        text = "COCKPIT EKSEKUTIF",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextSecondary,
+                        letterSpacing = 1.sp,
+                    )
+                }
+
+                // Core Score & Summary Narrative
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.Bottom) {
+                            Text(
+                                text = "$score",
+                                fontSize = 38.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = TextPrimary,
+                                lineHeight = 40.sp,
+                            )
+                            Text(
+                                text = " / 100",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextSecondary,
+                                modifier = Modifier.padding(bottom = 6.dp, start = 2.dp),
+                            )
+                        }
+                        Text(
+                            text = "Indeks Stabilitas & Kesehatan Sekolah",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                        )
+                        Spacer(Modifier.height(3.dp))
+                        Text(
+                            text = schoolHealthMetrics?.statusSummary
+                                ?: "Operasional sekolah berjalan kondusif dengan kepatuhan tinggi.",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                // 4 Pillars Micro-Grid
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    val compRate = schoolHealthMetrics?.complianceRate?.toInt() ?: 100
+                    val attRate = schoolHealthMetrics?.attendanceRate ?: 95.0
+                    val mastRate = schoolHealthMetrics?.academicMasteryRate ?: 90.0
+                    val atRisk = schoolHealthMetrics?.atRiskStudentsCount ?: 0
+
+                    HealthPillarTile(
+                        label = "Kepatuhan KBM",
+                        value = "$compRate%",
+                        isWarning = compRate < 85,
+                        modifier = Modifier.weight(1f),
+                    )
+                    HealthPillarTile(
+                        label = "Kehadiran Siswa",
+                        value = "${attRate.toInt()}%",
+                        isWarning = attRate < 85.0,
+                        modifier = Modifier.weight(1f),
+                    )
+                    HealthPillarTile(
+                        label = "Tuntas KKM",
+                        value = "${mastRate.toInt()}%",
+                        isWarning = mastRate < 75.0,
+                        modifier = Modifier.weight(1f),
+                    )
+                    HealthPillarTile(
+                        label = "Siswa Rawan",
+                        value = "$atRisk Murid",
+                        isWarning = atRisk > 0,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+
+    // ── 2. EARLY WARNING SYSTEM (EWS) - ANOMALI & KRISIS TERDETEKSI ───────────
+    item {
+        val anomalies = schoolHealthMetrics?.anomalies ?: emptyList()
+        PrincipalSectionHeader(
+            title = "Early Warning System (EWS) Sekolah",
+            subtitle = if (anomalies.isNotEmpty()) "${anomalies.size} Masalah terdeteksi memerlukan keputusan pimpinan"
+            else "Seluruh parameter operasional KBM berada dalam koridor optimal",
+            count = anomalies.size,
+        )
+    }
+
+    val activeAnomalies = schoolHealthMetrics?.anomalies ?: emptyList()
+    if (activeAnomalies.isNotEmpty()) {
+        items(activeAnomalies, key = { it.id }) { anomaly ->
+            AnomalyAlertCard(
+                anomaly = anomaly,
+                onTakeAction = { onTriggerDecision(anomaly) },
+            )
+        }
+    } else {
+        item {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                    .padding(14.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(NeonSuccess.copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CheckCircle,
+                            contentDescription = null,
+                            tint = NeonSuccess,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Tidak Ada Anomali Kritis Terdeteksi",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "KBM berjalan terjadwal, angka kehadiran stabil, dan ketuntasan KKM siswa terpantau optimal.",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // ── 3. PUSAT PENGAMBILAN KEPUTUSAN EKSEKUTIF (DECISION SUPPORT HUB) ─────────
+    item {
+        PrincipalSectionHeader(
+            title = "Pusat Keputusan Eksekutif Pimpinan",
+            subtitle = "Aksi taktis terarah kepala sekolah untuk menstabilkan institusi",
+        )
+    }
+
     item {
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                PrincipalKpiCard(
-                    title = "Data Rombel",
-                    value = if (schoolClasses.isNotEmpty()) "${schoolClasses.size} Kelas" else "13 Rombel",
-                    subtitle = if (totalStudentsCount.isNotBlank() && totalStudentsCount != "0") "$totalStudentsCount Total Siswa" else "Seluruh rombel sekolah",
-                    icon = Icons.Default.Class,
-                    accentColor = TeacherNeon,
-                    onClick = { onNavigateToRombelStudents("ALL") },
+                ExecutiveActionTile(
+                    title = "Instruksi Wali & BK",
+                    subtitle = "Intervensi absensi & siswa",
+                    badgeText = "Siswa Rawan",
+                    icon = Icons.Default.SupervisorAccount,
+                    accentColor = NeonBlue,
+                    onClick = { onQuickDecisionAction(ExecutiveDecisionType.ORDER_HOMEROOM_FOLLOW_UP) },
                     modifier = Modifier.weight(1f),
                 )
 
-                PrincipalKpiCard(
-                    title = "Sesi Kuis & CBT",
-                    value = if (quizzesCount.isNotBlank()) "$quizzesCount Kuis" else "0 Kuis",
-                    subtitle = "Evaluasi sekolah",
-                    icon = Icons.AutoMirrored.Filled.Assignment,
-                    accentColor = NeonSuccess,
-                    onClick = onNavigateToQuizzes,
+                ExecutiveActionTile(
+                    title = "Mandat Remedial",
+                    subtitle = "Perbaikan ketuntasan KKM",
+                    badgeText = "Kurikulum",
+                    icon = Icons.Default.Book,
+                    accentColor = TeacherNeon,
+                    onClick = { onQuickDecisionAction(ExecutiveDecisionType.ISSUE_REMEDIAL_MANDATE) },
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -110,30 +355,72 @@ fun LazyListScope.principalContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                PrincipalKpiCard(
-                    title = "Agenda Mengajar",
-                    value = if (todaySessions.isNotEmpty()) "${todaySessions.size} Sesi" else if (scheduleCount.isNotBlank()) "$scheduleCount Sesi" else "0 Sesi",
-                    subtitle = "Jadwal harian sekolah",
+                ExecutiveActionTile(
+                    title = "Tugaskan Inval / Piket",
+                    subtitle = "Tangani jam KBM kosong",
+                    badgeText = "Darurat KBM",
                     icon = Icons.Default.CalendarMonth,
-                    accentColor = NeonBlue,
-                    onClick = onNavigateToSessions,
+                    accentColor = NeonWarning,
+                    onClick = { onQuickDecisionAction(ExecutiveDecisionType.DISPATCH_SUBSTITUTE_TEACHER) },
                     modifier = Modifier.weight(1f),
                 )
 
-                PrincipalKpiCard(
-                    title = "Modul Ajar",
-                    value = if (materialsCount.isNotBlank()) "$materialsCount Modul" else "0 Modul",
-                    subtitle = "Materi & dokumen",
-                    icon = Icons.Default.Book,
-                    accentColor = NeonWarning,
-                    onClick = onNavigateToLearning,
+                ExecutiveActionTile(
+                    title = "Maklumat Resmi Kepsek",
+                    subtitle = "Edaran & instruksi masal",
+                    badgeText = "Disposisi",
+                    icon = Icons.Default.Campaign,
+                    accentColor = Color(0xFFA855F7),
+                    onClick = { onQuickDecisionAction(ExecutiveDecisionType.BROADCAST_PRINCIPAL_MEMO) },
                     modifier = Modifier.weight(1f),
                 )
             }
         }
     }
 
-    // ── 2. PRINCIPAL COMMAND HERO (PEMANTAUAN SELURUH ROMBEL SEKOLAH) ─────────────
+    // ── 4. AUDIT KETUNTASAN KURIKULUM & KKM MAPEL (ACADEMIC MASTERY RADAR) ─────
+    val performances = schoolHealthMetrics?.subjectPerformances ?: emptyList()
+    if (performances.isNotEmpty()) {
+        item {
+            PrincipalSectionHeader(
+                title = "Audit Ketuntasan Kurikulum & KKM Mapel",
+                subtitle = "Analitik ketercapaian nilai dan sebaran siswa remedial per mata pelajaran",
+                count = performances.size,
+                actionLabel = "Buku Nilai",
+                onActionClick = onNavigateToGrades,
+            )
+        }
+
+        items(performances.take(4), key = { "perf-${it.subjectId}" }) { perf ->
+            SubjectMasteryAuditCard(
+                performance = perf,
+                onRemedialAction = {
+                    onTriggerDecision(
+                        SchoolAnomaly(
+                            id = "remedial-${perf.subjectId}",
+                            category = com.schoolos.android.domain.model.AnomalyCategory.ACADEMIC_REMEDIAL,
+                            severity = if (perf.passRate < 65.0) com.schoolos.android.domain.model.AnomalySeverity.HIGH else com.schoolos.android.domain.model.AnomalySeverity.MEDIUM,
+                            title = "Mandat Remedial: ${perf.subjectName}",
+                            description = "${perf.remedialCount} Siswa tercatat belum tuntas pada mata pelajaran ${perf.subjectName} dengan rata-rata ${perf.averageScore}.",
+                            affectedTarget = perf.subjectName,
+                            targetId = perf.subjectId,
+                            recommendedDecision = ExecutiveDecisionType.ISSUE_REMEDIAL_MANDATE,
+                            recommendedActionLabel = "Terbitkan Mandat Remedial"
+                        )
+                    )
+                }
+            )
+        }
+    }
+
+    // ── 5. PENGAWASAN SELURUH ROMBEL DAPODIK (COMMAND SHORTCUT) ────────────────
+    item {
+        PrincipalSectionHeader(
+            title = "Akses Manajemen & Pengawasan Rombel",
+            subtitle = "Satu sentuhan audit seluruh rombel, leger nilai, dan aktivitas KBM",
+        )
+    }
+
     item {
         Box(
             modifier = Modifier
@@ -158,7 +445,7 @@ fun LazyListScope.principalContent(
                             .padding(horizontal = 7.dp, vertical = 2.dp),
                     ) {
                         Text(
-                            text = "DASHBOARD KEPALA SEKOLAH",
+                            text = "PENGAWASAN ROMBEL EKSEKUTIF",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = TeacherNeon,
@@ -171,7 +458,7 @@ fun LazyListScope.principalContent(
                         horizontalArrangement = Arrangement.spacedBy(3.dp),
                     ) {
                         Text(
-                            text = "Kelola Rombel",
+                            text = "Buka Pengawasan",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TeacherNeon,
@@ -209,16 +496,17 @@ fun LazyListScope.principalContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Pengawasan Seluruh Rombel Sekolah",
-                            fontSize = 15.sp,
+                            text = "Audit Seluruh Rombel & Data Dapodik",
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(2.dp))
+                        val totalClassCount = if (schoolClasses.isNotEmpty()) schoolClasses.size else schoolHealthMetrics?.totalClasses ?: 0
                         Text(
-                            text = "Akses rekapitulasi data siswa, jadwal mengajar, dan aktivitas akademik seluruh kelas",
+                            text = "Memantau ${totalClassCount} rombel aktif & ${totalStudentsCount} siswa terdaftar tanpa memotong rincian Dapodik.",
                             fontSize = 11.sp,
                             color = TextSecondary,
                             maxLines = 2,
@@ -230,201 +518,168 @@ fun LazyListScope.principalContent(
         }
     }
 
-    // ── 3. AKSI KEPALA SEKOLAH (Pusat Pengumuman & Leger Nilai) ────────────────
-    item {
-        PrincipalSectionHeader(
-            title = "Aksi & Manajemen Sekolah",
-            subtitle = "Pusat broadcast pengumuman, leger nilai, dan dokumen ajar",
-        )
-    }
-
-    item {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                BentoActionCard(
-                    title = "Broadcast Sekolah",
-                    subtitle = "Kirim pesan masal",
-                    iconRes = CoreR.drawable.ic_modern_chat,
-                    accentColor = TeacherNeon,
-                    badgeText = "Pesan",
-                    onClick = onNavigateToBroadcastCenter,
-                    modifier = Modifier.weight(1f),
-                )
-
-                BentoActionCard(
-                    title = "Buku Nilai Sekolah",
-                    subtitle = "Leger & capaian KKM",
-                    iconRes = CoreR.drawable.ic_modern_grades,
-                    accentColor = NeonBlue,
-                    badgeText = "Nilai",
-                    onClick = onNavigateToGrades,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                BentoActionCard(
-                    title = "Bank Kuis & CBT",
-                    subtitle = "Ujian & evaluasi",
-                    iconRes = CoreR.drawable.ic_modern_quiz,
-                    accentColor = NeonWarning,
-                    badgeText = "Kuis",
-                    onClick = onNavigateToQuizzes,
-                    modifier = Modifier.weight(1f),
-                )
-
-                BentoActionCard(
-                    title = "Perpustakaan Ajar",
-                    subtitle = "Modul & bahan ajar",
-                    iconRes = CoreR.drawable.ic_modern_book,
-                    accentColor = NeonSuccess,
-                    badgeText = "Modul",
-                    onClick = onNavigateToLearning,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
-    }
-
-    // ── 4. ANUMERASI JADWAL AKADEMIK SEKOLAH ──────────────────────────────────
-    item {
-        PrincipalSectionHeader(
-            title = "Jadwal Pembelajaran Sekolah Hari Ini",
-            subtitle = "Agenda tatap muka & sesi mengajar terdaftar",
-            count = todaySessions.size,
-            actionLabel = "Lihat Semua",
-            onActionClick = onNavigateToSessions,
-        )
-    }
-
-    if (todaySessions.isNotEmpty()) {
-        items(todaySessions.take(3), key = { it.id }) { session ->
-            val isLive = session.status.equals("active", ignoreCase = true)
-            val sessionClass = formatClassName(session.className ?: session.room)
-
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(
-                        0.5.dp,
-                        if (isLive) NeonSuccess.copy(alpha = 0.45f) else GlassBorder,
-                        RoundedCornerShape(12.dp)
-                    )
-                    .clickable { onNavigateToSessionDetail(session.id) }
-                    .padding(12.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = session.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "$sessionClass • ${session.teacherName ?: "Pengajar"}",
-                                fontSize = 11.sp,
-                                color = TextSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = TextTertiary,
-                        modifier = Modifier.size(14.dp),
-                    )
-                }
-            }
-        }
-    }
-
-    // ── 5. MONITORING PENUGASAN & PR SISWA SEKOLAH ────────────────────────────
-    if (teacherAssignments.isNotEmpty()) {
-        item {
-            PrincipalSectionHeader(
-                title = "Monitoring Penugasan & PR Siswa",
-                subtitle = "Rekapitulasi penugasan aktif dari seluruh guru",
-                count = teacherAssignments.size,
-                actionLabel = "Lihat Semua",
-                onActionClick = onNavigateToAssignments,
-            )
-        }
-
-        items(teacherAssignments.take(3), key = { "assign-${it.id}" }) { assignment ->
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                    .clickable { onNavigateToAssignments() }
-                    .padding(12.dp),
-            ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = assignment.title.ifBlank { "Tugas Siswa" },
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = "${assignment.subjectName ?: "Mata Pelajaran"} • ${formatClassName(assignment.className, "Semua Rombel")}",
-                            fontSize = 11.sp,
-                            color = TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = TextTertiary,
-                        modifier = Modifier.size(14.dp),
-                    )
-                }
-            }
-        }
-    }
-
     item {
         Spacer(Modifier.height(16.dp))
     }
 }
 
 @Composable
-private fun PrincipalKpiCard(
-    title: String,
+private fun HealthPillarTile(
+    label: String,
     value: String,
+    isWarning: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
+            .background(CosmicBlack.copy(alpha = 0.5f))
+            .border(
+                0.5.dp,
+                if (isWarning) Color(0xFFEF4444).copy(alpha = 0.6f) else GlassBorder,
+                RoundedCornerShape(8.dp)
+            )
+            .padding(vertical = 8.dp, horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = value,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isWarning) Color(0xFFEF4444) else TextPrimary,
+                maxLines = 1,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = label,
+                fontSize = 9.sp,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun AnomalyAlertCard(
+    anomaly: SchoolAnomaly,
+    onTakeAction: () -> Unit,
+) {
+    val isHigh = anomaly.severity == com.schoolos.android.domain.model.AnomalySeverity.HIGH
+    val cardBorder = if (isHigh) Color(0xFFEF4444) else Color(0xFFF59E0B)
+    val cardBg = if (isHigh) Color(0xFF2B0A0A) else Color(0xFF291505)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(cardBg)
+            .border(1.dp, cardBorder.copy(alpha = 0.55f), RoundedCornerShape(12.dp))
+            .padding(12.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(cardBorder.copy(alpha = 0.25f))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                    ) {
+                        Text(
+                            text = if (isHigh) "KRITIS" else "PERHATIAN",
+                            fontSize = 8.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = cardBorder,
+                            letterSpacing = 0.5.sp,
+                        )
+                    }
+
+                    Text(
+                        text = anomaly.affectedTarget,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = cardBorder,
+                    modifier = Modifier.size(14.dp),
+                )
+            }
+
+            Text(
+                text = anomaly.title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+            )
+
+            Text(
+                text = anomaly.description,
+                fontSize = 11.sp,
+                color = TextSecondary,
+                lineHeight = 15.sp,
+            )
+
+            // Direct Decision CTA Button
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+            ) {
+                Button(
+                    onClick = onTakeAction,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = cardBorder,
+                        contentColor = Color.White,
+                    ),
+                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                    modifier = Modifier.height(32.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp),
+                        )
+                        Text(
+                            text = anomaly.recommendedActionLabel,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExecutiveActionTile(
+    title: String,
     subtitle: String,
+    badgeText: String,
     icon: ImageVector,
     accentColor: Color,
     onClick: () -> Unit,
@@ -460,18 +715,25 @@ private fun PrincipalKpiCard(
                     )
                 }
 
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                    contentDescription = null,
-                    tint = TextTertiary,
-                    modifier = Modifier.size(12.dp),
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(4.dp))
+                        .background(CosmicSurface2)
+                        .padding(horizontal = 5.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = badgeText,
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = accentColor,
+                    )
+                }
             }
 
             Column {
                 Text(
-                    text = value,
-                    fontSize = 16.sp,
+                    text = title,
+                    fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
                     maxLines = 1,
@@ -480,11 +742,127 @@ private fun PrincipalKpiCard(
                 Spacer(Modifier.height(1.dp))
                 Text(
                     text = subtitle,
-                    fontSize = 11.sp,
-                    color = TextTertiary,
+                    fontSize = 10.5.sp,
+                    color = TextSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SubjectMasteryAuditCard(
+    performance: AcademicPerformanceSummary,
+    onRemedialAction: () -> Unit,
+) {
+    val isAtRisk = performance.remedialCount > 0 || performance.passRate < 75.0
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .background(CosmicNavy)
+            .border(
+                0.5.dp,
+                if (isAtRisk) Color(0xFFEF4444).copy(alpha = 0.4f) else GlassBorder,
+                RoundedCornerShape(12.dp)
+            )
+            .padding(12.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = performance.subjectName,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Text(
+                        text = "Rata-rata: ${performance.averageScore} • Rentang: ${performance.minScore.toInt()} - ${performance.maxScore.toInt()}",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(
+                            if (performance.remedialCount > 0) Color(0xFFEF4444).copy(alpha = 0.15f)
+                            else NeonSuccess.copy(alpha = 0.15f)
+                        )
+                        .border(
+                            0.5.dp,
+                            if (performance.remedialCount > 0) Color(0xFFEF4444).copy(alpha = 0.4f)
+                            else NeonSuccess.copy(alpha = 0.4f),
+                            RoundedCornerShape(6.dp)
+                        )
+                        .padding(horizontal = 7.dp, vertical = 2.dp),
+                ) {
+                    Text(
+                        text = if (performance.remedialCount > 0) "${performance.remedialCount} Remedial" else "100% Tuntas",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (performance.remedialCount > 0) Color(0xFFEF4444) else NeonSuccess,
+                    )
+                }
+            }
+
+            // Linear Progress Bar for Pass Rate
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = "Ketuntasan KKM",
+                        fontSize = 10.sp,
+                        color = TextTertiary,
+                    )
+                    Text(
+                        text = "${performance.passRate}% (${performance.passedCount}/${performance.totalGraded})",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isAtRisk) Color(0xFFEF4444) else TextSecondary,
+                    )
+                }
+                LinearProgressIndicator(
+                    progress = { (performance.passRate / 100.0).toFloat().coerceIn(0f, 1f) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp)),
+                    color = if (isAtRisk) Color(0xFFEF4444) else NeonSuccess,
+                    trackColor = CosmicSurface2,
+                )
+            }
+
+            if (performance.remedialCount > 0) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    Text(
+                        text = "Mandat Remedial →",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TeacherNeon,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .clickable(onClick = onRemedialAction)
+                            .padding(horizontal = 6.dp, vertical = 3.dp),
+                    )
+                }
             }
         }
     }
@@ -512,7 +890,7 @@ private fun PrincipalSectionHeader(
             ) {
                 Text(
                     text = title,
-                    fontSize = 15.sp,
+                    fontSize = 14.5.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = TextPrimary,
                 )
@@ -537,7 +915,7 @@ private fun PrincipalSectionHeader(
                 Spacer(Modifier.height(1.dp))
                 Text(
                     text = subtitle,
-                    fontSize = 11.sp,
+                    fontSize = 10.5.sp,
                     color = TextTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

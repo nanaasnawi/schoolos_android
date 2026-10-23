@@ -124,8 +124,14 @@ fun RombelStudentsScreen(
     val selectedFilter = uiState.selectedClassFilter
     val maleCount = uiState.maleCount
     val femaleCount = uiState.femaleCount
+    val isPrincipal = uiState.isPrincipal
+    val isSupervisionMode = isPrincipal || (className != null && className.equals("ALL", ignoreCase = true))
 
-    val subtitleText = if (selectedFilter == "ALL" || selectedFilter.isBlank()) {
+    val titleText = if (isSupervisionMode) "Pengawasan Seluruh Rombel" else "Rekap Siswa & Presensi"
+    val subtitleText = if (isSupervisionMode) {
+        if (filteredStudents.isNotEmpty()) "${filteredStudents.size} Siswa Terdaftar • Data Pokok Pendidikan (Dapodik)"
+        else "Pengawasan Eksekutif Dapodik"
+    } else if (selectedFilter == "ALL" || selectedFilter.isBlank()) {
         if (filteredStudents.isNotEmpty()) "Semua Kelas Diampu • ${filteredStudents.size} Siswa ($maleCount L • $femaleCount P)"
         else "Semua Kelas Diampu"
     } else {
@@ -140,7 +146,7 @@ fun RombelStudentsScreen(
     ) {
         // Executive TopBar
         ExecutiveTopBar(
-            title = "Rekap Siswa & Presensi",
+            title = titleText,
             subtitle = subtitleText,
             onBack = onBack,
             actions = {
@@ -222,69 +228,112 @@ fun RombelStudentsScreen(
             }
         }
 
-        // ── 2. QUICK PRESENSI ACTION & SUMMARY BAR ───────────────────────────
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 4.dp),
-            shape = RoundedCornerShape(12.dp),
-            color = CosmicNavy,
-            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
-        ) {
-            Row(
+        // ── 2. EXECUTIVE METRICS OR ROLL CALL BAR ───────────────────────────
+        if (isSupervisionMode) {
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
             ) {
-                // Left: Counters
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    AttendanceCountPill(label = "H", count = uiState.hadirCount, color = NeonSuccess)
-                    AttendanceCountPill(label = "S", count = uiState.sakitCount, color = NeonBlue)
-                    AttendanceCountPill(label = "I", count = uiState.izinCount, color = NeonWarning)
-                    AttendanceCountPill(label = "A", count = uiState.alpaCount, color = NeonError)
-                }
-
-                // Right: Batch Action Buttons
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    OutlinedButton(
-                        onClick = { viewModel.markAllPresent() },
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonSuccess),
-                        border = androidx.compose.foundation.BorderStroke(0.8.dp, NeonSuccess.copy(alpha = 0.6f)),
-                        modifier = Modifier.height(32.dp)
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(4.dp))
-                        Text("Hadir Semua", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        AttendanceCountPill(label = "Total Siswa", count = filteredStudents.size, color = NeonBlue)
+                        AttendanceCountPill(label = "Laki-laki", count = maleCount, color = TeacherNeon)
+                        AttendanceCountPill(label = "Perempuan", count = femaleCount, color = Color(0xFFEC4899))
                     }
 
-                    Button(
-                        onClick = {
-                            viewModel.saveAttendance { message ->
-                                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
-                            }
-                        },
-                        enabled = !uiState.isSavingAttendance && filteredStudents.isNotEmpty(),
-                        shape = RoundedCornerShape(8.dp),
-                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White),
-                        modifier = Modifier.height(32.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(NeonSuccess.copy(alpha = 0.12f))
+                            .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        if (uiState.isSavingAttendance) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                        Text(
+                            text = "Dapodik Terverifikasi",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonSuccess
+                        )
+                    }
+                }
+            }
+        } else {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(12.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Left: Counters
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AttendanceCountPill(label = "H", count = uiState.hadirCount, color = NeonSuccess)
+                        AttendanceCountPill(label = "S", count = uiState.sakitCount, color = NeonBlue)
+                        AttendanceCountPill(label = "I", count = uiState.izinCount, color = NeonWarning)
+                        AttendanceCountPill(label = "A", count = uiState.alpaCount, color = NeonError)
+                    }
+
+                    // Right: Batch Action Buttons
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedButton(
+                            onClick = { viewModel.markAllPresent() },
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonSuccess),
+                            border = androidx.compose.foundation.BorderStroke(0.8.dp, NeonSuccess.copy(alpha = 0.6f)),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            Icon(Icons.Default.DoneAll, contentDescription = null, modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Simpan", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("Hadir Semua", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                viewModel.saveAttendance { message ->
+                                    Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            enabled = !uiState.isSavingAttendance && filteredStudents.isNotEmpty(),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 4.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.White),
+                            modifier = Modifier.height(32.dp)
+                        ) {
+                            if (uiState.isSavingAttendance) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(14.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(14.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Simpan", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
@@ -457,6 +506,7 @@ fun RombelStudentsScreen(
                             StudentAttendanceCard(
                                 student = student,
                                 currentStatus = currentStatus,
+                                isSupervisionMode = isSupervisionMode,
                                 onStatusChange = { newStatus ->
                                     viewModel.setStudentAttendance(student.id, newStatus)
                                 },
@@ -495,6 +545,7 @@ private fun AttendanceCountPill(label: String, count: Int, color: Color) {
 private fun StudentAttendanceCard(
     student: ClassStudent,
     currentStatus: String,
+    isSupervisionMode: Boolean = false,
     onStatusChange: (String) -> Unit,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -571,7 +622,7 @@ private fun StudentAttendanceCard(
 
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        text = "NISN: ${student.nisn ?: "-"} • $genderLabel",
+                        text = if (isSupervisionMode) "NISN: ${student.nisn ?: "-"} • $genderLabel • Data Dapodik" else "NISN: ${student.nisn ?: "-"} • $genderLabel",
                         fontSize = 10.sp,
                         color = TextTertiary
                     )
@@ -588,12 +639,13 @@ private fun StudentAttendanceCard(
                 )
             }
 
-            // Bottom Section: Quick Attendance Segmented Selector (H | S | I | A)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(CosmicDark)
+            // Bottom Section: Quick Attendance Segmented Selector (H | S | I | A) - Excluded in supervision mode
+            if (!isSupervisionMode) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(CosmicDark)
                     .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
                     .padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -633,6 +685,7 @@ private fun StudentAttendanceCard(
             }
         }
     }
+}
 }
 
 @Composable

@@ -85,7 +85,8 @@ fun MainContainerScreen(
 ) {
     val authState by authManager.authState.collectAsState(initial = AuthState())
     val isParent = authState.isParent
-    val isTeacher = authState.isTeacher
+    val isPrincipal = authState.isPrincipal
+    val isTeacher = authState.isTeacher && !isPrincipal
     val isDark = LocalIsDarkTheme.current
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
@@ -93,6 +94,7 @@ fun MainContainerScreen(
 
     // Role-based accent colors (vibrant primary matching active state)
     val activeNeon = when {
+        isPrincipal -> TeacherNeon
         isTeacher -> TeacherNeon
         isParent  -> ParentNeon
         else      -> StudentNeon
@@ -100,6 +102,13 @@ fun MainContainerScreen(
 
     // Role-based nav items with modern custom vector icons
     val navItems: List<BottomNavItem> = when {
+        isPrincipal -> listOf(
+            BottomNavItem(Screen.Home.route,        "Beranda",    CoreR.drawable.ic_modern_home),
+            BottomNavItem(Screen.Sessions.route,    "Jadwal",     CoreR.drawable.ic_modern_calendar),
+            BottomNavItem(Screen.Supervision.route, "Pengawasan", CoreR.drawable.ic_modern_classes),
+            BottomNavItem(Screen.Grades.route,      "Leger",      CoreR.drawable.ic_modern_grades),
+            BottomNavItem(Screen.Profile.route,     "Akun",       CoreR.drawable.ic_modern_profile),
+        )
         isTeacher -> listOf(
             BottomNavItem(Screen.Home.route,        "Beranda",     CoreR.drawable.ic_modern_home),
             BottomNavItem(Screen.Sessions.route,    "Kelas",       CoreR.drawable.ic_modern_classes),

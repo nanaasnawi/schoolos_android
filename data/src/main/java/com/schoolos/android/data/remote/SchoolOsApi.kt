@@ -47,6 +47,9 @@ interface SchoolOsApi {
     @GET("students/me/official-profile")
     suspend fun getMyOfficialBiodata(): ApiResponse<OfficialStudentBiodataDto>
 
+    @GET("students/{id}")
+    suspend fun getStudentProfile(@Path("id") id: String): ApiResponse<OfficialStudentBiodataDto>
+
     // Academic (Classes & Subjects)
     @GET("academic/classes")
     suspend fun getClasses(
@@ -317,6 +320,12 @@ interface SchoolOsApi {
     suspend fun getAnnouncementById(@Path("id") id: String): ApiResponse<AnnouncementDto>
 
     // Analytics & Headmaster Compliance Monitoring
+    @GET("analytics/overview")
+    suspend fun getAnalyticsOverview(): ApiResponse<AnalyticsOverviewDto>
+
+    @GET("analytics/dashboard")
+    suspend fun getAnalyticsDashboard(): ApiResponse<DashboardDataResponseDto>
+
     @GET("analytics/schedule-compliance")
     suspend fun getScheduleCompliance(
         @Query("date") date: String? = null,
