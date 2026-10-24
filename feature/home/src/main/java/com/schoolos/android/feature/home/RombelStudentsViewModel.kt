@@ -38,6 +38,7 @@ data class RombelStudentsUiState(
     val selectedStudentAchievements: List<Achievement> = emptyList(),
     val isLoadingDetail: Boolean = false,
     val isPrincipal: Boolean = false,
+    val isRefreshing: Boolean = false,
 ) {
     val filteredStudents: List<ClassStudent>
         get() {
@@ -200,10 +201,14 @@ class RombelStudentsViewModel @Inject constructor(
         return map
     }
 
-    fun loadStudents(classNameOverride: String? = null) {
+    fun loadStudents(classNameOverride: String? = null, isPullRefresh: Boolean = false) {
         val targetClass = (classNameOverride ?: _uiState.value.className).trim()
         val filter = if (targetClass.isBlank() || targetClass.equals("ALL", ignoreCase = true)) "ALL" else targetClass
-        _uiState.update { it.copy(className = targetClass, selectedClassFilter = filter, isLoading = true, errorMessage = null) }
+        if (isPullRefresh) {
+            _uiState.update { it.copy(className = targetClass, selectedClassFilter = filter, isRefreshing = true, errorMessage = null) }
+        } else {
+            _uiState.update { it.copy(className = targetClass, selectedClassFilter = filter, isLoading = true, errorMessage = null) }
+        }
 
         viewModelScope.launch {
             val classesResult = academicRepository.getClasses()
@@ -220,6 +225,7 @@ class RombelStudentsViewModel @Inject constructor(
                         allStudents = studentList,
                         attendanceMap = mergedAttendance,
                         isLoading = false,
+                        isRefreshing = false,
                         errorMessage = null
                     )
                 }
@@ -240,6 +246,7 @@ class RombelStudentsViewModel @Inject constructor(
                             allStudents = distinct,
                             attendanceMap = mergedAttendance,
                             isLoading = false,
+                            isRefreshing = false,
                             errorMessage = null
                         )
                     }
@@ -248,6 +255,7 @@ class RombelStudentsViewModel @Inject constructor(
                         it.copy(
                             availableClasses = classes,
                             isLoading = false,
+                            isRefreshing = false,
                             errorMessage = error.message ?: "Gagal memuat daftar murid"
                         )
                     }

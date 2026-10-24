@@ -14,29 +14,20 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.QrCode2
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -44,12 +35,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.feature.profile.util.QrCodeGenerator
 
 @Composable
@@ -62,23 +50,31 @@ fun ProfileQrCard(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
+    val isDarkTheme = LocalIsDarkTheme.current
     val tokenToUse = qrToken.ifBlank { "sch_qr_v1_guest" }
     val qrBitmap = remember(tokenToUse) {
         QrCodeGenerator.generateQrBitmap(tokenToUse, width = 512, height = 512)
     }
 
+    var showEnlargedDialog by remember { mutableStateOf(false) }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
+            .shadow(
+                elevation = if (isDarkTheme) 0.dp else 1.5.dp,
+                shape = RoundedCornerShape(16.dp),
+                spotColor = Color(0x10000000)
+            )
             .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
             .padding(20.dp),
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            // Header Title
+            // Header Row: Title & Role Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -117,21 +113,31 @@ fun ProfileQrCard(
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
-            // ZXing Generated Real QR Code Box
+            // Clean QR Code Box (Clickable to open fullscreen view)
             Box(
                 modifier = Modifier
+                    .shadow(
+                        elevation = if (isDarkTheme) 0.dp else 2.dp,
+                        shape = RoundedCornerShape(14.dp),
+                        spotColor = Color(0x12000000)
+                    )
                     .clip(RoundedCornerShape(14.dp))
                     .background(Color.White)
-                    .border(2.dp, roleNeon.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
-                    .padding(16.dp),
+                    .border(
+                        1.dp,
+                        if (isDarkTheme) roleNeon.copy(alpha = 0.35f) else Color(0xFFE2E8F0),
+                        RoundedCornerShape(14.dp)
+                    )
+                    .clickable { showEnlargedDialog = true }
+                    .padding(14.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 if (qrBitmap != null) {
                     Image(
                         bitmap = qrBitmap.asImageBitmap(),
-                        contentDescription = "Real QR Code",
+                        contentDescription = "QR Code Login",
                         modifier = Modifier.size(160.dp),
                     )
                 } else {
@@ -148,8 +154,9 @@ fun ProfileQrCard(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
+            // User Identity & Affiliation
             Text(
                 text = userName.ifBlank { "Pengguna Akselerasi-Edu" },
                 fontSize = 15.sp,
@@ -157,8 +164,10 @@ fun ProfileQrCard(
                 color = TextPrimary,
             )
 
+            Spacer(Modifier.height(2.dp))
+
             Text(
-                text = schoolName.ifBlank { "Akselerasi-Edu Education" },
+                text = schoolName.ifBlank { "Akselerasi-Edu Platform" },
                 fontSize = 12.sp,
                 color = TextSecondary,
             )
@@ -173,9 +182,12 @@ fun ProfileQrCard(
                 modifier = Modifier.padding(horizontal = 12.dp),
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(18.dp))
 
-            // Download Button
+            // Single, Clean, High-Contrast Action Button
+            val buttonContainer = if (isDarkTheme) roleNeon else Color(0xFF059669)
+            val buttonContent = if (isDarkTheme) Color.Black else Color.White
+
             Button(
                 onClick = {
                     saveQrCardToGallery(
@@ -187,23 +199,187 @@ fun ProfileQrCard(
                     )
                 },
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = roleNeon,
-                    contentColor = CosmicBlack,
+                    containerColor = buttonContainer,
+                    contentColor = buttonContent,
                 ),
                 shape = RoundedCornerShape(10.dp),
                 modifier = Modifier.fillMaxWidth(),
+                contentPadding = PaddingValues(vertical = 12.dp),
             ) {
                 Icon(
                     imageVector = Icons.Default.Download,
                     contentDescription = "Unduh QR",
                     modifier = Modifier.size(18.dp),
+                    tint = buttonContent,
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = "Unduh Kartu QR Login",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
+                    color = buttonContent,
                 )
+            }
+        }
+    }
+
+    // Fullscreen QR dialog when user taps the QR code
+    if (showEnlargedDialog) {
+        EnlargedQrPreviewDialog(
+            userName = userName,
+            roleLabel = roleLabel,
+            schoolName = schoolName,
+            tokenToUse = tokenToUse,
+            onDismissRequest = { showEnlargedDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun EnlargedQrPreviewDialog(
+    userName: String,
+    roleLabel: String,
+    schoolName: String,
+    tokenToUse: String,
+    onDismissRequest: () -> Unit,
+) {
+    val enlargedBitmap = remember(tokenToUse) {
+        QrCodeGenerator.generateQrBitmap(tokenToUse, width = 720, height = 720)
+    }
+
+    Dialog(
+        onDismissRequest = onDismissRequest,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.85f))
+                .clickable { onDismissRequest() }
+                .padding(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(Color.White)
+                    .clickable(enabled = false) {}
+                    .padding(24.dp),
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column {
+                            Text(
+                                text = "KARTU QR LOGIN",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF64748B),
+                                letterSpacing = 0.5.sp,
+                            )
+                            Text(
+                                text = schoolName.ifBlank { "Akselerasi-Edu Platform" },
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF0F172A),
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onDismissRequest,
+                            modifier = Modifier
+                                .size(32.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFFF1F5F9))
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Tutup",
+                                tint = Color(0xFF0F172A),
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .size(240.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(Color.White)
+                            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(14.dp))
+                            .padding(12.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (enlargedBitmap != null) {
+                            Image(
+                                bitmap = enlargedBitmap.asImageBitmap(),
+                                contentDescription = "QR Code Login Besar",
+                                modifier = Modifier.fillMaxSize(),
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+
+                    Text(
+                        text = userName.ifBlank { "Pengguna Akselerasi-Edu" },
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF0F172A),
+                    )
+
+                    Spacer(Modifier.height(4.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(Color(0xFFECFDF5))
+                            .border(1.dp, Color(0xFFA7F3D0), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 10.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            text = "ROLE: $roleLabel",
+                            color = Color(0xFF059669),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+
+                    Text(
+                        text = "Arahkan layar ke kamera scanner kiosk atau presensi.",
+                        fontSize = 11.sp,
+                        color = Color(0xFF64748B),
+                        textAlign = TextAlign.Center,
+                    )
+
+                    Spacer(Modifier.height(18.dp))
+
+                    Button(
+                        onClick = onDismissRequest,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = Color(0xFF0F172A),
+                            contentColor = Color.White,
+                        ),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "Tutup",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
+                }
             }
         }
     }

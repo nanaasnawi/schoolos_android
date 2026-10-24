@@ -6,18 +6,18 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.*
@@ -27,20 +27,23 @@ fun OfficialBiodataNavigationCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDarkTheme = LocalIsDarkTheme.current
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.horizontalGradient(
-                    colors = listOf(
-                        CosmicNavy,
-                        CosmicNavy,
-                        StudentNeon.copy(alpha = 0.08f)
-                    )
-                )
+            .shadow(
+                elevation = if (isDarkTheme) 0.dp else 1.5.dp,
+                shape = RoundedCornerShape(14.dp),
+                spotColor = Color(0x10000000)
             )
-            .border(1.dp, StudentNeon.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(
+                0.5.dp,
+                if (isDarkTheme) StudentNeon.copy(alpha = 0.25f) else GlassBorder,
+                RoundedCornerShape(14.dp)
+            )
             .clickable(onClick = onClick)
             .padding(16.dp)
     ) {
@@ -49,87 +52,54 @@ fun OfficialBiodataNavigationCard(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            // Icon Container
             Box(
                 modifier = Modifier
-                    .size(46.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(StudentNeon.copy(alpha = 0.15f))
-                    .border(0.5.dp, StudentNeon.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(11.dp))
+                    .background(StudentNeon.copy(alpha = 0.12f))
+                    .border(0.5.dp, StudentNeon.copy(alpha = 0.30f), RoundedCornerShape(11.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.VerifiedUser,
                     contentDescription = null,
                     tint = StudentNeon,
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(22.dp)
                 )
             }
 
+            // Info Column
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(2.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Text(
-                        text = "Biodata Pokok Resmi",
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 15.sp
-                        ),
-                        color = TextPrimary
-                    )
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(NeonSuccess.copy(alpha = 0.12f))
-                            .padding(horizontal = 5.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            text = "RESMI",
-                            style = MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold
-                            ),
-                            color = NeonSuccess
-                        )
-                    }
-                }
                 Text(
-                    text = "Lihat detail identitas, domisili, orang tua, & bantuan PIP",
-                    style = MaterialTheme.typography.bodySmall.copy(fontSize = 12.sp),
-                    color = TextSecondary
+                    text = "Biodata Pokok Resmi Siswa",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+
+                Spacer(Modifier.height(3.dp))
+
+                Text(
+                    text = "Dapodik Kemendikdasmen RI • NISN & Identitas",
+                    fontSize = 12.sp,
+                    color = TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(StudentNeon)
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Text(
-                        text = "Buka",
-                        style = MaterialTheme.typography.labelSmall.copy(
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    )
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = "Lihat Detail Biodata Resmi",
-                        tint = Color.White,
-                        modifier = Modifier.size(13.dp)
-                    )
-                }
-            }
+            // Clean Trailing Navigation Chevron
+            Icon(
+                imageVector = Icons.Default.ChevronRight,
+                contentDescription = "Buka Biodata",
+                tint = TextTertiary,
+                modifier = Modifier.size(20.dp)
+            )
         }
     }
 }

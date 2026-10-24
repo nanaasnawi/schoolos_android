@@ -60,6 +60,7 @@ fun GradebookListScreen(
             ExecutiveTopBar(
                 title = if (isPrincipal) "Leger Capaian Belajar PKBM" else "Buku Nilai",
                 subtitle = if (isPrincipal) "Monitoring capaian KKTP seluruh rombel PKBM"
+                    else if (isTeacher && !state.teacherSubject.isNullOrBlank()) "Guru Mapel: ${state.teacherSubject} • Rombel ${state.className.ifBlank { "Paket" }}"
                     else if (isTeacher && state.className.isNotBlank()) "Tutor Pamong • Rombel ${state.className}"
                     else "Rekapitulasi Capaian Modul",
                 onBack = onBack,
@@ -131,6 +132,7 @@ fun GradebookListScreen(
                         teacherGradebookContent(
                             subjects = filteredSubjects,
                             className = state.className,
+                            teacherSubject = state.teacherSubject,
                             totalSubjectCount = state.subjects.size,
                             selectedFilter = selectedFilter,
                             isPrincipal = isPrincipal,

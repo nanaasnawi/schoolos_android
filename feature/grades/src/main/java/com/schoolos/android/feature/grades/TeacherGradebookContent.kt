@@ -34,6 +34,7 @@ import java.util.Locale
 fun LazyListScope.teacherGradebookContent(
     subjects: List<SubjectGradeSummary>,
     className: String,
+    teacherSubject: String? = null,
     totalSubjectCount: Int = subjects.size,
     selectedFilter: String = "Semua Mapel",
     isPrincipal: Boolean = false,
@@ -42,7 +43,12 @@ fun LazyListScope.teacherGradebookContent(
 ) {
     // ── TEACHER / PRINCIPAL CLASS HERO BANNER ─────────────────────
     item {
-        TeacherClassHeroHeader(subjects = subjects, className = className, isPrincipal = isPrincipal)
+        TeacherClassHeroHeader(
+            subjects = subjects,
+            className = className,
+            teacherSubject = teacherSubject,
+            isPrincipal = isPrincipal,
+        )
     }
 
     item {
@@ -54,6 +60,7 @@ fun LazyListScope.teacherGradebookContent(
         ) {
             Text(
                 if (isPrincipal) "LEGER NILAI SELURUH MODUL KESETARAAN"
+                else if (!teacherSubject.isNullOrBlank()) "LEGER NILAI MAPEL DIAMPU${if (className.isNotBlank()) " • $className" else ""}"
                 else if (className.isNotBlank()) "LEGER NILAI ROMBEL $className"
                 else "REKAP NILAI MODUL DIAMPU",
                 fontSize = 11.sp,
@@ -62,7 +69,7 @@ fun LazyListScope.teacherGradebookContent(
                 letterSpacing = 1.sp
             )
             Text(
-                "${subjects.size} Mapel",
+                if (!teacherSubject.isNullOrBlank()) "${subjects.size} Mapel Diampu" else "${subjects.size} Mapel",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextTertiary
@@ -128,7 +135,9 @@ fun LazyListScope.teacherGradebookContent(
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = if (className.isNotBlank()) "Belum ada modul pelajaran tercatat untuk Rombel $className." else "Belum ada modul mata pelajaran tercatat.",
+                        text = if (!teacherSubject.isNullOrBlank()) "Belum ada nilai modul tercatat untuk mata pelajaran $teacherSubject."
+                            else if (className.isNotBlank()) "Belum ada modul pelajaran tercatat untuk Rombel $className."
+                            else "Belum ada modul mata pelajaran tercatat.",
                         color = TextTertiary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
@@ -152,6 +161,7 @@ fun LazyListScope.teacherGradebookContent(
 private fun TeacherClassHeroHeader(
     subjects: List<SubjectGradeSummary>,
     className: String,
+    teacherSubject: String? = null,
     isPrincipal: Boolean = false,
 ) {
     val gradedSubjects = subjects.filter { it.finalScore > 0.0 && it.gradedComponentCount > 0 }
@@ -160,18 +170,21 @@ private fun TeacherClassHeroHeader(
 
     val headerBadgeText = when {
         isPrincipal -> "KEPALA PKBM • EKSEKUTIF LEGER KESETARAAN"
+        !teacherSubject.isNullOrBlank() -> "GURU MAPEL ${teacherSubject.uppercase()} • ${DapodikPeriod.getActiveSemester().uppercase()}"
         className.isNotBlank() -> "TUTOR PAMONG • ${DapodikPeriod.getActiveSemester().uppercase()}"
         else -> "TUTOR MODUL / MAPEL • ${DapodikPeriod.getActiveSemester().uppercase()}"
     }
 
     val headerTitleText = when {
         isPrincipal -> "Leger Capaian Belajar PKBM"
+        !teacherSubject.isNullOrBlank() -> teacherSubject
         className.isNotBlank() -> if (className.startsWith("Paket", ignoreCase = true)) className else "Rombel $className"
         else -> "Buku Penilaian Modul & Capaian Belajar"
     }
 
     val headerSubtitleText = when {
         isPrincipal -> "Monitoring Capaian KKTP & Mutu Belajar Rombel • ${DapodikPeriod.getFullPeriodLabel()}"
+        !teacherSubject.isNullOrBlank() && className.isNotBlank() -> "Penilaian Sumatif Modul & Capaian KKTP • Rombel $className • ${DapodikPeriod.getFullPeriodLabel()}"
         className.isNotBlank() -> "Leger Nilai Rombel • ${DapodikPeriod.getFullPeriodLabel()}"
         else -> "Penilaian Capaian & Evaluasi Modul • ${DapodikPeriod.getFullPeriodLabel()}"
     }
@@ -307,8 +320,10 @@ private fun TeacherClassHeroHeader(
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TeacherMetricCard(
-                label = "Modul / Pelajaran",
-                value = if (subjects.isNotEmpty()) "${subjects.size} Modul" else "—",
+                label = if (!teacherSubject.isNullOrBlank()) "Mapel Diampu" else "Modul / Pelajaran",
+                value = if (subjects.isNotEmpty()) {
+                    if (!teacherSubject.isNullOrBlank()) "${subjects.size} Mapel" else "${subjects.size} Modul"
+                } else "—",
                 modifier = Modifier.weight(1f)
             )
             val firstThreshold = subjects.firstOrNull { it.passingThreshold > 0 }?.passingThreshold
