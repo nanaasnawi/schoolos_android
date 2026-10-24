@@ -3,17 +3,16 @@ package com.schoolos.android.feature.grades
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Class
-import androidx.compose.material.icons.filled.Groups
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -21,9 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -32,9 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.common.DapodikPeriod
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.SubjectGradeSummary
-
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
+import java.util.Locale
 
 fun LazyListScope.teacherGradebookContent(
     subjects: List<SubjectGradeSummary>,
@@ -58,9 +53,9 @@ fun LazyListScope.teacherGradebookContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                if (isPrincipal) "LEGER NILAI SELURUH MAPEL SEKOLAH"
-                else if (className.isNotBlank()) "LEGER NILAI KELAS $className"
-                else "REKAP NILAI MATA PELAJARAN DIAMPU",
+                if (isPrincipal) "LEGER NILAI SELURUH MODUL KESETARAAN"
+                else if (className.isNotBlank()) "LEGER NILAI ROMBEL $className"
+                else "REKAP NILAI MODUL DIAMPU",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Black,
                 color = TeacherNeon,
@@ -75,35 +70,38 @@ fun LazyListScope.teacherGradebookContent(
         }
     }
 
-    item {
-        val filters = listOf("Semua Mapel", "Wajib", "MIPA", "Bahasa", "Muatan Lokal")
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rememberScrollState())
-                .padding(vertical = 4.dp)
-        ) {
-            filters.forEach { filter ->
-                val isSelected = filter == selectedFilter
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isSelected) TeacherNeon.copy(alpha = 0.15f) else CosmicNavy)
-                        .border(
-                            0.5.dp,
-                            if (isSelected) TeacherNeon.copy(alpha = 0.4f) else GlassBorder,
-                            RoundedCornerShape(8.dp),
+    // Dynamic Filter Chips (No hardcoded MIPA or fake categories)
+    val dynamicCategories = (listOf("Semua Mapel") + subjects.map { it.category }.filter { it.isNotBlank() && it != "Wajib" }).distinct()
+    if (dynamicCategories.size > 1) {
+        item {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState())
+                    .padding(vertical = 4.dp)
+            ) {
+                dynamicCategories.forEach { filter ->
+                    val isSelected = filter == selectedFilter
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isSelected) TeacherNeon.copy(alpha = 0.15f) else CosmicNavy)
+                            .border(
+                                0.5.dp,
+                                if (isSelected) TeacherNeon.copy(alpha = 0.4f) else GlassBorder,
+                                RoundedCornerShape(8.dp),
+                            )
+                            .clickable { onSelectFilter(filter) }
+                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    ) {
+                        Text(
+                            filter,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (isSelected) TeacherNeon else TextTertiary,
                         )
-                        .clickable { onSelectFilter(filter) }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                ) {
-                    Text(
-                        filter,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) TeacherNeon else TextTertiary,
-                    )
+                    }
                 }
             }
         }
@@ -122,10 +120,15 @@ fun LazyListScope.teacherGradebookContent(
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📚", fontSize = 36.sp)
+                    Icon(
+                        imageVector = Icons.Default.MenuBook,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(36.dp)
+                    )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Belum ada mata pelajaran tercatat untuk Kelas $className.",
+                        text = if (className.isNotBlank()) "Belum ada modul pelajaran tercatat untuk Rombel $className." else "Belum ada modul mata pelajaran tercatat.",
                         color = TextTertiary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
@@ -154,30 +157,23 @@ private fun TeacherClassHeroHeader(
     val gradedSubjects = subjects.filter { it.finalScore > 0.0 && it.gradedComponentCount > 0 }
     val hasGrades = gradedSubjects.isNotEmpty()
     val avgScore = if (hasGrades) gradedSubjects.map { it.finalScore }.average() else 0.0
-    val (predikatLabel, predikatDesc) = when {
-        !hasGrades -> Pair("Belum Dinilai", "Menunggu input nilai")
-        avgScore >= 85.0 -> Pair("Predikat A", "Sangat Baik")
-        avgScore >= 75.0 -> Pair("Predikat B", "Baik")
-        avgScore >= 65.0 -> Pair("Predikat C", "Cukup")
-        else -> Pair("Predikat D", "Perlu Bimbingan")
-    }
 
     val headerBadgeText = when {
-        isPrincipal -> "KEPALA SEKOLAH • EKSEKUTIF LEGER SEKOLAH"
-        className.isNotBlank() -> "WALI KELAS • ${DapodikPeriod.getActiveSemester().uppercase()}"
-        else -> "GURU MATA PELAJARAN • ${DapodikPeriod.getActiveSemester().uppercase()}"
+        isPrincipal -> "KEPALA PKBM • EKSEKUTIF LEGER KESETARAAN"
+        className.isNotBlank() -> "TUTOR PAMONG • ${DapodikPeriod.getActiveSemester().uppercase()}"
+        else -> "TUTOR MODUL / MAPEL • ${DapodikPeriod.getActiveSemester().uppercase()}"
     }
 
     val headerTitleText = when {
-        isPrincipal -> "Leger Nilai Sekolah"
-        className.isNotBlank() -> "Kelas $className"
-        else -> "Buku Nilai Mata Pelajaran"
+        isPrincipal -> "Leger Capaian Belajar PKBM"
+        className.isNotBlank() -> if (className.startsWith("Paket", ignoreCase = true)) className else "Rombel $className"
+        else -> "Buku Penilaian Modul & Capaian Belajar"
     }
 
     val headerSubtitleText = when {
-        isPrincipal -> "Monitoring Capaian KKM & Mutu Akademik Sekolah • ${DapodikPeriod.getFullPeriodLabel()}"
-        className.isNotBlank() -> "Leger Nilai Kelas • ${DapodikPeriod.getFullPeriodLabel()}"
-        else -> "Penilaian Komponen & Evaluasi Pembelajaran • ${DapodikPeriod.getFullPeriodLabel()}"
+        isPrincipal -> "Monitoring Capaian KKTP & Mutu Belajar Rombel • ${DapodikPeriod.getFullPeriodLabel()}"
+        className.isNotBlank() -> "Leger Nilai Rombel • ${DapodikPeriod.getFullPeriodLabel()}"
+        else -> "Penilaian Capaian & Evaluasi Modul • ${DapodikPeriod.getFullPeriodLabel()}"
     }
 
     val passRateText = if (hasGrades) {
@@ -191,17 +187,17 @@ private fun TeacherClassHeroHeader(
     val heroBg = if (isDark) {
         Brush.linearGradient(
             listOf(
-                Color(0xFF064E3B).copy(alpha = 0.35f),
-                Color(0xFF0B192E).copy(alpha = 0.7f),
-                CosmicNavy
+                TeacherContainer.copy(alpha = 0.35f),
+                CosmicNavy,
+                CosmicSurface2
             )
         )
     } else {
         Brush.linearGradient(
             listOf(
                 TeacherNeon.copy(alpha = 0.08f),
-                Color(0xFFF0FDF4),
-                CosmicNavy
+                CosmicNavy,
+                CosmicSurface2.copy(alpha = 0.5f)
             )
         )
     }
@@ -218,49 +214,29 @@ private fun TeacherClassHeroHeader(
             )
             .padding(16.dp)
     ) {
-        // TOP BADGE ROW
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        // TOP BADGE ROW (Pure Clean Presentation - No fake Dapodik Ready)
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(10.dp))
+                .background(TeacherNeon.copy(alpha = 0.12f))
+                .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                .padding(horizontal = 9.dp, vertical = 4.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(TeacherNeon.copy(alpha = 0.12f))
-                    .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 9.dp, vertical = 4.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(TeacherNeon)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = headerBadgeText,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        color = TeacherNeon,
-                        letterSpacing = 0.5.sp
-                    )
-                }
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(NeonSuccess.copy(alpha = 0.1f))
-                    .border(1.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.CheckCircle, null, tint = NeonSuccess, modifier = Modifier.size(11.dp))
-                    Spacer(Modifier.width(4.dp))
-                    Text("Dapodik Ready", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonSuccess)
-                }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(TeacherNeon)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    text = headerBadgeText,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Black,
+                    color = TeacherNeon,
+                    letterSpacing = 0.5.sp
+                )
             }
         }
 
@@ -283,7 +259,7 @@ private fun TeacherClassHeroHeader(
 
         Spacer(Modifier.height(14.dp))
 
-        // BIG STATS ROW
+        // BIG STATS ROW (Factual state rendering - ADR-0011 Thin Client)
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Bottom,
@@ -291,7 +267,7 @@ private fun TeacherClassHeroHeader(
         ) {
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = if (hasGrades) "%.1f".format(avgScore) else "—",
+                    text = if (hasGrades) "%.1f".format(Locale.US, avgScore) else "—",
                     fontSize = 36.sp,
                     fontWeight = FontWeight.Black,
                     color = TextPrimary,
@@ -306,38 +282,44 @@ private fun TeacherClassHeroHeader(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = predikatLabel,
+                            text = if (hasGrades) "Terdata" else "Belum Dinilai",
                             color = if (hasGrades) TeacherNeon else TextTertiary,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Black
                         )
                     }
                     Spacer(Modifier.height(2.dp))
-                    Text(predikatDesc, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        text = if (hasGrades) "${gradedSubjects.size} dari ${subjects.size} Mapel Dinilai" else "Menunggu input nilai",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
         }
 
         Spacer(Modifier.height(14.dp))
 
-        // 3 METRIC PILLS
+        // 3 METRIC PILLS (Factual, NO hardcoded 75.0 fallback)
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TeacherMetricCard(
-                label = "Mata Pelajaran",
-                value = "${subjects.size} Mapel",
+                label = "Modul / Pelajaran",
+                value = if (subjects.isNotEmpty()) "${subjects.size} Modul" else "—",
                 modifier = Modifier.weight(1f)
             )
-            val targetKkm = subjects.firstOrNull()?.passingThreshold ?: 75.0
+            val firstThreshold = subjects.firstOrNull { it.passingThreshold > 0 }?.passingThreshold
+            val targetKktpText = if (firstThreshold != null && firstThreshold > 0) "${firstThreshold.toInt()}" else "—"
             TeacherMetricCard(
-                label = "Target KKM",
-                value = "$targetKkm",
+                label = "Target KKTP",
+                value = targetKktpText,
                 modifier = Modifier.weight(1f)
             )
             TeacherMetricCard(
-                label = "Kelulusan",
+                label = "Ketercapaian",
                 value = passRateText,
                 modifier = Modifier.weight(1f)
             )
@@ -368,14 +350,15 @@ private fun TeacherSubjectGradeCard(
     className: String,
     onClick: () -> Unit,
 ) {
-    val (emoji, accentColor) = when {
-        summary.subjectName.contains("Matematika", ignoreCase = true) -> Pair("🧮", StudentNeon)
-        summary.subjectName.contains("IPA", ignoreCase = true) || summary.subjectName.contains("Fisika", ignoreCase = true) || summary.subjectName.contains("Biologi", ignoreCase = true) -> Pair("🔬", NeonBlue)
-        summary.subjectName.contains("Bahasa", ignoreCase = true) -> Pair("📚", NeonSuccess)
-        summary.subjectName.contains("IPS", ignoreCase = true) || summary.subjectName.contains("Ekonomi", ignoreCase = true) || summary.subjectName.contains("Geografi", ignoreCase = true) -> Pair("🌍", NeonWarning)
-        summary.subjectName.contains("Olahraga", ignoreCase = true) || summary.subjectName.contains("Penjas", ignoreCase = true) -> Pair("⚽", NeonError)
-        summary.subjectName.contains("Informatika", ignoreCase = true) || summary.subjectName.contains("TIK", ignoreCase = true) -> Pair("💻", Color(0xFF00E5FF))
-        else -> Pair("📖", TeacherNeon)
+    val icon = subjectIcon(summary.subjectName)
+    val accentColor = when {
+        summary.subjectName.contains("Matematika", ignoreCase = true) -> StudentNeon
+        summary.subjectName.contains("IPA", ignoreCase = true) || summary.subjectName.contains("Fisika", ignoreCase = true) || summary.subjectName.contains("Biologi", ignoreCase = true) -> NeonBlue
+        summary.subjectName.contains("Bahasa", ignoreCase = true) -> NeonSuccess
+        summary.subjectName.contains("IPS", ignoreCase = true) || summary.subjectName.contains("Ekonomi", ignoreCase = true) || summary.subjectName.contains("Geografi", ignoreCase = true) -> NeonWarning
+        summary.subjectName.contains("Olahraga", ignoreCase = true) || summary.subjectName.contains("Penjas", ignoreCase = true) -> NeonError
+        summary.subjectName.contains("Informatika", ignoreCase = true) || summary.subjectName.contains("TIK", ignoreCase = true) || summary.subjectName.contains("Komputer", ignoreCase = true) -> AccentNeonCyan
+        else -> TeacherNeon
     }
 
     val isGraded = summary.finalScore > 0.0 && summary.gradedComponentCount > 0
@@ -394,7 +377,7 @@ private fun TeacherSubjectGradeCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Subject Emoji Chip
+                // Subject Vector Icon Chip (Zero Emoji)
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -403,7 +386,12 @@ private fun TeacherSubjectGradeCard(
                         .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(emoji, fontSize = 20.sp)
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(22.dp)
+                    )
                 }
 
                 Spacer(Modifier.width(12.dp))
@@ -423,39 +411,43 @@ private fun TeacherSubjectGradeCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(accentColor.copy(alpha = 0.1f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "Kelas $className",
-                                fontSize = 10.sp,
-                                color = accentColor,
-                                fontWeight = FontWeight.Bold
-                            )
+                        if (className.isNotBlank()) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(accentColor.copy(alpha = 0.1f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = if (className.startsWith("Paket", ignoreCase = true)) className else "Rombel $className",
+                                    fontSize = 10.sp,
+                                    color = accentColor,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(CosmicSurface2)
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = "KKM 75",
-                                fontSize = 10.sp,
-                                color = TextTertiary,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                        if (summary.passingThreshold > 0.0) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(CosmicSurface2)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "KKTP ${summary.passingThreshold.toInt()}",
+                                    fontSize = 10.sp,
+                                    color = TextTertiary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
                         }
                     }
                 }
 
-                // Score & Predikat Column
+                // Score & Status Column (Thin Client SSOT)
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = if (isGraded) "%.1f".format(summary.finalScore) else "—",
+                        text = if (isGraded) "%.1f".format(Locale.US, summary.finalScore) else "—",
                         fontWeight = FontWeight.Black,
                         fontSize = 20.sp,
                         color = if (isGraded) accentColor else TextTertiary,
@@ -469,7 +461,9 @@ private fun TeacherSubjectGradeCard(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            text = if (isGraded) "Predikat ${summary.letterGrade}" else "Belum Dinilai",
+                            text = if (isGraded) {
+                                if (summary.letterGrade.isNotBlank() && summary.letterGrade != "-") "Capaian ${summary.letterGrade}" else "Sudah Dinilai"
+                            } else "Belum Dinilai",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.ExtraBold,
                             color = if (isGraded) accentColor else TextTertiary

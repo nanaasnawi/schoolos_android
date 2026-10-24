@@ -325,7 +325,7 @@ private fun saveQrCardToGallery(
                 values.put(MediaStore.Images.Media.IS_PENDING, 0)
                 resolver.update(uri, values, null, null)
             }
-            Toast.makeText(context, "✅ Kartu QR Login berhasil disimpan ke Galeri (Pictures/AkselerasiEdu)!", Toast.LENGTH_LONG).show()
+            Toast.makeText(context, "Kartu QR Login berhasil disimpan ke Galeri (Pictures/AkselerasiEdu)!", Toast.LENGTH_LONG).show()
         } else {
             Toast.makeText(context, "Gagal menyimpan Kartu QR ke Galeri.", Toast.LENGTH_SHORT).show()
         }

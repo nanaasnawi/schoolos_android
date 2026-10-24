@@ -67,22 +67,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicDark
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface2
-import com.schoolos.android.core.designsystem.CosmicSurface3
-import com.schoolos.android.core.designsystem.ExecutiveTopBar
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonError
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.NeonWarning
-import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.ClassStudent
 
 private fun formatClassName(raw: String?): String {
@@ -101,7 +86,7 @@ private fun formatClassName(raw: String?): String {
 @Composable
 fun RombelStudentsScreen(
     className: String? = null,
-    onBack: () -> Unit,
+    onBack: (() -> Unit)? = null,
     onNavigateToStudentDetail: (ClassStudent) -> Unit = {},
     modifier: Modifier = Modifier,
     viewModel: RombelStudentsViewModel = hiltViewModel(),
@@ -127,15 +112,15 @@ fun RombelStudentsScreen(
     val isPrincipal = uiState.isPrincipal
     val isSupervisionMode = isPrincipal || (className != null && className.equals("ALL", ignoreCase = true))
 
-    val titleText = if (isSupervisionMode) "Pengawasan Seluruh Rombel" else "Rekap Siswa & Presensi"
+    val titleText = if (isSupervisionMode) "Pengawasan Seluruh Rombel" else "Rekap Warga Belajar & Presensi"
     val subtitleText = if (isSupervisionMode) {
-        if (filteredStudents.isNotEmpty()) "${filteredStudents.size} Siswa Terdaftar • Data Pokok Pendidikan (Dapodik)"
-        else "Pengawasan Eksekutif Dapodik"
+        if (filteredStudents.isNotEmpty()) "${filteredStudents.size} Warga Belajar Terdaftar"
+        else "Pengawasan Rombel PKBM"
     } else if (selectedFilter == "ALL" || selectedFilter.isBlank()) {
-        if (filteredStudents.isNotEmpty()) "Semua Kelas Diampu • ${filteredStudents.size} Siswa ($maleCount L • $femaleCount P)"
-        else "Semua Kelas Diampu"
+        if (filteredStudents.isNotEmpty()) "Semua Rombel Diampu • ${filteredStudents.size} WB ($maleCount L • $femaleCount P)"
+        else "Semua Rombel Diampu"
     } else {
-        if (filteredStudents.isNotEmpty()) "${formatClassName(selectedFilter)} • ${filteredStudents.size} Siswa ($maleCount L • $femaleCount P)"
+        if (filteredStudents.isNotEmpty()) "${formatClassName(selectedFilter)} • ${filteredStudents.size} WB ($maleCount L • $femaleCount P)"
         else formatClassName(selectedFilter)
     }
 
@@ -233,7 +218,7 @@ fun RombelStudentsScreen(
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
                 shape = RoundedCornerShape(12.dp),
                 color = CosmicNavy,
                 border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
@@ -242,32 +227,27 @@ fun RombelStudentsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        AttendanceCountPill(label = "Total Siswa", count = filteredStudents.size, color = NeonBlue)
-                        AttendanceCountPill(label = "Laki-laki", count = maleCount, color = TeacherNeon)
-                        AttendanceCountPill(label = "Perempuan", count = femaleCount, color = Color(0xFFEC4899))
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(NeonSuccess.copy(alpha = 0.12f))
-                            .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 7.dp, vertical = 3.dp)
-                    ) {
-                        Text(
-                            text = "Dapodik Terverifikasi",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonSuccess
-                        )
-                    }
+                    AttendanceCountPill(
+                        label = "Total WB",
+                        count = filteredStudents.size,
+                        color = NeonBlue,
+                        modifier = Modifier.weight(1f)
+                    )
+                    AttendanceCountPill(
+                        label = "Laki-laki",
+                        count = maleCount,
+                        color = TeacherNeon,
+                        modifier = Modifier.weight(1f)
+                    )
+                    AttendanceCountPill(
+                        label = "Perempuan",
+                        count = femaleCount,
+                        color = AccentNeonPink,
+                        modifier = Modifier.weight(1f)
+                    )
                 }
             }
         } else {
@@ -521,18 +501,19 @@ fun RombelStudentsScreen(
 }
 
 @Composable
-private fun AttendanceCountPill(label: String, count: Int, color: Color) {
+private fun AttendanceCountPill(label: String, count: Int, color: Color, modifier: Modifier = Modifier) {
     Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
+        modifier = modifier
+            .clip(RoundedCornerShape(8.dp))
             .background(color.copy(alpha = 0.12f))
-            .border(0.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 6.dp, vertical = 2.dp)
+            .border(0.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 8.dp, vertical = 6.dp),
+        contentAlignment = Alignment.Center
     ) {
         Text(
             text = "$label: $count",
             color = color,
-            fontSize = 10.sp,
+            fontSize = 11.sp,
             fontWeight = FontWeight.Bold
         )
     }
@@ -587,48 +568,48 @@ private fun StudentAttendanceCard(
 
                 Spacer(Modifier.width(10.dp))
 
-                // Name & details
-                Column(modifier = Modifier.weight(1f)) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            text = student.fullName,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f, fill = false)
-                        )
-
-                        // Class Badge Chip
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(NeonBlue.copy(alpha = 0.14f))
-                                .border(0.5.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
-                        ) {
-                            Text(
-                                text = formatClassName(student.className),
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonBlue
-                            )
-                        }
-                    }
-
-                    Spacer(Modifier.height(2.dp))
+                // Name & details (takes full available space cleanly)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
                     Text(
-                        text = if (isSupervisionMode) "NISN: ${student.nisn ?: "-"} • $genderLabel • Data Dapodik" else "NISN: ${student.nisn ?: "-"} • $genderLabel",
-                        fontSize = 10.sp,
-                        color = TextTertiary
+                        text = student.fullName,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "NISN: ${student.nisn?.takeIf { it.isNotBlank() } ?: "—"} • Jenis Kelamin: $genderLabel",
+                        fontSize = 11.sp,
+                        color = TextTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(10.dp))
+
+                // Class Badge Chip (consistently aligned in a neat column on the right)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NeonBlue.copy(alpha = 0.12f))
+                        .border(0.5.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = formatClassName(student.className),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonBlue
+                    )
+                }
+
+                Spacer(Modifier.width(8.dp))
 
                 // Detail indicator
                 Icon(

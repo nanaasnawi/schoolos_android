@@ -74,7 +74,7 @@ fun OfficialBiodataNavigationCard(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Biodata Resmi Dapodik",
+                        text = "Biodata Pokok Resmi",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.Bold,
                             fontSize = 15.sp

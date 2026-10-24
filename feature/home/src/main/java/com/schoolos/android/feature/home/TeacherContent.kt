@@ -381,7 +381,7 @@ fun LazyListScope.teacherContent(
             ) {
                 BentoActionCard(
                     title = "Buku Nilai",
-                    subtitle = "Rekap capaian & KKM",
+                    subtitle = "Rekap capaian KKTP & rapor",
                     iconRes = CoreR.drawable.ic_modern_grades,
                     accentColor = NeonBlue,
                     badgeText = "Nilai",
@@ -1009,14 +1009,14 @@ private fun TeacherScheduleAlertCard(
     val headerColor = if (isLive) NeonError else NeonWarning
     val headerBg = if (isLive) NeonError.copy(alpha = 0.15f) else NeonWarning.copy(alpha = 0.15f)
     val headerTitle = if (isLive) {
-        "🚨 ALARM: KELAS SEDANG BERLANGSUNG!"
+        "PERINGATAN: SESI TUTORIAL SEDANG BERLANGSUNG"
     } else {
-        "⏰ PERINGATAN: ${urgentSession.minutesUntilStart} MENIT MENUJU JADWAL"
+        "PENGINGAT: ${urgentSession.minutesUntilStart} MENIT MENUJU JADWAL SESI"
     }
     val descriptionText = if (isLive) {
-        "Jam pelajaran telah dimulai! Segera isi & terbitkan materi ajar, penugasan, atau kuis evaluasi untuk murid Anda sekarang."
+        "Sesi tutorial telah dimulai. Segera siapkan materi modul ajar, penugasan, atau evaluasi KKTP untuk warga belajar."
     } else {
-        "Jadwal mengajar dimulai pukul ${urgentSession.scheduledTimeStr}. Jangan lupa siapkan dan isi materi pelajaran, tugas, atau kuis sebelum kelas dimulai!"
+        "Jadwal tutorial dimulai pukul ${urgentSession.scheduledTimeStr}. Siapkan modul pembelajaran dan instrumen asesmen sebelum sesi dimulai."
     }
 
     Box(

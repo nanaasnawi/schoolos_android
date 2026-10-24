@@ -289,7 +289,7 @@ private fun TeacherQuizCard(
                             .border(0.5.dp, NeonSuccess.copy(alpha = 0.20f), RoundedCornerShape(6.dp))
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text("KKM ${quiz.passingScore}", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        Text("KKTP ${quiz.passingScore}", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Medium)
                     }
 
                     quiz.timeLimitMinutes?.takeIf { it > 0 }?.let { mins ->

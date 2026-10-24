@@ -66,19 +66,19 @@ fun WhatsAppProfileCard(
             value = userName.ifBlank { "Pengguna Akselerasi-Edu" },
             roleNeon = roleNeon,
             isEditable = false,
-            footerNote = "Nama ini sinkron dengan data Dapodik resmi dan tidak dapat diubah.",
+            footerNote = "Nama ini sinkron dengan biodata pokok resmi dan tidak dapat diubah.",
         )
 
         ProfileDivider()
 
-        // 2. Tentang / Status (Siswa: Terkunci di Dapodik)
+        // 2. Tentang / Status (Warga Belajar: Terkunci di Pangkalan Data Pokok)
         ProfileInfoRow(
             icon = Icons.Default.Info,
             label = "Tentang / Domisili",
             value = about.ifBlank { "Ada di Akselerasi-Edu" },
             roleNeon = roleNeon,
             isEditable = !isStudent,
-            footerNote = if (isStudent) "Alamat domisili terdaftar resmi di Dapodik." else null,
+            footerNote = if (isStudent) "Alamat domisili terdaftar pada biodata pokok resmi." else null,
             onClick = { if (!isStudent) onEditField("about") },
         )
 

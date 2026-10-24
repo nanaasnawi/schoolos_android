@@ -675,7 +675,7 @@ class ChatManager @Inject constructor(
                     lastMessageContent = content.trim(),
                     lastSenderName = effectiveSenderName,
                     messageCount = updatedMsgs.size,
-                    readStatusLabel = if (isTeacher) "✓ Dijawab Guru" else "Menunggu Dibaca Guru",
+                    readStatusLabel = if (isTeacher) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong",
                     teacherLastReadAt = if (isTeacher) now else 0L,
                 )
             } else {

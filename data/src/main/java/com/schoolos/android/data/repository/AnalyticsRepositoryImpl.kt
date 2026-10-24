@@ -53,8 +53,8 @@ class AnalyticsRepositoryImpl @Inject constructor(
             val totalClasses = overviewDto?.totalClasses?.toInt()
                 ?: classes.size
 
-            val complianceRate = complianceDto?.complianceRate ?: 100.0
-            val attendanceRate = overviewDto?.attendanceRate ?: 95.0
+            val complianceRate = complianceDto?.complianceRate ?: 0.0
+            val attendanceRate = overviewDto?.attendanceRate ?: 0.0
             val atRiskStudents = overviewDto?.atRiskStudents?.toInt() ?: 0
             val overdueSessionsCount = complianceDto?.overdueUnrecordedCount?.toInt() ?: 0
 
@@ -64,7 +64,7 @@ class AnalyticsRepositoryImpl @Inject constructor(
                 val passRate = if (raw.totalGraded > 0) {
                     ((raw.passedCount.toDouble() / raw.totalGraded.toDouble()) * 100.0 * 10.0).let { Math.round(it) / 10.0 }
                 } else {
-                    100.0
+                    0.0
                 }
                 AcademicPerformanceSummary(
                     subjectId = raw.subjectId,
@@ -82,16 +82,16 @@ class AnalyticsRepositoryImpl @Inject constructor(
 
             val highRemedialSubjects = subjectSummaries.filter { it.remedialCount > 0 && it.passRate < 80.0 }
 
-            // ── ANOMALY DETECTION ENGINE (EARLY WARNING SYSTEM) ───────────────
+            // ── ANOMALY DETECTION ENGINE (EARLY WARNING SYSTEM UNTUK KEPALA PKBM) ───────────────
             val anomalies = mutableListOf<SchoolAnomaly>()
 
-            // A. Teaching Compliance & Jam Kosong
+            // A. Teaching Compliance & Tutorial Kosong
             if (overdueSessionsCount > 0) {
                 val affectedSession = complianceDto?.items?.firstOrNull { it.state.equals("OVERDUE_UNRECORDED", ignoreCase = true) }
                 val targetDesc = if (affectedSession != null) {
                     "${affectedSession.className} • ${affectedSession.subjectName} (${affectedSession.teacherName})"
                 } else {
-                    "$overdueSessionsCount Sesi Terjadwal"
+                    "$overdueSessionsCount Sesi Tutorial Terjadwal"
                 }
 
                 anomalies.add(
@@ -99,45 +99,45 @@ class AnalyticsRepositoryImpl @Inject constructor(
                         id = "anomaly-kbm-overdue",
                         category = AnomalyCategory.TEACHING_COMPLIANCE,
                         severity = AnomalySeverity.HIGH,
-                        title = "KBM Terganggu: $overdueSessionsCount Sesi Jam Pelajaran Tanpa Presensi / Guru",
-                        description = "Sesi pembelajaran terjadwal telah melewati batas waktu mulai tanpa kehadiran terkonfirmasi. Segera tentukan guru pengganti (inval) agar KBM tidak terlantar.",
+                        title = "Sesi Belajar Terganggu: $overdueSessionsCount Sesi Tutorial Tanpa Presensi Tutor",
+                        description = "Sesi pembelajaran / tutorial terjadwal telah melewati batas waktu mulai tanpa presensi tutor terkonfirmasi. Segera tentukan tutor pendamping agar kegiatan belajar warga belajar tidak terhenti.",
                         affectedTarget = targetDesc,
                         targetId = affectedSession?.sessionId ?: affectedSession?.scheduleId ?: "",
-                        recommendedDecision = ExecutiveDecisionType.DISPATCH_SUBSTITUTE_TEACHER,
-                        recommendedActionLabel = "Tugaskan Guru Pengganti (Inval)"
+                        recommendedDecision = ExecutiveDecisionType.DISPATCH_SUBSTITUTE_TUTOR,
+                        recommendedActionLabel = "Tugaskan Tutor Pendamping"
                     )
                 )
             }
 
-            // B. Academic KKM & Remedial Spike
+            // B. Academic KKTP Gap (Kurikulum Merdeka - Non Formal)
             for (sub in highRemedialSubjects.take(2)) {
                 anomalies.add(
                     SchoolAnomaly(
-                        id = "anomaly-kkm-${sub.subjectId}",
-                        category = AnomalyCategory.ACADEMIC_REMEDIAL,
+                        id = "anomaly-kktp-${sub.subjectId}",
+                        category = AnomalyCategory.ACADEMIC_KKTP_GAP,
                         severity = if (sub.passRate < 60.0) AnomalySeverity.HIGH else AnomalySeverity.MEDIUM,
-                        title = "Ketidaktuntasan KKM: ${sub.subjectName} (${sub.remedialCount} Remedial)",
-                        description = "Tingkat ketuntasan hanya ${sub.passRate}% dengan rata-rata kelas ${sub.averageScore}. Diperlukan intervensi remedial terstruktur dan review instrumen asesmen.",
+                        title = "Capaian KKTP Belum Optimal: ${sub.subjectName} (${sub.remedialCount} Perlu Bimbingan)",
+                        description = "Tingkat ketercapaian KKTP hanya ${sub.passRate}% dengan rata-rata modul ${sub.averageScore}. Diperlukan penguatan modul dan bimbingan belajar mandiri terstruktur.",
                         affectedTarget = sub.subjectName,
                         targetId = sub.subjectId,
-                        recommendedDecision = ExecutiveDecisionType.ISSUE_REMEDIAL_MANDATE,
-                        recommendedActionLabel = "Terbitkan Mandat Remedial"
+                        recommendedDecision = ExecutiveDecisionType.ISSUE_KKTP_GUIDANCE,
+                        recommendedActionLabel = "Instruksi Penguatan KKTP"
                     )
                 )
             }
 
-            // C. Low School-Wide Attendance
-            if (attendanceRate > 0.0 && attendanceRate < 85.0) {
+            // C. Low PKBM-Wide Attendance (Risiko Keterikatan WB)
+            if (attendanceRate in 1.0..84.9) {
                 anomalies.add(
                     SchoolAnomaly(
                         id = "anomaly-attendance-drop",
                         category = AnomalyCategory.ATTENDANCE_DROP,
                         severity = if (attendanceRate < 75.0) AnomalySeverity.HIGH else AnomalySeverity.MEDIUM,
-                        title = "Tingkat Kehadiran Sekolah Di Bawah Standar (${attendanceRate}%)",
-                        description = "Persentase kehadiran harian berada di bawah target institusi (90%). Berpotensi mengindikasikan lonjakan absensi tanpa keterangan atau wabah sakit rombel.",
-                        affectedTarget = "Seluruh Rombel Sekolah",
+                        title = "Keaktifan Warga Belajar PKBM Di Bawah Standar (${attendanceRate}%)",
+                        description = "Persentase kehadiran tutorial/tatap muka berada di bawah target keaktifan warga belajar. Perlu pendampingan tutor pamong untuk mencegah risiko putus belajar (drop out).",
+                        affectedTarget = "Seluruh Rombel PKBM",
                         recommendedDecision = ExecutiveDecisionType.ORDER_HOMEROOM_FOLLOW_UP,
-                        recommendedActionLabel = "Instruksi Tindak Lanjut Wali Kelas"
+                        recommendedActionLabel = "Instruksi Tindak Lanjut Tutor Pamong"
                     )
                 )
             }
@@ -149,11 +149,11 @@ class AnalyticsRepositoryImpl @Inject constructor(
                         id = "anomaly-at-risk-students",
                         category = AnomalyCategory.STUDENT_AT_RISK,
                         severity = if (atRiskStudents >= 5) AnomalySeverity.HIGH else AnomalySeverity.MEDIUM,
-                        title = "$atRiskStudents Siswa Terindikasi Memerlukan Intervensi Khusus",
-                        description = "Siswa teridentifikasi tidak tuntas pada kriteria ketuntasan minimal berkelanjutan. Diperlukan konseling wali kelas & bimbingan konseling (BK).",
-                        affectedTarget = "Daftar Siswa Evaluasi",
+                        title = "$atRiskStudents Warga Belajar Memerlukan Pendampingan Khusus",
+                        description = "Warga belajar teridentifikasi mengalami ketertinggalan modul secara berkelanjutan. Diperlukan konseling dan kunjungan pendampingan oleh tutor pamong.",
+                        affectedTarget = "Daftar Warga Belajar Rentan",
                         recommendedDecision = ExecutiveDecisionType.ORDER_HOMEROOM_FOLLOW_UP,
-                        recommendedActionLabel = "Pemanggilan Wali Murid & BK"
+                        recommendedActionLabel = "Pendampingan Tutor Pamong"
                     )
                 )
             }
@@ -176,19 +176,21 @@ class AnalyticsRepositoryImpl @Inject constructor(
             }
 
             val summaryText = when (level) {
-                SchoolStabilityLevel.CRITICAL -> "Kondisi Sekolah Memerlukan Intervensi Cepat (${anomalies.size} Masalah Terdeteksi)"
-                SchoolStabilityLevel.WARNING -> "Kondisi Waspada: Diperlukan Perhatian Pimpinan (${anomalies.size} Catatan)"
-                SchoolStabilityLevel.STABLE -> "Kondisi Sekolah Stabil, Kondusif, dan Berjalan Optimal"
+                SchoolStabilityLevel.CRITICAL -> "Operasional PKBM Memerlukan Intervensi Cepat (${anomalies.size} Catatan Terdeteksi)"
+                SchoolStabilityLevel.WARNING -> "Kondisi Waspada: Diperlukan Perhatian Kepala PKBM (${anomalies.size} Catatan)"
+                SchoolStabilityLevel.STABLE -> "Operasional PKBM Berjalan Kondusif & Terkelola Baik"
             }
 
             val academicMasteryRate = if (subjectSummaries.isNotEmpty()) {
                 val totalP = subjectSummaries.sumOf { it.passedCount }
                 val totalG = subjectSummaries.sumOf { it.totalGraded }
                 if (totalG > 0) ((totalP.toDouble() / totalG.toDouble()) * 100.0 * 10.0).let { Math.round(it) / 10.0 }
-                else 100.0
+                else 0.0
             } else {
-                100.0
+                0.0
             }
+
+            val hasRealData = overviewDto != null || complianceDto != null || dashboardDto != null
 
             SchoolHealthMetrics(
                 stabilityScore = score,
@@ -205,6 +207,7 @@ class AnalyticsRepositoryImpl @Inject constructor(
                 totalClasses = totalClasses,
                 anomalies = anomalies,
                 subjectPerformances = subjectSummaries,
+                hasRealData = hasRealData,
             )
         }.onFailure { error ->
             Timber.e(error, "Failed to compute school stability metrics")
@@ -220,44 +223,44 @@ class AnalyticsRepositoryImpl @Inject constructor(
     ): Result<String> {
         return runCatching {
             when (decisionType) {
-                ExecutiveDecisionType.DISPATCH_SUBSTITUTE_TEACHER -> {
+                ExecutiveDecisionType.DISPATCH_SUBSTITUTE_TUTOR -> {
                     notificationRepository.broadcastNotification(
                         classId = targetId,
-                        title = "[INSTRUKSI KEPSEK] Penugasan Guru Pengganti / Inval KBM",
-                        body = "Kepala Sekolah menginstruksikan penugasan guru pengganti untuk $targetName: $instructions",
+                        title = "[INSTRUKSI KEPALA PKBM] Penugasan Tutor Pendamping Tutorial",
+                        body = "Kepala PKBM menginstruksikan penugasan tutor pendamping untuk $targetName: $instructions",
                         targetRoles = listOf("teacher", "staff")
                     )
-                    "✓ Penugasan guru pengganti dan instruksi darurat KBM berhasil diterbitkan ke seluruh dewan guru."
+                    "Penugasan tutor pendamping tutorial berhasil diterbitkan ke dewan tutor pamong."
                 }
-                ExecutiveDecisionType.ISSUE_REMEDIAL_MANDATE -> {
+                ExecutiveDecisionType.ISSUE_KKTP_GUIDANCE -> {
                     notificationRepository.broadcastNotification(
                         classId = "",
-                        title = "[INSTRUKSI KEPSEK] Mandat Remedial & Intervensi KKM",
-                        body = "Instruksi Kepala Sekolah untuk mata pelajaran $targetName: $instructions. Harap segera susun jadwal remedial.",
+                        title = "[INSTRUKSI KEPALA PKBM] Penguatan Modul & Pendampingan KKTP",
+                        body = "Instruksi Kepala PKBM untuk mata pelajaran/modul $targetName: $instructions. Harap segera berikan bimbingan ketercapaian KKTP.",
                         targetRoles = listOf("teacher")
                     )
-                    "✓ Mandat remedial dan intervensi kurikulum berhasil dikirimkan ke guru mata pelajaran."
+                    "Instruksi penguatan ketercapaian KKTP berhasil disampaikan ke tutor pengampu modul."
                 }
                 ExecutiveDecisionType.ORDER_HOMEROOM_FOLLOW_UP -> {
                     notificationRepository.broadcastNotification(
                         classId = "",
-                        title = "[INSTRUKSI KEPSEK] Tindak Lanjut Wali Kelas & BP/BK",
-                        body = "Instruksi Pimpinan terkait $targetName: $instructions. Lakukan verifikasi dan pemanggilan orang tua bila diperlukan.",
+                        title = "[INSTRUKSI KEPALA PKBM] Tindak Lanjut Tutor Pamong",
+                        body = "Instruksi Pimpinan PKBM terkait $targetName: $instructions. Lakukan verifikasi dan pendampingan warga belajar.",
                         targetRoles = listOf("teacher", "staff")
                     )
-                    "✓ Instruksi tindak lanjut berhasil disampaikan ke seluruh wali kelas dan staf bimbingan konseling (BK)."
+                    "Instruksi pendampingan warga belajar berhasil disampaikan ke tutor pamong."
                 }
                 ExecutiveDecisionType.BROADCAST_PRINCIPAL_MEMO -> {
                     notificationRepository.broadcastNotification(
                         classId = "",
-                        title = "[MAKLUMAT KEPALA SEKOLAH] $title",
+                        title = "[MAKLUMAT KEPALA PKBM] $title",
                         body = instructions,
                         targetRoles = listOf("teacher", "student", "parent")
                     )
-                    "✓ Maklumat resmi Kepala Sekolah berhasil disiarkan ke seluruh civitas akademika sekolah."
+                    "Maklumat resmi Kepala PKBM berhasil disiarkan ke seluruh tutor, warga belajar, dan wali."
                 }
                 ExecutiveDecisionType.INSPECT_ROMBEL -> {
-                    "✓ Navigasi ke rombel $targetName untuk verifikasi data Dapodik dan presensi."
+                    "Navigasi ke rombel $targetName untuk supervisi modul dan presensi warga belajar."
                 }
             }
         }

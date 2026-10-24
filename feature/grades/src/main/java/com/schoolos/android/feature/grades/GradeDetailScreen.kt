@@ -76,7 +76,7 @@ fun GradeDetailScreen(
         topBar = {
             ExecutiveTopBar(
                 title = subjectName,
-                subtitle = if (isPrincipal) "Leger Nilai & Capaian KKM • ${DapodikPeriod.getFullPeriodLabel()}"
+                subtitle = if (isPrincipal) "Leger Nilai & Capaian KKTP • ${DapodikPeriod.getFullPeriodLabel()}"
                     else if (isTeacher) "Laporan Nilai • ${DapodikPeriod.getFullPeriodLabel()}"
                     else "Detail Nilai • ${DapodikPeriod.getFullPeriodLabel()}",
                 onBack = onBack,

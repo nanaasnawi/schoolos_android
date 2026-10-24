@@ -192,7 +192,7 @@ class AssignmentDetailViewModel @Inject constructor(
                                     xpEarned = res.xpEarned,
                                     newTotalXp = res.totalXp.toInt(),
                                     level = res.level,
-                                    title = if (res.alreadyAwarded) "Tugas Telah Dikumpulkan ⭐" else "Tugas Berhasil Dikumpulkan! 📝",
+                                    title = if (res.alreadyAwarded) "Tugas Telah Dikumpulkan" else "Tugas Berhasil Dikumpulkan!",
                                     description = if (res.alreadyAwarded) "Anda telah mengumpulkan tugas ini sebelumnya." else "Kerja hebat! Pengumpulan tugas mandiri memberi Anda +${res.xpEarned} XP.",
                                     actionType = "SUBMIT_ASSIGNMENT",
                                 )

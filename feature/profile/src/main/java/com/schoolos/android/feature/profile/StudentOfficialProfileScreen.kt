@@ -49,8 +49,8 @@ fun StudentOfficialProfileScreen(
         containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = "Biodata Resmi Siswa",
-                subtitle = "Data Sinkronisasi Dapodik Kemendikdasmen",
+                title = "Biodata Pokok Warga Belajar",
+                subtitle = "Sinkronisasi Pangkalan Data Pokok Pendidikan",
                 onBack = onBack,
                 actions = {
                     Box(
@@ -91,7 +91,7 @@ fun StudentOfficialProfileScreen(
                             strokeWidth = 3.dp
                         )
                         Text(
-                            text = "Memuat data biodata resmi Dapodik dari server...",
+                            text = "Memuat biodata pokok dari server...",
                             style = MaterialTheme.typography.bodyMedium,
                             color = TextSecondary,
                             textAlign = TextAlign.Center
@@ -357,7 +357,7 @@ fun StudentOfficialProfileScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = "🔒 Sesuai regulasi sistem, hanya Email dan Nomor Telepon yang dapat diperbarui secara mandiri oleh siswa pada halaman Profil. Perubahan identitas pokok, domisili, orang tua, dan data PIP wajib melalui Operator Dapodik Sekolah.",
+                                        text = "Sesuai regulasi sistem, hanya Email dan Nomor Telepon yang dapat diperbarui secara mandiri oleh warga belajar pada halaman Profil. Perubahan identitas pokok, domisili, orang tua, dan bantuan pendidikan wajib melalui Operator PKBM / Lembaga.",
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp, lineHeight = 16.sp),
                                         color = TextSecondary
                                     )
@@ -436,7 +436,7 @@ private fun OfficialHeroCard(
                         modifier = Modifier.size(15.dp)
                     )
                     Text(
-                        text = "Data Terverifikasi Dapodik",
+                        text = "Data Pokok Terverifikasi",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
                         color = NeonSuccess
                     )

@@ -203,7 +203,7 @@ fun MaterialAiGeneratorScreen(
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "✨ Generate Materi Modul Sekarang",
+                                    "Generate Materi Modul Sekarang",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -256,7 +256,7 @@ fun MaterialAiGeneratorScreen(
                                     border = BorderStroke(1.5.dp, if (selectedMode == "INFOGRAPHIC") EmeraldPrimary else colorScheme.outlineVariant)
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("🖼️ Infografis Majalah", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedMode == "INFOGRAPHIC") EmeraldPrimary else colorScheme.onSurface)
+                                        Text("Infografis Majalah", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedMode == "INFOGRAPHIC") EmeraldPrimary else colorScheme.onSurface)
                                         Spacer(Modifier.height(4.dp))
                                         Text("Visual dinamis, card intisari & ilustrasi kontekstual.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant, lineHeight = 14.sp)
                                     }
@@ -272,7 +272,7 @@ fun MaterialAiGeneratorScreen(
                                     border = BorderStroke(1.5.dp, if (selectedMode == "ARTICLE") CyanPrimary else colorScheme.outlineVariant)
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("📰 Naskah Berita / Modul", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedMode == "ARTICLE") CyanPrimary else colorScheme.onSurface)
+                                        Text("Naskah Berita / Modul", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedMode == "ARTICLE") CyanPrimary else colorScheme.onSurface)
                                         Spacer(Modifier.height(4.dp))
                                         Text("Sub-bab rinci, penjelasan ilmiah & rangkuman.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant, lineHeight = 14.sp)
                                     }
@@ -291,7 +291,7 @@ fun MaterialAiGeneratorScreen(
                                         shape = RoundedCornerShape(6.dp)
                                     ) {
                                         Text(
-                                            "🔒 Terkunci (Guru Pengampu)",
+                                            "Terkunci (Tutor Pengampu)",
                                             fontSize = 10.sp,
                                             color = EmeraldPrimary,
                                             fontWeight = FontWeight.SemiBold,
@@ -567,7 +567,7 @@ fun MaterialAiGeneratorScreen(
                                                 shape = RoundedCornerShape(6.dp)
                                             ) {
                                                 Text(
-                                                    if (res.mode == "INFOGRAPHIC") "🖼️ INFOGRAFIS MAJALAH" else "📰 ARTIKEL BERITA",
+                                                    if (res.mode == "INFOGRAPHIC") "INFOGRAFIS MAJALAH" else "ARTIKEL BERITA",
                                                     color = Color.White,
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,
@@ -635,7 +635,7 @@ fun MaterialAiGeneratorScreen(
                                                 shape = RoundedCornerShape(6.dp)
                                             ) {
                                                 Text(
-                                                    text = if (isImg) "🎨 GAMBAR / DIAGRAM" else "📝 TEKS / NARASI",
+                                                    text = if (isImg) "GAMBAR / DIAGRAM" else "TEKS / NARASI",
                                                     color = if (isImg) CyanPrimary else EmeraldPrimary,
                                                     fontSize = 10.sp,
                                                     fontWeight = FontWeight.Bold,

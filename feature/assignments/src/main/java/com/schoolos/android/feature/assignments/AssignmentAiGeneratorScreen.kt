@@ -23,8 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.AiGenerationLoadingOverlay
-import com.schoolos.android.core.designsystem.AiGenerationType
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.GeneratedCurriculumQuestion
 import com.schoolos.android.domain.model.GeneratedCurriculumResult
@@ -213,7 +212,7 @@ fun AssignmentAiGeneratorScreen(
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "✨ Mulai Susun Tugas Otomatis",
+                                    "Mulai Susun Tugas Otomatis",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -266,7 +265,7 @@ fun AssignmentAiGeneratorScreen(
                                         shape = RoundedCornerShape(6.dp)
                                     ) {
                                         Text(
-                                            "🔒 Terkunci (Guru Pengampu)",
+                                            "Terkunci (Tutor Pengampu)",
                                             fontSize = 10.sp,
                                             color = EmeraldPrimary,
                                             fontWeight = FontWeight.SemiBold,
@@ -442,7 +441,7 @@ fun AssignmentAiGeneratorScreen(
                                     )
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("📚 Opsi A: Terstruktur", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "STRUCTURED_QUESTIONS") EmeraldPrimary else colorScheme.onSurface)
+                                        Text("Opsi A: Terstruktur", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "STRUCTURED_QUESTIONS") EmeraldPrimary else colorScheme.onSurface)
                                         Spacer(Modifier.height(4.dp))
                                         Text("Kombinasi soal PG otomatis dan uraian analitis.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                                     }
@@ -460,7 +459,7 @@ fun AssignmentAiGeneratorScreen(
                                     )
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("📝 Opsi B: Tugas Mandiri (PR)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "HOMEWORK_PR") EmeraldPrimary else colorScheme.onSurface)
+                                        Text("Opsi B: Tugas Mandiri (PR)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "HOMEWORK_PR") EmeraldPrimary else colorScheme.onSurface)
                                         Spacer(Modifier.height(4.dp))
                                         Text("Tugas mandiri, petunjuk foto lembar kerja & rubrik.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                                     }
@@ -636,7 +635,7 @@ fun AssignmentAiGeneratorScreen(
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Column {
-                                        Text("🎨 Sertakan Soal Bergambar / Diagram", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Text("Sertakan Soal Bergambar / Diagram", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                         Text("Ilustrasi edukatif Kurikulum Merdeka (sains, bagan, grafik)", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                                     }
                                 }
@@ -812,8 +811,8 @@ fun AssignmentAiGeneratorScreen(
                                                     Text("$essayCount Soal Essay", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                                                 }
                                             }
-                                            Surface(color = Color(0xFFF59E0B), shape = RoundedCornerShape(6.dp)) {
-                                                Text("KKM: ${res.passingScore}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                            Surface(color = NeonWarning, shape = RoundedCornerShape(6.dp)) {
+                                                Text("KKTP: ${res.passingScore}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                                             }
                                         }
 

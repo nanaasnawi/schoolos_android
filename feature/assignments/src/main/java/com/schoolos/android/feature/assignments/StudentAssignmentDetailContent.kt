@@ -28,9 +28,12 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Grade
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Send
@@ -209,7 +212,7 @@ fun StudentAssignmentDetailContent(
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
-                            text = "Tanya Guru 💬",
+                            text = "Tanya Tutor Pamong",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
@@ -303,11 +306,11 @@ private fun AssignmentStatusCard(
 ) {
     val isClosed = !assignment.isActive || assignment.status.lowercase() in listOf("closed", "archived")
     val (accentColor, statusLabel) = when {
-        isGraded -> Pair(NeonSuccess, "Dinilai ✓")
-        isSubmitted -> Pair(NeonBlue, "Dikumpulkan ✓")
+        isGraded -> Pair(NeonSuccess, "Dinilai")
+        isSubmitted -> Pair(NeonBlue, "Dikumpulkan")
         isClosed -> Pair(TextTertiary, "Ditutup")
-        dueInfo?.label?.contains("Terlambat") == true -> Pair(NeonError, "Terlambat!")
-        dueInfo?.label?.contains("Hari ini") == true -> Pair(NeonWarning, "Hari Terakhir!")
+        dueInfo?.label?.contains("Terlambat") == true -> Pair(NeonError, "Terlambat")
+        dueInfo?.label?.contains("Hari ini") == true -> Pair(NeonWarning, "Hari Terakhir")
         else -> Pair(StudentNeon, "Aktif")
     }
 
@@ -764,11 +767,11 @@ private fun MaterialRow(
     index: Int,
     onOpenMaterial: (String) -> Unit,
 ) {
-    val (matColor, matEmoji) = when (material.materialType) {
-        MaterialType.VIDEO -> Pair(NeonError, "🎬")
-        MaterialType.IMAGE -> Pair(NeonWarning, "🖼️")
-        MaterialType.DOCUMENT -> Pair(NeonBlue, "📄")
-        else -> Pair(StudentNeon, "📁")
+    val (matColor, matIcon) = when (material.materialType) {
+        MaterialType.VIDEO -> Pair(NeonError, Icons.Default.PlayCircle)
+        MaterialType.IMAGE -> Pair(NeonWarning, Icons.Default.Image)
+        MaterialType.DOCUMENT -> Pair(NeonBlue, Icons.Default.Description)
+        else -> Pair(StudentNeon, Icons.Default.Folder)
     }
 
     Box(
@@ -792,7 +795,7 @@ private fun MaterialRow(
                     .border(1.dp, matColor.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(matEmoji, fontSize = 16.sp)
+                Icon(imageVector = matIcon, contentDescription = null, tint = matColor, modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.width(10.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -1672,7 +1675,7 @@ private fun SubmittedMultipleChoiceCard(
                             ) {
                                 Text(
                                     text = if (isGraded) {
-                                        if (isCorrect == true) "✓ Pilihan Kamu" else "✗ Pilihan Kamu"
+                                        if (isCorrect == true) "Pilihan Kamu (Benar)" else "Pilihan Kamu (Salah)"
                                     } else "Jawaban Kamu",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
@@ -1687,7 +1690,7 @@ private fun SubmittedMultipleChoiceCard(
                                     .padding(horizontal = 6.dp, vertical = 3.dp)
                             ) {
                                 Text(
-                                    text = "★ Kunci Jawaban",
+                                    text = "Kunci Jawaban",
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = NeonSuccess
@@ -1900,7 +1903,7 @@ private fun QuestionsSubmissionCard(
                             color = TextPrimary
                         )
                         Text(
-                            text = if (allAnswered) "✓ Semua soal telah dijawab" else "$answeredCount dari $totalQuestions soal telah dijawab",
+                            text = if (allAnswered) "Semua soal telah dijawab" else "$answeredCount dari $totalQuestions soal telah dijawab",
                             fontSize = 10.sp,
                             color = if (allAnswered) NeonSuccess else NeonWarning
                         )

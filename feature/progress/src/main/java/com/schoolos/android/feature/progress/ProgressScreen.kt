@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.AssignmentLate
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -197,7 +198,7 @@ private fun ProgressContent(
                     total = progress.lessonTotal,
                     insight = lessonInsight,
                     color = StudentNeon,
-                    emoji = "📖",
+                    icon = Icons.Default.Book,
                 )
             }
             item {
@@ -207,7 +208,7 @@ private fun ProgressContent(
                     total = progress.assignmentTotal,
                     insight = assignmentInsight,
                     color = NeonBlue,
-                    emoji = "📝",
+                    icon = Icons.AutoMirrored.Filled.Assignment,
                 )
             }
             item {
@@ -217,7 +218,7 @@ private fun ProgressContent(
                     total = progress.sessionTotal,
                     insight = sessionInsight,
                     color = NeonSuccess,
-                    emoji = "🗓️",
+                    icon = Icons.Default.CalendarMonth,
                 )
             }
 
@@ -241,10 +242,10 @@ private fun ProgressContent(
 
             item {
                 val lessonRemaining = (progress.lessonTotal - progress.lessonCompleted).coerceAtLeast(0)
-                val lessonSub = if (lessonRemaining > 0) "$lessonRemaining modul tersisa" else "✓ 100% Selesai"
+                val lessonSub = if (lessonRemaining > 0) "$lessonRemaining modul tersisa" else "100% Selesai"
 
                 val assignmentRemaining = (progress.assignmentTotal - progress.assignmentCompleted).coerceAtLeast(0)
-                val assignmentSub = if (assignmentRemaining > 0) "⚠️ $assignmentRemaining belum dikirim" else "✓ Semua diserahkan"
+                val assignmentSub = if (assignmentRemaining > 0) "$assignmentRemaining belum dikirim" else "Semua diserahkan"
 
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -255,7 +256,7 @@ private fun ProgressContent(
                         completed = progress.lessonCompleted,
                         total = progress.lessonTotal,
                         subtitle = lessonSub,
-                        emoji = "📖",
+                        icon = Icons.Default.Book,
                         color = StudentNeon,
                         onClick = onNavigateToMaterials,
                         modifier = Modifier.weight(1f),
@@ -266,7 +267,7 @@ private fun ProgressContent(
                         completed = progress.assignmentCompleted,
                         total = progress.assignmentTotal,
                         subtitle = assignmentSub,
-                        emoji = "📝",
+                        icon = Icons.AutoMirrored.Filled.Assignment,
                         color = NeonBlue,
                         onClick = onNavigateToAssignments,
                         modifier = Modifier.weight(1f),
@@ -276,7 +277,7 @@ private fun ProgressContent(
 
             item {
                 val quizRemaining = (progress.quizTotal - progress.quizCompleted).coerceAtLeast(0)
-                val quizSub = if (quizRemaining > 0) "$quizRemaining kuis evaluasi" else "✓ Tuntas dievaluasi"
+                val quizSub = if (quizRemaining > 0) "$quizRemaining kuis evaluasi" else "Tuntas dievaluasi"
 
                 val sessionPct = if (progress.sessionTotal > 0) (progress.sessionAttended * 100 / progress.sessionTotal) else 100
                 val sessionSub = if (sessionPct >= 90) "Kehadiran sangat aktif" else "$sessionPct% Presensi kelas"
@@ -290,7 +291,7 @@ private fun ProgressContent(
                         completed = progress.quizCompleted,
                         total = progress.quizTotal,
                         subtitle = quizSub,
-                        emoji = "🎯",
+                        icon = Icons.Default.Quiz,
                         color = NeonSuccess,
                         onClick = onNavigateToQuizzes,
                         modifier = Modifier.weight(1f),
@@ -301,7 +302,7 @@ private fun ProgressContent(
                         completed = progress.sessionAttended,
                         total = progress.sessionTotal,
                         subtitle = sessionSub,
-                        emoji = "🗓️",
+                        icon = Icons.Default.CalendarMonth,
                         color = NeonWarning,
                         onClick = null,
                         modifier = Modifier.weight(1f),
@@ -528,7 +529,7 @@ private fun StudentBentoProgressTile(
     completed: Int,
     total: Int,
     subtitle: String,
-    emoji: String,
+    icon: ImageVector,
     color: Color,
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -574,7 +575,12 @@ private fun StudentBentoProgressTile(
                         .border(1.dp, color.copy(alpha = if (isDark) 0.35f else 0.22f), RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = emoji, fontSize = 17.sp)
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = color,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
 
                 Box(
@@ -682,16 +688,16 @@ private fun StudentActionableInsightsCard(
             // Item 1: Prioritas Tugas
             if (missingAssignments > 0) {
                 InsightRow(
-                    emoji = "📝",
+                    icon = Icons.AutoMirrored.Filled.Assignment,
                     iconColor = errorColor,
                     title = "$missingAssignments Tugas Perlu Diselesaikan",
-                    description = "Ada tugas aktif yang belum dikumpulkan. Selesaikan sebelum tenggat untuk menjaga nilai semester.",
+                    description = "Ada tugas aktif yang belum dikumpulkan. Selesaikan sebelum tenggat untuk menjaga ketuntasan KKTP.",
                     actionText = "Buka Daftar Tugas →",
                     onAction = onNavigateToAssignments,
                 )
             } else {
                 InsightRow(
-                    emoji = "✅",
+                    icon = Icons.Default.CheckCircle,
                     iconColor = successColor,
                     title = "Semua Tugas Tuntas Dikumpulkan",
                     description = "Seluruh penugasan pada semester ini telah diserahkan dengan lengkap.",
@@ -705,16 +711,16 @@ private fun StudentActionableInsightsCard(
             // Item 2: Penguatan Materi
             if (missingLessons > 0) {
                 InsightRow(
-                    emoji = "📖",
+                    icon = Icons.Default.Book,
                     iconColor = lessonColor,
                     title = "$missingLessons Modul Materi Belum Dipelajari",
-                    description = "Buka materi digital dan rangkuman modul untuk persiapan menghadapi kuis dan ujian.",
+                    description = "Buka materi digital dan rangkuman modul untuk persiapan evaluasi KKTP.",
                     actionText = "Buka Bahan Ajar →",
                     onAction = onNavigateToMaterials,
                 )
             } else {
                 InsightRow(
-                    emoji = "✅",
+                    icon = Icons.Default.CheckCircle,
                     iconColor = successColor,
                     title = "Modul Ajar Tuntas Dipelajari",
                     description = "Kamu telah menyelesaikan semua bahan materi digital semester ini.",
@@ -739,7 +745,7 @@ private fun StudentActionableInsightsCard(
             }
 
             InsightRow(
-                emoji = "📈",
+                icon = Icons.AutoMirrored.Filled.TrendingUp,
                 iconColor = presensiColor,
                 title = presensiTitle,
                 description = presensiDesc,
@@ -752,7 +758,7 @@ private fun StudentActionableInsightsCard(
 
 @Composable
 private fun InsightRow(
-    emoji: String,
+    icon: ImageVector,
     iconColor: Color,
     title: String,
     description: String,
@@ -772,7 +778,12 @@ private fun InsightRow(
                 .border(1.dp, iconColor.copy(alpha = if (isDark) 0.35f else 0.22f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = emoji, fontSize = 17.sp)
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = iconColor,
+                modifier = Modifier.size(18.dp)
+            )
         }
 
         Spacer(Modifier.width(12.dp))
@@ -949,7 +960,12 @@ private fun CriticalMonitoringCard(
                     .background(iconBg),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(text = if (isAlert) "🚨" else "✅", fontSize = 22.sp)
+                Icon(
+                    imageVector = if (isAlert) Icons.Default.Warning else Icons.Default.CheckCircle,
+                    contentDescription = null,
+                    tint = if (isAlert) NeonError else NeonSuccess,
+                    modifier = Modifier.size(22.dp)
+                )
             }
             Spacer(Modifier.width(14.dp))
             Column(modifier = Modifier.weight(1f)) {
@@ -979,7 +995,7 @@ private fun ParentMonitoringCard(
     total: Int,
     insight: String,
     color: Color,
-    emoji: String = "📊",
+    icon: ImageVector = Icons.Default.Assessment,
 ) {
     val pct = (completed.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f)
 
@@ -1000,13 +1016,18 @@ private fun ParentMonitoringCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(30.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(color.copy(alpha = 0.12f))
-                            .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
+                            .border(1.dp, color.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text(text = emoji, fontSize = 14.sp)
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                     Spacer(Modifier.width(10.dp))
                     Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
@@ -1066,7 +1087,7 @@ private fun TeacherRemarksCard(progress: Progress) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(teacherName, fontWeight = FontWeight.Black, fontSize = 13.sp, color = TextPrimary)
                             Spacer(Modifier.width(4.dp))
-                            Text("✓", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
+                            Icon(Icons.Default.CheckCircle, null, tint = NeonBlue, modifier = Modifier.size(13.dp))
                         }
                         Text("Pengampu • $className", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Medium)
                     }

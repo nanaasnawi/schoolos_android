@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -408,7 +409,7 @@ fun AutoGenerateQuizDialog(
 
                     QuizFormatOptionCard(
                         title = "Ujian Tengah / Akhir Semester",
-                        subtitle = "$numQuestions Soal komprehensif (KKM 75, durasi 90 mnt)",
+                        subtitle = "$numQuestions Soal komprehensif (KKTP 75, durasi 90 mnt)",
                         isSelected = selectedType == "EXAM_MONTHLY",
                         onClick = { selectedType = "EXAM_MONTHLY" }
                     )
@@ -514,7 +515,12 @@ private fun QuizFormatOptionCard(
                 )
             }
             if (isSelected) {
-                Text(text = "✓", fontSize = 14.sp, color = colorScheme.primary, fontWeight = FontWeight.Black)
+                Icon(
+                    imageVector = Icons.Default.Check,
+                    contentDescription = null,
+                    tint = colorScheme.primary,
+                    modifier = Modifier.size(16.dp)
+                )
             }
         }
     }

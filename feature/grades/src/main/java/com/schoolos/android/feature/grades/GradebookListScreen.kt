@@ -58,10 +58,10 @@ fun GradebookListScreen(
         containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = if (isPrincipal) "Leger Nilai Sekolah" else "Buku Nilai",
-                subtitle = if (isPrincipal) "Monitoring capaian KKM seluruh rombel"
-                    else if (isTeacher && state.className.isNotBlank()) "Wali Kelas • Kelas ${state.className}"
-                    else "Rekapitulasi Nilai Akademik",
+                title = if (isPrincipal) "Leger Capaian Belajar PKBM" else "Buku Nilai",
+                subtitle = if (isPrincipal) "Monitoring capaian KKTP seluruh rombel PKBM"
+                    else if (isTeacher && state.className.isNotBlank()) "Tutor Pamong • Rombel ${state.className}"
+                    else "Rekapitulasi Capaian Modul",
                 onBack = onBack,
             )
         }
@@ -90,32 +90,34 @@ fun GradebookListScreen(
                         item {
                             StudentGradeHeroHeader(state.subjects)
                         }
-                        item {
-                            val filters = listOf("Semua Mapel", "Wajib", "MIPA", "Muatan Lokal")
-                            LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
-                            ) {
-                                items(filters) { filter ->
-                                    val isSelected = filter == selectedFilter
-                                    Box(
-                                        modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) CosmicSurface2 else CosmicNavy)
-                                            .border(
-                                                0.5.dp,
-                                                if (isSelected) GlassBorder2 else GlassBorder,
-                                                RoundedCornerShape(8.dp),
+                        val dynamicCategories = (listOf("Semua Mapel") + state.subjects.map { it.category }.filter { it.isNotBlank() && it != "Wajib" }).distinct()
+                        if (dynamicCategories.size > 1) {
+                            item {
+                                LazyRow(
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                ) {
+                                    items(dynamicCategories) { filter ->
+                                        val isSelected = filter == selectedFilter
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(if (isSelected) CosmicSurface2 else CosmicNavy)
+                                                .border(
+                                                    0.5.dp,
+                                                    if (isSelected) GlassBorder2 else GlassBorder,
+                                                    RoundedCornerShape(8.dp),
+                                                )
+                                                .clickable { selectedFilter = filter }
+                                                .padding(horizontal = 12.dp, vertical = 6.dp),
+                                        ) {
+                                            Text(
+                                                filter,
+                                                fontSize = 12.sp,
+                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                color = if (isSelected) TextPrimary else TextTertiary,
                                             )
-                                            .clickable { selectedFilter = filter }
-                                            .padding(horizontal = 12.dp, vertical = 6.dp),
-                                    ) {
-                                        Text(
-                                            filter,
-                                            fontSize = 12.sp,
-                                            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                            color = if (isSelected) TextPrimary else TextTertiary,
-                                        )
+                                        }
                                     }
                                 }
                             }
@@ -149,15 +151,8 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
     val totalGraded = subjects.sumOf { it.gradedComponentCount }
     val totalComponents = subjects.sumOf { it.componentCount }
 
-    val kkm = subjects.firstOrNull()?.passingThreshold ?: 75.0
-    val (predicate, predicateDesc) = when {
-        avgScore >= kkm + 10.0 -> Pair("Predikat A", "Sangat Baik")
-        avgScore >= kkm -> Pair("Predikat B", "Baik")
-        avgScore >= kkm - 10.0 -> Pair("Predikat C", "Cukup")
-        avgScore >= kkm - 20.0 -> Pair("Predikat D", "Kurang")
-        avgScore > 0.0 -> Pair("Predikat E", "Perlu Bimbingan")
-        else -> Pair("-", "Belum Ada Nilai")
-    }
+    val statusText = if (gradedSubjects.isNotEmpty()) "Terdata" else "Belum Dinilai"
+    val statusDesc = if (gradedSubjects.isNotEmpty()) "${gradedSubjects.size} dari ${subjects.size} Mapel Dinilai" else "Menunggu evaluasi modul"
 
     Box(
         modifier = Modifier
@@ -182,7 +177,7 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        "PERFORMA AKADEMIK",
+                        "CAPAIAN MODUL BELAJAR",
                         color = TextSecondary,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
@@ -193,11 +188,16 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(NeonSuccess.copy(alpha = 0.12f))
-                        .border(0.5.dp, NeonSuccess.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                        .background(if (gradedSubjects.isNotEmpty()) StudentNeon.copy(alpha = 0.12f) else CosmicSurface2)
+                        .border(0.5.dp, if (gradedSubjects.isNotEmpty()) StudentNeon.copy(alpha = 0.25f) else GlassBorder, RoundedCornerShape(6.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
-                    Text(predicate, color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        statusText,
+                        color = if (gradedSubjects.isNotEmpty()) StudentNeon else TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
                 }
             }
 
@@ -205,7 +205,7 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
 
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
-                    text = if (gradedSubjects.isNotEmpty()) "%.1f".format(avgScore) else "-",
+                    text = if (gradedSubjects.isNotEmpty()) "%.1f".format(java.util.Locale.US, avgScore) else "—",
                     color = TextPrimary,
                     fontSize = 32.sp,
                     fontWeight = FontWeight.Bold,
@@ -213,7 +213,7 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
                 )
                 Spacer(Modifier.width(10.dp))
                 Text(
-                    text = predicateDesc,
+                    text = statusDesc,
                     color = TextTertiary,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Normal,

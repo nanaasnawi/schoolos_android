@@ -379,8 +379,8 @@ private fun EmptyAssignmentState(selectedTab: String) {
             TextTertiary
         )
         else -> Triple(
-            "Semua Tugas Beres! 🎉",
-            "Belum ada penugasan baru dari bapak/ibu guru. Waktunya istirahat atau pelajari materi berikutnya.",
+            "Semua Tugas Selesai",
+            "Belum ada penugasan baru dari tutor pamong. Waktunya istirahat atau pelajari modul berikutnya.",
             NeonSuccess
         )
     }

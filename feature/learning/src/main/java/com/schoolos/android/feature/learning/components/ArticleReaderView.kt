@@ -72,7 +72,7 @@ fun ArticleReaderView(
                     Spacer(Modifier.width(8.dp))
                     Column {
                         Text(
-                            text = "📖 Naskah Artikel & Materi Teks",
+                            text = "Naskah Artikel & Materi Teks",
                             color = NeonSuccess,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
@@ -98,7 +98,7 @@ fun ArticleReaderView(
                     modifier = Modifier.clickable {
                         clipboardManager.setText(AnnotatedString(content))
                         copiedAll = true
-                        Toast.makeText(context, "✓ Seluruh naskah artikel disalin ke papan klip!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Seluruh naskah artikel disalin ke papan klip!", Toast.LENGTH_SHORT).show()
                     }
                 ) {
                     Row(
@@ -160,7 +160,7 @@ fun ArticleReaderView(
                                 .clickable {
                                     clipboardManager.setText(AnnotatedString(p.trim()))
                                     paragraphCopied = true
-                                    Toast.makeText(context, "✓ Paragraf disalin ke papan klip", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Paragraf disalin ke papan klip", Toast.LENGTH_SHORT).show()
                                 }
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {

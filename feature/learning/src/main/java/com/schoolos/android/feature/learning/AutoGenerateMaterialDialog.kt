@@ -182,7 +182,7 @@ fun AutoGenerateMaterialDialog(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "🖼️ Infografis Majalah",
+                                    text = "Infografis Majalah",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (selectedMode == "INFOGRAPHIC") colorScheme.onPrimaryContainer else colorScheme.onSurface
@@ -211,7 +211,7 @@ fun AutoGenerateMaterialDialog(
                                 verticalArrangement = Arrangement.spacedBy(2.dp)
                             ) {
                                 Text(
-                                    text = "📰 Artikel Berita",
+                                    text = "Artikel Berita",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (selectedMode == "ARTICLE") colorScheme.onPrimaryContainer else colorScheme.onSurface
@@ -376,7 +376,12 @@ fun AutoGenerateMaterialDialog(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(text = "⚡", fontSize = 14.sp)
+                        Icon(
+                            Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = colorScheme.secondary,
+                            modifier = Modifier.size(16.dp)
+                        )
                         Text(
                             text = "AI Assistant: Menyusun narasi, headline, callout dan visual ilustrasi materi siap ajar.",
                             fontSize = 11.sp,

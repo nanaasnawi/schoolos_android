@@ -9,6 +9,7 @@ import com.schoolos.android.core.common.Settings
 import com.schoolos.android.core.common.SettingsManager
 import com.schoolos.android.domain.model.GamificationStatus
 import com.schoolos.android.domain.model.OfficialStudentBiodata
+import com.schoolos.android.domain.model.OfficialTeacherBiodata
 import com.schoolos.android.domain.model.User
 import com.schoolos.android.domain.repository.AuthRepository
 import com.schoolos.android.domain.repository.GamificationRepository
@@ -49,10 +50,14 @@ data class ProfileUiState(
     // Gamification Level & XP
     val gamificationStatus: GamificationStatus? = null,
     val gamificationLoading: Boolean = false,
-    // Verified Dapodik Official Biodata
+    // Verified Dapodik Official Biodata (Student)
     val officialBiodata: OfficialStudentBiodata? = null,
     val officialBiodataLoading: Boolean = false,
     val officialBiodataError: String? = null,
+    // Verified Dapodik Official Biodata (Teacher / GTK)
+    val officialTeacherBiodata: OfficialTeacherBiodata? = null,
+    val officialTeacherBiodataLoading: Boolean = false,
+    val officialTeacherBiodataError: String? = null,
 )
 
 @HiltViewModel
@@ -148,7 +153,29 @@ class ProfileViewModel @Inject constructor(
                     .onFailure { err ->
                         _state.value = _state.value.copy(
                             officialBiodataLoading = false,
-                            officialBiodataError = err.localizedMessage ?: "Gagal memuat biodata resmi Dapodik.",
+                            officialBiodataError = err.localizedMessage ?: "Gagal memuat biodata pokok resmi.",
+                        )
+                    }
+            }
+        }
+    }
+
+    fun loadTeacherOfficialBiodata() {
+        viewModelScope.launch {
+            if (authManager.isLoggedIn) {
+                _state.value = _state.value.copy(officialTeacherBiodataLoading = true, officialTeacherBiodataError = null)
+                authRepository.getTeacherOfficialBiodata()
+                    .onSuccess { biodata ->
+                        _state.value = _state.value.copy(
+                            officialTeacherBiodata = biodata,
+                            officialTeacherBiodataLoading = false,
+                            officialTeacherBiodataError = null,
+                        )
+                    }
+                    .onFailure { err ->
+                        _state.value = _state.value.copy(
+                            officialTeacherBiodataLoading = false,
+                            officialTeacherBiodataError = err.localizedMessage ?: "Gagal memuat profil resmi GTK.",
                         )
                     }
             }

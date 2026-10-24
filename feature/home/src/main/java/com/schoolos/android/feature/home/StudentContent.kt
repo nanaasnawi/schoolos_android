@@ -30,9 +30,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Book
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.School
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
@@ -190,17 +192,22 @@ fun LazyListScope.studentContent(
                         .padding(28.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Text("🏝️", fontSize = 32.sp)
+                    Icon(
+                        imageVector = Icons.Default.School,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(32.dp)
+                    )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        text = "Tidak Ada Kelas Hari Ini",
+                        text = "Tidak Ada Sesi Tutorial Hari Ini",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary,
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        text = "Nikmati waktu istirahat atau pelajari materi berikutnya.",
+                        text = "Manfaatkan waktu untuk belajar mandiri atau membaca modul ajar.",
                         fontSize = 12.sp,
                         color = TextTertiary,
                     )
@@ -248,18 +255,8 @@ fun LazyListScope.studentContent(
     item {
         val avgNum = gradeAverage.toDoubleOrNull() ?: 0.0
         val hasGrade = gradeAverage != "-" && avgNum > 0.0
-        val predicateLabel = when {
-            !hasGrade -> "Semester Berjalan"
-            avgNum >= 85.0 -> "Predikat A • Sangat Baik"
-            avgNum >= 75.0 -> "Predikat B • Tuntas KKM"
-            else -> "Predikat C • Perlu Penguatan"
-        }
-        val predicateColor = when {
-            !hasGrade -> TextTertiary
-            avgNum >= 85.0 -> NeonSuccess
-            avgNum >= 75.0 -> NeonBlue
-            else -> NeonWarning
-        }
+        val statusLabel = if (hasGrade) "Capaian Belajar" else "Semester Berjalan"
+        val statusColor = if (hasGrade) StudentNeon else TextTertiary
 
         Box(
             modifier = Modifier
@@ -292,13 +289,13 @@ fun LazyListScope.studentContent(
                             modifier = Modifier
                                 .size(28.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(predicateColor.copy(alpha = 0.14f)),
+                                .background(statusColor.copy(alpha = 0.14f)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Assessment,
                                 contentDescription = null,
-                                tint = predicateColor,
+                                tint = statusColor,
                                 modifier = Modifier.size(16.dp),
                             )
                         }
@@ -322,21 +319,21 @@ fun LazyListScope.studentContent(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(predicateColor.copy(alpha = 0.12f))
-                            .border(0.75.dp, predicateColor.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
+                            .background(statusColor.copy(alpha = 0.12f))
+                            .border(0.75.dp, statusColor.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
                             .padding(horizontal = 10.dp, vertical = 4.dp),
                     ) {
                         Text(
-                            text = predicateLabel,
+                            text = statusLabel,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = predicateColor,
+                            color = statusColor,
                             maxLines = 1,
                         )
                     }
                 }
 
-                // Core Metric Row: Big Score on Left + Circular Grade Gauge on Right
+                // Core Metric Row: Big Score on Left + Circular Gauge on Right
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -364,7 +361,7 @@ fun LazyListScope.studentContent(
                         }
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = if (hasGrade) gradeStatus else "Belum ada nilai yang diinput guru",
+                            text = if (hasGrade) gradeStatus else "Belum ada nilai yang diinput tutor",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Normal,
                             color = TextSecondary,
@@ -373,42 +370,35 @@ fun LazyListScope.studentContent(
                         )
                     }
 
-                    // Visual Letter-Grade Gauge Meter
+                    // Visual Progress Gauge
                     Box(
                         modifier = Modifier.size(56.dp),
                         contentAlignment = Alignment.Center,
                     ) {
+                        val progress = if (hasGrade) (avgNum / 100.0).toFloat().coerceIn(0f, 1f) else 0f
                         androidx.compose.material3.CircularProgressIndicator(
-                            progress = { if (hasGrade) (avgNum / 100.0).toFloat().coerceIn(0f, 1f) else 0f },
+                            progress = { progress },
                             modifier = Modifier.fillMaxSize(),
-                            color = predicateColor,
+                            color = if (hasGrade) StudentNeon else TextTertiary,
                             trackColor = CosmicSurface2,
                             strokeWidth = 5.dp,
                             strokeCap = androidx.compose.ui.graphics.StrokeCap.Round,
                         )
-                        val letterGrade = when {
-                            !hasGrade -> "-"
-                            avgNum >= 90.0 -> "A"
-                            avgNum >= 80.0 -> "B"
-                            avgNum >= 70.0 -> "C"
-                            avgNum >= 60.0 -> "D"
-                            else -> "E"
-                        }
-                        Text(
-                            text = letterGrade,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Black,
-                            color = predicateColor,
+                        Icon(
+                            imageVector = if (hasGrade) Icons.Default.CheckCircle else Icons.Default.School,
+                            contentDescription = null,
+                            tint = if (hasGrade) StudentNeon else TextTertiary,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
                 }
 
-                // Balanced 2-Card Micro-Bento Row (KKM Status + Top Subject or XP)
+                // Balanced 2-Card Micro-Bento Row (KKTP Status + Top Subject or XP)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    // Card 1: KKM Compliance
+                    // Card 1: KKTP Compliance
                     Row(
                         modifier = Modifier
                             .weight(1f)
@@ -422,29 +412,29 @@ fun LazyListScope.studentContent(
                             modifier = Modifier
                                 .size(24.dp)
                                 .clip(CircleShape)
-                                .background(if (avgNum >= 75.0) NeonSuccess.copy(alpha = 0.15f) else NeonWarning.copy(alpha = 0.15f)),
+                                .background((if (hasGrade) NeonSuccess else NeonBlue).copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(
-                                text = if (avgNum >= 75.0) "✓" else "!",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black,
-                                color = if (avgNum >= 75.0) NeonSuccess else NeonWarning,
+                            Icon(
+                                imageVector = if (hasGrade) Icons.Default.CheckCircle else Icons.AutoMirrored.Filled.MenuBook,
+                                contentDescription = null,
+                                tint = if (hasGrade) NeonSuccess else NeonBlue,
+                                modifier = Modifier.size(13.dp),
                             )
                         }
                         Spacer(Modifier.width(8.dp))
                         Column {
                             Text(
-                                text = "STANDAR KKM",
+                                text = "STATUS CAPAIAN",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TextTertiary,
                             )
                             Text(
-                                text = if (avgNum >= 75.0) "Tuntas KKM (75)" else "Perlu Penguatan",
+                                text = if (hasGrade) "Aktif Dievaluasi" else "Modul Berjalan",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (avgNum >= 75.0) NeonSuccess else NeonWarning,
+                                color = if (hasGrade) NeonSuccess else TextSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -470,17 +460,17 @@ fun LazyListScope.studentContent(
                                     .background(StudentNeon.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(
-                                    text = "★",
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = StudentNeon,
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = StudentNeon,
+                                    modifier = Modifier.size(13.dp),
                                 )
                             }
                             Spacer(Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = "MAPEL TERTINGGI",
+                                    text = "MODUL TERTINGGI",
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = TextTertiary,
@@ -512,9 +502,11 @@ fun LazyListScope.studentContent(
                                     .background(StudentNeon.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Text(
-                                    text = "⭐",
-                                    fontSize = 11.sp,
+                                Icon(
+                                    imageVector = Icons.Default.Star,
+                                    contentDescription = null,
+                                    tint = StudentNeon,
+                                    modifier = Modifier.size(13.dp),
                                 )
                             }
                             Spacer(Modifier.width(8.dp))
@@ -545,7 +537,7 @@ fun LazyListScope.studentContent(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                     ) {
                         topGradeSubjects.take(2).forEachIndexed { idx, subj ->
-                            val rankIcon = if (idx == 0) "🥇" else "🥈"
+                            val rankIcon = "#${idx + 1}"
                             Row(
                                 modifier = Modifier
                                     .weight(1f)
@@ -1189,7 +1181,12 @@ fun WeeklyActivityChartCard(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
-                            Text(text = "🔥", fontSize = 11.sp)
+                            Icon(
+                                imageVector = Icons.Default.Assessment,
+                                contentDescription = null,
+                                tint = NeonWarning,
+                                modifier = Modifier.size(12.dp)
+                            )
                             Column {
                                 Text(
                                     text = "Hari Puncak",
@@ -1216,7 +1213,7 @@ fun WeeklyActivityChartCard(
             ) {
                 // 1. Materi (Emerald)
                 ActivityCategoryPill(
-                    iconText = "📖",
+                    icon = Icons.Default.Book,
                     label = "Materi",
                     sub = "Modul & Video",
                     count = totalMaterials,
@@ -1226,7 +1223,7 @@ fun WeeklyActivityChartCard(
                 )
                 // 2. Tugas (Neon Blue)
                 ActivityCategoryPill(
-                    iconText = "📝",
+                    icon = Icons.AutoMirrored.Filled.Assignment,
                     label = "Tugas",
                     sub = "PR & Proyek",
                     count = totalAssignments,
@@ -1236,9 +1233,9 @@ fun WeeklyActivityChartCard(
                 )
                 // 3. Kuis & CBT (Amber)
                 ActivityCategoryPill(
-                    iconText = "🎯",
+                    icon = Icons.Default.Quiz,
                     label = "Kuis & CBT",
-                    sub = "Ujian & PTS",
+                    sub = "Evaluasi KKTP",
                     count = totalQuizzes,
                     accentColor = NeonWarning,
                     modifier = Modifier.weight(1f),
@@ -1287,7 +1284,7 @@ fun WeeklyActivityChartCard(
 
 @Composable
 private fun ActivityCategoryPill(
-    iconText: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     label: String,
     sub: String,
     count: Int,
@@ -1309,7 +1306,12 @@ private fun ActivityCategoryPill(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(text = iconText, fontSize = 12.sp)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(16.dp)
+                )
                 Text(
                     text = "$count",
                     fontSize = 14.sp,
@@ -1422,11 +1424,7 @@ private fun DayBarColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(quizRatio.coerceAtLeast(0.01f))
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(NeonWarning, Color(0xFFD97706))
-                                    )
-                                ),
+                                .background(NeonWarning),
                         )
                     }
                     // Assignment (Blue) in middle
@@ -1435,11 +1433,7 @@ private fun DayBarColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(assRatio.coerceAtLeast(0.01f))
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(NeonBlue, Color(0xFF2563EB))
-                                    )
-                                ),
+                                .background(NeonBlue),
                         )
                     }
                     // Material (Green) at bottom
@@ -1448,11 +1442,7 @@ private fun DayBarColumn(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(matRatio.coerceAtLeast(0.01f))
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(NeonSuccess, Color(0xFF059669))
-                                    )
-                                ),
+                                .background(NeonSuccess),
                         )
                     }
                 }
@@ -1593,7 +1583,12 @@ private fun SelectedDayDetailCard(
                         .background(StudentNeon.copy(alpha = 0.1f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = "💡", fontSize = 14.sp)
+                    Icon(
+                        imageVector = Icons.Default.Assessment,
+                        contentDescription = null,
+                        tint = StudentNeon,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
@@ -1603,7 +1598,7 @@ private fun SelectedDayDetailCard(
                         color = TextPrimary,
                     )
                     Text(
-                        text = "Yuk buka modul materi, kerjakan tugas, atau kuis harian!",
+                        text = "Akses modul materi, kerjakan tugas mandiri, atau kuis harian",
                         fontSize = 10.sp,
                         color = TextTertiary,
                     )
@@ -1618,11 +1613,11 @@ private fun DailyActivityItemRow(
     item: DailyActivityItem,
     onNavigate: () -> Unit,
 ) {
-    val (accentColor, iconChar) = when (item.category) {
-        "MATERIAL"   -> Pair(NeonSuccess, "📖")
-        "ASSIGNMENT" -> Pair(NeonBlue, "📝")
-        "QUIZ"       -> Pair(NeonWarning, "🎯")
-        else         -> Pair(StudentNeon, "📌")
+    val (accentColor, iconVector) = when (item.category) {
+        "MATERIAL"   -> Pair(NeonSuccess, Icons.Default.Book)
+        "ASSIGNMENT" -> Pair(NeonBlue, Icons.AutoMirrored.Filled.Assignment)
+        "QUIZ"       -> Pair(NeonWarning, Icons.Default.Quiz)
+        else         -> Pair(StudentNeon, Icons.Default.Assessment)
     }
 
     Row(
@@ -1643,7 +1638,12 @@ private fun DailyActivityItemRow(
                 .background(accentColor.copy(alpha = 0.15f)),
             contentAlignment = Alignment.Center,
         ) {
-            Text(text = iconChar, fontSize = 12.sp)
+            Icon(
+                imageVector = iconVector,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(14.dp)
+            )
         }
 
         Column(modifier = Modifier.weight(1f)) {

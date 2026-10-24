@@ -265,7 +265,7 @@ class LearningViewModel @Inject constructor(
                                     xpEarned = res.xpEarned,
                                     newTotalXp = res.totalXp.toInt(),
                                     level = res.level,
-                                    title = if (res.alreadyAwarded) "Materi Telah Dipelajari ⭐" else "Materi Selesai Dibaca! 📖",
+                                    title = if (res.alreadyAwarded) "Materi Telah Dipelajari" else "Materi Selesai Dibaca!",
                                     description = if (res.alreadyAwarded) "Anda telah menyelesaikan materi ini sebelumnya." else "Hebat! Anda mendapatkan +${res.xpEarned} XP dan pemahaman materi Anda semakin mendalam.",
                                     actionType = "READ_MATERIAL",
                                 )

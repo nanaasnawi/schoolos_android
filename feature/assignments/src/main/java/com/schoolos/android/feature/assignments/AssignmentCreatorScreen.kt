@@ -120,7 +120,7 @@ fun AssignmentCreatorScreen(
 
     LaunchedEffect(state.success) {
         if (state.success) {
-            Toast.makeText(context, "✓ Tugas berhasil diterbitkan ke siswa!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Tugas berhasil diterbitkan ke siswa!", Toast.LENGTH_SHORT).show()
             onSuccess()
             viewModel.resetState()
         }
@@ -140,7 +140,7 @@ fun AssignmentCreatorScreen(
                 }
                 viewModel.applyGeneratedAssignment(generated)
                 showAiGenerateDialog = false
-                Toast.makeText(context, "✓ Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
             },
             onGenerateRequest = { format, subId, subName, topic, gradeLevel, difficulty, numMcq, numEssay, includeImages ->
                 viewModel.generateAssignmentAsync(
@@ -327,7 +327,7 @@ fun AssignmentCreatorScreen(
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = "✨ Generate Tugas (AI)",
+                                text = "Generate Tugas (AI)",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -418,7 +418,7 @@ fun AssignmentCreatorScreen(
 
                     AssignmentDropdown(
                         value = selectedSubject,
-                        label = if (state.isSubjectLocked) "Mata Pelajaran * (🔒 Terkunci)" else "Mata Pelajaran *",
+                        label = if (state.isSubjectLocked) "Mata Pelajaran * (Terkunci)" else "Mata Pelajaran *",
                         icon = if (state.isSubjectLocked) Icons.Default.Lock else Icons.Default.School,
                         expanded = if (state.isSubjectLocked && subjectOptions.size <= 1) false else isSubjectMenuExpanded,
                         accentColor = TeacherNeon,
@@ -460,9 +460,9 @@ fun AssignmentCreatorScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            Triple("STRUCTURED_QUESTIONS", "📝 PG & Essay", "Dikerjakan online"),
-                            Triple("HOMEWORK_PR", "📄 PR / Berkas", "Upload Foto/PDF"),
-                            Triple("HYBRID", "🔄 Kombinasi", "Soal + Upload")
+                            Triple("STRUCTURED_QUESTIONS", "PG & Essay", "Dikerjakan online"),
+                            Triple("HOMEWORK_PR", "PR / Berkas", "Upload Foto/PDF"),
+                            Triple("HYBRID", "Kombinasi", "Soal + Upload")
                         ).forEach { (formatKey, label, sublabel) ->
                             val isSelected = state.assignmentFormat == formatKey
                             Box(
@@ -770,7 +770,7 @@ fun AssignmentCreatorScreen(
                         }
                     }
 
-                    // KKM info
+                    // KKTP info
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -781,7 +781,7 @@ fun AssignmentCreatorScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(Icons.Default.Info, null, tint = NeonWarning, modifier = Modifier.size(16.dp))
-                        Text("KKM Kelulusan: 75 Poin", color = NeonWarning, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Target KKTP: 75 Poin", color = NeonWarning, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
             }
@@ -856,7 +856,7 @@ private fun QuestionBuilderCard(
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
-                            if (isMultipleChoice) "🔘 Pilihan Ganda (PG)" else "📝 Uraian / Esai",
+                            if (isMultipleChoice) "Pilihan Ganda (PG)" else "Uraian / Esai",
                             color = if (isMultipleChoice) IndigoAccent else CyanAccent,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold
@@ -995,7 +995,7 @@ private fun QuestionBuilderCard(
 
                             if (isCorrect) {
                                 Text(
-                                    "✓ Kunci",
+                                    "Kunci",
                                     color = NeonSuccess,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black
@@ -1262,7 +1262,7 @@ private fun AssignmentReviewAndPublishScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("🎯", fontSize = 22.sp)
+                        Icon(Icons.Default.School, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(22.dp))
                         Column {
                             Text("Sasaran Tugas:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
                             Text(
@@ -1423,7 +1423,7 @@ private fun AssignmentReviewAndPublishScreen(
                                                             modifier = Modifier.weight(1f)
                                                         )
                                                         if (isCorrect) {
-                                                            Text("✓ Kunci", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                                            Text("Kunci", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Black)
                                                         }
                                                     }
                                                 }

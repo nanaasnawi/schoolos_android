@@ -199,7 +199,7 @@ fun MaterialCreatorScreen(
                 mediaUrl = "https://www.youtube.com/watch?v=${v.videoId}"
                 isChangingYoutubeVideo = false
                 previewingYoutubeVideo = null
-                Toast.makeText(context, "✓ Video dipilih! Judul dan deskripsi otomatis terisi.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Video dipilih! Judul dan deskripsi otomatis terisi.", Toast.LENGTH_SHORT).show()
             }
         )
     }
@@ -227,7 +227,7 @@ fun MaterialCreatorScreen(
                     viewModel.contentBlocks.value = newBlocks
                 }
                 showAiGenerateDialog = false
-                Toast.makeText(context, "✓ Materi \"${generated.title}\" berhasil diterapkan!", Toast.LENGTH_SHORT).show()
+                Toast.makeText(context, "Materi \"${generated.title}\" berhasil diterapkan!", Toast.LENGTH_SHORT).show()
             },
             onGenerateRequest = { mode, subName, topic, gradeLevel ->
                 viewModel.generateMaterialAsync(
@@ -327,7 +327,7 @@ fun MaterialCreatorScreen(
 
     LaunchedEffect(state.success) {
         if (state.success) {
-            Toast.makeText(context, "✓ Materi ajar berhasil diterbitkan ke siswa!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Materi ajar berhasil diterbitkan ke siswa!", Toast.LENGTH_SHORT).show()
             onSuccess()
             viewModel.resetState()
         }
@@ -557,7 +557,7 @@ fun MaterialCreatorScreen(
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                             Text(
-                                text = "✨ Generate Materi (AI)",
+                                text = "Generate Materi (AI)",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = MaterialTheme.colorScheme.onSurface
@@ -605,7 +605,7 @@ fun MaterialCreatorScreen(
 
                     ModernDropdown(
                         value = selectedSubject,
-                        label = if (state.isSubjectLocked) "Mata Pelajaran (🔒 Terkunci)" else "Mata Pelajaran",
+                        label = if (state.isSubjectLocked) "Mata Pelajaran (Terkunci)" else "Mata Pelajaran",
                         icon = if (state.isSubjectLocked) Icons.Default.Lock else Icons.Default.School,
                         expanded = if (state.isSubjectLocked && subjectOptions.size <= 1) false else isSubjectMenuExpanded,
                         accentColor = EmeraldGlow,
@@ -742,7 +742,7 @@ fun MaterialCreatorScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Text("📚", fontSize = 16.sp)
+                                        Icon(Icons.Default.MenuBook, contentDescription = null, tint = if (isSibiMode) EmeraldGlow else TextPrimary, modifier = Modifier.size(18.dp))
                                         Column {
                                             Text(
                                                 "Katalog Buku SIBI",
@@ -776,7 +776,7 @@ fun MaterialCreatorScreen(
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
-                                        Text("📤", fontSize = 16.sp)
+                                        Icon(Icons.Default.UploadFile, contentDescription = null, tint = if (isUploadMode) TealAccent else TextPrimary, modifier = Modifier.size(18.dp))
                                         Column {
                                             Text(
                                                 "Upload Berkas PDF",
@@ -813,7 +813,7 @@ fun MaterialCreatorScreen(
                                                         .background(EmeraldGlow.copy(alpha = 0.15f)),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    Text("📚", fontSize = 18.sp)
+                                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(20.dp))
                                                 }
                                                 Spacer(Modifier.width(10.dp))
                                                 Column(modifier = Modifier.weight(1f)) {
@@ -934,7 +934,7 @@ fun MaterialCreatorScreen(
                                     ) {
                                         Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Text("💡", fontSize = 15.sp)
+                                                Icon(Icons.Default.Lightbulb, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(16.dp))
                                                 Spacer(Modifier.width(6.dp))
                                                 Text(
                                                     text = "Rekomendasi Buku SIBI Resmi:",
@@ -1041,7 +1041,7 @@ fun MaterialCreatorScreen(
                                         val displayName = state.uploadedFileName ?: mediaUrl.substringAfterLast("/")
                                         FileUploadedCard(
                                             fileName = displayName,
-                                            statusText = "✓ Berkas PDF siap diterbitkan",
+                                            statusText = "Berkas PDF siap diterbitkan",
                                             icon = Icons.Default.PictureAsPdf,
                                             iconTint = Color(0xFFEF4444),
                                             accentColor = NeonSuccess,
@@ -1105,7 +1105,7 @@ fun MaterialCreatorScreen(
                                 description = video.description
                                 mediaUrl = "https://www.youtube.com/watch?v=${video.videoId}"
                                 isChangingYoutubeVideo = false
-                                Toast.makeText(context, "✓ Video dipilih! Judul dan deskripsi otomatis terisi.", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(context, "Video dipilih! Judul dan deskripsi otomatis terisi.", Toast.LENGTH_SHORT).show()
                             },
                             onPreviewVideo = { video ->
                                 previewingYoutubeVideo = video
@@ -1611,7 +1611,7 @@ private fun LibraryBookCatalogSheetContent(
         } else if (filtered.isEmpty()) {
             Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📖", fontSize = 36.sp)
+                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(40.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("Tidak ada buku ditemukan", fontWeight = FontWeight.Bold, color = TextPrimary)
                     Text("Coba cari dengan kata kunci lain", fontSize = 12.sp, color = TextTertiary)
@@ -1657,7 +1657,7 @@ private fun LibraryBookCatalogSheetContent(
                                         .background(EmeraldGlow.copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Text("📕", fontSize = 20.sp)
+                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(20.dp))
                                 }
                                 Spacer(Modifier.width(12.dp))
                                 Column(modifier = Modifier.weight(1f)) {
@@ -1887,7 +1887,7 @@ private fun MaterialReviewAndPublishScreen(
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("🎯", fontSize = 22.sp)
+                    Icon(Icons.Default.School, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(22.dp))
                     Column {
                         Text("Akan Diterbitkan Untuk:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
                         Text(
@@ -1981,7 +1981,7 @@ private fun MaterialReviewAndPublishScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(12.dp)
                             ) {
-                                Text("📕", fontSize = 26.sp)
+                                Icon(Icons.Default.MenuBook, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(26.dp))
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(selectedBook.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     Spacer(Modifier.height(2.dp))
@@ -2003,7 +2003,7 @@ private fun MaterialReviewAndPublishScreen(
                         ) {
                             Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Text("▶️", fontSize = 16.sp)
+                                    Icon(Icons.Default.PlayCircle, contentDescription = null, tint = NeonBlue, modifier = Modifier.size(18.dp))
                                     Text("Tautan Video Pembelajaran:", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
                                 }
                                 Text(mediaUrl, color = NeonBlue, fontSize = 11.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
@@ -2039,7 +2039,7 @@ private fun MaterialReviewAndPublishScreen(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text("📎", fontSize = 20.sp)
+                                Icon(Icons.Default.AttachFile, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(20.dp))
                                 Column {
                                     Text("Berkas Lampiran Digital Tersedia", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     Text(mediaUrl, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)

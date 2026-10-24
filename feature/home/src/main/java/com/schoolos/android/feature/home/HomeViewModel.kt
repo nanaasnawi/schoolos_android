@@ -496,11 +496,10 @@ class HomeViewModel @Inject constructor(
                 val trendPoints = validScores.map { it.toFloat() }
                 val avg = if (validScores.isNotEmpty()) validScores.average() else 0.0
                 val avgStr = if (validScores.isNotEmpty()) String.format(Locale.US, "%.1f", avg) else "-"
-                val statusStr = when {
-                    avg >= 85.0 -> "Melampaui KKM • Predikat A"
-                    avg >= 75.0 -> "Tuntas KKM • Predikat B"
-                    avg > 0.0 -> "Perlu Remedial • Predikat C"
-                    else -> "Belum ada data nilai"
+                val statusStr = if (validScores.isNotEmpty()) {
+                    "${validScores.size} Capaian Modul Terdata"
+                } else {
+                    "Belum ada data capaian modul"
                 }
 
                 val subjectMap = academicRepository.getSubjects().getOrDefault(emptyList()).associate { it.id to it.name }

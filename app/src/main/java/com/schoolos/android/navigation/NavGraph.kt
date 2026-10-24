@@ -38,6 +38,7 @@ import com.schoolos.android.feature.profile.ProfileScreen
 import com.schoolos.android.feature.profile.SchoolHelpContactScreen
 import com.schoolos.android.feature.profile.SecuritySettingsScreen
 import com.schoolos.android.feature.profile.StudentOfficialProfileScreen
+import com.schoolos.android.feature.profile.TeacherOfficialProfileScreen
 import com.schoolos.android.feature.progress.ProgressScreen
 import com.schoolos.android.feature.quizzes.QuizAttemptScreen
 import com.schoolos.android.feature.quizzes.QuizBuilderScreen
@@ -478,8 +479,9 @@ fun NavGraph(
 
             // Gradebook
             composable(Screen.Grades.route) {
+                val isPrincipal = authState?.isPrincipal == true
                 GradebookListScreen(
-                    onBack = { navController.popBackStack() },
+                    onBack = if (isPrincipal) null else { { navController.popBackStack() } },
                     onSubjectClick = { subjectId, subjectName ->
                         navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
                     },
@@ -629,6 +631,9 @@ fun NavGraph(
                     onNavigateToOfficialBiodata = {
                         navController.navigate(Screen.OfficialBiodata.route)
                     },
+                    onNavigateToOfficialGtkBiodata = {
+                        navController.navigate(Screen.OfficialGtkBiodata.route)
+                    },
                 )
             }
             composable(Screen.ProfileSecurity.route) {
@@ -653,6 +658,11 @@ fun NavGraph(
             }
             composable(Screen.OfficialBiodata.route) {
                 StudentOfficialProfileScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.OfficialGtkBiodata.route) {
+                TeacherOfficialProfileScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
@@ -687,7 +697,7 @@ fun NavGraph(
             composable(Screen.Supervision.route) {
                 RombelStudentsScreen(
                     className = "ALL",
-                    onBack = { navController.popBackStack() },
+                    onBack = null,
                     onNavigateToStudentDetail = { student ->
                         navController.navigate(
                             Screen.StudentDetail.createRoute(

@@ -30,9 +30,8 @@ fun isParentRole(role: String?): Boolean {
 fun isTeacherRole(role: String?): Boolean {
     if (role.isNullOrBlank()) return false
     val l = role.lowercase()
-    return !isParentRole(role) && (
+    return !isParentRole(role) && !isPrincipalRole(role) && (
         l.contains("teacher") || l.contains("guru") ||
-        l.contains("kepala") || l.contains("principal") ||
         l.contains("admin") || l.contains("operator") ||
         l.contains("staff") || l.contains("bendahara")
     )
@@ -41,14 +40,14 @@ fun isTeacherRole(role: String?): Boolean {
 fun isPrincipalRole(role: String?): Boolean {
     if (role.isNullOrBlank()) return false
     val l = role.lowercase()
-    return l.contains("principal") || l.contains("kepala") || l.contains("headmaster") || l.contains("rektor") || l.contains("direktur")
+    return l.contains("principal") || l.contains("kepala") || l.contains("headmaster") || l.contains("rektor") || l.contains("direktur") || l.contains("kepsek")
 }
 
 fun isSubjectLockedTeacher(role: String?): Boolean {
     if (role.isNullOrBlank()) return false
     val l = role.lowercase()
-    return !isParentRole(role) && (l.contains("teacher") || l.contains("guru") || l.contains("pengajar")) &&
-        !l.contains("admin") && !l.contains("operator") && !l.contains("kepala") && !l.contains("principal")
+    return !isParentRole(role) && !isPrincipalRole(role) && (l.contains("teacher") || l.contains("guru") || l.contains("pengajar")) &&
+        !l.contains("admin") && !l.contains("operator")
 }
 
 data class AuthState(
@@ -74,7 +73,7 @@ data class AuthState(
 ) {
     val isParent: Boolean get() = isParentRole(role)
     val isPrincipal: Boolean get() = isPrincipalRole(role)
-    val isTeacher: Boolean get() = isTeacherRole(role) || isPrincipal
+    val isTeacher: Boolean get() = isTeacherRole(role) && !isPrincipal
     val isStudent: Boolean get() = !isParent && !isTeacher && !isPrincipal
     val isSubjectLockedTeacher: Boolean get() = isSubjectLockedTeacher(role)
 }

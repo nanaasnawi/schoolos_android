@@ -7,6 +7,6 @@ data class AchievementDto(
     val id: String,
     val title: String,
     val description: String = "",
-    val icon: String = "🏆",
+    val icon: String = "",
     val earnedAt: String? = null,
 )

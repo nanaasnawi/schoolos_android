@@ -1,4 +1,4 @@
-package com.schoolos.android.feature.assignments
+    package com.schoolos.android.feature.assignments
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -158,7 +158,7 @@ fun TeacherAssignmentDetailContent(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "📋 Butir Soal (${assignment.questions.size})",
+                        text = "Butir Soal (${assignment.questions.size})",
                         fontSize = 12.sp,
                         fontWeight = if (isTab0) FontWeight.Bold else FontWeight.Medium,
                         color = if (isTab0) NeonBlue else TextSecondary
@@ -184,7 +184,7 @@ fun TeacherAssignmentDetailContent(
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "📥 Koreksi Siswa ($submittedOrGradedCount/$totalStudents)",
+                        text = "Koreksi Siswa ($submittedOrGradedCount/$totalStudents)",
                         fontSize = 12.sp,
                         fontWeight = if (isTab1) FontWeight.Bold else FontWeight.Medium,
                         color = if (isTab1) NeonBlue else TextSecondary
@@ -254,7 +254,12 @@ fun TeacherAssignmentDetailContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text("📝", fontSize = 32.sp)
+                        Icon(
+                            Icons.Default.Description,
+                            contentDescription = null,
+                            tint = NeonBlue,
+                            modifier = Modifier.size(36.dp)
+                        )
                         Text(
                             "Tugas Berbasis Instruksi / Pengumpulan Dokumen",
                             fontSize = 13.sp,
@@ -319,7 +324,7 @@ fun TeacherAssignmentDetailContent(
                                             .padding(horizontal = 7.dp, vertical = 3.dp)
                                     ) {
                                         Text(
-                                            if (isPg) "🔘 Pilihan Ganda (PG)" else "📝 Soal Uraian / Esai",
+                                            if (isPg) "Pilihan Ganda (PG)" else "Soal Uraian / Esai",
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = if (isPg) NeonBlue else NeonWarning
@@ -328,7 +333,7 @@ fun TeacherAssignmentDetailContent(
                                 }
 
                                 Text(
-                                    "⭐ ${q.points ?: 10} Poin",
+                                    "${q.points ?: 10} Poin",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = NeonSuccess
@@ -392,7 +397,7 @@ fun TeacherAssignmentDetailContent(
                                                 if (isCorrect) {
                                                     Spacer(Modifier.width(6.dp))
                                                     Text(
-                                                        "✓ Kunci Benar",
+                                                        "Kunci Benar",
                                                         fontSize = 10.sp,
                                                         fontWeight = FontWeight.Black,
                                                         color = NeonSuccess
@@ -492,10 +497,10 @@ fun TeacherAssignmentDetailContent(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
-                            StatBadge("📥 Kumpul", submittedOrGradedCount.toString(), NeonBlue, Modifier.weight(1f))
-                            StatBadge("⏳ Perlu Nilai", pendingCount.toString(), NeonWarning, Modifier.weight(1f))
-                            StatBadge("✅ Dinilai", gradedCount.toString(), NeonSuccess, Modifier.weight(1f))
-                            StatBadge("⚠️ Belum Kumpul", unsubmittedCount.toString(), TextTertiary, Modifier.weight(1f))
+                            StatBadge("Kumpul", submittedOrGradedCount.toString(), NeonBlue, Modifier.weight(1f))
+                            StatBadge("Perlu Nilai", pendingCount.toString(), NeonWarning, Modifier.weight(1f))
+                            StatBadge("Dinilai", gradedCount.toString(), NeonSuccess, Modifier.weight(1f))
+                            StatBadge("Belum Kumpul", unsubmittedCount.toString(), TextTertiary, Modifier.weight(1f))
                         }
                     }
                 }
@@ -514,7 +519,7 @@ fun TeacherAssignmentDetailContent(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Default.CheckCircle, null, tint = NeonSuccess, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(8.dp))
-                        Text("✅ Nilai & feedback berhasil disimpan ke siswa!", fontSize = 13.sp, color = NeonSuccess, fontWeight = FontWeight.Bold)
+                        Text("Nilai & feedback berhasil disimpan ke siswa!", fontSize = 13.sp, color = NeonSuccess, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -592,13 +597,18 @@ fun TeacherAssignmentDetailContent(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(if (submissionFilter == "UNSUBMITTED") "🎉" else "📭", fontSize = 32.sp)
+                        Icon(
+                            imageVector = if (submissionFilter == "UNSUBMITTED") Icons.Default.CheckCircle else Icons.Default.Inbox,
+                            contentDescription = null,
+                            tint = if (submissionFilter == "UNSUBMITTED") NeonSuccess else TextTertiary,
+                            modifier = Modifier.size(36.dp)
+                        )
                         Text(
                             when (submissionFilter) {
                                 "PENDING" -> "Tidak ada pengumpulan yang menunggu penilaian."
                                 "GRADED" -> "Belum ada pengumpulan yang dinilai."
-                                "UNSUBMITTED" -> "Semua siswa dalam kelas telah mengumpulkan tugas!"
-                                else -> "Belum ada siswa yang mengumpulkan."
+                                "UNSUBMITTED" -> "Semua warga belajar telah mengumpulkan tugas!"
+                                else -> "Belum ada warga belajar yang mengumpulkan."
                             },
                             fontSize = 13.sp,
                             color = TextTertiary,

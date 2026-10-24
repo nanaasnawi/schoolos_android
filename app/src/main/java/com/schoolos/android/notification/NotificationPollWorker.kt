@@ -156,20 +156,6 @@ object NotificationPollWorker {
     }
 
     private fun prefixFor(type: String, title: String): String {
-        if (title.startsWith("📢") || title.startsWith("📚") || title.startsWith("📝") ||
-            title.startsWith("💻") || title.startsWith("🏆") || title.startsWith("🔔") ||
-            title.startsWith("🎓")
-        ) return title
-        val t = type.uppercase()
-        val emoji = when {
-            t.contains("MATERIAL") -> "📚"
-            t.contains("ASSIGN") -> "📝"
-            t.contains("QUIZ") || t.contains("CBT") -> "💻"
-            t.contains("GRADE") || t.contains("NILAI") -> "🏆"
-            t.contains("SESSION") || t.contains("JADWAL") -> "🎓"
-            t.contains("REMINDER") -> "🔔"
-            else -> "📢"
-        }
-        return "$emoji $title"
+        return title.trim()
     }
 }

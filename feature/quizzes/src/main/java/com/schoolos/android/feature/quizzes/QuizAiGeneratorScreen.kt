@@ -23,8 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.AiGenerationLoadingOverlay
-import com.schoolos.android.core.designsystem.AiGenerationType
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.GeneratedCurriculumQuestion
@@ -230,7 +229,7 @@ fun QuizAiGeneratorScreen(
                                 Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    "✨ Generate Paket Kuis CBT Sekarang",
+                                    "Generate Paket Kuis CBT Sekarang",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -277,7 +276,7 @@ fun QuizAiGeneratorScreen(
                                         shape = RoundedCornerShape(6.dp)
                                     ) {
                                         Text(
-                                            "🔒 Terkunci (Guru Pengampu)",
+                                            "Terkunci (Tutor Pengampu)",
                                             fontSize = 10.sp,
                                             color = CyanPrimary,
                                             fontWeight = FontWeight.SemiBold,
@@ -445,7 +444,7 @@ fun QuizAiGeneratorScreen(
                                     )
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("🔘 Pilihan Ganda (Full PG)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "MCQ_ONLY") CyanPrimary else colorScheme.onSurface)
+                                        Text("Pilihan Ganda (Full PG)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "MCQ_ONLY") CyanPrimary else colorScheme.onSurface)
                                         Spacer(Modifier.height(4.dp))
                                         Text("100% butir soal objektif pilihan ganda otomatis.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                                     }
@@ -463,7 +462,7 @@ fun QuizAiGeneratorScreen(
                                     )
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("📝 PG + Uraian (Campuran)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "MIXED") EmeraldPrimary else colorScheme.onSurface)
+                                        Text("PG + Uraian (Campuran)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "MIXED") EmeraldPrimary else colorScheme.onSurface)
                                         Spacer(Modifier.height(4.dp))
                                         Text("Kombinasi soal PG objektif dan soal uraian analitis.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                                     }
@@ -627,7 +626,7 @@ fun QuizAiGeneratorScreen(
                                     border = androidx.compose.foundation.BorderStroke(1.dp, if (examScope == "TOPIC_QUIZ") CyanPrimary else colorScheme.outlineVariant)
                                 ) {
                                     Column(modifier = Modifier.padding(10.dp)) {
-                                        Text("📖 Kuis Topik Terpilih", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = if (examScope == "TOPIC_QUIZ") CyanPrimary else colorScheme.onSurface)
+                                        Text("Kuis Topik Terpilih", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = if (examScope == "TOPIC_QUIZ") CyanPrimary else colorScheme.onSurface)
                                         Text("Menyusun kuis cepat berbasis topik spesifik.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                                     }
                                 }
@@ -640,7 +639,7 @@ fun QuizAiGeneratorScreen(
                                     border = androidx.compose.foundation.BorderStroke(1.dp, if (examScope == "MONTHLY_EXAM") EmeraldPrimary else colorScheme.outlineVariant)
                                 ) {
                                     Column(modifier = Modifier.padding(10.dp)) {
-                                        Text("📅 Ujian Bulanan", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = if (examScope == "MONTHLY_EXAM") EmeraldPrimary else colorScheme.onSurface)
+                                        Text("Ujian Bulanan", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = if (examScope == "MONTHLY_EXAM") EmeraldPrimary else colorScheme.onSurface)
                                         Text("Merangkum materi 30 hari komprehensif.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                                     }
                                 }
@@ -666,7 +665,7 @@ fun QuizAiGeneratorScreen(
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Column {
-                                        Text("🎨 Sertakan Soal Bergambar / Diagram", fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                                        Text("Sertakan Soal Bergambar / Diagram", fontWeight = FontWeight.Bold, fontSize = 12.sp)
                                         Text("Diagram sains, siklus, geometri, grafik edukatif", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
                                     }
                                 }
@@ -836,8 +835,8 @@ fun QuizAiGeneratorScreen(
                                                     Text("$essayCount Butir Essay", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                                                 }
                                             }
-                                            Surface(color = Color(0xFFF59E0B), shape = RoundedCornerShape(6.dp)) {
-                                                Text("KKM: ${res.passingScore}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                            Surface(color = NeonWarning, shape = RoundedCornerShape(6.dp)) {
+                                                Text("KKTP: ${res.passingScore}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
                                             }
                                             Surface(color = CyanPrimary, shape = RoundedCornerShape(6.dp)) {
                                                 Text("${res.timeLimitMinutes} Menit", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
@@ -998,7 +997,7 @@ private fun QuizQuestionVerificationCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("📋 Panduan Jawaban & Rubrik Penskoran:", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = PurplePrimary)
+                        Text("Panduan Jawaban & Rubrik Penskoran:", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = PurplePrimary)
                         Text(
                             question.explanation ?: "Jawaban uraian dinilai berdasarkan kedalaman konsep dan kelengkapan analisis materi.",
                             fontSize = 11.sp,
