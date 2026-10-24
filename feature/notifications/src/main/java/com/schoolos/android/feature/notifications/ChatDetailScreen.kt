@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.collectIsDraggedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -133,13 +132,7 @@ fun ChatDetailScreen(
         val size = thread?.messages?.size ?: 0
         if (size > 0) listState.animateScrollToItem(size - 1)
     }
-    // Dismiss keyboard ONLY when user actively drags the chat list with finger
-    val isListDragged by listState.interactionSource.collectIsDraggedAsState()
-    LaunchedEffect(isListDragged) {
-        if (isListDragged) {
-            focusManager.clearFocus()
-        }
-    }
+
     val imeInsets = WindowInsets.ime
     val density = LocalDensity.current
     val isKeyboardOpen = remember {

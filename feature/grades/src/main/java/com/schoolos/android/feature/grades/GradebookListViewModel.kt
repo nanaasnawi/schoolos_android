@@ -24,6 +24,7 @@ data class GradebookUiState(
     val userRole: String = "student",
     val className: String = "",
     val teacherName: String = "",
+    val teacherSubject: String? = null,
     val subjects: List<SubjectGradeSummary> = emptyList(),
 )
 
@@ -32,6 +33,7 @@ class GradebookListViewModel @Inject constructor(
     private val repository: GradeRepository,
     private val academicRepository: AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
+    private val authRepository: com.schoolos.android.domain.repository.AuthRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(GradebookUiState())
@@ -52,10 +54,15 @@ class GradebookListViewModel @Inject constructor(
             currentClassId = initialAuth.classId ?: ""
             val homeroom = initialAuth.className?.takeIf { it.isNotBlank() } ?: ""
             val name = initialAuth.name?.takeIf { it.isNotBlank() } ?: ""
+            var teacherSubj = initialAuth.subject?.takeIf { it.isNotBlank() }
+            if (teacherSubj == null && initialAuth.isTeacher) {
+                teacherSubj = authRepository.getTeacherOfficialBiodata().getOrNull()?.subject?.takeIf { it.isNotBlank() }
+            }
             _state.value = _state.value.copy(
                 userRole = initialAuth.role ?: "student",
                 className = homeroom,
                 teacherName = name,
+                teacherSubject = teacherSubj,
             )
             load(homeroom, currentClassId, isInitial = true)
         }
@@ -69,17 +76,23 @@ class GradebookListViewModel @Inject constructor(
                     val newHomeroom = auth.className?.takeIf { it.isNotBlank() } ?: ""
                     val newRole = auth.role ?: "student"
                     val name = auth.name?.takeIf { it.isNotBlank() } ?: ""
+                    var teacherSubj = auth.subject?.takeIf { it.isNotBlank() }
+                    if (teacherSubj == null && auth.isTeacher) {
+                        teacherSubj = authRepository.getTeacherOfficialBiodata().getOrNull()?.subject?.takeIf { it.isNotBlank() }
+                    }
 
                     val classOrRoleChanged = hasLoadedOnce && (
                         _state.value.userRole != newRole ||
                         _state.value.className != newHomeroom ||
-                        currentClassId != newClassId
+                        currentClassId != newClassId ||
+                        _state.value.teacherSubject != teacherSubj
                     )
 
                     _state.value = _state.value.copy(
                         userRole = newRole,
                         className = newHomeroom,
                         teacherName = name,
+                        teacherSubject = teacherSubj,
                     )
 
                     if (classOrRoleChanged) {
@@ -126,8 +139,8 @@ class GradebookListViewModel @Inject constructor(
                 }
             }
 
-            // Retrieve subjects (from cache if already loaded unless forceRefresh)
-            val allSubjects = if (!forceRefresh && cachedSubjects != null) {
+            // Retrieve raw subjects (from cache if already loaded unless forceRefresh)
+            val allRawSubjects = if (!forceRefresh && cachedSubjects != null) {
                 cachedSubjects!!
             } else {
                 val res = academicRepository.getSubjects()
@@ -135,6 +148,30 @@ class GradebookListViewModel @Inject constructor(
                 if (list.isNotEmpty()) cachedSubjects = list
                 list
             }
+
+            val auth = authManager.authState.first()
+            val isPrincipal = auth.isPrincipal
+            val isTeacher = auth.isTeacher
+            var teacherSubj = _state.value.teacherSubject ?: auth.subject?.trim()
+            if (isTeacher && teacherSubj.isNullOrBlank()) {
+                teacherSubj = authRepository.getTeacherOfficialBiodata().getOrNull()?.subject?.trim()
+                if (!teacherSubj.isNullOrBlank()) {
+                    _state.value = _state.value.copy(teacherSubject = teacherSubj)
+                }
+            }
+
+            // Scope subjects strictly to teacher assigned subject(s) for guru mapel (Kemendikdasmen PKBM)
+            val allSubjects = if (isTeacher && !isPrincipal && !teacherSubj.isNullOrBlank()) {
+                val tokens = teacherSubj.split(Regex("[,;/|]")).map { it.trim().lowercase() }.filter { it.isNotEmpty() }
+                val matched = allRawSubjects.filter { s ->
+                    val sName = s.name.lowercase()
+                    tokens.any { t -> sName == t || sName.contains(t) || t.contains(sName) }
+                }
+                if (matched.isNotEmpty()) matched else allRawSubjects
+            } else {
+                allRawSubjects
+            }
+
             val subjectMap = allSubjects.associate { it.id to it.name }
 
             repository.getGradebook(targetClassId.ifBlank { null })

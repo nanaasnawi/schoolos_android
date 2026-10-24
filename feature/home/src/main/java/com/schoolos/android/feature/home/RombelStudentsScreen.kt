@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -134,24 +136,18 @@ fun RombelStudentsScreen(
             title = titleText,
             subtitle = subtitleText,
             onBack = onBack,
-            actions = {
-                IconButton(
-                    onClick = { viewModel.loadStudents(selectedFilter) },
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CosmicNavy)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Refresh,
-                        contentDescription = "Muat Ulang",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
         )
+
+        PullRefreshContainer(
+            isRefreshing = uiState.isRefreshing,
+            onRefresh = { viewModel.loadStudents(selectedFilter, isPullRefresh = true) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
+            Column(
+                modifier = Modifier.fillMaxSize()
+            ) {
 
         // ── 1. FILTER TABS KELAS DIAMPU ───────────────────────────────────────
         if (uiState.availableClasses.isNotEmpty()) {
@@ -357,131 +353,131 @@ fun RombelStudentsScreen(
         }
 
         // ── 4. CONTENT ───────────────────────────────────────────────────────
-        when {
-            isLoading && students.isEmpty() -> {
-                com.schoolos.android.core.designsystem.ShimmerList(
-                    count = 6,
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                )
-            }
-            errorMessage != null && students.isEmpty() -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+        ) {
+            when {
+                isLoading && students.isEmpty() -> {
+                    com.schoolos.android.core.designsystem.ShimmerList(
+                        count = 6,
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
+                errorMessage != null && students.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(NeonError.copy(alpha = 0.1f))
-                                .border(0.5.dp, NeonError.copy(alpha = 0.3f), CircleShape),
-                            contentAlignment = Alignment.Center
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.WarningAmber,
-                                contentDescription = null,
-                                tint = NeonError,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                        Text(
-                            text = "Gagal Memuat Data",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = errorMessage,
-                            fontSize = 12.sp,
-                            color = TextTertiary,
-                            textAlign = TextAlign.Center,
-                            lineHeight = 18.sp
-                        )
-                        Surface(
-                            onClick = { viewModel.loadStudents(selectedFilter) },
-                            shape = RoundedCornerShape(8.dp),
-                            color = CosmicNavy,
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
-                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonError.copy(alpha = 0.1f))
+                                    .border(0.5.dp, NeonError.copy(alpha = 0.3f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.WarningAmber,
+                                    contentDescription = null,
+                                    tint = NeonError,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
                             Text(
-                                text = "Coba Lagi",
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
+                                text = "Gagal Memuat Data",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.SemiBold,
                                 color = TextPrimary
                             )
+                            Text(
+                                text = errorMessage,
+                                fontSize = 12.sp,
+                                color = TextTertiary,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 18.sp
+                            )
+                            Surface(
+                                onClick = { viewModel.loadStudents(selectedFilter) },
+                                shape = RoundedCornerShape(8.dp),
+                                color = CosmicNavy,
+                                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                            ) {
+                                Text(
+                                    text = "Coba Lagi",
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = TextPrimary
+                                )
+                            }
                         }
                     }
                 }
-            }
-            filteredStudents.isEmpty() -> {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                filteredStudents.isEmpty() -> {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(56.dp)
-                                .clip(CircleShape)
-                                .background(CosmicNavy)
-                                .border(0.5.dp, GlassBorder, CircleShape),
-                            contentAlignment = Alignment.Center
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Default.People,
-                                contentDescription = null,
-                                tint = TextTertiary,
-                                modifier = Modifier.size(28.dp)
+                            Box(
+                                modifier = Modifier
+                                    .size(56.dp)
+                                    .clip(CircleShape)
+                                    .background(CosmicNavy)
+                                    .border(0.5.dp, GlassBorder, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.People,
+                                    contentDescription = null,
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                            Text(
+                                text = if (searchQuery.isNotBlank()) "Siswa Tidak Ditemukan" else "Belum Ada Siswa",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = if (searchQuery.isNotBlank())
+                                    "Tidak ada siswa yang cocok dengan \"$searchQuery\"."
+                                else
+                                    "Belum ada siswa terdaftar di pilihan rombel ini.",
+                                fontSize = 12.sp,
+                                color = TextTertiary,
+                                textAlign = TextAlign.Center
                             )
                         }
-                        Text(
-                            text = if (searchQuery.isNotBlank()) "Siswa Tidak Ditemukan" else "Belum Ada Siswa",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = if (searchQuery.isNotBlank())
-                                "Tidak ada siswa yang cocok dengan \"$searchQuery\"."
-                            else
-                                "Belum ada siswa terdaftar di pilihan rombel ini.",
-                            fontSize = 12.sp,
-                            color = TextTertiary,
-                            textAlign = TextAlign.Center
-                        )
                     }
                 }
-            }
-            else -> {
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .navigationBarsPadding(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    itemsIndexed(filteredStudents, key = { _, s -> s.id }) { index, student ->
-                        var visible by remember { mutableStateOf(false) }
-                        LaunchedEffect(Unit) { visible = true }
-                        AnimatedVisibility(
-                            visible = visible,
-                            enter = fadeIn(tween(140 + index * 15)) +
-                                    slideInVertically(tween(140 + index * 15)) { it / 4 }
-                        ) {
+                else -> {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .navigationBarsPadding(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        itemsIndexed(filteredStudents, key = { _, s -> s.id }) { _, student ->
                             val currentStatus = uiState.attendanceMap[student.id] ?: "present"
                             StudentAttendanceCard(
                                 student = student,
@@ -498,6 +494,8 @@ fun RombelStudentsScreen(
             }
         }
     }
+}
+}
 }
 
 @Composable
