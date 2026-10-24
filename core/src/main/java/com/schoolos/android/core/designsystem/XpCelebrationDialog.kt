@@ -19,8 +19,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Stars
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -122,15 +125,20 @@ fun XpCelebrationDialog(
                         ),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Text(text = "⭐", fontSize = 34.sp)
+                    Icon(
+                        imageVector = Icons.Default.Stars,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
                 val defaultHeading = when (reward.actionType) {
-                    "READ_MATERIAL" -> "Materi Selesai Dibaca! 📖"
-                    "SUBMIT_ASSIGNMENT" -> "Tugas Berhasil Dikumpulkan! 📝"
-                    "COMPLETE_QUIZ" -> "Ujian CBT Selesai! 🏆"
+                    "READ_MATERIAL" -> "Materi Selesai Dibaca!"
+                    "SUBMIT_ASSIGNMENT" -> "Tugas Berhasil Dikumpulkan!"
+                    "COMPLETE_QUIZ" -> "Ujian CBT Selesai!"
                     else -> reward.title
                 }
 
@@ -205,7 +213,7 @@ fun XpCelebrationDialog(
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
                         Text(
-                            text = "🎖️ Level $level",
+                            text = "Level $level",
                             color = TextPrimary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
@@ -254,7 +262,7 @@ fun XpCelebrationDialog(
                     ),
                 ) {
                     Text(
-                        text = "Keren, Lanjutkan! 🚀",
+                        text = "Lanjutkan",
                         color = Color.White,
                         fontWeight = FontWeight.Bold,
                         fontSize = 14.sp,

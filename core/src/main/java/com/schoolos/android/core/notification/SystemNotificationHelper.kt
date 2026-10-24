@@ -95,8 +95,7 @@ object SystemNotificationHelper {
         return try {
             val prefs = context.getSharedPreferences("schoolos_notif_dedup", Context.MODE_PRIVATE)
             val cleanTitle = title
-                .removePrefix("📢").removePrefix("📚").removePrefix("📝")
-                .removePrefix("💻").removePrefix("🏆").removePrefix("🔔").removePrefix("🎓")
+                .replace(Regex("""^[\p{So}\p{Sk}\p{Sm}\s\u2000-\u3300]+"""), "")
                 .trim().lowercase()
             val cleanMsg = message.trim().lowercase()
             val key = "dedup_${(navigateTo + "_" + cleanTitle + "_" + cleanMsg.take(60)).hashCode()}"
@@ -121,8 +120,7 @@ object SystemNotificationHelper {
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
             val active = nm.activeNotifications ?: return false
             val cleanTitle = title
-                .removePrefix("📢").removePrefix("📚").removePrefix("📝")
-                .removePrefix("💻").removePrefix("🏆").removePrefix("🔔").removePrefix("🎓")
+                .replace(Regex("""^[\p{So}\p{Sk}\p{Sm}\s\u2000-\u3300]+"""), "")
                 .trim()
             val targetTag = if (!referenceId.isNullOrBlank()) "schoolos_$referenceId" else null
 

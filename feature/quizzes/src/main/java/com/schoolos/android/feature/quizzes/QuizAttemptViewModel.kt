@@ -144,7 +144,7 @@ class QuizAttemptViewModel @Inject constructor(
                                     xpEarned = res.xpEarned,
                                     newTotalXp = res.totalXp.toInt(),
                                     level = res.level,
-                                    title = if (res.alreadyAwarded) "Evaluasi Telah Diselesaikan ⭐" else "Ujian / Kuis Selesai! 🏆",
+                                    title = if (res.alreadyAwarded) "Evaluasi Telah Diselesaikan" else "Ujian / Kuis Selesai!",
                                     description = if (res.alreadyAwarded) "Anda telah menyelesaikan evaluasi ini sebelumnya." else "Luar biasa! Menyelesaikan evaluasi CBT memberi Anda +${res.xpEarned} XP.",
                                     actionType = "COMPLETE_QUIZ",
                                 )

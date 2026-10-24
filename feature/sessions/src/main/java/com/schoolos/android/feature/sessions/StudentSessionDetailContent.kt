@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.EditNote
 import androidx.compose.material.icons.filled.EventAvailable
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayArrow
@@ -87,7 +88,7 @@ fun StudentSessionDetailContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                "🏥 Sakit",
+                                "Sakit",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = if (selectedExcuseType == "sick") NeonBlue else TextSecondary
@@ -104,7 +105,7 @@ fun StudentSessionDetailContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                "✉️ Izin",
+                                "Izin",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 13.sp,
                                 color = if (selectedExcuseType == "excused") NeonWarning else TextSecondary
@@ -321,7 +322,7 @@ fun StudentSessionDetailContent(
                         contentAlignment = Alignment.Center,
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("📝", fontSize = 14.sp)
+                            Icon(Icons.Default.EditNote, contentDescription = null, tint = NeonWarning, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(
                                 "Ajukan Keterangan Izin / Sakit (Maks. 24 Jam)",

@@ -212,8 +212,8 @@ object TeacherScheduleReminderManager {
                 return
             }
 
-            val title = "⏰ 15 Menit Lagi: Jadwal Mengajar $subjectName"
-            val message = "Jadwal mengajar kelas $className dimulai pukul $scheduledTime. Jangan lupa siapkan dan isi materi pembelajaran, tugas, atau kuis untuk murid Anda!"
+            val title = "15 Menit Lagi: Jadwal Sesi Modul $subjectName"
+            val message = "Jadwal pembelajaran rombel $className dimulai pukul $scheduledTime. Silakan persiapkan modul materi pembelajaran atau penugasan untuk warga belajar."
 
             val notifId = (sessionId + "_" + reminderType).hashCode() and 0x7FFFFFFF
 

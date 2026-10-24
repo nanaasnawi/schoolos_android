@@ -662,7 +662,7 @@ fun QuizDetailScreen(
                                                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                                         ) {
                                                             Text(
-                                                                "Sedang Ujian ⏳",
+                                                                "Sedang Ujian",
                                                                 fontSize = 10.sp,
                                                                 fontWeight = FontWeight.Bold,
                                                                 color = NeonBlue
@@ -954,7 +954,7 @@ private fun CosmicQuizHeroCard(
                 ) {
                     val potentialXp = if (maxScore > 0) maxScore * 5 else 100
                     Text(
-                        text = if (isTeacher) "Pendidik / Guru Pengampu" else "⭐ Potensi $potentialXp XP",
+                        text = if (isTeacher) "Pendidik / Tutor Pengampu" else "Potensi $potentialXp XP",
                         color = if (isTeacher) TeacherNeon else AccentNeonAmber,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold

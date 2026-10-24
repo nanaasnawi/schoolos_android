@@ -62,6 +62,22 @@ import com.schoolos.android.core.designsystem.subjectIcon
 import com.schoolos.android.domain.model.LearningSession
 import java.time.Instant
 import java.time.ZoneId
+import java.time.ZonedDateTime
+
+private fun formatClassName(raw: String?, fallback: String = "Kelas"): String {
+    if (raw.isNullOrBlank() || raw == "-" || (raw.length >= 32 && raw.contains("-"))) {
+        return fallback
+    }
+    val clean = raw.trim()
+    return if (clean.startsWith("Kelas", ignoreCase = true) ||
+        clean.startsWith("Paket", ignoreCase = true) ||
+        clean.startsWith("Ruang", ignoreCase = true)
+    ) {
+        clean
+    } else {
+        "Kelas $clean"
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 fun LazyListScope.teacherAgendaContent(
@@ -159,8 +175,13 @@ private fun TeacherTimelineItem(
     val isActive = session.status.equals("active", ignoreCase = true)
     val isCompleted = session.status.equals("completed", ignoreCase = true)
 
-    val startHour = formatHourMinute(session.scheduledAt) ?: "07.30"
-    val endHour = formatHourMinute(session.endedAt) ?: "09.00"
+    val startHour = formatHourMinute(session.startTime)
+        ?: formatHourMinute(session.scheduledAt)
+        ?: formatHourMinute(session.startedAt)
+        ?: "07.30"
+    val endHour = formatHourMinute(session.endTime)
+        ?: formatHourMinute(session.endedAt)
+        ?: "09.00"
     val room = session.room ?: "Ruang Kelas Online"
     val isOnline = room.contains("Online", ignoreCase = true) || room.contains("Meet", ignoreCase = true)
 
@@ -313,9 +334,12 @@ private fun TeacherTimelineItem(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
-                            Spacer(Modifier.height(1.dp))
+                            val classFormatted = formatClassName(session.className ?: session.room)
+                            val teacherFormatted = session.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
+                            val sessionSubtitle = if (teacherFormatted != null) "$classFormatted • $teacherFormatted" else classFormatted
+
                             Text(
-                                text = "Sesi Mengajar",
+                                text = sessionSubtitle,
                                 fontSize = 11.sp,
                                 color = TextTertiary,
                                 fontWeight = FontWeight.Normal,
@@ -411,14 +435,40 @@ private fun TeacherTimelineItem(
     }
 }
 
-private fun formatHourMinute(iso: String?): String? {
-    if (iso.isNullOrBlank()) return null
+private fun formatHourMinute(raw: String?): String? {
+    if (raw.isNullOrBlank()) return null
+    val trimmed = raw.trim()
+    // 1. Check if it's already a time string like "07:30" or "07:30:00"
+    if (trimmed.matches(Regex("""^\d{1,2}:\d{2}(:\d{2})?$"""))) {
+        val parts = trimmed.split(":")
+        val h = parts[0].toIntOrNull() ?: return null
+        val m = parts[1].toIntOrNull() ?: return null
+        return String.format(java.util.Locale.US, "%02d.%02d", h, m)
+    }
+    // 2. Check if it contains a space "YYYY-MM-DD HH:mm:ss"
+    if (trimmed.contains(" ") && trimmed.length >= 16) {
+        val timePart = trimmed.substringAfter(" ").trim()
+        if (timePart.matches(Regex("""^\d{1,2}:\d{2}(:\d{2})?$"""))) {
+            val parts = timePart.split(":")
+            val h = parts[0].toIntOrNull()
+            val m = parts[1].toIntOrNull()
+            if (h != null && m != null) {
+                return String.format(java.util.Locale.US, "%02d.%02d", h, m)
+            }
+        }
+    }
+    // 3. Fallback to ISO / Instant in Asia/Jakarta
     return try {
-        val instant = Instant.parse(iso)
+        val instant = Instant.parse(trimmed)
         val zdt = instant.atZone(ZoneId.of("Asia/Jakarta"))
         String.format(java.util.Locale.US, "%02d.%02d", zdt.hour, zdt.minute)
     } catch (_: Exception) {
-        null
+        try {
+            val zdt = ZonedDateTime.parse(trimmed).withZoneSameInstant(ZoneId.of("Asia/Jakarta"))
+            String.format(java.util.Locale.US, "%02d.%02d", zdt.hour, zdt.minute)
+        } catch (_: Exception) {
+            null
+        }
     }
 }
 

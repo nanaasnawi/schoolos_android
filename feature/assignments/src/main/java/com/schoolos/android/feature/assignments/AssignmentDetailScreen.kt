@@ -74,7 +74,7 @@ fun AssignmentDetailScreen(
 
     LaunchedEffect(state.submitSuccess) {
         if (state.submitSuccess) {
-            Toast.makeText(context, "✓ Tugas berhasil dikumpulkan!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Tugas berhasil dikumpulkan!", Toast.LENGTH_SHORT).show()
             content = ""
             pgAnswers = emptyMap()
             essayAnswers = emptyMap()

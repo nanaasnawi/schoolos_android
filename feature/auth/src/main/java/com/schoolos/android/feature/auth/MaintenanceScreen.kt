@@ -372,10 +372,11 @@ fun MaintenanceScreen(
                 }
             }
 
-            if (feedbackMessage != null) {
+            val currentFeedback = feedbackMessage
+            if (currentFeedback != null) {
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    text = "ℹ️ $feedbackMessage",
+                    text = currentFeedback,
                     fontSize = 11.5.sp,
                     color = Color(0xFF38BDF8),
                     textAlign = TextAlign.Center

@@ -238,20 +238,6 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun prefixFor(category: String, title: String): String {
-        if (title.startsWith("📢") || title.startsWith("📚") || title.startsWith("📝") ||
-            title.startsWith("💻") || title.startsWith("🏆") || title.startsWith("🔔") ||
-            title.startsWith("🎓")
-        ) return title
-        val c = category.uppercase()
-        val emoji = when {
-            c.contains("MATERIAL") -> "📚"
-            c.contains("ASSIGN") -> "📝"
-            c.contains("QUIZ") || c.contains("CBT") -> "💻"
-            c.contains("GRADE") || c.contains("NILAI") -> "🏆"
-            c.contains("SESSION") || c.contains("JADWAL") -> "🎓"
-            c.contains("REMINDER") -> "🔔"
-            else -> "📢"
-        }
-        return "$emoji $title"
+        return title.trim()
     }
 }

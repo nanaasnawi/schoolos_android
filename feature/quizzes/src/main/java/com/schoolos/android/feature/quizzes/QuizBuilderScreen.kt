@@ -72,10 +72,10 @@ fun QuizBuilderScreen(
                     generated = generated,
                     onSuccess = {
                         showAiGenerateDialog = false
-                        Toast.makeText(context, "✓ Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Berhasil menerapkan ${generated.questions.size} butir soal terverifikasi!", Toast.LENGTH_SHORT).show()
                     },
                     onError = { err ->
-                        Toast.makeText(context, "⚠️ $err", Toast.LENGTH_LONG).show()
+                        Toast.makeText(context, err, Toast.LENGTH_LONG).show()
                     }
                 )
             },
@@ -298,7 +298,7 @@ private fun QuizInfoForm(
                     }
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = "✨ Generate Kuis / Ujian (AI)",
+                            text = "Generate Kuis / Ujian (AI)",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -346,7 +346,7 @@ private fun QuizInfoForm(
 
                 QuizDropdown(
                     value = selectedSubject,
-                    label = if (state.isSubjectLocked) "Mata Pelajaran (🔒 Terkunci)" else "Mata Pelajaran",
+                    label = if (state.isSubjectLocked) "Mata Pelajaran (Terkunci)" else "Mata Pelajaran",
                     icon = if (state.isSubjectLocked) Icons.Default.Lock else Icons.Default.School,
                     expanded = if (state.isSubjectLocked && subjectOptions.size <= 1) false else isSubjectMenuExpanded,
                     accentColor = TeacherNeon,
@@ -394,7 +394,7 @@ private fun QuizInfoForm(
                     value = desc,
                     onValueChange = { desc = it },
                     label = "Petunjuk Pengerjaan Peserta",
-                    placeholder = "Pilih jawaban yang paling tepat. KKM = 70.",
+                    placeholder = "Pilih jawaban yang paling tepat. Target KKTP = 70.",
                     icon = Icons.Default.Info,
                     accentColor = TeacherNeon,
                     minHeight = 80.dp
@@ -582,7 +582,7 @@ private fun QuizQuestionForm(
                 correctIndex = correctOptionIndex,
                 points = pts
             )
-            if (notify) Toast.makeText(context, "✓ Butir #${selectedQuestionIndex + 1} disimpan!", Toast.LENGTH_SHORT).show()
+            if (notify) Toast.makeText(context, "Butir #${selectedQuestionIndex + 1} disimpan!", Toast.LENGTH_SHORT).show()
             onSaved()
         } else {
             viewModel.addQuestion(
@@ -593,7 +593,7 @@ private fun QuizQuestionForm(
                 points = pts,
                 onSuccessCallback = {
                     val savedNum = state.questionsList.size
-                    if (notify) Toast.makeText(context, "✓ Butir #$savedNum ditambahkan!", Toast.LENGTH_SHORT).show()
+                    if (notify) Toast.makeText(context, "Butir #$savedNum ditambahkan!", Toast.LENGTH_SHORT).show()
                     onSaved()
                 }
             )
@@ -720,7 +720,7 @@ private fun QuizQuestionForm(
                             }
                         ) {
                             Text(
-                                "⚖ Bagi Rata 100",
+                                "Bagi Rata 100",
                                 color = TextSecondary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -911,8 +911,8 @@ private fun QuizQuestionForm(
                 // Format Soal Segmented Switch
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     listOf(
-                        "MULTIPLE_CHOICE" to "🔘  Pilihan Ganda (PG)",
-                        "ESSAY" to "📝  Soal Esai / Uraian"
+                        "MULTIPLE_CHOICE" to "Pilihan Ganda (PG)",
+                        "ESSAY" to "Soal Esai / Uraian"
                     ).forEach { (type, label) ->
                         val isSelected = questionType == type
                         Surface(
@@ -1068,9 +1068,9 @@ private fun QuizQuestionForm(
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Text(
-                                            if (isCorrect) "$letter✓" else letter,
+                                            if (isCorrect) "$letter (Kunci)" else letter,
                                             color = if (isCorrect) Color.White else TextSecondary,
-                                            fontSize = 12.sp,
+                                            fontSize = 11.sp,
                                             fontWeight = FontWeight.Black
                                         )
                                     }
@@ -1246,8 +1246,8 @@ private fun QuizQuestionForm(
                     ) {
                         Text(
                             if (canGoNext) "Simpan & Lanjut ke #${selectedQuestionIndex + 2} →"
-                            else if (isViewingExisting) "Simpan Butir #${selectedQuestionIndex + 1} ✓"
-                            else "Simpan Soal Baru ✓",
+                            else if (isViewingExisting) "Simpan Butir #${selectedQuestionIndex + 1}"
+                            else "Simpan Soal Baru",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -1486,7 +1486,7 @@ private fun QuizReviewAndPublishPage(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.weight(1f, fill = false)
                         ) {
-                            Text("🎯", fontSize = 18.sp)
+                            Icon(Icons.Default.School, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(20.dp))
                             Column {
                                 Text(
                                     "Kelas ${state.className.ifBlank { "Semua" }} • ${state.subjectName.ifBlank { "Umum" }}",
@@ -1511,7 +1511,7 @@ private fun QuizReviewAndPublishPage(
                                 .padding(horizontal = 10.dp, vertical = 5.dp)
                         ) {
                             Text(
-                                "⏱️ ${state.timeLimitMinutes} Menit",
+                                "${state.timeLimitMinutes} Menit",
                                 color = NeonWarning,
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.Bold
@@ -1571,7 +1571,7 @@ private fun QuizReviewAndPublishPage(
                             contentAlignment = Alignment.Center
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("KKM Lulus", fontSize = 10.sp, color = TextTertiary)
+                                Text("Target KKTP", fontSize = 10.sp, color = TextTertiary)
                                 Spacer(Modifier.height(2.dp))
                                 Text(
                                     "${state.passingScore}",
@@ -1597,7 +1597,7 @@ private fun QuizReviewAndPublishPage(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Text("💡", fontSize = 16.sp)
+                    Icon(Icons.Default.Info, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(18.dp))
                     Text(
                         "Periksa seluruh butir soal dan kunci jawaban di bawah ini. Setelah tombol 'Terbitkan Kuis CBT' ditekan, paket kuis akan aktif dan siap dikerjakan oleh siswa di rombel sasaran.",
                         fontSize = 11.sp,
@@ -1715,7 +1715,7 @@ private fun QuizReviewAndPublishPage(
                                                 modifier = Modifier.weight(1f)
                                             )
                                             if (isCorrect) {
-                                                Text("✓ Kunci", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Black)
+                                                Text("Kunci", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Black)
                                             }
                                         }
                                     }
@@ -1758,7 +1758,7 @@ private fun QuizReviewAndPublishPage(
                 Button(
                     onClick = {
                         viewModel.publishCreatedQuiz {
-                            Toast.makeText(context, "✓ Kuis CBT berhasil diterbitkan!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Kuis CBT berhasil diterbitkan!", Toast.LENGTH_SHORT).show()
                             onFinish()
                         }
                     },

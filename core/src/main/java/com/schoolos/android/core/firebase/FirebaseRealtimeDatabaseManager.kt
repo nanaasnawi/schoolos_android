@@ -100,7 +100,7 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                 "lastSenderName" to message.senderName,
                 "lastSenderId" to message.senderId,
                 "lastSenderRole" to message.senderRole,
-                "readStatusLabel" to if (message.isFromTeacher) "✓ Dijawab Guru" else "Menunggu Dibaca Guru",
+                "readStatusLabel" to if (message.isFromTeacher) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong",
                 "teacherLastReadAt" to if (message.isFromTeacher) message.timestamp else 0L,
             )
             if (!studentId.isNullOrBlank()) summaryMap["studentId"] = studentId
@@ -113,7 +113,8 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
             // If teacher replied, ensure metadata also holds the correct teacher name & ID
             if (message.isFromTeacher && message.senderName.isNotBlank() &&
                 !message.senderName.equals("Bapak/Ibu Guru", ignoreCase = true) &&
-                !message.senderName.equals("Guru Pengampu", ignoreCase = true)
+                !message.senderName.equals("Guru Pengampu", ignoreCase = true) &&
+                !message.senderName.equals("Tutor Pamong", ignoreCase = true)
             ) {
                 threadRef.child("metadata").updateChildren(
                     mapOf(
@@ -138,7 +139,7 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
             summaryRef.updateChildren(
                 mapOf(
                     "teacherLastReadAt" to now,
-                    "readStatusLabel" to "✓ Dibaca Guru"
+                    "readStatusLabel" to "Dibaca Tutor Pamong"
                 )
             )
         } catch (e: Exception) {

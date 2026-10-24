@@ -87,7 +87,7 @@ class TodayViewModel @Inject constructor(
                 error = null
             )
             val role = _state.value.userRole.lowercase()
-            val isTeacherOrStaff = role.contains("teacher") || role.contains("guru") || role.contains("principal") || role.contains("kepala")
+            val isTeacherOrStaff = role.contains("teacher") || role.contains("guru") || role.contains("principal") || role.contains("kepala") || role.contains("kepsek")
             val targetClassId = if (isTeacherOrStaff) null else _state.value.classId
             repository.getSessions(targetClassId)
                 .onSuccess { sessions ->
@@ -112,7 +112,7 @@ class TodayViewModel @Inject constructor(
         filter: String,
     ) {
         val role = _state.value.userRole.lowercase()
-        val isPrincipal = role.contains("principal") || role.contains("kepala")
+        val isPrincipal = role.contains("principal") || role.contains("kepala") || role.contains("kepsek")
         val isTeacher = (role.contains("teacher") || role.contains("guru")) && !isPrincipal
         val teacherUserId = currentAuth.userId ?: ""
         val teacherName = currentAuth.name ?: ""
@@ -214,28 +214,28 @@ class TodayViewModel @Inject constructor(
 
     private fun extractSessionDate(s: LearningSession): LocalDate? {
         val fromSessionDate = s.sessionDate?.let { dateStr ->
-            if (dateStr.contains("T")) {
-                parseDate(dateStr)
-            } else {
-                try {
-                    LocalDate.parse(dateStr)
-                } catch (_: Exception) {
-                    null
-                }
+            val clean = dateStr.trim().substringBefore(" ").substringBefore("T")
+            try {
+                LocalDate.parse(clean)
+            } catch (_: Exception) {
+                null
             }
         }
         return fromSessionDate ?: s.scheduledAt?.let { parseDate(it) } ?: s.startedAt?.let { parseDate(it) }
     }
 
     private fun parseDate(iso: String): LocalDate? {
+        val clean = iso.trim()
+        val zone = ZoneId.of("Asia/Jakarta")
         return try {
-            Instant.parse(iso).atZone(ZoneId.systemDefault()).toLocalDate()
+            Instant.parse(clean).atZone(zone).toLocalDate()
         } catch (_: Exception) {
             try {
-                ZonedDateTime.parse(iso).withZoneSameInstant(ZoneId.systemDefault()).toLocalDate()
+                ZonedDateTime.parse(clean).withZoneSameInstant(zone).toLocalDate()
             } catch (_: Exception) {
                 try {
-                    LocalDate.parse(iso.substringBefore("T"))
+                    val datePart = clean.substringBefore(" ").substringBefore("T")
+                    LocalDate.parse(datePart)
                 } catch (_: Exception) { null }
             }
         }

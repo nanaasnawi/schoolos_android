@@ -28,8 +28,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -71,24 +75,19 @@ import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
 import kotlin.random.Random
 
-private fun gradeFromScore(score: Int, maxScore: Int): Triple<String, String, Color> {
-    val pct = if (maxScore == 0) 0f else score.toFloat() / maxScore
-    return when {
-        pct >= 0.90f -> Triple("A",  "Sangat Baik 🏆",        Color(0xFF00E676))
-        pct >= 0.80f -> Triple("A-", "Baik Sekali 🌟",        Color(0xFF00C896))
-        pct >= 0.70f -> Triple("B",  "Baik 👍",              Color(0xFF4FC3F7))
-        pct >= 0.60f -> Triple("C",  "Cukup 😊",             Color(0xFFFFB300))
-        else         -> Triple("D",  "Perlu Belajar Lagi 💪", Color(0xFFFF5252))
+private fun statusFromAttempt(isPassed: Boolean): Pair<String, Color> {
+    return if (isPassed) {
+        Pair("Kompeten & Tuntas KKTP", NeonSuccess)
+    } else {
+        Pair("Perlu Penguatan Modul", NeonWarning)
     }
 }
 
-private fun motivationQuote(score: Int, maxScore: Int): String {
-    val pct = if (maxScore == 0) 0f else score.toFloat() / maxScore
-    return when {
-        pct >= 0.90f -> "\"Luar biasa! Kamu adalah bintang belajar hari ini!\" ⭐"
-        pct >= 0.75f -> "\"Kerja keras selalu membuahkan hasil. Terus semangat!\" 🚀"
-        pct >= 0.60f -> "\"Sudah cukup baik! Sedikit lagi bisa lebih tinggi!\" 🎯"
-        else         -> "\"Jangan menyerah! Setiap kegagalan adalah awal kesuksesan!\" 💪"
+private fun motivationQuote(isPassed: Boolean): String {
+    return if (isPassed) {
+        "\"Capaian pembelajaran modul tuntas. Pertahankan prestasi dan ketekunan belajar!\""
+    } else {
+        "\"Tetap semangat. Manfaatkan bimbingan tutorial bersama tutor pamong untuk penguatan capaian modul.\""
     }
 }
 
@@ -105,9 +104,10 @@ fun QuizResultScreen(
             val isGraded = state.attempt?.status == "graded"
             val score    = state.attempt?.score ?: 0
             val maxScore = state.attempt?.totalPoints?.let { if (it > 0) it else 100 } ?: 100
-            val (grade, gradeLabel, gradeColor) = gradeFromScore(score, maxScore)
             val pct = if (maxScore == 0) 0f else score.toFloat() / maxScore
-            val isCelebration = isGraded && pct >= 0.75f
+            val isPassed = state.attempt?.passed ?: (pct >= 0.75f)
+            val (statusLabel, statusColor) = statusFromAttempt(isPassed)
+            val isCelebration = isGraded && isPassed
 
             Box(modifier = Modifier.fillMaxSize()) {
                 // Dark cosmic background
@@ -134,21 +134,31 @@ fun QuizResultScreen(
                     Spacer(Modifier.height(32.dp))
 
                     if (!isGraded) {
-                        // Belum Dinilai Guru (Menunggu Koreksi)
+                        // Belum Dinilai Tutor (Menunggu Koreksi)
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(NeonWarning.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Assessment,
+                                contentDescription = null,
+                                tint = NeonWarning,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
                         Text(
-                            "📝",
-                            fontSize = 68.sp,
-                        )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            "Jawaban Berhasil Terkirim!",
+                            "Jawaban Berhasil Terkirim",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 22.sp,
                             color = NeonWarning,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Lembar pengerjaan telah tersimpan aman",
+                            "Lembar pengerjaan telah tersimpan di server",
                             fontSize = 13.sp,
                             color = TextTertiary,
                         )
@@ -165,14 +175,14 @@ fun QuizResultScreen(
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
                                 Text(
-                                    "⏳ Menunggu Koreksi Guru",
+                                    "Menunggu Koreksi Tutor Pamong",
                                     fontWeight = FontWeight.Bold,
                                     color = NeonWarning,
                                     fontSize = 16.sp
                                 )
                                 Spacer(Modifier.height(8.dp))
                                 Text(
-                                    "Koreksi hasil kuis & ujian CBT diserahkan kepada Guru pengampu mapel. Nilai resmi dan pembahasan akan tampil setelah diverifikasi dan disahkan oleh Guru.",
+                                    "Koreksi hasil kuis dan evaluasi modul diserahkan kepada Tutor pengampu. Nilai resmi dan pembahasan akan tampil setelah diverifikasi oleh Tutor.",
                                     style = MaterialTheme.typography.bodySmall,
                                     textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                                     color = TextSecondary,
@@ -181,21 +191,31 @@ fun QuizResultScreen(
                             }
                         }
                     } else {
-                        // Sudah Dinilai oleh Guru
-                        Text(
-                            if (pct >= 0.90f) "🎉" else if (pct >= 0.75f) "🌟" else if (pct >= 0.60f) "😊" else "💪",
-                            fontSize = 72.sp,
-                        )
+                        // Sudah Dinilai oleh Tutor
+                        Box(
+                            modifier = Modifier
+                                .size(72.dp)
+                                .clip(CircleShape)
+                                .background(statusColor.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = if (isCelebration) Icons.Default.EmojiEvents else Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = statusColor,
+                                modifier = Modifier.size(38.dp)
+                            )
+                        }
                         Spacer(Modifier.height(8.dp))
                         Text(
                             if (isCelebration) "Selamat!" else "Kamu sudah berusaha!",
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 24.sp,
-                            color = gradeColor,
+                            color = statusColor,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Kuis telah dinilai oleh Guru",
+                            "Uji kompetensi telah dinilai oleh Tutor Pamong",
                             fontSize = 13.sp,
                             color = TextTertiary,
                         )
@@ -207,37 +227,32 @@ fun QuizResultScreen(
                             score = score,
                             maxScore = maxScore,
                             size = 140.dp,
-                            color = gradeColor,
+                            color = statusColor,
                         )
 
                         Spacer(Modifier.height(16.dp))
 
-                        // Grade badge
+                        // KKTP Achievement badge
                         Surface(
                             shape = RoundedCornerShape(14.dp),
-                            color = gradeColor.copy(alpha = 0.12f),
+                            color = statusColor.copy(alpha = 0.12f),
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Text(
-                                    "Predikat",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = gradeColor,
+                                Icon(
+                                    imageVector = if (isPassed) Icons.Default.CheckCircle else Icons.Default.Info,
+                                    contentDescription = null,
+                                    tint = statusColor,
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
-                                    grade,
-                                    style = MaterialTheme.typography.headlineMedium,
+                                    statusLabel,
+                                    style = MaterialTheme.typography.titleMedium,
                                     fontWeight = FontWeight.Bold,
-                                    color = gradeColor,
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    "— $gradeLabel",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = gradeColor,
+                                    color = statusColor,
                                 )
                             }
                         }
@@ -267,9 +282,9 @@ fun QuizResultScreen(
                             )
                             Spacer(Modifier.height(14.dp))
                             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                StatItem("✅", "Benar", "$correctCount", NeonSuccess)
-                                StatItem("❌", "Salah", "$incorrectCount", NeonError)
-                                StatItem("⏱", "Nilai", "$score", StudentNeon)
+                                StatItem(Icons.Default.CheckCircle, "Benar", "$correctCount", NeonSuccess)
+                                StatItem(Icons.Default.Close, "Salah", "$incorrectCount", NeonError)
+                                StatItem(Icons.Default.Assessment, "Nilai", "$score", StudentNeon)
                             }
                         }
                     }
@@ -280,14 +295,14 @@ fun QuizResultScreen(
                     Box(
                         modifier = Modifier.fillMaxWidth()
                             .clip(RoundedCornerShape(20.dp))
-                            .background(gradeColor.copy(alpha = 0.08f))
-                            .border(1.dp, gradeColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
+                            .background(statusColor.copy(alpha = 0.08f))
+                            .border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
                             .padding(14.dp),
                     ) {
                         Text(
-                            motivationQuote(score, maxScore),
+                            motivationQuote(isPassed),
                             fontSize = 14.sp,
-                            color = gradeColor,
+                            color = statusColor,
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Medium,
                         )
@@ -387,7 +402,7 @@ fun QuizResultScreen(
                     Box(
                         modifier = Modifier.fillMaxWidth().height(52.dp)
                             .clip(RoundedCornerShape(14.dp))
-                            .background(Brush.horizontalGradient(listOf(gradeColor, gradeColor.copy(alpha = 0.7f))))
+                            .background(Brush.horizontalGradient(listOf(statusColor, statusColor.copy(alpha = 0.7f))))
                             .clickable(onClick = onBack),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -406,9 +421,9 @@ fun QuizResultScreen(
 }
 
 @Composable
-private fun StatItem(emoji: String, label: String, value: String, color: Color) {
+private fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, color: Color) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(emoji, fontSize = 22.sp)
+        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
         Spacer(Modifier.height(4.dp))
         Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = color)
         Text(label, fontSize = 11.sp, color = TextTertiary)

@@ -39,6 +39,8 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Done
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -622,10 +624,10 @@ private fun TopicContextBanner(
                 val isTeacherRead = (thread.teacherLastReadAt ?: 0L) >= lastMsgTime
                 val isAnswered = thread.status == InquiryStatus.ANSWERED
                 val effectiveLabel = when {
-                    isAnswered -> if (isTeacherMode) "✓ Selesai Dijawab" else "✓ Jawaban Tersedia"
+                    isAnswered -> if (isTeacherMode) "Selesai Dijawab" else "Jawaban Tersedia"
                     isTeacherMode -> "Perlu Ditanggapi"
-                    isTeacherRead -> "✓ Dibaca Guru"
-                    else -> "Menunggu Dibaca Guru"
+                    isTeacherRead -> "Dibaca Tutor Pamong"
+                    else -> "Menunggu Respon Tutor"
                 }
                 val isSuccessColor = isAnswered || (isTeacherRead && !isTeacherMode)
                 val badgeColor = if (isSuccessColor) Color(0xFF10B981) else Color(0xFFF59E0B)
@@ -807,18 +809,24 @@ private fun MessageBubble(
                         Spacer(Modifier.width(4.dp))
                         val isMessageRead = message.isRead || isReadByRecipient
                         if (isMessageRead) {
-                            Text(
-                                text = "✓✓ Dibaca",
-                                fontSize = 9.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFF38BDF8),
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Icon(Icons.Default.DoneAll, contentDescription = "Dibaca", tint = Color(0xFF38BDF8), modifier = Modifier.size(13.dp))
+                                Text(
+                                    text = "Dibaca",
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF38BDF8),
+                                )
+                            }
                         } else {
-                            Text(
-                                text = "✓ Terkirim",
-                                fontSize = 9.5.sp,
-                                color = TextTertiary,
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Icon(Icons.Default.Done, contentDescription = "Terkirim", tint = TextTertiary, modifier = Modifier.size(13.dp))
+                                Text(
+                                    text = "Terkirim",
+                                    fontSize = 9.5.sp,
+                                    color = TextTertiary,
+                                )
+                            }
                         }
                     }
                 }

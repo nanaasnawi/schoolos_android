@@ -35,7 +35,11 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -115,7 +119,7 @@ fun QuizAttemptScreen(
         state.questions.isEmpty() && !state.isLoading -> {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text("📋", fontSize = 52.sp)
+                    Icon(Icons.Default.Quiz, contentDescription = null, tint = Color(0xFF7C3AED), modifier = Modifier.size(48.dp))
                     Spacer(Modifier.height(12.dp))
                     Text("Tidak ada soal tersedia", style = MaterialTheme.typography.bodyLarge)
                 }
@@ -380,7 +384,7 @@ fun QuizAttemptScreen(
             onDismissRequest = { showConfirm = false },
             title = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("📤", fontSize = 36.sp)
+                    Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, tint = Color(0xFF7C3AED), modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("Kumpulkan Jawaban?", fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 }
@@ -417,7 +421,7 @@ fun QuizAttemptScreen(
             onDismissRequest = { viewModel.clearSubmitError() },
             title = {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
-                    Text("⚠️", fontSize = 36.sp)
+                    Icon(Icons.Default.Warning, contentDescription = null, tint = Color(0xFFDC2626), modifier = Modifier.size(36.dp))
                     Spacer(Modifier.height(8.dp))
                     Text("Pengumpulan Gagal", fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                 }
@@ -504,7 +508,7 @@ private fun QuizTopBar(
             // XP indicator
             Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFFF3E8FF)) {
                 Text(
-                    "⭐ XP",
+                    "XP",
                     style = MaterialTheme.typography.labelMedium,
                     color = Color(0xFF7C3AED),
                     fontWeight = FontWeight.Bold,
@@ -594,7 +598,7 @@ private fun AnswerBubble(
             )
             if (isSelected) {
                 Spacer(Modifier.width(8.dp))
-                Text("✓", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(18.dp))
             }
         }
     }
@@ -666,7 +670,7 @@ private fun QuizBottomBar(
                         )
                         Spacer(Modifier.width(4.dp))
                         if (!isLastQuestion) Icon(Icons.AutoMirrored.Filled.ArrowForward, "Berikutnya", tint = Color.White, modifier = Modifier.size(18.dp))
-                        else Text("🚀", fontSize = 14.sp)
+                        else Icon(Icons.AutoMirrored.Filled.Send, "Kumpulkan", tint = Color.White, modifier = Modifier.size(18.dp))
                     }
                 }
             }

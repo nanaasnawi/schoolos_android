@@ -146,7 +146,7 @@ fun LoginHelpDialog(
                         .padding(10.dp),
                 ) {
                     Text(
-                        text = "💡 Login Instan: Anda juga dapat memindai Badge QR Code resmi tanpa mengetik kata sandi. Lupa kata sandi? Hubungi Operator / Admin IT Sekolah.",
+                        text = "Login Instan: Anda juga dapat memindai Badge QR Code resmi tanpa mengetik kata sandi. Lupa kata sandi? Hubungi Operator / Admin IT Sekolah.",
                         fontSize = 11.sp,
                         color = TextSecondary,
                         lineHeight = 16.sp,

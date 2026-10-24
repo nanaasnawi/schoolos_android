@@ -311,7 +311,7 @@ fun LearningMaterialDetailScreen(
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        "✓ Selesai",
+                                        "Selesai",
                                         color = NeonSuccess,
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Bold
@@ -371,7 +371,7 @@ fun LearningMaterialDetailScreen(
                                             if (success) {
                                                 Toast.makeText(
                                                     context,
-                                                    "✓ Materi berhasil diselesaikan!",
+                                                    "Materi berhasil diselesaikan!",
                                                     Toast.LENGTH_SHORT
                                                 ).show()
                                             } else {
@@ -711,7 +711,7 @@ fun LearningMaterialDetailScreen(
                                     .padding(horizontal = 10.dp, vertical = 6.dp)
                             ) {
                                 Text(
-                                    text = "Tanya Guru 💬",
+                                    text = "Tanya Tutor Pamong",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color.Black
@@ -870,7 +870,7 @@ fun LearningMaterialDetailScreen(
                     ) { success, err ->
                         if (success) {
                             showEditDialog = false
-                            Toast.makeText(context, "✓ Materi berhasil diperbarui!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Materi berhasil diperbarui!", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, "Gagal: ${err ?: "Terjadi kesalahan"}", Toast.LENGTH_SHORT).show()
                         }
@@ -914,7 +914,7 @@ fun LearningMaterialDetailScreen(
                             viewModel.deleteMaterial(material.id) { success, err ->
                                 if (success) {
                                     showDeleteDialog = false
-                                    Toast.makeText(context, "✓ Materi berhasil dihapus!", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Materi berhasil dihapus!", Toast.LENGTH_SHORT).show()
                                     onBack()
                                 } else {
                                     Toast.makeText(context, "Gagal: ${err ?: "Terjadi kesalahan"}", Toast.LENGTH_SHORT).show()
@@ -1050,7 +1050,7 @@ fun LearningMaterialDetailScreen(
                         }
 
                         Text(
-                            text = "💡 Setelah waktu membaca minimal terpenuhi, tombol Tandai Selesai akan aktif.",
+                            text = "Setelah waktu membaca minimal terpenuhi, tombol Tandai Selesai akan aktif.",
                             color = TextTertiary,
                             fontSize = 11.sp,
                             lineHeight = 15.sp

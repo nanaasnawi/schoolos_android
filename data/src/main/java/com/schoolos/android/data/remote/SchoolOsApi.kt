@@ -50,6 +50,20 @@ interface SchoolOsApi {
     @GET("students/{id}")
     suspend fun getStudentProfile(@Path("id") id: String): ApiResponse<OfficialStudentBiodataDto>
 
+    // Official Verified Dapodik GTK / Teacher Biodata
+    @GET("teachers/me/official-profile")
+    suspend fun getMyTeacherOfficialBiodata(): ApiResponse<OfficialTeacherBiodataDto>
+
+    @GET("teachers/me")
+    suspend fun getMyTeacherProfile(): ApiResponse<OfficialTeacherBiodataDto>
+
+    @GET("teachers")
+    suspend fun getTeachers(
+        @Query("page") page: Int? = null,
+        @Query("page_size") pageSize: Int? = null,
+        @Query("search") search: String? = null,
+    ): ApiResponse<List<OfficialTeacherBiodataDto>>
+
     // Academic (Classes & Subjects)
     @GET("academic/classes")
     suspend fun getClasses(

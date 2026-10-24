@@ -120,7 +120,7 @@ class NotificationSyncManager @Inject constructor(
                                                     SystemNotificationHelper.showNotification(
                                                         context = context,
                                                         notificationId = id.hashCode(),
-                                                        title = "📢 $title",
+                                                        title = title,
                                                         message = content
                                                     )
                                                 }
@@ -176,20 +176,7 @@ suspend fun syncNotifications() {
                     }
                     mutableShownIds.add(notifId.toString())
                     newShown = true
-                    val emoji = when (navigateTo) {
-                        "materials" -> "📚"
-                        "assignments" -> "📝"
-                        "quizzes" -> "💻"
-                        "grades" -> "🏆"
-                        "sessions" -> "🎓"
-                        "schedule" -> "🔔"
-                        else -> "📢"
-                    }
-                    val displayTitle = if (notif.title.startsWith("📢") || notif.title.startsWith("📚") ||
-                        notif.title.startsWith("📝") || notif.title.startsWith("💻") ||
-                        notif.title.startsWith("🏆") || notif.title.startsWith("🎓") ||
-                        notif.title.startsWith("🔔")
-                    ) notif.title else "$emoji ${notif.title}"
+                    val displayTitle = notif.title.trim()
 
                     // Trigger native Android system notification
                     SystemNotificationHelper.showNotification(

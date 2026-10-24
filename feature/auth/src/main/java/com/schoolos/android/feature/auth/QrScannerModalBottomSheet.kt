@@ -369,7 +369,7 @@ fun QrScannerModalBottomSheet(
                     .padding(horizontal = 12.dp, vertical = 8.dp)
             ) {
                 Text(
-                    text = "💡 Tips: Siswa & Wali Murid bisa menyimpan foto kartu QR yang dibagikan guru di Galeri HP, lalu pilih 'Pilih dari Galeri' untuk masuk instan.",
+                    text = "Tips: Warga belajar & Wali Murid bisa menyimpan foto kartu QR yang dibagikan di Galeri HP, lalu pilih 'Pilih dari Galeri' untuk masuk instan.",
                     fontSize = 11.sp,
                     color = TextTertiary,
                     lineHeight = 15.sp

@@ -69,38 +69,35 @@ fun StudentGradeDetailContent(
     val isDark = LocalIsDarkTheme.current
     val score = detail.summary.finalScore
     val letter = detail.summary.letterGrade
-    val kkm = detail.summary.passingThreshold
-    val kkmDiff = score - kkm
+    val kktp = detail.summary.passingThreshold
+    val kktpDiff = score - kktp
     val isPassing = detail.summary.isPassed
     val hasGrades = score > 0.0
 
     // Theme-adaptive status colors
-    val successColor = if (isDark) NeonSuccess else Color(0xFF047857)
-    val successBg = if (isDark) NeonSuccess.copy(alpha = 0.12f) else Color(0xFFECFDF5)
-    val successBorder = if (isDark) NeonSuccess.copy(alpha = 0.35f) else Color(0xFFA7F3D0)
+    val successColor = NeonSuccess
+    val successBg = NeonSuccess.copy(alpha = 0.12f)
+    val successBorder = NeonSuccess.copy(alpha = 0.35f)
 
-    val warningColor = if (isDark) NeonWarning else Color(0xFFB45309)
-    val warningBg = if (isDark) NeonWarning.copy(alpha = 0.12f) else Color(0xFFFEF3C7)
-    val warningBorder = if (isDark) NeonWarning.copy(alpha = 0.35f) else Color(0xFFFDE68A)
+    val warningColor = NeonWarning
+    val warningBg = NeonWarning.copy(alpha = 0.12f)
+    val warningBorder = NeonWarning.copy(alpha = 0.35f)
 
-    val neutralIndigoColor = if (isDark) StudentNeon else Color(0xFF4338CA)
-    val neutralIndigoBg = if (isDark) StudentNeon.copy(alpha = 0.12f) else Color(0xFFEEF2FF)
-    val neutralIndigoBorder = if (isDark) StudentNeon.copy(alpha = 0.35f) else Color(0xFFC7D2FE)
+    val neutralIndigoColor = StudentNeon
+    val neutralIndigoBg = StudentNeon.copy(alpha = 0.12f)
+    val neutralIndigoBorder = StudentNeon.copy(alpha = 0.35f)
 
     val evaluationTitle = when {
-        score >= kkm + 10.0 -> "Predikat Istimewa (A)"
-        score >= kkm -> "Kompeten & Tuntas (B)"
-        score >= kkm - 10.0 -> "Cukup Memadai (C)"
-        hasGrades -> "Perlu Remedial (D)"
+        letter.isNotBlank() && letter != "-" -> "Predikat $letter"
+        isPassing -> "Kompeten & Tuntas"
+        hasGrades -> "Perlu Penguatan Modul"
         else -> "Belum Ada Catatan Nilai"
     }
 
     val evaluationDesc = when {
-        score >= kkm + 10.0 -> "Prestasi luar biasa! Capaian akademik Anda berada pada kuadran kompetensi tertinggi."
-        score >= kkm -> "Kerja bagus! Nilai Anda telah memenuhi dan melampaui standar kelulusan KKM yang ditetapkan."
-        score >= kkm - 10.0 -> "Capaian mendekati target KKM. Perbanyak latihan mandiri untuk mengoptimalkan nilai akhir."
-        hasGrades -> "Nilai saat ini di bawah standar KKM ($kkm). Konsultasikan jadwal bimbingan remedial dengan guru pengampu."
-        else -> "Komponen penilaian sedang dalam proses evaluasi oleh guru mata pelajaran."
+        isPassing -> "Capaian pembelajaran Anda telah memenuhi kriteria ketuntasan tujuan pembelajaran (KKTP)."
+        hasGrades -> "Capaian saat ini di bawah target KKTP (${kktp.toInt()}). Silakan konsultasikan jadwal bimbingan dan penguatan modul dengan tutor pengampu."
+        else -> "Komponen penilaian sedang dalam proses evaluasi oleh tutor pengampu."
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -133,7 +130,7 @@ fun StudentGradeDetailContent(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Top Tag + KKM Status Chip
+                // Top Tag + KKTP Status Chip
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
@@ -161,7 +158,7 @@ fun StudentGradeDetailContent(
                         )
                     }
 
-                    // KKM Tag Chip (theme-aware colors)
+                    // KKTP Tag Chip (theme-aware colors)
                     val (chipText, chipIcon, chipTextColor, chipBgColor, chipBorderColor) = when {
                         !hasGrades -> Tuple5(
                             "Menunggu Evaluasi",
@@ -171,14 +168,14 @@ fun StudentGradeDetailContent(
                             neutralIndigoBorder
                         )
                         isPassing -> Tuple5(
-                            "+${"%.1f".format(kkmDiff)} dari KKM",
+                            "+${"%.1f".format(kktpDiff)} dari KKTP",
                             Icons.Default.CheckCircle,
                             successColor,
                             successBg,
                             successBorder
                         )
                         else -> Tuple5(
-                            "${"%.1f".format(kkmDiff)} dari KKM",
+                            "${"%.1f".format(kktpDiff)} dari KKTP",
                             Icons.Default.Warning,
                             warningColor,
                             warningBg,
@@ -219,7 +216,7 @@ fun StudentGradeDetailContent(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     val scoreDisplayColor = when {
-                        !hasGrades -> if (isDark) TextSecondary else Color(0xFF64748B)
+                        !hasGrades -> TextSecondary
                         isPassing -> successColor
                         else -> warningColor
                     }
@@ -238,18 +235,18 @@ fun StudentGradeDetailContent(
                         // Dynamic Theme-Aware Predikat Badge
                         val (predBg, predBorder, predTextColor) = when {
                             !hasGrades || letter == "-" -> Triple(
-                                if (isDark) Color(0xFF312E81).copy(alpha = 0.45f) else Color(0xFFEEF2FF),
-                                if (isDark) Color(0xFF6366F1).copy(alpha = 0.6f) else Color(0xFFA5B4FC),
-                                if (isDark) Color(0xFFE0E7FF) else Color(0xFF3730A3)
+                                StudentNeon.copy(alpha = 0.15f),
+                                StudentNeon.copy(alpha = 0.4f),
+                                StudentNeon
                             )
                             isPassing -> Triple(
-                                if (isDark) NeonSuccess.copy(alpha = 0.15f) else Color(0xFFECFDF5),
-                                if (isDark) NeonSuccess.copy(alpha = 0.5f) else Color(0xFFA7F3D0),
+                                NeonSuccess.copy(alpha = 0.15f),
+                                NeonSuccess.copy(alpha = 0.4f),
                                 successColor
                             )
                             else -> Triple(
-                                if (isDark) NeonWarning.copy(alpha = 0.15f) else Color(0xFFFEF3C7),
-                                if (isDark) NeonWarning.copy(alpha = 0.5f) else Color(0xFFFDE68A),
+                                NeonWarning.copy(alpha = 0.15f),
+                                NeonWarning.copy(alpha = 0.4f),
                                 warningColor
                             )
                         }
@@ -281,7 +278,7 @@ fun StudentGradeDetailContent(
                         Spacer(Modifier.height(5.dp))
 
                         Text(
-                            text = "Standar KKM: ${kkm.toInt()}",
+                            text = "Target KKTP: ${kktp.toInt()}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextTertiary
@@ -326,7 +323,7 @@ fun StudentGradeDetailContent(
                 HorizontalDivider(color = GlassBorder, thickness = 1.dp)
                 Spacer(Modifier.height(16.dp))
 
-                // BENCHMARK PROGRESS BAR WITH KKM MARKER
+                // BENCHMARK PROGRESS BAR WITH KKTP MARKER
                 Column(modifier = Modifier.fillMaxWidth()) {
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -379,7 +376,7 @@ fun StudentGradeDetailContent(
 
                     Spacer(Modifier.height(8.dp))
 
-                    // Indicator labels: 0, KKM benchmark pill, 100
+                    // Indicator labels: 0, KKTP benchmark pill, 100
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
@@ -402,7 +399,7 @@ fun StudentGradeDetailContent(
                             )
                             Spacer(Modifier.width(4.dp))
                             Text(
-                                text = "Target KKM: ${kkm.toInt()}",
+                                text = "Target KKTP: ${kktp.toInt()}",
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = warningColor
@@ -570,12 +567,10 @@ fun StudentGradeDetailContent(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                if (isDark) NeonBlue.copy(alpha = 0.15f) else Color(0xFFEFF6FF)
-                            )
+                            .background(NeonBlue.copy(alpha = 0.15f))
                             .border(
                                 1.dp,
-                                if (isDark) NeonBlue.copy(alpha = 0.35f) else Color(0xFFBFDBFE),
+                                NeonBlue.copy(alpha = 0.35f),
                                 RoundedCornerShape(12.dp)
                             ),
                         contentAlignment = Alignment.Center
@@ -583,7 +578,7 @@ fun StudentGradeDetailContent(
                         Icon(
                             imageVector = Icons.Default.BarChart,
                             contentDescription = null,
-                            tint = if (isDark) NeonBlue else Color(0xFF1D4ED8),
+                            tint = NeonBlue,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -610,12 +605,12 @@ fun StudentGradeDetailContent(
                 val totalCount = detail.summary.componentCount
                 val compText = if (totalCount > 0) "$gradedCount dari $totalCount Dinilai" else "Belum Dinilai"
                 val pctText = "${detail.summary.completionPercentage.toInt()}% Lengkap"
-                val kkmStatusText = when {
+                val kktpStatusText = when {
                     !hasGrades -> "Dalam Proses"
-                    isPassing -> "Tuntas KKM ✓"
-                    else -> "Belum Tuntas !"
+                    isPassing -> "Tuntas KKTP"
+                    else -> "Perlu Penguatan"
                 }
-                val kkmStatusColor = when {
+                val kktpStatusColor = when {
                     !hasGrades -> neutralIndigoColor
                     isPassing -> successColor
                     else -> warningColor
@@ -628,7 +623,7 @@ fun StudentGradeDetailContent(
                     AnalyticsMiniTile(
                         label = "Komponen",
                         value = compText,
-                        color = if (isDark) NeonBlue else Color(0xFF1D4ED8),
+                        color = NeonBlue,
                         modifier = Modifier.weight(1f)
                     )
                     AnalyticsMiniTile(
@@ -639,8 +634,8 @@ fun StudentGradeDetailContent(
                     )
                     AnalyticsMiniTile(
                         label = "Kelulusan",
-                        value = kkmStatusText,
-                        color = kkmStatusColor,
+                        value = kktpStatusText,
+                        color = kktpStatusColor,
                         modifier = Modifier.weight(1f)
                     )
                 }
@@ -660,7 +655,7 @@ fun StudentGradeDetailContent(
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = if (isDark) NeonBlue else Color(0xFF2563EB),
+                            tint = NeonBlue,
                             modifier = Modifier
                                 .size(18.dp)
                                 .padding(top = 1.dp)
@@ -675,10 +670,9 @@ fun StudentGradeDetailContent(
                             )
                             Spacer(Modifier.height(3.dp))
                             val tipText = when {
-                                score >= 85.0 -> "Pertahankan konsistensi performa pada tugas harian dan ujian untuk mengamankan nilai akhir sempurna."
-                                score >= 75.0 -> "Hasil penilaian Anda stabil. Maksimalkan pemahaman materi praktikum dan kuis untuk meningkatkan predikat menjadi A."
-                                hasGrades -> "Tingkatkan nilai komponen yang masih belum optimal. Hubungi guru mata pelajaran untuk konsultasi perbaikan nilai."
-                                else -> "Pantau materi pembelajaran dan penugasan secara berkala untuk mempersiapkan evaluasi nilai harian."
+                                isPassing -> "Pertahankan konsistensi performa pada tugas mandiri dan penilaian modul untuk mengoptimalkan capaian belajar."
+                                hasGrades -> "Tingkatkan nilai komponen yang masih belum optimal. Hubungi tutor pamong pengampu modul untuk bimbingan penguatan."
+                                else -> "Pantau modul pembelajaran dan penugasan secara berkala untuk mempersiapkan evaluasi capaian belajar."
                             }
                             Text(
                                 text = tipText,
@@ -718,12 +712,12 @@ fun StudentGradeDetailContent(
                         letter = "A",
                         range = "85 - 100",
                         desc = "Sangat Baik",
-                        color = if (isDark) StudentNeon else Color(0xFF4338CA)
+                        color = StudentNeon
                     )
                     GradeScaleTierItem(
                         letter = "B",
                         range = "75 - 84",
-                        desc = "Baik (KKM)",
+                        desc = "Baik (KKTP)",
                         color = successColor
                     )
                     GradeScaleTierItem(
@@ -735,8 +729,8 @@ fun StudentGradeDetailContent(
                     GradeScaleTierItem(
                         letter = "D",
                         range = "< 65",
-                        desc = "Remedial",
-                        color = if (isDark) NeonError else Color(0xFFDC2626)
+                        desc = "Perlu Penguatan",
+                        color = NeonError
                     )
                 }
             }
@@ -760,19 +754,19 @@ private fun GradeBreakdownCardItem(
     val lower = name.lowercase()
     val (icon: ImageVector, accentColor: Color) = when {
         lower.contains("kuis") || lower.contains("quiz") || lower.contains("ulangan") ->
-            Pair(Icons.Default.Bolt, if (isDark) NeonWarning else Color(0xFFD97706))
+            Pair(Icons.Default.Bolt, NeonWarning)
         lower.contains("uts") || lower.contains("tengah") || lower.contains("mid") ->
-            Pair(Icons.Default.Assessment, if (isDark) TeacherNeon else Color(0xFF059669))
+            Pair(Icons.Default.Assessment, TeacherNeon)
         lower.contains("uas") || lower.contains("akhir") || lower.contains("pas") || lower.contains("pat") ->
-            Pair(Icons.Default.School, if (isDark) StudentNeon else Color(0xFF4F46E5))
+            Pair(Icons.Default.School, StudentNeon)
         lower.contains("praktik") || lower.contains("proyek") || lower.contains("lab") ->
-            Pair(Icons.Default.Science, if (isDark) NeonSuccess else Color(0xFF059669))
+            Pair(Icons.Default.Science, NeonSuccess)
         else ->
-            Pair(Icons.AutoMirrored.Filled.Assignment, if (isDark) NeonBlue else Color(0xFF2563EB))
+            Pair(Icons.AutoMirrored.Filled.Assignment, NeonBlue)
     }
 
-    val successText = if (isDark) NeonSuccess else Color(0xFF047857)
-    val successBg = if (isDark) NeonSuccess.copy(alpha = 0.12f) else Color(0xFFECFDF5)
+    val successText = NeonSuccess
+    val successBg = NeonSuccess.copy(alpha = 0.12f)
 
     Box(
         modifier = Modifier

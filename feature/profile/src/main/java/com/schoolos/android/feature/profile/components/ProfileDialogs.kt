@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.ZoomIn
@@ -266,7 +267,9 @@ fun ProfileHelpDialog(
                         .padding(10.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("🕒 Jam Layanan: ", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                        Icon(Icons.Default.Schedule, contentDescription = null, tint = TextTertiary, modifier = Modifier.size(14.dp))
+                        Spacer(Modifier.width(4.dp))
+                        Text("Jam Layanan: ", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
                         Text("Senin – Jumat, 08.00 – 16.00 WIB", fontSize = 11.sp, color = TextSecondary)
                     }
                 }

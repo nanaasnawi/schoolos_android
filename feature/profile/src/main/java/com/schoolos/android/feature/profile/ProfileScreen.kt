@@ -41,6 +41,7 @@ import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.feature.profile.components.EditProfileFieldDialog
 import com.schoolos.android.feature.profile.components.OfficialBiodataNavigationCard
+import com.schoolos.android.feature.profile.components.OfficialGtkBiodataNavigationCard
 import com.schoolos.android.feature.profile.components.ParentStudentCard
 import com.schoolos.android.feature.profile.components.ProfileAvatarActionDialog
 import com.schoolos.android.feature.profile.components.ProfileAvatarPreviewDialog
@@ -62,6 +63,7 @@ fun ProfileScreen(
     onNavigateToHelp: () -> Unit = {},
     onNavigateToAbout: () -> Unit = {},
     onNavigateToOfficialBiodata: () -> Unit = {},
+    onNavigateToOfficialGtkBiodata: () -> Unit = onNavigateToOfficialBiodata,
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -88,7 +90,7 @@ fun ProfileScreen(
                     val filename = "photo_${System.currentTimeMillis()}.jpg"
                     viewModel.uploadProfilePhoto(compressedBytes, filename, "image/jpeg") { success, err ->
                         if (success) {
-                            Toast.makeText(context, "✅ Foto profil berhasil disimpan langsung ke database PostgreSQL!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Foto profil berhasil disimpan langsung ke database PostgreSQL!", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
                         }
@@ -110,7 +112,7 @@ fun ProfileScreen(
                 val filename = "photo_cam_${System.currentTimeMillis()}.jpg"
                 viewModel.uploadProfilePhoto(compressedBytes, filename, "image/jpeg") { success, err ->
                     if (success) {
-                        Toast.makeText(context, "✅ Foto profil berhasil disimpan langsung ke database PostgreSQL!", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Foto profil berhasil disimpan langsung ke database PostgreSQL!", Toast.LENGTH_SHORT).show()
                     } else {
                         Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
                     }
@@ -242,10 +244,16 @@ fun ProfileScreen(
                 },
             )
 
-            // 3.5 Dedicated Navigation Button: "Lihat Detail Biodata Resmi" (Khusus Portal Murid / Siswa)
+            // 3.5 Dedicated Navigation Button: "Biodata Pokok Resmi"
             if (!isTeacher && !isParent && !isPrincipal) {
+                // Khusus Murid / Siswa
                 OfficialBiodataNavigationCard(
                     onClick = onNavigateToOfficialBiodata,
+                )
+            } else if (isTeacher || isPrincipal) {
+                // Khusus Pendidik & Tenaga Kependidikan (GTK / Guru / Tutor / Kepala Sekolah)
+                OfficialGtkBiodataNavigationCard(
+                    onClick = onNavigateToOfficialGtkBiodata,
                 )
             }
 
@@ -324,7 +332,7 @@ fun ProfileScreen(
                 onSave = { newValue ->
                     viewModel.updateEditableField(key, newValue) { success, err ->
                         if (success) {
-                            Toast.makeText(context, "✅ Data berhasil diperbarui di server!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Data berhasil diperbarui di server!", Toast.LENGTH_SHORT).show()
                         } else {
                             Toast.makeText(context, err ?: "Gagal memperbarui data", Toast.LENGTH_LONG).show()
                         }

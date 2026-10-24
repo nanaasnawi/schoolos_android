@@ -11,15 +11,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.material3.TabRowDefaults.tabIndicatorOffset
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -58,20 +60,20 @@ fun StudentDetailScreen(
     val errorMessage = uiState.errorMessage
     val selectedTab = uiState.selectedTab
 
-    val tabs = listOf("Data Dapodik", "Perkembangan", "Metrik", "Pencapaian", "Kontak")
+    val tabs = listOf("Biodata Pokok", "Perkembangan", "Metrik", "Pencapaian", "Kontak")
 
     val isFemale = student.gender?.trim()?.uppercase() == "P"
     val genderLabel = if (isFemale) "Perempuan" else "Laki-laki"
     val genderIcon = if (isFemale) Icons.Default.Female else Icons.Default.Male
-    val heroAccent = if (isFemale) Color(0xFFEC4899) else StudentNeon
+    val heroAccent = if (isFemale) AccentNeonPink else StudentNeon
 
     Scaffold(
         modifier = modifier.fillMaxSize(),
         containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = "Detail Profil Siswa",
-                subtitle = if (student.className.isNotBlank()) "Kelas ${student.className} • Data Pokok Pendidikan" else "Data Pokok Pendidikan (Dapodik)",
+                title = "Detail Warga Belajar",
+                subtitle = if (student.className.isNotBlank()) "${student.className} • Profil Warga Belajar" else "Profil Warga Belajar",
                 onBack = onBack,
                 actions = {
                     Box(
@@ -276,18 +278,25 @@ private fun StudentHeroCard(
                     )
                 }
 
+                val formattedClass = when {
+                    student.className.isBlank() || student.className == "-" -> "Warga Belajar Aktif"
+                    student.className.startsWith("Paket", ignoreCase = true) -> student.className
+                    student.className.startsWith("Rombel", ignoreCase = true) -> student.className
+                    student.className.startsWith("Kelas", ignoreCase = true) -> student.className.replaceFirst("Kelas", "Rombel", ignoreCase = true)
+                    else -> "Rombel ${student.className}"
+                }
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     InfoPill(
-                        label = if (student.className.isNotBlank()) "Kelas ${student.className}" else "Siswa Aktif",
-                        icon = Icons.Default.Class,
+                        label = formattedClass,
+                        icon = Icons.Default.School,
                         color = heroAccent,
                     )
                     InfoPill(
                         label = genderLabel,
-                        icon = genderIcon,
+                        icon = Icons.Default.Person,
                         color = TextSecondary,
                     )
                 }
@@ -307,23 +316,23 @@ private fun InfoPill(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(color.copy(alpha = 0.12f))
-            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp),
+            .border(0.5.dp, color.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 9.dp, vertical = 4.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+            horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = color,
-                modifier = Modifier.size(11.dp)
+                modifier = Modifier.size(12.dp)
             )
             Text(
                 text = label,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = color,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -389,11 +398,11 @@ private fun MetricBentoCard(
 ) {
     Box(
         modifier = modifier
-            .height(86.dp)
+            .height(96.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(CosmicNavy)
             .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
-            .padding(10.dp),
+            .padding(horizontal = 10.dp, vertical = 10.dp),
     ) {
         Column(
             modifier = Modifier.fillMaxSize(),
@@ -414,7 +423,7 @@ private fun MetricBentoCard(
                     modifier = Modifier.size(15.dp)
                 )
             }
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
                     text = value,
                     fontSize = 15.sp,
@@ -423,10 +432,9 @@ private fun MetricBentoCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(1.dp))
                 Text(
                     text = label,
-                    fontSize = 10.sp,
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.Medium,
                     color = TextTertiary,
                     maxLines = 1,
@@ -445,38 +453,50 @@ private fun StudentTabRow(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.padding(horizontal = 16.dp)) {
-        TabRow(
-            selectedTabIndex = selectedTab,
-            containerColor = CosmicNavy,
-            contentColor = StudentNeon,
-            modifier = Modifier.clip(RoundedCornerShape(12.dp)).border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp)),
-            divider = {},
-            indicator = { tabPositions ->
-                if (selectedTab < tabPositions.size) {
-                    Box(
-                        modifier = Modifier
-                            .tabIndicatorOffset(tabPositions[selectedTab])
-                            .fillMaxHeight()
-                            .padding(4.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(StudentNeon.copy(alpha = 0.20f))
-                            .border(0.5.dp, StudentNeon.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
-                    )
-                }
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        tabs.forEachIndexed { index, title ->
+            val isSelected = selectedTab == index
+            val tabIcon = when (index) {
+                0 -> Icons.Default.Badge
+                1 -> Icons.AutoMirrored.Filled.TrendingUp
+                2 -> Icons.Default.Assessment
+                3 -> Icons.Default.EmojiEvents
+                4 -> Icons.Default.Phone
+                else -> Icons.Default.Info
             }
-        ) {
-            tabs.forEachIndexed { index, title ->
-                Tab(
-                    selected = selectedTab == index,
-                    onClick = { onTabSelected(index) },
+            Surface(
+                onClick = { onTabSelected(index) },
+                shape = RoundedCornerShape(12.dp),
+                color = if (isSelected) StudentNeon.copy(alpha = 0.16f) else CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(
+                    width = if (isSelected) 1.dp else 0.5.dp,
+                    color = if (isSelected) StudentNeon else GlassBorder
+                ),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    Icon(
+                        imageVector = tabIcon,
+                        contentDescription = null,
+                        tint = if (isSelected) StudentNeon else TextTertiary,
+                        modifier = Modifier.size(15.dp)
+                    )
                     Text(
                         text = title,
                         fontSize = 12.sp,
-                        fontWeight = if (selectedTab == index) FontWeight.Bold else FontWeight.Medium,
-                        color = if (selectedTab == index) StudentNeon else TextSecondary,
-                        modifier = Modifier.padding(vertical = 10.dp)
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) StudentNeon else TextSecondary,
+                        maxLines = 1,
                     )
                 }
             }
@@ -1103,7 +1123,7 @@ private fun DapodikDetailTab(
                     strokeWidth = 2.5.dp
                 )
                 Text(
-                    text = "Memuat rincian data Dapodik...",
+                    text = "Memuat rincian biodata pokok...",
                     fontSize = 12.sp,
                     color = TextSecondary
                 )
@@ -1116,9 +1136,9 @@ private fun DapodikDetailTab(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(14.dp)
     ) {
-        // 1. Identitas Pokok Dapodik
+        // 1. Identitas Pokok
         DapodikSectionCard(
-            title = "Identitas Pribadi Pokok Dapodik",
+            title = "Identitas Pribadi Pokok",
             icon = Icons.Default.Badge,
             accent = StudentNeon,
         ) {
@@ -1158,7 +1178,7 @@ private fun DapodikDetailTab(
         DapodikSectionCard(
             title = "Data Orang Tua & Wali",
             icon = Icons.Default.FamilyRestroom,
-            accent = Color(0xFFA855F7),
+            accent = AccentNeonPurple,
         ) {
             Text(
                 text = "DATA AYAH KANDUNG",
@@ -1181,7 +1201,7 @@ private fun DapodikDetailTab(
                 text = "DATA IBU KANDUNG",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color(0xFFEC4899),
+                color = AccentNeonPink,
                 modifier = Modifier.padding(bottom = 2.dp)
             )
             DapodikDataRow("Nama Ibu", biodata?.namaIbu ?: "-")

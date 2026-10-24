@@ -170,8 +170,8 @@ class RombelStudentsViewModel @Inject constructor(
             _uiState.update { it.copy(isSavingAttendance = false) }
 
             if (totalSaved > 0) {
-                val targetLabel = if (selectedFilter == "ALL") "semua kelas diampu" else "kelas $selectedFilter"
-                onSuccess("✓ Presensi $totalSaved siswa ($targetLabel) berhasil disimpan ke database!")
+                val targetLabel = if (selectedFilter == "ALL") "seluruh rombel diampu" else "rombel $selectedFilter"
+                onSuccess("Presensi $totalSaved warga belajar ($targetLabel) berhasil disimpan ke database!")
                 val refreshed = fetchAttendanceForClasses(classes)
                 if (refreshed.isNotEmpty()) {
                     _uiState.update { it.copy(attendanceMap = refreshed) }

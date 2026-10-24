@@ -2,15 +2,15 @@ package com.schoolos.android.domain.model
 
 enum class SchoolStabilityLevel {
     CRITICAL, // Kritis / Perlu Tindakan Segera
-    WARNING,  // Waspada / Perlu Perhatian
+    WARNING,  // Waspada / Perlu Perhatian Pimpinan
     STABLE    // Stabil & Kondusif
 }
 
 enum class AnomalyCategory {
-    TEACHING_COMPLIANCE, // KBM Terganggu / Guru Belum Hadir / Jam Kosong
-    ACADEMIC_REMEDIAL,   // Ketidaktuntasan KKM / Remedial Tinggi
-    ATTENDANCE_DROP,     // Lonjakan Ketidakhadiran Rombel
-    STUDENT_AT_RISK,     // Siswa Rawan / Rentan Putus Sekolah
+    TEACHING_COMPLIANCE, // Sesi Pembelajaran / Tutorial Terganggu (Tutor Belum Hadir)
+    ACADEMIC_KKTP_GAP,   // Capaian KKTP Modul Belum Optimal / Perlu Bimbingan
+    ATTENDANCE_DROP,     // Keaktifan Warga Belajar Menurun
+    STUDENT_AT_RISK,     // Warga Belajar Rentan Putus Belajar (Drop Out)
 }
 
 enum class AnomalySeverity {
@@ -20,11 +20,11 @@ enum class AnomalySeverity {
 }
 
 enum class ExecutiveDecisionType {
-    DISPATCH_SUBSTITUTE_TEACHER, // Tugaskan Guru Pengganti / Inval
-    ISSUE_REMEDIAL_MANDATE,      // Perintahkan Remedial & Pengayaan KKM
-    ORDER_HOMEROOM_FOLLOW_UP,    // Instruksikan Tindak Lanjut Wali Kelas & BP/BK
-    BROADCAST_PRINCIPAL_MEMO,    // Terbitkan Instruksi Resmi / Maklumat Kepala Sekolah
-    INSPECT_ROMBEL,              // Audit Rombel Lapangan
+    DISPATCH_SUBSTITUTE_TUTOR, // Tugaskan Tutor Pendamping / Pengganti
+    ISSUE_KKTP_GUIDANCE,       // Instruksikan Penguatan Modul & Pendampingan KKTP
+    ORDER_HOMEROOM_FOLLOW_UP,  // Instruksikan Tindak Lanjut Tutor Pamong
+    BROADCAST_PRINCIPAL_MEMO,  // Terbitkan Maklumat Resmi Kepala PKBM
+    INSPECT_ROMBEL,            // Supervisi Rombel Belajar Mandiri / Tutorial
 }
 
 data class SchoolAnomaly(
@@ -33,7 +33,7 @@ data class SchoolAnomaly(
     val severity: AnomalySeverity,
     val title: String,
     val description: String,
-    val affectedTarget: String, // e.g. "Kelas 4 • Matematika" atau "Seluruh Rombel"
+    val affectedTarget: String, // e.g. "Paket C • Modul Matematika" atau "Seluruh Rombel"
     val targetId: String = "",
     val recommendedDecision: ExecutiveDecisionType,
     val recommendedActionLabel: String,
@@ -67,4 +67,6 @@ data class SchoolHealthMetrics(
     val totalClasses: Int,
     val anomalies: List<SchoolAnomaly> = emptyList(),
     val subjectPerformances: List<AcademicPerformanceSummary> = emptyList(),
+    val hasRealData: Boolean = true,
 )
+

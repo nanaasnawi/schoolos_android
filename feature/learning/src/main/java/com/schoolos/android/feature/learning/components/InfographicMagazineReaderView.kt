@@ -101,7 +101,7 @@ fun parseInfographicBlocks(
             // Check if text is "Tahukah Kamu?" / Did you know callout
             if (text.contains("tahukah kamu", ignoreCase = true) || text.contains("fakta menarik", ignoreCase = true)) {
                 didYouKnow = text
-                    .replace(Regex("""^###\s*📌?\s*""", RegexOption.IGNORE_CASE), "")
+                    .replace(Regex("""^###\s*[\p{So}\p{Sk}\p{Sm}\u2000-\u3300]?\s*""", RegexOption.IGNORE_CASE), "")
                     .replace(Regex("""^Tahukah Kamu\??:?\s*""", RegexOption.IGNORE_CASE), "")
                     .replace(Regex("""^Fakta Menarik\??:?\s*""", RegexOption.IGNORE_CASE), "")
                     .trim()
@@ -114,7 +114,7 @@ fun parseInfographicBlocks(
             var body = text
             var step = cardCounter
 
-            val headingRegex = Regex("""^###\s*📌?\s*(\d+)?\.?\s*([^\n]+)""")
+            val headingRegex = Regex("""^###\s*[\p{So}\p{Sk}\p{Sm}\u2000-\u3300]?\s*(\d+)?\.?\s*([^\n]+)""")
             val match = headingRegex.find(text)
             if (match != null) {
                 val numStr = match.groupValues.getOrNull(1)
@@ -133,7 +133,7 @@ fun parseInfographicBlocks(
 
             // Clean headline of symbols
             headline = headline
-                .replace(Regex("""^[📌💡🔍📖⭐\s]+"""), "")
+                .replace(Regex("""^[\p{So}\p{Sk}\p{Sm}\s\u2000-\u3300*#•\-]+"""), "")
                 .replace(Regex("""^#+\s*"""), "")
                 .trim()
 
@@ -215,22 +215,22 @@ fun InfographicMagazineReaderView(
 
     val copyAllText = {
         val sb = StringBuilder()
-        sb.append("📘 ").append(title.uppercase()).append("\n")
+        sb.append(title.uppercase()).append("\n")
         sb.append("Mata Pelajaran: ").append(subjectName).append(" | Rombel: ").append(className).append("\n")
         sb.append("Penyusun: ").append(teacherName).append("\n\n")
 
         magazineData.cards.forEach { card ->
-            sb.append("📌 ").append(card.stepNumber).append(". ").append(card.headline).append("\n")
+            sb.append(card.stepNumber).append(". ").append(card.headline).append("\n")
             sb.append(card.body).append("\n\n")
         }
 
         if (!magazineData.didYouKnowText.isNullOrBlank()) {
-            sb.append("💡 Tahukah Kamu?\n").append(magazineData.didYouKnowText).append("\n\n")
+            sb.append("Tahukah Kamu?\n").append(magazineData.didYouKnowText).append("\n\n")
         }
 
         clipboardManager.setText(AnnotatedString(sb.toString()))
         copiedSuccess = true
-        Toast.makeText(context, "✓ Seluruh naskah materi berhasil disalin ke papan klip", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, "Seluruh naskah materi berhasil disalin ke papan klip", Toast.LENGTH_SHORT).show()
     }
 
     Column(
@@ -347,7 +347,7 @@ fun InfographicMagazineReaderView(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "🎨 Mode Poster & Majalah Digital",
+                        text = "Mode Poster & Majalah Digital",
                         color = TextTertiary,
                         fontSize = 11.sp
                     )
@@ -591,7 +591,7 @@ fun InfographicMagazineReaderView(
                             )
                         }
                         Text(
-                            text = "💡 TAHUKAH KAMU?",
+                            text = "TAHUKAH KAMU?",
                             color = NeonWarning,
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.ExtraBold,

@@ -54,14 +54,13 @@ fun TeacherGradeDetailContent(
         } else {
             components.forEach { entry ->
                 val score = entry.rawScore ?: entry.weightedScore ?: 0.0
-                val grade = when {
-                    score >= threshold + 10.0 -> "A"
-                    score >= threshold -> "B"
-                    score >= threshold - 10.0 -> "C"
-                    score > 0.0 -> "D"
-                    else -> "-"
+                val isPassed = score >= threshold
+                val status = when {
+                    score <= 0.0 -> "Belum Dinilai"
+                    isPassed -> "Tuntas KKTP"
+                    else -> "Perlu Penguatan"
                 }
-                TeacherStudentGradeRow(entry.componentName, score, grade)
+                TeacherStudentGradeRow(entry.componentName, score, status, isPassed)
             }
         }
 
@@ -78,9 +77,9 @@ fun TeacherGradeDetailContent(
                     
                     SummaryRowCompact("Rata-rata Nilai", if (graded.isNotEmpty()) "%.1f".format(avg) else "-")
                     HorizontalDivider(color = GlassBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-                    SummaryRowCompact("Tuntas KKM", "$passingCount / $totalCount Selesai")
+                    SummaryRowCompact("Tuntas KKTP", "$passingCount / $totalCount Selesai")
                     HorizontalDivider(color = GlassBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 8.dp))
-                    SummaryRowCompact("Tingkat Kelulusan", if (totalCount > 0) "${((passingCount.toDouble() / totalCount) * 100).toInt()}%" else "-")
+                    SummaryRowCompact("Ketercapaian KKTP", if (totalCount > 0) "${((passingCount.toDouble() / totalCount) * 100).toInt()}%" else "-")
                 }
             }
         }
@@ -88,7 +87,7 @@ fun TeacherGradeDetailContent(
 }
 
 @Composable
-private fun TeacherStudentGradeRow(name: String, score: Double, grade: String) {
+private fun TeacherStudentGradeRow(name: String, score: Double, status: String, isPassed: Boolean) {
     GlassCard(cornerRadius = 14.dp) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(14.dp),
@@ -103,8 +102,13 @@ private fun TeacherStudentGradeRow(name: String, score: Double, grade: String) {
             Spacer(Modifier.width(14.dp))
             Text(name, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary, modifier = Modifier.weight(1f))
             Column(horizontalAlignment = Alignment.End) {
-                Text("%.1f".format(score), fontWeight = FontWeight.Black, fontSize = 15.sp, color = TextPrimary)
-                Text("Predikat $grade", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = if (grade == "A") NeonSuccess else NeonBlue)
+                Text(if (score > 0.0) "%.1f".format(score) else "-", fontWeight = FontWeight.Black, fontSize = 15.sp, color = TextPrimary)
+                Text(
+                    status,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isPassed) NeonSuccess else if (score > 0.0) NeonWarning else TextTertiary
+                )
             }
             Spacer(Modifier.width(14.dp))
             Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(16.dp))

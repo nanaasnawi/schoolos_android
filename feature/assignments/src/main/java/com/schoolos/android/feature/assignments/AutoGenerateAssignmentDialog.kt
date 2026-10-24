@@ -11,6 +11,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -399,7 +401,7 @@ fun AutoGenerateAssignmentDialog(
                                     modifier = Modifier.weight(1f),
                                     title = "Opsi A: Soal Terstruktur (PG & Essay)",
                                     subtitle = "Kombinasi soal pilihan ganda otomatis dan uraian analitis dengan rubrik penilaian lengkap.",
-                                    icon = "📚",
+                                    icon = Icons.Default.MenuBook,
                                     isSelected = selectedFormat == "STRUCTURED_QUESTIONS",
                                     onClick = { selectedFormat = "STRUCTURED_QUESTIONS" }
                                 )
@@ -408,7 +410,7 @@ fun AutoGenerateAssignmentDialog(
                                     modifier = Modifier.weight(1f),
                                     title = "Opsi B: Tugas Mandiri / PR (Lembar Kerja)",
                                     subtitle = "Instruksi tugas mandiri, petunjuk unggah lembar kerja, & rubrik komprehensif.",
-                                    icon = "📄",
+                                    icon = Icons.Default.Description,
                                     isSelected = selectedFormat == "HOMEWORK_PR",
                                     onClick = { selectedFormat = "HOMEWORK_PR" }
                                 )
@@ -621,7 +623,7 @@ fun AutoGenerateAssignmentDialog(
                                 )
                                 Column {
                                     Text(
-                                        text = "🎨 Sertakan Soal Bergambar / Diagram",
+                                        text = "Sertakan Soal Bergambar / Diagram",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = if (includeImages) Color(0xFF065F46) else colorScheme.onSurface
@@ -706,7 +708,7 @@ private fun FormatOptionDetailedCard(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String,
-    icon: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
     isSelected: Boolean,
     onClick: () -> Unit,
 ) {
@@ -725,7 +727,12 @@ private fun FormatOptionDetailedCard(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(text = icon, fontSize = 14.sp)
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (isSelected) Color(0xFF15803D) else colorScheme.onSurfaceVariant
+                )
                 Text(
                     text = title,
                     fontSize = 11.sp,
