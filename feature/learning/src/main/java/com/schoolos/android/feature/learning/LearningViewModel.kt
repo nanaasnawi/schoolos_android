@@ -46,6 +46,7 @@ data class LearningUiState(
     val totalMaterials: Int = 0,
     val userRole: String = "student",
     val subjectFilter: String? = null,
+    val classFilter: String? = null,
     val bookPdfCount: Int = 0,
     val videoCount: Int = 0,
     val pendingCount: Int = 0,
@@ -68,6 +69,9 @@ class LearningViewModel @Inject constructor(
 
     /** Optional subject filter passed via navigation (e.g. from a session detail). */
     private var subjectFilter: String? = savedStateHandle.get<String>("subjectId")?.takeIf { it.isNotBlank() }
+
+    /** Optional class/rombel filter passed via navigation (e.g. "PAKET B 8A"). */
+    private var classFilter: String? = savedStateHandle.get<String>("className")?.takeIf { it.isNotBlank() }
 
     val selectedMaterial = MutableStateFlow<com.schoolos.android.domain.model.LearningMaterial?>(null)
     val materialCompletions = MutableStateFlow<List<com.schoolos.android.domain.model.MaterialStudentCompletion>>(emptyList())
@@ -298,19 +302,28 @@ class LearningViewModel @Inject constructor(
         filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
     }
 
-    /** Tolerant subject matching: exact, or bidirectional contains (case-insensitive). */
-    private fun matchesSubject(itemSubject: String?, filter: String): Boolean {
-        if (itemSubject.isNullOrBlank()) return false
-        val a = itemSubject.trim()
-        val b = filter.trim()
-        return a.equals(b, ignoreCase = true) || a.contains(b, ignoreCase = true) || b.contains(a, ignoreCase = true)
+    fun clearClassFilter() {
+        classFilter = null
+        _state.value = _state.value.copy(classFilter = null)
+        filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
+    }
+
+    fun clearFilters() {
+        subjectFilter = null
+        classFilter = null
+        _state.value = _state.value.copy(subjectFilter = null, classFilter = null)
+        filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
     }
 
     private fun filterMaterials(query: String, category: String) {
         var filtered = allMaterials
 
         subjectFilter?.let { filter ->
-            filtered = filtered.filter { matchesSubject(it.subject, filter) }
+            filtered = filtered.filter { com.schoolos.android.core.designsystem.matchesSubjectFilter(it.subject, filter) }
+        }
+
+        classFilter?.let { filter ->
+            filtered = filtered.filter { com.schoolos.android.core.designsystem.matchesClassFilter(it.className, filter) }
         }
 
         if (query.isNotBlank()) {
@@ -333,20 +346,31 @@ class LearningViewModel @Inject constructor(
             }
         }
 
-        val completedCount = allMaterials.count { it.isCompleted }
-        val pendingCount = allMaterials.size - completedCount
-        val bookPdfCount = allMaterials.count { it.type == "PDF" || it.startPage != null }
-        val videoCount = allMaterials.count { it.type == "VIDEO" }
+        // Base scoped pool for count statistics (scoped by active subject/class filters)
+        val scopedBase = if (subjectFilter != null || classFilter != null) {
+            allMaterials.filter { item ->
+                (subjectFilter == null || com.schoolos.android.core.designsystem.matchesSubjectFilter(item.subject, subjectFilter)) &&
+                (classFilter == null || com.schoolos.android.core.designsystem.matchesClassFilter(item.className, classFilter))
+            }
+        } else {
+            allMaterials
+        }
+
+        val completedCount = scopedBase.count { it.isCompleted }
+        val pendingCount = scopedBase.size - completedCount
+        val bookPdfCount = scopedBase.count { it.type == "PDF" || it.startPage != null }
+        val videoCount = scopedBase.count { it.type == "VIDEO" }
 
         _state.value = _state.value.copy(
             isLoading = false,
             materials = filtered,
             totalCompleted = completedCount,
-            totalMaterials = allMaterials.size,
+            totalMaterials = scopedBase.size,
             pendingCount = pendingCount,
             bookPdfCount = bookPdfCount,
             videoCount = videoCount,
             subjectFilter = subjectFilter,
+            classFilter = classFilter,
         )
     }
 
