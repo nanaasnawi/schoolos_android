@@ -32,6 +32,7 @@ data class StudentGradebookRow(
     val sumatifM1: Double = 0.0,
     val sumatifM2: Double = 0.0,
     val sumatifM3: Double = 0.0,
+    val sumatifM4: Double = 0.0,
     val avgSumatif: Double = 0.0,
     val ats: Double = 0.0,
     val sas: Double = 0.0,
@@ -75,15 +76,19 @@ data class GradebookUiState(
                 val m3 = saved?.sumatifM3 ?: 0.0
                 val a = saved?.ats ?: 0.0
                 val sa = saved?.sas ?: 0.0
-                val eval = computeKurikulumMerdekaGrade(m1, m2, m3, a, sa, activeScheme)
+                val eval = if (activeScheme == "B") {
+                    computeKurikulumMerdekaGrade(m1, m2, m3, atsVal = 0.0, sasVal = 0.0, scheme = "B")
+                } else {
+                    computeKurikulumMerdekaGrade(m1, m2, m3, atsVal = a, sasVal = sa, scheme = "A")
+                }
 
                 val savedFs = saved?.finalScore
                 val savedAvg = saved?.avgSumatif
-                val fs: Double = if (savedFs != null && savedFs > 0.0) savedFs else eval.finalScore
-                val lg: String = if (!saved?.letterGrade.isNullOrBlank() && saved?.letterGrade != "-") saved!!.letterGrade!! else eval.letterGrade
-                val status: String = if (saved?.passed == true) "Tuntas KKTP"
+                val fs: Double = if (activeScheme == "B") eval.finalScore else (if (savedFs != null && savedFs > 0.0) savedFs else eval.finalScore)
+                val lg: String = if (activeScheme == "B") eval.letterGrade else (if (!saved?.letterGrade.isNullOrBlank() && saved?.letterGrade != "-") saved!!.letterGrade!! else eval.letterGrade)
+                val status: String = if (activeScheme == "B") eval.statusKktp else (if (saved?.passed == true) "Tuntas KKTP"
                 else if (savedFs != null && savedFs > 0.0) "Perlu Remedial"
-                else eval.statusKktp
+                else eval.statusKktp)
                 val avgM: Double = if (savedAvg != null && savedAvg > 0.0) savedAvg else eval.avgSumatif
 
                 StudentGradebookRow(
@@ -95,8 +100,8 @@ data class GradebookUiState(
                     sumatifM2 = m2,
                     sumatifM3 = m3,
                     avgSumatif = avgM,
-                    ats = a,
-                    sas = sa,
+                    ats = if (activeScheme == "B") 0.0 else a,
+                    sas = if (activeScheme == "B") 0.0 else sa,
                     finalScore = fs,
                     letterGrade = lg,
                     statusKktp = status,
@@ -256,6 +261,7 @@ class GradebookListViewModel @Inject constructor(
         highestDesc: String,
         lowestDesc: String,
         formatifNotes: String,
+        m4: Double = 0.0,
     ) {
         viewModelScope.launch {
             _state.update { it.copy(isSaving = true) }
@@ -263,15 +269,25 @@ class GradebookListViewModel @Inject constructor(
             val currentSubjName = _state.value.selectedSubjectName
             val scheme = _state.value.activeScheme
 
-            val eval = computeKurikulumMerdekaGrade(m1, m2, m3, ats, sas, scheme)
+            val effectiveAts = if (scheme == "B") 0.0 else ats
+            val effectiveSas = if (scheme == "B") 0.0 else sas
+            val eval = computeKurikulumMerdekaGrade(
+                m1 = m1,
+                m2 = m2,
+                m3 = m3,
+                atsVal = effectiveAts,
+                sasVal = effectiveSas,
+                scheme = scheme,
+                m4 = m4,
+            )
 
             val input = StudentGradeInputItem(
                 studentId = studentId,
                 sumatifM1 = m1,
                 sumatifM2 = m2,
                 sumatifM3 = m3,
-                ats = ats,
-                sas = sas,
+                ats = effectiveAts,
+                sas = effectiveSas,
                 formatifNotes = formatifNotes,
                 finalScore = eval.finalScore,
                 letterGrade = eval.letterGrade,

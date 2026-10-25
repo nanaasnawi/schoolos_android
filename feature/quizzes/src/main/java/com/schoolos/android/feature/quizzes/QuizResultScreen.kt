@@ -75,6 +75,7 @@ import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
 import kotlin.random.Random
 
+@Composable
 private fun statusFromAttempt(isPassed: Boolean): Pair<String, Color> {
     return if (isPassed) {
         Pair("Kompeten & Tuntas KKTP", NeonSuccess)

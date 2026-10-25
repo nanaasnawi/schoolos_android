@@ -86,25 +86,32 @@ fun GradebookListScreen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     // ── SEGMENTED TOP TABS (FOR TEACHER / PRINCIPAL) ─────────
                     if (isTeacher) {
+                        val isDark = LocalIsDarkTheme.current
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(horizontal = 14.dp, vertical = 6.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(CosmicNavy)
+                                .background(if (isDark) CosmicNavy else Color(0xFFF1F5F9))
                                 .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
                                 .padding(4.dp),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             // Tab 0: Buku Nilai Siswa (Matches Web Dashboard)
+                            val isTab0 = state.activeTab == 0
+                            val tab0Bg = if (isTab0) {
+                                if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color.White
+                            } else Color.Transparent
+                            val tab0Border = if (isTab0) TeacherNeon else Color.Transparent
+
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(9.dp))
-                                    .background(if (state.activeTab == 0) TeacherNeon.copy(alpha = 0.18f) else Color.Transparent)
+                                    .background(tab0Bg)
                                     .border(
-                                        if (state.activeTab == 0) 1.dp else 0.dp,
-                                        if (state.activeTab == 0) TeacherNeon.copy(alpha = 0.5f) else Color.Transparent,
+                                        if (isTab0) 1.dp else 0.dp,
+                                        tab0Border,
                                         RoundedCornerShape(9.dp)
                                     )
                                     .clickable { viewModel.selectTab(0) }
@@ -118,27 +125,33 @@ fun GradebookListScreen(
                                     Icon(
                                         Icons.Default.MenuBook,
                                         contentDescription = null,
-                                        tint = if (state.activeTab == 0) TeacherNeon else TextTertiary,
+                                        tint = if (isTab0) TeacherNeon else TextTertiary,
                                         modifier = Modifier.size(15.dp)
                                     )
                                     Text(
                                         "Buku Nilai Siswa (${state.totalStudentsCount})",
                                         fontSize = 12.sp,
-                                        fontWeight = if (state.activeTab == 0) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (state.activeTab == 0) TeacherNeon else TextTertiary
+                                        fontWeight = if (isTab0) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isTab0) TeacherNeon else TextTertiary
                                     )
                                 }
                             }
 
                             // Tab 1: Rekap 18 Modul Overview
+                            val isTab1 = state.activeTab == 1
+                            val tab1Bg = if (isTab1) {
+                                if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color.White
+                            } else Color.Transparent
+                            val tab1Border = if (isTab1) TeacherNeon else Color.Transparent
+
                             Box(
                                 modifier = Modifier
                                     .weight(1f)
                                     .clip(RoundedCornerShape(9.dp))
-                                    .background(if (state.activeTab == 1) TeacherNeon.copy(alpha = 0.18f) else Color.Transparent)
+                                    .background(tab1Bg)
                                     .border(
-                                        if (state.activeTab == 1) 1.dp else 0.dp,
-                                        if (state.activeTab == 1) TeacherNeon.copy(alpha = 0.5f) else Color.Transparent,
+                                        if (isTab1) 1.dp else 0.dp,
+                                        tab1Border,
                                         RoundedCornerShape(9.dp)
                                     )
                                     .clickable { viewModel.selectTab(1) }
@@ -152,14 +165,14 @@ fun GradebookListScreen(
                                     Icon(
                                         Icons.Default.Assessment,
                                         contentDescription = null,
-                                        tint = if (state.activeTab == 1) TeacherNeon else TextTertiary,
+                                        tint = if (isTab1) TeacherNeon else TextTertiary,
                                         modifier = Modifier.size(15.dp)
                                     )
                                     Text(
                                         "Rekap ${state.subjects.size} Modul",
                                         fontSize = 12.sp,
-                                        fontWeight = if (state.activeTab == 1) FontWeight.Bold else FontWeight.Normal,
-                                        color = if (state.activeTab == 1) TeacherNeon else TextTertiary
+                                        fontWeight = if (isTab1) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isTab1) TeacherNeon else TextTertiary
                                     )
                                 }
                             }
@@ -277,7 +290,7 @@ fun GradebookListScreen(
             activeScheme = state.activeScheme,
             isSaving = state.isSaving,
             onDismiss = { selectedRowForDetail = null },
-            onSave = { m1, m2, m3, ats, sas, highest, lowest, notes ->
+            onSave = { m1, m2, m3, ats, sas, highest, lowest, notes, m4 ->
                 viewModel.saveStudentGrade(
                     studentId = row.studentId,
                     studentName = row.name,
@@ -288,7 +301,8 @@ fun GradebookListScreen(
                     sas = sas,
                     highestDesc = highest,
                     lowestDesc = lowest,
-                    formatifNotes = notes
+                    formatifNotes = notes,
+                    m4 = m4,
                 )
                 selectedRowForDetail = null
             }

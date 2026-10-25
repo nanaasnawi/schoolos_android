@@ -21,64 +21,83 @@ import androidx.core.view.WindowCompat
 // ─── Apple & Linear Ultra-Minimalist Design System — Color Tokens ───────────
 
 // Refined Accents (Subtle & Disciplined, Not Neon)
-val NeonBlue       = Color(0xFF3B82F6) // Apple System Blue
-val NeonBlueLight  = Color(0xFF60A5FA)
-val NeonBlueDark   = Color(0xFF2563EB)
-val NeonBlueBg     = Color(0xFF1E293B)
+val BaseNeonBlue       = Color(0xFF3B82F6) // Apple System Blue
+val BaseNeonBlueLight  = Color(0xFF60A5FA)
+val BaseNeonBlueDark   = Color(0xFF2563EB)
+val BaseNeonBlueBg     = Color(0xFF1E293B)
+
+val NeonBlue: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF3B82F6) else Color(0xFF2563EB)
+val NeonBlueLight = BaseNeonBlueLight
+val NeonBlueDark = BaseNeonBlueDark
+val NeonBlueBg = BaseNeonBlueBg
 
 // Role subtle accents
-val StudentPrimary    = Color(0xFF6366F1) // Indigo
-val StudentLight      = Color(0xFF818CF8)
-val StudentContainer  = Color(0xFF1E1B4B)
-val StudentNeon       = Color(0xFF818CF8)
+val StudentPrimary = Color(0xFF6366F1) // Indigo
+val StudentLight = Color(0xFF818CF8)
+val StudentContainer: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF1E1B4B) else Color(0xFFEEF2FF)
+val StudentNeon: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF818CF8) else Color(0xFF4F46E5)
 
-val TeacherPrimary    = Color(0xFF10B981) // Crisp Emerald
-val TeacherLight      = Color(0xFF34D399)
-val TeacherContainer  = Color(0xFF064E3B)
-val TeacherNeon       = Color(0xFF10B981)
+val TeacherPrimary = Color(0xFF10B981) // Crisp Emerald
+val TeacherLight = Color(0xFF34D399)
+val TeacherContainer: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF064E3B) else Color(0xFFECFDF5)
+val TeacherNeon: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF10B981) else Color(0xFF059669)
 
-val ParentPrimary     = Color(0xFFF43F5E) // Calm Rose
-val ParentLight       = Color(0xFFFB7185)
-val ParentContainer   = Color(0xFF881337)
-val ParentNeon        = Color(0xFFF43F5E)
+val TeacherBrandBg: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5)
+val TeacherBrandBorder: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0)
+val TeacherBrandText: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF34D399) else Color(0xFF047857)
+
+val ParentPrimary = Color(0xFFF43F5E) // Calm Rose
+val ParentLight = Color(0xFFFB7185)
+val ParentContainer: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF881337) else Color(0xFFFFF1F2)
+val ParentNeon: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFF43F5E) else Color(0xFFE11D48)
 
 // Minimal semantic accents
-val AccentElectricBlue  = Color(0xFF3B82F6)
-val AccentNeonGreen     = Color(0xFF10B981)
-val AccentNeonAmber     = Color(0xFFF59E0B)
-val AccentNeonCoral     = Color(0xFFEF4444)
-val AccentNeonPurple    = Color(0xFF818CF8)
-val AccentNeonCyan      = Color(0xFF06B6D4)
-val AccentNeonPink      = Color(0xFFEC4899)
+val AccentElectricBlue: Color @Composable get() = NeonBlue
+val AccentNeonGreen: Color    @Composable get() = TeacherNeon
+val AccentNeonAmber: Color    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFF59E0B) else Color(0xFFD97706)
+val AccentNeonCoral: Color    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFEF4444) else Color(0xFFDC2626)
+val AccentNeonPurple: Color   @Composable get() = StudentNeon
+val AccentNeonCyan: Color     @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF06B6D4) else Color(0xFF0891B2)
+val AccentNeonPink: Color     @Composable get() = ParentNeon
 
 // Semantic Colors
-val NeonSuccess  = Color(0xFF10B981)
-val NeonWarning  = Color(0xFFF59E0B)
-val NeonError    = Color(0xFFEF4444)
-val NeonInfo     = Color(0xFF3B82F6)
+val NeonSuccess: Color @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF10B981) else Color(0xFF059669)
+val NeonWarning: Color @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFF59E0B) else Color(0xFFD97706)
+val NeonError: Color   @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFEF4444) else Color(0xFFDC2626)
+val NeonInfo: Color    @Composable get() = NeonBlue
 
 // Semantic backgrounds
-val SuccessBg   = Color(0xFF064E3B)
-val WarningBg   = Color(0xFF451A03)
-val ErrorBg     = Color(0xFF4C0519)
-val InfoBg      = Color(0xFF1E293B)
+val SuccessBg: Color @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF064E3B) else Color(0xFFECFDF5)
+val WarningBg: Color @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF451A03) else Color(0xFFFFFBEB)
+val ErrorBg: Color   @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF4C0519) else Color(0xFFFEF2F2)
+val InfoBg: Color    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF1E293B) else Color(0xFFEFF6FF)
 
 // Aliases
-val PrimaryBlue       = NeonBlue
-val PrimaryBlueLight  = NeonBlueLight
-val SoftBlueBg        = NeonBlueBg
+val PrimaryBlue: Color      @Composable get() = NeonBlue
+val PrimaryBlueLight: Color @Composable get() = NeonBlueLight
+val SoftBlueBg: Color       @Composable get() = InfoBg
 
-val AccentPurple      = StudentNeon
-val AccentEmerald     = NeonSuccess
-val AccentAmber       = NeonWarning
-val AccentRose        = NeonError
-val AccentBlue        = AccentElectricBlue
-val AccentOrange      = Color(0xFFF97316)
+val AccentPurple: Color  @Composable get() = StudentNeon
+val AccentEmerald: Color @Composable get() = NeonSuccess
+val AccentAmber: Color   @Composable get() = NeonWarning
+val AccentRose: Color    @Composable get() = NeonError
+val AccentBlue: Color    @Composable get() = NeonBlue
+val AccentOrange: Color  @Composable get() = if (LocalIsDarkTheme.current) Color(0xFFF97316) else Color(0xFFEA580C)
 
-val SuccessGreen = NeonSuccess
-val WarningAmber = NeonWarning
-val ErrorRed     = NeonError
-val InfoBlue     = NeonInfo
+val SuccessGreen: Color @Composable get() = NeonSuccess
+val WarningAmber: Color @Composable get() = NeonWarning
+val ErrorRed: Color     @Composable get() = NeonError
+val InfoBlue: Color     @Composable get() = NeonInfo
 
 // ─── Reactive Theme Color Tokens (Matte Obsidian & Zinc Hierarchy) ──────────
 val TextPrimary: Color
@@ -186,7 +205,7 @@ private val LightColorScheme = lightColorScheme(
     onSurfaceVariant     = Color(0xFF475569), // Slate 600
     outline              = Color(0xFFCBD5E1), // Slate 300
     outlineVariant       = Color(0xFFE2E8F0), // Slate 200
-    error                = NeonError,
+    error                = Color(0xFFEF4444),
     onError              = Color.White,
     errorContainer       = Color(0xFFFEF2F2), // Soft Red 50
     onErrorContainer     = Color(0xFFB91C1C), // Deep Red 700

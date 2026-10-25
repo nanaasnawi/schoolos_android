@@ -467,6 +467,8 @@ private fun StudentProgressHeroCard(progress: Progress) {
 
             // Animated Circular Ring with Dual Gradient
             val trackColor = GlassBorder2
+            val neonBlue = NeonBlue
+            val studentNeon = StudentNeon
             Box(
                 modifier = Modifier.size(90.dp),
                 contentAlignment = Alignment.Center,
@@ -492,7 +494,7 @@ private fun StudentProgressHeroCard(progress: Progress) {
                     if (animatedPct > 0f) {
                         drawArc(
                             brush = Brush.sweepGradient(
-                                listOf(NeonBlue, StudentNeon, NeonBlue)
+                                listOf(neonBlue, studentNeon, neonBlue)
                             ),
                             startAngle = -90f,
                             sweepAngle = 360f * animatedPct,

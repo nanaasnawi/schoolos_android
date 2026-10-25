@@ -122,22 +122,47 @@ fun computeKurikulumMerdekaGrade(
     m1: Double,
     m2: Double,
     m3: Double,
-    atsVal: Double,
-    sasVal: Double,
-    scheme: String = "A", // "A" (60/20/20) or "B" (100% Modul Kesetaraan)
+    atsVal: Double = 0.0,
+    sasVal: Double = 0.0,
+    scheme: String = "A", // "A" (60% Modul, 20% ATS, 20% SAS) or "B" (100% Murni Modul Kesetaraan PKBM)
+    m4: Double = 0.0,
     kktpThreshold: Double = 75.0,
 ): GradeEvalResult {
-    val activeModules = listOf(m1, m2, m3).filter { it > 0.0 }
+    val activeModules = if (scheme == "B") {
+        listOf(m1, m2, m3, m4).filter { it > 0.0 }
+    } else {
+        listOf(m1, m2, m3).filter { it > 0.0 }
+    }
     val avgM = if (activeModules.isNotEmpty()) activeModules.average() else 0.0
 
-    if (activeModules.isEmpty() && atsVal == 0.0 && sasVal == 0.0) {
-        return GradeEvalResult(avgSumatif = 0.0, finalScore = 0.0, letterGrade = "-", statusKktp = "Belum Diinput")
-    }
-
-    val calculated = if (scheme == "B") {
-        if (avgM > 0.0) avgM else maxOf(atsVal, sasVal)
+    if (scheme == "B") {
+        // Skema B (Pendidikan Kesetaraan PKBM): 100% Rata-rata Nilai Sumatif Modul
+        // Tanpa ATS dan tanpa SAS sama sekali!
+        if (activeModules.isEmpty()) {
+            return GradeEvalResult(avgSumatif = 0.0, finalScore = 0.0, letterGrade = "-", statusKktp = "Belum Diinput")
+        }
+        val roundedNa = kotlin.math.round(avgM)
+        val pred = when {
+            roundedNa >= 88 -> "A"
+            roundedNa >= 75 -> "B"
+            roundedNa >= 65 -> "C"
+            else -> "D"
+        }
+        val status = if (roundedNa >= kktpThreshold) "Tuntas KKTP" else "Perlu Remedial"
+        return GradeEvalResult(
+            avgSumatif = kotlin.math.round(avgM * 10.0) / 10.0,
+            finalScore = roundedNa,
+            letterGrade = pred,
+            statusKktp = status
+        )
     } else {
-        if (atsVal > 0.0 && sasVal > 0.0) {
+        // Skema A (Reguler / Standar Kurikulum Merdeka):
+        // Bobot: 60% Rata-rata Modul + 20% ATS + 20% SAS
+        if (activeModules.isEmpty() && atsVal == 0.0 && sasVal == 0.0) {
+            return GradeEvalResult(avgSumatif = 0.0, finalScore = 0.0, letterGrade = "-", statusKktp = "Belum Diinput")
+        }
+
+        val calculated = if (atsVal > 0.0 && sasVal > 0.0) {
             avgM * 0.6 + atsVal * 0.2 + sasVal * 0.2
         } else if (atsVal > 0.0) {
             avgM * 0.6 + atsVal * 0.4
@@ -146,22 +171,22 @@ fun computeKurikulumMerdekaGrade(
         } else {
             avgM
         }
-    }
 
-    val roundedNa = kotlin.math.round(calculated)
-    val pred = when {
-        roundedNa >= 88 -> "A"
-        roundedNa >= 75 -> "B"
-        roundedNa >= 65 -> "C"
-        else -> "D"
-    }
-    val status = if (roundedNa >= kktpThreshold) "Tuntas KKTP" else "Perlu Remedial"
+        val roundedNa = kotlin.math.round(calculated)
+        val pred = when {
+            roundedNa >= 88 -> "A"
+            roundedNa >= 75 -> "B"
+            roundedNa >= 65 -> "C"
+            else -> "D"
+        }
+        val status = if (roundedNa >= kktpThreshold) "Tuntas KKTP" else "Perlu Remedial"
 
-    return GradeEvalResult(
-        avgSumatif = kotlin.math.round(avgM * 10.0) / 10.0,
-        finalScore = roundedNa,
-        letterGrade = pred,
-        statusKktp = status
-    )
+        return GradeEvalResult(
+            avgSumatif = kotlin.math.round(avgM * 10.0) / 10.0,
+            finalScore = roundedNa,
+            letterGrade = pred,
+            statusKktp = status
+        )
+    }
 }
 

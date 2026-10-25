@@ -32,4 +32,5 @@ object DataModule {
     @Provides @Singleton fun provideGamificationRepository(impl: GamificationRepositoryImpl): GamificationRepository = impl
     @Provides @Singleton fun provideHabitRepository(impl: HabitRepositoryImpl): HabitRepository = impl
     @Provides @Singleton fun provideAnalyticsRepository(impl: AnalyticsRepositoryImpl): AnalyticsRepository = impl
+    @Provides @Singleton fun provideAtRiskRepository(impl: AtRiskRepositoryImpl): AtRiskRepository = impl
 }

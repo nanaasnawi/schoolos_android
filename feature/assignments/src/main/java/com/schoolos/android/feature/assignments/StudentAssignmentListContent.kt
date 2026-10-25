@@ -52,7 +52,7 @@ fun LazyListScope.studentAssignmentListContent(
             renderAssignmentSection(
                 title = "Segera Berakhir",
                 items = dueSoonItems,
-                accentColor = NeonWarning,
+                type = AssignmentSectionType.DUE_SOON,
                 onAssignmentClick = onAssignmentClick
             )
         }
@@ -62,7 +62,7 @@ fun LazyListScope.studentAssignmentListContent(
             renderAssignmentSection(
                 title = "Sedang Berlangsung",
                 items = activeItems,
-                accentColor = StudentNeon,
+                type = AssignmentSectionType.ACTIVE,
                 onAssignmentClick = onAssignmentClick
             )
         }
@@ -72,17 +72,23 @@ fun LazyListScope.studentAssignmentListContent(
             renderAssignmentSection(
                 title = "Tugas Selesai",
                 items = completedItems,
-                accentColor = NeonSuccess,
+                type = AssignmentSectionType.COMPLETED,
                 onAssignmentClick = onAssignmentClick
             )
         }
     }
 }
 
+private enum class AssignmentSectionType {
+    DUE_SOON,
+    ACTIVE,
+    COMPLETED
+}
+
 private fun LazyListScope.renderAssignmentSection(
     title: String,
     items: List<Assignment>,
-    accentColor: Color,
+    type: AssignmentSectionType,
     onAssignmentClick: (String) -> Unit,
 ) {
     if (items.isEmpty()) return
@@ -91,11 +97,15 @@ private fun LazyListScope.renderAssignmentSection(
         SectionHeader(
             title = title,
             count = items.size,
-            accentColor = accentColor,
         )
     }
 
     items(items, key = { it.id }) { assignment ->
+        val accentColor = when (type) {
+            AssignmentSectionType.DUE_SOON -> NeonWarning
+            AssignmentSectionType.ACTIVE -> StudentNeon
+            AssignmentSectionType.COMPLETED -> NeonSuccess
+        }
         StudentAssignmentCard(
             assignment = assignment,
             accentColor = accentColor,
@@ -108,7 +118,6 @@ private fun LazyListScope.renderAssignmentSection(
 private fun SectionHeader(
     title: String,
     count: Int,
-    accentColor: Color,
 ) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
