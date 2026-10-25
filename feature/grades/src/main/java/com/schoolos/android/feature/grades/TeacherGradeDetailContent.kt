@@ -1,6 +1,7 @@
 package com.schoolos.android.feature.grades
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -17,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.*
@@ -46,10 +48,28 @@ fun TeacherGradeDetailContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 24.dp),
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(CosmicNavy)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Text("Belum ada data nilai tercatat untuk mata pelajaran ini.", fontSize = 12.sp, color = TextTertiary)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Icon(Icons.Default.Info, null, tint = TeacherNeon, modifier = Modifier.size(28.dp))
+                    Text(
+                        "Belum ada data nilai masuk untuk mata pelajaran ini.",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        textAlign = TextAlign.Center
+                    )
+                    Text(
+                        "Nilai Sumatif M1, M2, M3, ATS, SAS, serta deskripsi ketercapaian KKTP dapat diinput langsung pada Buku Nilai Siswa.",
+                        fontSize = 11.sp,
+                        color = TextTertiary,
+                        textAlign = TextAlign.Center
+                    )
+                }
             }
         } else {
             components.forEach { entry ->

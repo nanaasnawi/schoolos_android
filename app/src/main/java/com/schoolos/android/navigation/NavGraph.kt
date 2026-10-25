@@ -269,7 +269,11 @@ fun NavGraph(
                         else navController.navigate(Screen.Learning.route)
                     },
                     onNavigateToRombelStudents = { className ->
-                        navController.navigate(Screen.RombelStudents.createRoute(className))
+                        if (className.equals("SUPERVISION", ignoreCase = true) || className.equals("ALL", ignoreCase = true)) {
+                            navController.navigate(Screen.Supervision.route)
+                        } else {
+                            navController.navigate(Screen.RombelStudents.createRoute(className))
+                        }
                     }
                 )
             }

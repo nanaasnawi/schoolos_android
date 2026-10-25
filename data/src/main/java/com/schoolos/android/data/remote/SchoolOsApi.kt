@@ -253,6 +253,18 @@ interface SchoolOsApi {
         @Query("subject_id") subjectId: String? = null,
     ): ApiResponse<List<GradeEntryDto>>
 
+    @GET("learning/assessment/gradebook/summary")
+    suspend fun getGradebookSummary(
+        @Query("class_id") classId: String? = null,
+        @Query("subject_id") subjectId: String? = null,
+        @Query("student_id") studentId: String? = null,
+    ): ApiResponse<List<com.schoolos.android.data.remote.dto.GradebookSummaryDto>>
+
+    @POST("learning/assessment/gradebook/save")
+    suspend fun saveGradebook(
+        @Body request: com.schoolos.android.data.remote.dto.SaveGradebookRequestDto,
+    ): ApiResponse<Boolean>
+
     // Progress
     @GET("learning/progress/me")
     suspend fun getMyProgress(): ApiResponse<ProgressDto>
