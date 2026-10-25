@@ -70,7 +70,7 @@ class AssignmentListViewModel @Inject constructor(
             repository.getAssignments(classId)
                 .onSuccess { assignments ->
                     hasLoadedInitialData = true
-                    val filtered = subjectFilter?.let { filter -> assignments.filter { a -> matchesSubject(a.subjectName, filter) } } ?: assignments
+                    val filtered = subjectFilter?.let { filter -> assignments.filter { a -> com.schoolos.android.core.designsystem.matchesSubjectFilter(a.subjectName, filter) } } ?: assignments
                     val grouped = groupAssignments(filtered)
                     _state.value = _state.value.copy(
                         isLoading = false,
@@ -90,14 +90,6 @@ class AssignmentListViewModel @Inject constructor(
                     )
                 }
         }
-    }
-
-    /** Tolerant subject matching: exact, or bidirectional contains (case-insensitive). */
-    private fun matchesSubject(itemSubject: String?, filter: String): Boolean {
-        if (itemSubject.isNullOrBlank()) return false
-        val a = itemSubject.trim()
-        val b = filter.trim()
-        return a.equals(b, ignoreCase = true) || a.contains(b, ignoreCase = true) || b.contains(a, ignoreCase = true)
     }
 
     fun clearSubjectFilter() {

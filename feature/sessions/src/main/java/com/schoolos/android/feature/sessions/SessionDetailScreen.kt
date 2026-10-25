@@ -61,9 +61,9 @@ import com.schoolos.android.core.designsystem.subjectIcon
 @Composable
 fun SessionDetailScreen(
     onBack: () -> Unit = {},
-    onOpenAssignments: (String) -> Unit = {},
-    onOpenQuizzes: (String) -> Unit = {},
-    onOpenMaterials: (String) -> Unit = {},
+    onOpenAssignments: (String, String?) -> Unit = { _, _ -> },
+    onOpenQuizzes: (String, String?) -> Unit = { _, _ -> },
+    onOpenMaterials: (String, String?) -> Unit = { _, _ -> },
     viewModel: SessionDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -118,10 +118,11 @@ fun SessionDetailScreen(
                     val isTeacher = isTeacherRole(state.userRole) || isPrincipal
                     val accentColor = if (isTeacher) TeacherNeon else StudentNeon
 
-                    // Wrap callbacks to pass the subject name for filtering
-                    val openAssignments: (String) -> Unit = { onOpenAssignments(subject) }
-                    val openQuizzes: (String) -> Unit = { onOpenQuizzes(subject) }
-                    val openMaterials: (String) -> Unit = { onOpenMaterials(subject) }
+                    // Wrap callbacks to pass both the subject name and class name for strict scoping
+                    val sessionClassName = session.className?.trim()?.takeIf { it.isNotBlank() }
+                    val openAssignments: (String) -> Unit = { onOpenAssignments(subject, sessionClassName) }
+                    val openQuizzes: (String) -> Unit = { onOpenQuizzes(subject, sessionClassName) }
+                    val openMaterials: (String) -> Unit = { onOpenMaterials(subject, sessionClassName) }
 
                     Column(
                         modifier = Modifier

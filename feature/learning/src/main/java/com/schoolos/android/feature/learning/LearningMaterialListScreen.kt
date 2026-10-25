@@ -42,6 +42,7 @@ fun LearningMaterialListScreen(
     onMaterialClick: (String) -> Unit = {},
     onCreateMaterial: () -> Unit = {},
     subjectId: String = "",
+    className: String? = null,
     viewModel: LearningViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -88,12 +89,15 @@ fun LearningMaterialListScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
 
-            // ── ACTIVE SUBJECT FILTER (passed from schedule/session) ─────────
-            if (state.subjectFilter != null) {
+            // ── ACTIVE SUBJECT / CLASS FILTER (passed from schedule/session) ─────────
+            if (state.subjectFilter != null || state.classFilter != null) {
                 item {
                     SubjectFilterChip(
-                        subject = state.subjectFilter!!,
-                        onClear = if (subjectId.isNotBlank()) null else viewModel::clearSubjectFilter,
+                        subject = state.subjectFilter.orEmpty(),
+                        className = state.classFilter,
+                        onClear = viewModel::clearFilters,
+                        onClearSubject = viewModel::clearSubjectFilter,
+                        onClearClass = viewModel::clearClassFilter,
                     )
                 }
             }

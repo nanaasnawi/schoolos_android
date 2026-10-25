@@ -6,22 +6,43 @@ sealed class Screen(val route: String) {
     data object Auth : Screen("auth")
     data object Home : Screen("home")
     data object Learning : Screen("learning")
-    data object LearningBySubject : Screen("learning/subject/{subjectId}") {
-        fun createRoute(subjectId: String) = "learning/subject/${Uri.encode(subjectId)}"
+    data object LearningBySubject : Screen("learning/subject/{subjectId}?className={className}") {
+        fun createRoute(subjectId: String, className: String? = null): String {
+            val encodedSubject = Uri.encode(subjectId)
+            return if (!className.isNullOrBlank()) {
+                "learning/subject/$encodedSubject?className=${Uri.encode(className)}"
+            } else {
+                "learning/subject/$encodedSubject"
+            }
+        }
     }
     data object LearningDetail : Screen("learning/{id}") {
         fun createRoute(id: String) = "learning/$id"
     }
     data object Assignments : Screen("assignments")
-    data object AssignmentsBySubject : Screen("assignments/subject/{subjectId}") {
-        fun createRoute(subjectId: String) = "assignments/subject/${Uri.encode(subjectId)}"
+    data object AssignmentsBySubject : Screen("assignments/subject/{subjectId}?className={className}") {
+        fun createRoute(subjectId: String, className: String? = null): String {
+            val encodedSubject = Uri.encode(subjectId)
+            return if (!className.isNullOrBlank()) {
+                "assignments/subject/$encodedSubject?className=${Uri.encode(className)}"
+            } else {
+                "assignments/subject/$encodedSubject"
+            }
+        }
     }
     data object AssignmentDetail : Screen("assignments/{id}") {
         fun createRoute(id: String) = "assignments/$id"
     }
     data object Quizzes : Screen("quizzes")
-    data object QuizzesBySubject : Screen("quizzes/subject/{subjectId}") {
-        fun createRoute(subjectId: String) = "quizzes/subject/${Uri.encode(subjectId)}"
+    data object QuizzesBySubject : Screen("quizzes/subject/{subjectId}?className={className}") {
+        fun createRoute(subjectId: String, className: String? = null): String {
+            val encodedSubject = Uri.encode(subjectId)
+            return if (!className.isNullOrBlank()) {
+                "quizzes/subject/$encodedSubject?className=${Uri.encode(className)}"
+            } else {
+                "quizzes/subject/$encodedSubject"
+            }
+        }
     }
     data object QuizDetail : Screen("quizzes/{id}") {
         fun createRoute(id: String) = "quizzes/$id"

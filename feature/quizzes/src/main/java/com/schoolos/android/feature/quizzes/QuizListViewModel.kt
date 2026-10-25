@@ -91,7 +91,7 @@ class QuizListViewModel @Inject constructor(
                         quizzes
                     }
 
-                    val filtered = subjectFilter?.let { filter -> updatedQuizzes.filter { q -> matchesSubject(q.subjectName, filter) } } ?: updatedQuizzes
+                    val filtered = subjectFilter?.let { filter -> updatedQuizzes.filter { q -> com.schoolos.android.core.designsystem.matchesSubjectFilter(q.subjectName, filter) } } ?: updatedQuizzes
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
@@ -108,14 +108,6 @@ class QuizListViewModel @Inject constructor(
                     )
                 }
         }
-    }
-
-    /** Tolerant subject matching: exact, or bidirectional contains (case-insensitive). */
-    private fun matchesSubject(itemSubject: String?, filter: String): Boolean {
-        if (itemSubject.isNullOrBlank()) return false
-        val a = itemSubject.trim()
-        val b = filter.trim()
-        return a.equals(b, ignoreCase = true) || a.contains(b, ignoreCase = true) || b.contains(a, ignoreCase = true)
     }
 
     fun clearSubjectFilter() {

@@ -289,11 +289,20 @@ fun NavGraph(
             }
             composable(
                 route = Screen.LearningBySubject.route,
-                arguments = listOf(navArgument("subjectId") { type = NavType.StringType }),
+                arguments = listOf(
+                    navArgument("subjectId") { type = NavType.StringType },
+                    navArgument("className") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                ),
             ) { backStackEntry ->
                 val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
+                val className = backStackEntry.arguments?.getString("className")
                 LearningMaterialListScreen(
                     subjectId = subjectId,
+                    className = className,
                     onBack = { navController.popBackStack() },
                     onMaterialClick = { id -> navController.navigate(Screen.LearningDetail.createRoute(id)) },
                     onCreateMaterial = { navController.navigate(Screen.MaterialCreator.route) },
@@ -340,16 +349,16 @@ fun NavGraph(
             ) {
                 SessionDetailScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenAssignments = { subject ->
-                        if (subject.isNotBlank()) navController.navigate(Screen.AssignmentsBySubject.createRoute(subject))
+                    onOpenAssignments = { subject, className ->
+                        if (subject.isNotBlank()) navController.navigate(Screen.AssignmentsBySubject.createRoute(subject, className))
                         else navController.navigate(Screen.Assignments.route)
                     },
-                    onOpenQuizzes = { subject ->
-                        if (subject.isNotBlank()) navController.navigate(Screen.QuizzesBySubject.createRoute(subject))
+                    onOpenQuizzes = { subject, className ->
+                        if (subject.isNotBlank()) navController.navigate(Screen.QuizzesBySubject.createRoute(subject, className))
                         else navController.navigate(Screen.Quizzes.route)
                     },
-                    onOpenMaterials = { subject ->
-                        if (subject.isNotBlank()) navController.navigate(Screen.LearningBySubject.createRoute(subject))
+                    onOpenMaterials = { subject, className ->
+                        if (subject.isNotBlank()) navController.navigate(Screen.LearningBySubject.createRoute(subject, className))
                         else navController.navigate(Screen.Learning.route)
                     }
                 )
@@ -374,7 +383,14 @@ fun NavGraph(
             }
             composable(
                 route = Screen.AssignmentsBySubject.route,
-                arguments = listOf(navArgument("subjectId") { type = NavType.StringType }),
+                arguments = listOf(
+                    navArgument("subjectId") { type = NavType.StringType },
+                    navArgument("className") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                ),
             ) { backStackEntry ->
                 val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
                 AssignmentListScreen(
@@ -421,7 +437,14 @@ fun NavGraph(
             }
             composable(
                 route = Screen.QuizzesBySubject.route,
-                arguments = listOf(navArgument("subjectId") { type = NavType.StringType }),
+                arguments = listOf(
+                    navArgument("subjectId") { type = NavType.StringType },
+                    navArgument("className") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    }
+                ),
             ) { backStackEntry ->
                 val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
                 QuizListScreen(
