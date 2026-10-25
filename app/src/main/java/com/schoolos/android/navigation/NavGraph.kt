@@ -698,10 +698,32 @@ fun NavGraph(
                 )
             }
 
-            // Early Warning System / At-Risk Monitoring Screen (Principal & Supervision View)
+            // Executive Supervision Rombel (Principal & Leadership View — Supervisi 13 Rombel PKBM)
             composable(Screen.Supervision.route) {
+                RombelStudentsScreen(
+                    className = "ALL",
+                    onBack = { navController.popBackStack() },
+                    onNavigateToStudentDetail = { student ->
+                        navController.navigate(
+                            Screen.StudentDetail.createRoute(
+                                studentId = student.id,
+                                studentName = student.fullName,
+                                nisn = student.nisn,
+                                gender = student.gender,
+                                className = student.className,
+                                phone = student.noHp,
+                                email = student.email,
+                            )
+                        )
+                    }
+                )
+            }
+
+            // Early Warning System / At-Risk Monitoring Screen (Halaman Warning)
+            composable(Screen.AtRisk.route) {
+                val isPrincipal = authState?.isPrincipal == true
                 AtRiskMonitoringScreen(
-                    onBack = null,
+                    onBack = if (isPrincipal) null else { { navController.popBackStack() } },
                     onNavigateToStudentDetail = { studentId, name, nisn, className ->
                         navController.navigate(
                             Screen.StudentDetail.createRoute(
