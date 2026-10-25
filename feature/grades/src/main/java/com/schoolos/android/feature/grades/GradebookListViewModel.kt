@@ -4,7 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
+import com.schoolos.android.domain.model.ClassStudent
+import com.schoolos.android.domain.model.GradebookSummaryItem
+import com.schoolos.android.domain.model.StudentGradeInputItem
 import com.schoolos.android.domain.model.SubjectGradeSummary
+import com.schoolos.android.domain.model.computeKurikulumMerdekaGrade
 import com.schoolos.android.domain.model.toSubjectSummary
 import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.GradeRepository
@@ -14,19 +18,113 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import timber.log.Timber
+import java.util.Locale
 import javax.inject.Inject
+
+data class StudentGradebookRow(
+    val studentId: String,
+    val nisn: String,
+    val name: String,
+    val className: String,
+    val sumatifM1: Double = 0.0,
+    val sumatifM2: Double = 0.0,
+    val sumatifM3: Double = 0.0,
+    val avgSumatif: Double = 0.0,
+    val ats: Double = 0.0,
+    val sas: Double = 0.0,
+    val finalScore: Double = 0.0,
+    val letterGrade: String = "-",
+    val statusKktp: String = "Belum Diinput", // "Tuntas KKTP" | "Perlu Remedial" | "Belum Diinput"
+    val highestCompetencyDesc: String = "",
+    val lowestCompetencyDesc: String = "",
+    val formatifNotes: String = "",
+)
 
 data class GradebookUiState(
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
+    val isSaving: Boolean = false,
     val error: String? = null,
+    val userMessage: String? = null,
     val userRole: String = "student",
     val className: String = "",
     val teacherName: String = "",
     val teacherSubject: String? = null,
     val subjects: List<SubjectGradeSummary> = emptyList(),
-)
+    // ── KURIKULUM MERDEKA TEACHER/PRINCIPAL GRADEBOOK SSOT ───────────
+    val allActiveStudents: List<ClassStudent> = emptyList(), // 304 active students
+    val availableClasses: List<AcademicClass> = emptyList(), // 13 classes
+    val availableSubjects: List<AcademicSubject> = emptyList(), // 18 subjects
+    val selectedSubjectId: String = "",
+    val selectedSubjectName: String = "",
+    val selectedClassFilter: String = "ALL", // "ALL" or specific rombel
+    val activeScheme: String = "A", // "A" (60/20/20) or "B" (100% Modul)
+    val searchQuery: String = "",
+    val savedSummaries: Map<String, GradebookSummaryItem> = emptyMap(), // studentId -> GradebookSummaryItem
+    val activeTab: Int = 0, // 0 = Buku Nilai Siswa (Gradebook Table), 1 = Rekap 18 Modul
+) {
+    val filteredGradebookRows: List<StudentGradebookRow>
+        get() {
+            val base = allActiveStudents.map { s ->
+                val saved = savedSummaries[s.id]
+                val m1 = saved?.sumatifM1 ?: 0.0
+                val m2 = saved?.sumatifM2 ?: 0.0
+                val m3 = saved?.sumatifM3 ?: 0.0
+                val a = saved?.ats ?: 0.0
+                val sa = saved?.sas ?: 0.0
+                val eval = computeKurikulumMerdekaGrade(m1, m2, m3, a, sa, activeScheme)
+
+                val savedFs = saved?.finalScore
+                val savedAvg = saved?.avgSumatif
+                val fs: Double = if (savedFs != null && savedFs > 0.0) savedFs else eval.finalScore
+                val lg: String = if (!saved?.letterGrade.isNullOrBlank() && saved?.letterGrade != "-") saved!!.letterGrade!! else eval.letterGrade
+                val status: String = if (saved?.passed == true) "Tuntas KKTP"
+                else if (savedFs != null && savedFs > 0.0) "Perlu Remedial"
+                else eval.statusKktp
+                val avgM: Double = if (savedAvg != null && savedAvg > 0.0) savedAvg else eval.avgSumatif
+
+                StudentGradebookRow(
+                    studentId = s.id,
+                    nisn = s.nisn,
+                    name = s.fullName,
+                    className = s.className,
+                    sumatifM1 = m1,
+                    sumatifM2 = m2,
+                    sumatifM3 = m3,
+                    avgSumatif = avgM,
+                    ats = a,
+                    sas = sa,
+                    finalScore = fs,
+                    letterGrade = lg,
+                    statusKktp = status,
+                    highestCompetencyDesc = saved?.highestCompetencyDesc.orEmpty(),
+                    lowestCompetencyDesc = saved?.lowestCompetencyDesc.orEmpty(),
+                    formatifNotes = saved?.formatifNotes.orEmpty(),
+                )
+            }
+            val byClass = if (selectedClassFilter.isBlank() || selectedClassFilter.equals("ALL", ignoreCase = true) || selectedClassFilter.equals("Semua", ignoreCase = true)) {
+                base
+            } else {
+                base.filter { it.className.equals(selectedClassFilter, ignoreCase = true) }
+            }
+            return if (searchQuery.isBlank()) byClass
+            else byClass.filter {
+                it.name.contains(searchQuery, ignoreCase = true) ||
+                        it.nisn.contains(searchQuery, ignoreCase = true) ||
+                        it.className.contains(searchQuery, ignoreCase = true)
+            }
+        }
+
+    val totalStudentsCount: Int get() = filteredGradebookRows.size
+    val gradedRows: List<StudentGradebookRow> get() = filteredGradebookRows.filter { it.finalScore > 0 }
+    val averageScore: Double get() = if (gradedRows.isNotEmpty()) gradedRows.map { it.finalScore }.average() else 0.0
+    val passedCount: Int get() = gradedRows.count { it.finalScore >= 75.0 }
+    val remedialCount: Int get() = gradedRows.count { it.finalScore < 75.0 }
+    val passingPercentage: Int get() = if (gradedRows.isNotEmpty()) ((passedCount.toDouble() / gradedRows.size) * 100).toInt() else 0
+}
 
 @HiltViewModel
 class GradebookListViewModel @Inject constructor(
@@ -43,12 +141,11 @@ class GradebookListViewModel @Inject constructor(
     private var loadJob: Job? = null
     private var hasLoadedOnce: Boolean = false
 
-    // In-memory cache for static school academic structures
     private var cachedSubjects: List<AcademicSubject>? = null
     private var cachedClasses: List<AcademicClass>? = null
+    private var cachedStudents: List<ClassStudent>? = null
 
     init {
-        // Initial load: fetch once cleanly without collecting continuous DataStore triggers
         viewModelScope.launch {
             val initialAuth = authManager.authState.first()
             currentClassId = initialAuth.classId ?: ""
@@ -67,7 +164,6 @@ class GradebookListViewModel @Inject constructor(
             load(homeroom, currentClassId, isInitial = true)
         }
 
-        // Only reload if the user's role or class assignment actually changed structurally
         viewModelScope.launch {
             authManager.authState
                 .distinctUntilChangedBy { Triple(it.role, it.className, it.classId) }
@@ -82,11 +178,11 @@ class GradebookListViewModel @Inject constructor(
                     }
 
                     val classOrRoleChanged = hasLoadedOnce && (
-                        _state.value.userRole != newRole ||
-                        _state.value.className != newHomeroom ||
-                        currentClassId != newClassId ||
-                        _state.value.teacherSubject != teacherSubj
-                    )
+                            _state.value.userRole != newRole ||
+                                    _state.value.className != newHomeroom ||
+                                    currentClassId != newClassId ||
+                                    _state.value.teacherSubject != teacherSubj
+                            )
 
                     _state.value = _state.value.copy(
                         userRole = newRole,
@@ -111,6 +207,134 @@ class GradebookListViewModel @Inject constructor(
         }
     }
 
+    fun selectTab(tab: Int) {
+        _state.update { it.copy(activeTab = tab) }
+    }
+
+    fun selectSubject(subjectId: String, subjectName: String) {
+        _state.update { it.copy(selectedSubjectId = subjectId, selectedSubjectName = subjectName) }
+        loadGradebookSummaries(subjectId)
+    }
+
+    fun selectClassFilter(filter: String) {
+        _state.update { it.copy(selectedClassFilter = filter) }
+    }
+
+    fun selectScheme(scheme: String) {
+        _state.update { it.copy(activeScheme = scheme) }
+    }
+
+    fun onSearchQueryChanged(query: String) {
+        _state.update { it.copy(searchQuery = query) }
+    }
+
+    fun clearUserMessage() {
+        _state.update { it.copy(userMessage = null) }
+    }
+
+    private fun loadGradebookSummaries(subjectId: String) {
+        viewModelScope.launch {
+            repository.getGradebookSummary(subjectId = subjectId.ifBlank { null })
+                .onSuccess { list ->
+                    val map = list.associateBy { it.studentId }
+                    _state.update { it.copy(savedSummaries = map) }
+                }
+                .onFailure {
+                    Timber.w("Failed to fetch gradebook summary for subject $subjectId: ${it.message}")
+                }
+        }
+    }
+
+    fun saveStudentGrade(
+        studentId: String,
+        studentName: String,
+        m1: Double,
+        m2: Double,
+        m3: Double,
+        ats: Double,
+        sas: Double,
+        highestDesc: String,
+        lowestDesc: String,
+        formatifNotes: String,
+    ) {
+        viewModelScope.launch {
+            _state.update { it.copy(isSaving = true) }
+            val currentSubjId = _state.value.selectedSubjectId
+            val currentSubjName = _state.value.selectedSubjectName
+            val scheme = _state.value.activeScheme
+
+            val eval = computeKurikulumMerdekaGrade(m1, m2, m3, ats, sas, scheme)
+
+            val input = StudentGradeInputItem(
+                studentId = studentId,
+                sumatifM1 = m1,
+                sumatifM2 = m2,
+                sumatifM3 = m3,
+                ats = ats,
+                sas = sas,
+                formatifNotes = formatifNotes,
+                finalScore = eval.finalScore,
+                letterGrade = eval.letterGrade,
+                passed = eval.statusKktp == "Tuntas KKTP",
+                status = "published"
+            )
+
+            val studentObj = _state.value.allActiveStudents.find { it.id == studentId }
+            val classId = studentObj?.classId
+
+            val result = repository.saveGradebook(
+                classId = classId,
+                subjectId = currentSubjId.ifBlank { null },
+                subjectName = currentSubjName.ifBlank { null },
+                weightSumatif = if (scheme == "B") 1.0 else 0.6,
+                weightAts = if (scheme == "B") 0.0 else 0.2,
+                weightSas = if (scheme == "B") 0.0 else 0.2,
+                kktp = 75.0,
+                grades = listOf(input)
+            )
+
+            result.onSuccess {
+                // Update local memory map immediately for zero lag
+                val updatedMap = _state.value.savedSummaries.toMutableMap()
+                updatedMap[studentId] = GradebookSummaryItem(
+                    studentId = studentId,
+                    classId = classId,
+                    subjectId = currentSubjId,
+                    subjectName = currentSubjName,
+                    sumatifM1 = m1,
+                    sumatifM2 = m2,
+                    sumatifM3 = m3,
+                    avgSumatif = eval.avgSumatif,
+                    ats = ats,
+                    sas = sas,
+                    finalScore = eval.finalScore,
+                    letterGrade = eval.letterGrade,
+                    passed = eval.statusKktp == "Tuntas KKTP",
+                    status = "published",
+                    highestCompetencyDesc = highestDesc,
+                    lowestCompetencyDesc = lowestDesc,
+                    formatifNotes = formatifNotes
+                )
+                _state.update {
+                    it.copy(
+                        isSaving = false,
+                        savedSummaries = updatedMap,
+                        userMessage = "Nilai & capaian $studentName berhasil disimpan!"
+                    )
+                }
+                // Reload from backend
+                loadGradebookSummaries(currentSubjId)
+            }.onFailure { err ->
+                _state.update {
+                    it.copy(
+                        isSaving = false,
+                        error = "Gagal menyimpan nilai: ${err.message}"
+                    )
+                }
+            }
+        }
+    }
+
     private fun load(
         className: String,
         classId: String,
@@ -119,13 +343,11 @@ class GradebookListViewModel @Inject constructor(
     ) {
         loadJob?.cancel()
         loadJob = viewModelScope.launch {
-            // Keep existing UI rendered if we already have subjects to prevent flickering
             _state.value = _state.value.copy(
-                isLoading = _state.value.subjects.isEmpty(),
+                isLoading = _state.value.subjects.isEmpty() && _state.value.allActiveStudents.isEmpty(),
                 error = null,
             )
 
-            // Resolve target class ID if not yet available in AuthState
             var targetClassId = classId
             if (targetClassId.isBlank() && className.isNotBlank()) {
                 val classes = cachedClasses ?: run {
@@ -139,13 +361,33 @@ class GradebookListViewModel @Inject constructor(
                 }
             }
 
-            // Retrieve raw subjects (from cache if already loaded unless forceRefresh)
+            // Retrieve raw subjects
             val allRawSubjects = if (!forceRefresh && cachedSubjects != null) {
                 cachedSubjects!!
             } else {
                 val res = academicRepository.getSubjects()
                 val list = res.getOrDefault(emptyList()).distinctBy { it.id }
                 if (list.isNotEmpty()) cachedSubjects = list
+                list
+            }
+
+            // Retrieve raw classes
+            val allClasses = if (!forceRefresh && cachedClasses != null) {
+                cachedClasses!!
+            } else {
+                val res = academicRepository.getClasses()
+                val list = res.getOrDefault(emptyList()).distinctBy { it.id }
+                if (list.isNotEmpty()) cachedClasses = list
+                list
+            }
+
+            // Retrieve all active students (SSOT: 304 active students)
+            val allStudents = if (!forceRefresh && cachedStudents != null && cachedStudents!!.isNotEmpty()) {
+                cachedStudents!!
+            } else {
+                val res = academicRepository.getClassStudents("")
+                val list = res.getOrDefault(emptyList())
+                if (list.isNotEmpty()) cachedStudents = list
                 list
             }
 
@@ -172,7 +414,32 @@ class GradebookListViewModel @Inject constructor(
                 allRawSubjects
             }
 
+            // Determine initial selected subject for Gradebook view
+            val initialSubject = if (_state.value.selectedSubjectName.isNotBlank()) {
+                allSubjects.find { it.name.equals(_state.value.selectedSubjectName, ignoreCase = true) }
+                    ?: allSubjects.firstOrNull()
+            } else {
+                // Default to teacher's subject if available, otherwise first subject (matches web)
+                if (!teacherSubj.isNullOrBlank()) {
+                    allSubjects.firstOrNull { it.name.contains(teacherSubj!!, ignoreCase = true) } ?: allSubjects.firstOrNull()
+                } else {
+                    allSubjects.firstOrNull()
+                }
+            }
+
+            val selectedSubjId = initialSubject?.id ?: ""
+            val selectedSubjName = initialSubject?.name ?: if (allSubjects.isNotEmpty()) allSubjects.first().name else "Pendidikan Agama Islam dan Budi Pekerti"
+
             val subjectMap = allSubjects.associate { it.id to it.name }
+
+            // Load saved gradebook summary from backend
+            if (selectedSubjId.isNotBlank()) {
+                repository.getGradebookSummary(subjectId = selectedSubjId)
+                    .onSuccess { summaries ->
+                        val map = summaries.associateBy { it.studentId }
+                        _state.update { it.copy(savedSummaries = map) }
+                    }
+            }
 
             repository.getGradebook(targetClassId.ifBlank { null })
                 .onSuccess { entries ->
@@ -182,7 +449,6 @@ class GradebookListViewModel @Inject constructor(
                         entries.toSubjectSummary(id, realName)
                     }
 
-                    // For curriculum subjects without grade entries yet, represent real un-graded state
                     val existingIds = entrySummaries.map { it.subjectId }.toSet()
                     val unGradedSummaries = allSubjects
                         .filter { it.id !in existingIds }
@@ -211,11 +477,15 @@ class GradebookListViewModel @Inject constructor(
                         isLoading = false,
                         isRefreshing = false,
                         subjects = finalSubjects,
+                        allActiveStudents = allStudents,
+                        availableClasses = allClasses,
+                        availableSubjects = allSubjects,
+                        selectedSubjectId = selectedSubjId,
+                        selectedSubjectName = selectedSubjName,
                         error = null,
                     )
                 }
                 .onFailure { e ->
-                    // Fallback to subjects with real un-graded status (no fake dummy scores)
                     val emptySummaries = allSubjects.distinctBy { it.id }.map { subj ->
                         SubjectGradeSummary(
                             subjectId = subj.id,
@@ -233,6 +503,11 @@ class GradebookListViewModel @Inject constructor(
                         isLoading = false,
                         isRefreshing = false,
                         subjects = if (_state.value.subjects.isNotEmpty()) _state.value.subjects else emptySummaries,
+                        allActiveStudents = allStudents,
+                        availableClasses = allClasses,
+                        availableSubjects = allSubjects,
+                        selectedSubjectId = selectedSubjId,
+                        selectedSubjectName = selectedSubjName,
                         error = if (_state.value.subjects.isEmpty() && emptySummaries.isEmpty()) e.message ?: "Gagal memuat buku nilai" else null,
                     )
                 }

@@ -75,11 +75,17 @@ class RombelStudentsViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val navClassName: String = savedStateHandle.get<String>("className") ?: ""
+    private val normalizedClass: String = if (
+        navClassName.isBlank() ||
+        navClassName.equals("ALL", ignoreCase = true) ||
+        navClassName.equals("SUPERVISION", ignoreCase = true) ||
+        navClassName.equals("Semua", ignoreCase = true)
+    ) "ALL" else navClassName
 
     private val _uiState = MutableStateFlow(
         RombelStudentsUiState(
-            className = navClassName,
-            selectedClassFilter = if (navClassName.isBlank() || navClassName.equals("ALL", ignoreCase = true)) "ALL" else navClassName
+            className = normalizedClass,
+            selectedClassFilter = normalizedClass
         )
     )
     val uiState = _uiState.asStateFlow()
@@ -91,7 +97,7 @@ class RombelStudentsViewModel @Inject constructor(
                 _uiState.update { it.copy(isPrincipal = isPrin) }
             }
         }
-        loadStudents(navClassName)
+        loadStudents(normalizedClass)
     }
 
     fun onSearchQueryChanged(query: String) {
@@ -202,8 +208,9 @@ class RombelStudentsViewModel @Inject constructor(
     }
 
     fun loadStudents(classNameOverride: String? = null, isPullRefresh: Boolean = false) {
-        val targetClass = (classNameOverride ?: _uiState.value.className).trim()
-        val filter = if (targetClass.isBlank() || targetClass.equals("ALL", ignoreCase = true)) "ALL" else targetClass
+        val raw = (classNameOverride ?: _uiState.value.className).trim()
+        val targetClass = if (raw.isBlank() || raw.equals("ALL", ignoreCase = true) || raw.equals("SUPERVISION", ignoreCase = true) || raw.equals("Semua", ignoreCase = true)) "ALL" else raw
+        val filter = if (_uiState.value.selectedClassFilter.equals("SUPERVISION", ignoreCase = true) || _uiState.value.selectedClassFilter.isBlank()) targetClass else _uiState.value.selectedClassFilter
         if (isPullRefresh) {
             _uiState.update { it.copy(className = targetClass, selectedClassFilter = filter, isRefreshing = true, errorMessage = null) }
         } else {

@@ -10,15 +10,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.material.icons.filled.MenuBook
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -39,9 +33,18 @@ fun GradebookListScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var selectedFilter by remember { mutableStateOf("Semua Mapel") }
+    var selectedRowForDetail by remember { mutableStateOf<StudentGradebookRow?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
+
+    LaunchedEffect(state.userMessage) {
+        state.userMessage?.let { msg ->
+            snackbarHostState.showSnackbar(msg)
+            viewModel.clearUserMessage()
+        }
+    }
 
     val filteredSubjects = remember(state.subjects, selectedFilter) {
         if (selectedFilter == "Semua Mapel") {
@@ -49,19 +52,20 @@ fun GradebookListScreen(
         } else {
             state.subjects.filter {
                 it.category.equals(selectedFilter, ignoreCase = true) ||
-                it.subjectName.contains(selectedFilter, ignoreCase = true)
+                        it.subjectName.contains(selectedFilter, ignoreCase = true)
             }
         }
     }
 
     Scaffold(
         containerColor = CosmicBlack,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             ExecutiveTopBar(
-                title = if (isPrincipal) "Leger Capaian Belajar PKBM" else "Buku Nilai",
-                subtitle = if (isPrincipal) "Monitoring capaian KKTP seluruh rombel PKBM"
-                    else if (isTeacher && !state.teacherSubject.isNullOrBlank()) "Guru Mapel: ${state.teacherSubject} • Rombel ${state.className.ifBlank { "Paket" }}"
-                    else if (isTeacher && state.className.isNotBlank()) "Tutor Pamong • Rombel ${state.className}"
+                title = if (isPrincipal) "Buku Nilai (Teacher Gradebook)"
+                    else if (isTeacher) "Buku Nilai Guru"
+                    else "Buku Nilai",
+                subtitle = if (isPrincipal || isTeacher) "Standar Kurikulum Merdeka (Kemendikdasmen RI)"
                     else "Rekapitulasi Capaian Modul",
                 onBack = onBack,
             )
@@ -76,73 +80,219 @@ fun GradebookListScreen(
         ) {
             if (state.isLoading) {
                 LoadingState()
-            } else if (state.error != null) {
+            } else if (state.error != null && state.allActiveStudents.isEmpty() && state.subjects.isEmpty()) {
                 ErrorState(message = state.error!!, onRetry = viewModel::refresh)
-            } else if (state.subjects.isEmpty()) {
-                EmptyState("Belum ada mata pelajaran tercatat.", Icons.Default.Assessment)
             } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    // ── STUDENT VIEW ─────────────────────────────────
-                    if (!isTeacher) {
-                        item {
-                            StudentGradeHeroHeader(state.subjects)
-                        }
-                        val dynamicCategories = (listOf("Semua Mapel") + state.subjects.map { it.category }.filter { it.isNotBlank() && it != "Wajib" }).distinct()
-                        if (dynamicCategories.size > 1) {
-                            item {
-                                LazyRow(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // ── SEGMENTED TOP TABS (FOR TEACHER / PRINCIPAL) ─────────
+                    if (isTeacher) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 6.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CosmicNavy)
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            // Tab 0: Buku Nilai Siswa (Matches Web Dashboard)
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(if (state.activeTab == 0) TeacherNeon.copy(alpha = 0.18f) else Color.Transparent)
+                                    .border(
+                                        if (state.activeTab == 0) 1.dp else 0.dp,
+                                        if (state.activeTab == 0) TeacherNeon.copy(alpha = 0.5f) else Color.Transparent,
+                                        RoundedCornerShape(9.dp)
+                                    )
+                                    .clickable { viewModel.selectTab(0) }
+                                    .padding(vertical = 9.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    items(dynamicCategories) { filter ->
-                                        val isSelected = filter == selectedFilter
-                                        Box(
-                                            modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSelected) CosmicSurface2 else CosmicNavy)
-                                                .border(
-                                                    0.5.dp,
-                                                    if (isSelected) GlassBorder2 else GlassBorder,
-                                                    RoundedCornerShape(8.dp),
+                                    Icon(
+                                        Icons.Default.MenuBook,
+                                        contentDescription = null,
+                                        tint = if (state.activeTab == 0) TeacherNeon else TextTertiary,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(
+                                        "Buku Nilai Siswa (${state.totalStudentsCount})",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (state.activeTab == 0) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (state.activeTab == 0) TeacherNeon else TextTertiary
+                                    )
+                                }
+                            }
+
+                            // Tab 1: Rekap 18 Modul Overview
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(9.dp))
+                                    .background(if (state.activeTab == 1) TeacherNeon.copy(alpha = 0.18f) else Color.Transparent)
+                                    .border(
+                                        if (state.activeTab == 1) 1.dp else 0.dp,
+                                        if (state.activeTab == 1) TeacherNeon.copy(alpha = 0.5f) else Color.Transparent,
+                                        RoundedCornerShape(9.dp)
+                                    )
+                                    .clickable { viewModel.selectTab(1) }
+                                    .padding(vertical = 9.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.Assessment,
+                                        contentDescription = null,
+                                        tint = if (state.activeTab == 1) TeacherNeon else TextTertiary,
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                    Text(
+                                        "Rekap ${state.subjects.size} Modul",
+                                        fontSize = 12.sp,
+                                        fontWeight = if (state.activeTab == 1) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (state.activeTab == 1) TeacherNeon else TextTertiary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // ── LAZY COLUMN CONTENT ──────────────────────────────────
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        if (!isTeacher) {
+                            // ── STUDENT VIEW ─────────────────────────────────
+                            item {
+                                StudentGradeHeroHeader(state.subjects)
+                            }
+                            val dynamicCategories = (listOf("Semua Mapel") + state.subjects.map { it.category }.filter { it.isNotBlank() && it != "Wajib" }).distinct()
+                            if (dynamicCategories.size > 1) {
+                                item {
+                                    LazyRow(
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                                    ) {
+                                        items(dynamicCategories) { filter ->
+                                            val isSelected = filter == selectedFilter
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(if (isSelected) CosmicSurface2 else CosmicNavy)
+                                                    .border(
+                                                        0.5.dp,
+                                                        if (isSelected) GlassBorder2 else GlassBorder,
+                                                        RoundedCornerShape(8.dp),
+                                                    )
+                                                    .clickable { selectedFilter = filter }
+                                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                            ) {
+                                                Text(
+                                                    filter,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                                    color = if (isSelected) TextPrimary else TextTertiary,
                                                 )
-                                                .clickable { selectedFilter = filter }
-                                                .padding(horizontal = 12.dp, vertical = 6.dp),
-                                        ) {
-                                            Text(
-                                                filter,
-                                                fontSize = 12.sp,
-                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                                color = if (isSelected) TextPrimary else TextTertiary,
-                                            )
+                                            }
                                         }
                                     }
                                 }
                             }
+                            studentGradebookContent(
+                                subjects = filteredSubjects,
+                                onSubjectClick = onSubjectClick
+                            )
+                        } else {
+                            // ── TEACHER / PRINCIPAL VIEW ──────────────────────
+                            if (state.activeTab == 0) {
+                                // View 0: Buku Nilai Siswa (Kurikulum Merdeka SSOT)
+                                kurikulumMerdekaGradebookContent(
+                                    totalStudents = state.totalStudentsCount,
+                                    averageScore = state.averageScore,
+                                    passingPercentage = state.passingPercentage,
+                                    passedCount = state.passedCount,
+                                    remedialCount = state.remedialCount,
+                                    selectedSubjectName = state.selectedSubjectName,
+                                    availableSubjects = state.availableSubjects,
+                                    selectedClassFilter = state.selectedClassFilter,
+                                    availableClasses = state.availableClasses,
+                                    activeScheme = state.activeScheme,
+                                    searchQuery = state.searchQuery,
+                                    filteredRows = state.filteredGradebookRows,
+                                    onSelectSubject = { subj ->
+                                        viewModel.selectSubject(subj.id, subj.name)
+                                    },
+                                    onSelectClassFilter = { cls ->
+                                        viewModel.selectClassFilter(cls)
+                                    },
+                                    onSelectScheme = { scheme ->
+                                        viewModel.selectScheme(scheme)
+                                    },
+                                    onSearchQueryChanged = { q ->
+                                        viewModel.onSearchQueryChanged(q)
+                                    },
+                                    onOpenDetail = { row ->
+                                        selectedRowForDetail = row
+                                    }
+                                )
+                            } else {
+                                // View 1: Rekap 18 Modul Overview Cards
+                                teacherGradebookContent(
+                                    subjects = filteredSubjects,
+                                    className = state.className,
+                                    teacherSubject = state.teacherSubject,
+                                    totalSubjectCount = state.subjects.size,
+                                    selectedFilter = selectedFilter,
+                                    isPrincipal = isPrincipal,
+                                    onSelectFilter = { selectedFilter = it },
+                                    onSubjectClick = { subjectId, subjectName ->
+                                        viewModel.selectSubject(subjectId, subjectName)
+                                        viewModel.selectTab(0)
+                                    }
+                                )
+                            }
                         }
-                        studentGradebookContent(
-                            subjects = filteredSubjects,
-                            onSubjectClick = onSubjectClick
-                        )
-                    } else {
-                        // ── TEACHER VIEW (WALIKELAS LEGER NILAI) ───────────
-                        teacherGradebookContent(
-                            subjects = filteredSubjects,
-                            className = state.className,
-                            teacherSubject = state.teacherSubject,
-                            totalSubjectCount = state.subjects.size,
-                            selectedFilter = selectedFilter,
-                            isPrincipal = isPrincipal,
-                            onSelectFilter = { selectedFilter = it },
-                            onSubjectClick = onSubjectClick
-                        )
                     }
                 }
             }
         }
+    }
+
+    // ── MODAL BOTTOM SHEET FOR INPUT NILAI & DETAIL CAPAIAN ──────────────────
+    selectedRowForDetail?.let { row ->
+        GradeDetailModalSheet(
+            row = row,
+            selectedSubjectName = state.selectedSubjectName,
+            activeScheme = state.activeScheme,
+            isSaving = state.isSaving,
+            onDismiss = { selectedRowForDetail = null },
+            onSave = { m1, m2, m3, ats, sas, highest, lowest, notes ->
+                viewModel.saveStudentGrade(
+                    studentId = row.studentId,
+                    studentName = row.name,
+                    m1 = m1,
+                    m2 = m2,
+                    m3 = m3,
+                    ats = ats,
+                    sas = sas,
+                    highestDesc = highest,
+                    lowestDesc = lowest,
+                    formatifNotes = notes
+                )
+                selectedRowForDetail = null
+            }
+        )
     }
 }
 
@@ -225,7 +375,6 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
 
             Spacer(Modifier.height(12.dp))
 
-            // Executive Summary Strip
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
