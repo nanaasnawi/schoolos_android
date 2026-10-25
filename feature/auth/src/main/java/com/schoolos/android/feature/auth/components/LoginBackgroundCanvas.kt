@@ -36,6 +36,8 @@ fun LoginBackgroundCanvas(
         label = "auraFloat2",
     )
 
+    val tertiaryColor = NeonBlue
+
     Canvas(modifier = modifier.fillMaxSize()) {
         drawCircle(
             brush = Brush.radialGradient(
@@ -63,7 +65,7 @@ fun LoginBackgroundCanvas(
         )
         drawCircle(
             brush = Brush.radialGradient(
-                colors = listOf(NeonBlue.copy(alpha = 0.10f * (0.8f + auraAnim * 0.2f)), Color.Transparent),
+                colors = listOf(tertiaryColor.copy(alpha = 0.10f * (0.8f + auraAnim * 0.2f)), Color.Transparent),
                 center = Offset(size.width * 0.85f, size.height * 0.88f - auraAnim * 50f),
                 radius = 480f,
             ),

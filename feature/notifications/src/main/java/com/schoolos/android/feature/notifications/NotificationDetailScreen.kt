@@ -364,6 +364,7 @@ private fun iconForType(type: String): ImageVector = when {
     else -> Icons.Default.Campaign
 }
 
+@Composable
 private fun colorForType(type: String): Color = when {
     type.contains("assignment", ignoreCase = true) || type.contains("tugas", ignoreCase = true) -> StudentNeon
     type.contains("quiz", ignoreCase = true) || type.contains("kuis", ignoreCase = true) -> NeonWarning

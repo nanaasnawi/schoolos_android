@@ -4,10 +4,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.StudentNeon
-import com.schoolos.android.core.designsystem.AccentNeonPurple
+import com.schoolos.android.core.designsystem.BaseNeonBlue
+import com.schoolos.android.core.designsystem.StudentPrimary
+import com.schoolos.android.core.designsystem.TeacherPrimary
 import com.schoolos.android.domain.model.MaterialType
 import com.schoolos.android.domain.repository.LearningMaterialRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -148,10 +147,10 @@ class LearningViewModel @Inject constructor(
         )
         return sortedList.mapIndexed { idx, m ->
             val color = when (idx % 4) {
-                0 -> NeonBlue
-                1 -> TeacherNeon
-                2 -> AccentNeonPurple
-                else -> StudentNeon
+                0 -> BaseNeonBlue
+                1 -> TeacherPrimary
+                2 -> Color(0xFF8B5CF6)
+                else -> StudentPrimary
             }
             val typeLabel = when (m.materialType) {
                 MaterialType.VIDEO -> "VIDEO"

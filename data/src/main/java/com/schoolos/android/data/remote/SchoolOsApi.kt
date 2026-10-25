@@ -374,6 +374,21 @@ interface SchoolOsApi {
     suspend fun verifyHabitParent(
         @Body request: VerifyHabitParentRequestDto
     ): ApiResponse<VerifyHabitResponseDto>
+
+    // ── At-Risk & Teacher Intervention Reminders ───────────────
+    @GET("learning/materials/{id}/completions")
+    suspend fun getMaterialCompletions(
+        @Path("id") id: String,
+        @Query("class_id") classId: String? = null,
+    ): ApiResponse<List<MaterialCompletionDto>>
+
+    @GET("teacher/remind")
+    suspend fun getReminders(): ApiResponse<Map<String, ReminderItemDto>>
+
+    @POST("teacher/remind")
+    suspend fun sendReminder(
+        @Body request: SendReminderRequestDto
+    ): ApiResponse<SendReminderResponseDto>
 }
 
 @kotlinx.serialization.Serializable
@@ -489,3 +504,45 @@ data class CreateQuizOptionRequestDto(
 data class FileUploadResponse(
     val url: String,
 )
+
+@kotlinx.serialization.Serializable
+data class MaterialCompletionDto(
+    @kotlinx.serialization.SerialName("student_id") val studentId: String = "",
+    @kotlinx.serialization.SerialName("student_name") val studentName: String = "",
+    val nisn: String? = null,
+    val gender: String? = null,
+    @kotlinx.serialization.SerialName("class_name") val className: String? = null,
+    @kotlinx.serialization.SerialName("is_completed") val isCompleted: Boolean = false,
+    @kotlinx.serialization.SerialName("completed_at") val completedAt: String? = null,
+    @kotlinx.serialization.SerialName("current_page") val currentPage: Int? = null,
+    @kotlinx.serialization.SerialName("last_read_at") val lastReadAt: String? = null,
+)
+
+@kotlinx.serialization.Serializable
+data class SendReminderRequestDto(
+    @kotlinx.serialization.SerialName("student_id") val studentId: String? = null,
+    @kotlinx.serialization.SerialName("student_ids") val studentIds: List<String>? = null,
+    val title: String? = null,
+    val reason: String? = null,
+    val category: String? = null,
+    @kotlinx.serialization.SerialName("material_id") val materialId: String? = null,
+    @kotlinx.serialization.SerialName("assignment_id") val assignmentId: String? = null,
+    @kotlinx.serialization.SerialName("teacher_name") val teacherName: String? = null,
+)
+
+@kotlinx.serialization.Serializable
+data class SendReminderResponseDto(
+    val success: Boolean = true,
+    val message: String = "",
+    @kotlinx.serialization.SerialName("sent_count") val sentCount: Int = 0,
+    @kotlinx.serialization.SerialName("sent_at") val sentAt: String = "",
+)
+
+@kotlinx.serialization.Serializable
+data class ReminderItemDto(
+    val id: String = "",
+    val sent: Boolean = true,
+    @kotlinx.serialization.SerialName("sent_at") val sentAt: String = "",
+    val title: String = "",
+)
+

@@ -24,6 +24,7 @@ import com.schoolos.android.feature.assignments.habits.HabitsScreen
 import com.schoolos.android.feature.auth.LoginScreen
 import com.schoolos.android.feature.grades.GradeDetailScreen
 import com.schoolos.android.feature.grades.GradebookListScreen
+import com.schoolos.android.feature.home.AtRiskMonitoringScreen
 import com.schoolos.android.feature.home.HomeScreen
 import com.schoolos.android.feature.home.RombelStudentsScreen
 import com.schoolos.android.feature.home.StudentDetailScreen
@@ -697,21 +698,20 @@ fun NavGraph(
                 )
             }
 
-            // Executive Supervision Rombel (Principal & Leadership View)
+            // Early Warning System / At-Risk Monitoring Screen (Principal & Supervision View)
             composable(Screen.Supervision.route) {
-                RombelStudentsScreen(
-                    className = "ALL",
+                AtRiskMonitoringScreen(
                     onBack = null,
-                    onNavigateToStudentDetail = { student ->
+                    onNavigateToStudentDetail = { studentId, name, nisn, className ->
                         navController.navigate(
                             Screen.StudentDetail.createRoute(
-                                studentId = student.id,
-                                studentName = student.fullName,
-                                nisn = student.nisn,
-                                gender = student.gender,
-                                className = student.className,
-                                phone = student.noHp,
-                                email = student.email,
+                                studentId = studentId,
+                                studentName = name,
+                                nisn = nisn,
+                                gender = "",
+                                className = className,
+                                phone = "",
+                                email = "",
                             )
                         )
                     }

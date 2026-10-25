@@ -482,6 +482,8 @@ private fun ScannerOverlay(isScanning: Boolean) {
         label = "scanAnim"
     )
 
+    val laserColor = NeonBlue
+
     Canvas(modifier = Modifier.fillMaxSize()) {
         val strokeWidth = 3.dp.toPx()
         val cornerSize = 24.dp.toPx()
@@ -493,27 +495,27 @@ private fun ScannerOverlay(isScanning: Boolean) {
         val bottom = size.height - pad
 
         // Top-Left Corner
-        drawLine(NeonBlue, Offset(left, top), Offset(left + cornerSize, top), strokeWidth)
-        drawLine(NeonBlue, Offset(left, top), Offset(left, top + cornerSize), strokeWidth)
+        drawLine(laserColor, Offset(left, top), Offset(left + cornerSize, top), strokeWidth)
+        drawLine(laserColor, Offset(left, top), Offset(left, top + cornerSize), strokeWidth)
 
         // Top-Right Corner
-        drawLine(NeonBlue, Offset(right, top), Offset(right - cornerSize, top), strokeWidth)
-        drawLine(NeonBlue, Offset(right, top), Offset(right, top + cornerSize), strokeWidth)
+        drawLine(laserColor, Offset(right, top), Offset(right - cornerSize, top), strokeWidth)
+        drawLine(laserColor, Offset(right, top), Offset(right, top + cornerSize), strokeWidth)
 
         // Bottom-Left Corner
-        drawLine(NeonBlue, Offset(left, bottom), Offset(left + cornerSize, bottom), strokeWidth)
-        drawLine(NeonBlue, Offset(left, bottom), Offset(left, bottom - cornerSize), strokeWidth)
+        drawLine(laserColor, Offset(left, bottom), Offset(left + cornerSize, bottom), strokeWidth)
+        drawLine(laserColor, Offset(left, bottom), Offset(left, bottom - cornerSize), strokeWidth)
 
         // Bottom-Right Corner
-        drawLine(NeonBlue, Offset(right, bottom), Offset(right - cornerSize, bottom), strokeWidth)
-        drawLine(NeonBlue, Offset(right, bottom), Offset(right, bottom - cornerSize), strokeWidth)
+        drawLine(laserColor, Offset(right, bottom), Offset(right - cornerSize, bottom), strokeWidth)
+        drawLine(laserColor, Offset(right, bottom), Offset(right, bottom - cornerSize), strokeWidth)
 
         // Laser Scan Line
         if (isScanning) {
             val lineY = top + (bottom - top) * lineProgress
             drawLine(
                 brush = Brush.horizontalGradient(
-                    colors = listOf(Color.Transparent, NeonBlue, Color.Transparent)
+                    colors = listOf(Color.Transparent, laserColor, Color.Transparent)
                 ),
                 start = Offset(left, lineY),
                 end = Offset(right, lineY),

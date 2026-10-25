@@ -88,13 +88,14 @@ import com.schoolos.android.core.designsystem.subjectGradient
 import com.schoolos.android.core.designsystem.subjectIcon
 
 private val ChoiceLabels = listOf("A", "B", "C", "D", "E")
-private val ChoiceColors = listOf(
-    StudentNeon,
-    NeonBlue,
-    NeonSuccess,
-    NeonWarning,
-    NeonError,
-)
+private val ChoiceColors: List<Color>
+    @Composable get() = listOf(
+        StudentNeon,
+        NeonBlue,
+        NeonSuccess,
+        NeonWarning,
+        NeonError,
+    )
 
 @Composable
 fun QuizAttemptScreen(

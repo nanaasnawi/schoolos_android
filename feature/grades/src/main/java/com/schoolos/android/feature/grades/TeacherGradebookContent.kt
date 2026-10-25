@@ -307,6 +307,7 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
         items(filteredRows, key = { it.studentId }) { row ->
             StudentGradebookItemCard(
                 row = row,
+                activeScheme = activeScheme,
                 onClickDetail = { onOpenDetail(row) }
             )
         }
@@ -323,20 +324,35 @@ private fun GradebookHeroBanner(
     activeScheme: String,
     onSelectScheme: (String) -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val heroGradient = if (isDark) {
+        Brush.linearGradient(
+            listOf(
+                Color(0xFF064E3B).copy(alpha = 0.45f),
+                CosmicNavy,
+                CosmicSurface2
+            )
+        )
+    } else {
+        Brush.linearGradient(
+            listOf(
+                Color(0xFFECFDF5),
+                Color(0xFFF0FDF4),
+                Color(0xFFFFFFFF)
+            )
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(20.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        TeacherContainer.copy(alpha = 0.4f),
-                        CosmicNavy,
-                        CosmicSurface2
-                    )
-                )
+            .background(heroGradient)
+            .border(
+                1.dp,
+                if (isDark) TeacherNeon.copy(alpha = 0.35f) else Color(0xFFA7F3D0),
+                RoundedCornerShape(20.dp)
             )
-            .border(1.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
             .padding(16.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -344,8 +360,12 @@ private fun GradebookHeroBanner(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
-                    .background(TeacherNeon.copy(alpha = 0.12f))
-                    .border(0.5.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                    .background(if (isDark) TeacherNeon.copy(alpha = 0.12f) else Color(0xFFD1FAE5))
+                    .border(
+                        0.5.dp,
+                        if (isDark) TeacherNeon.copy(alpha = 0.35f) else Color(0xFF6EE7B7),
+                        RoundedCornerShape(8.dp)
+                    )
                     .padding(horizontal = 8.dp, vertical = 3.dp)
             ) {
                 Text(
@@ -378,20 +398,26 @@ private fun GradebookHeroBanner(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(CosmicBlack.copy(alpha = 0.5f))
+                    .background(if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9))
                     .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
                     .padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 // Skema A
+                val isSchemeA = activeScheme == "A"
+                val tabABg = if (isSchemeA) {
+                    if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color.White
+                } else Color.Transparent
+                val tabABorder = if (isSchemeA) TeacherNeon else Color.Transparent
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (activeScheme == "A") TeacherNeon.copy(alpha = 0.2f) else Color.Transparent)
+                        .background(tabABg)
                         .border(
-                            if (activeScheme == "A") 1.dp else 0.dp,
-                            if (activeScheme == "A") TeacherNeon else Color.Transparent,
+                            if (isSchemeA) 1.dp else 0.dp,
+                            tabABorder,
                             RoundedCornerShape(8.dp)
                         )
                         .clickable { onSelectScheme("A") }
@@ -401,20 +427,26 @@ private fun GradebookHeroBanner(
                     Text(
                         text = "Skema A (ATS & SAS)",
                         fontSize = 11.sp,
-                        fontWeight = if (activeScheme == "A") FontWeight.Bold else FontWeight.Medium,
-                        color = if (activeScheme == "A") TeacherNeon else TextTertiary
+                        fontWeight = if (isSchemeA) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSchemeA) TeacherNeon else TextTertiary
                     )
                 }
 
                 // Skema B
+                val isSchemeB = activeScheme == "B"
+                val tabBBg = if (isSchemeB) {
+                    if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color.White
+                } else Color.Transparent
+                val tabBBorder = if (isSchemeB) TeacherNeon else Color.Transparent
+
                 Box(
                     modifier = Modifier
                         .weight(1f)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (activeScheme == "B") TeacherNeon.copy(alpha = 0.2f) else Color.Transparent)
+                        .background(tabBBg)
                         .border(
-                            if (activeScheme == "B") 1.dp else 0.dp,
-                            if (activeScheme == "B") TeacherNeon else Color.Transparent,
+                            if (isSchemeB) 1.dp else 0.dp,
+                            tabBBorder,
                             RoundedCornerShape(8.dp)
                         )
                         .clickable { onSelectScheme("B") }
@@ -424,8 +456,8 @@ private fun GradebookHeroBanner(
                     Text(
                         text = "Skema B (Murni Modul)",
                         fontSize = 11.sp,
-                        fontWeight = if (activeScheme == "B") FontWeight.Bold else FontWeight.Medium,
-                        color = if (activeScheme == "B") TeacherNeon else TextTertiary
+                        fontWeight = if (isSchemeB) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSchemeB) TeacherNeon else TextTertiary
                     )
                 }
             }
@@ -435,8 +467,12 @@ private fun GradebookHeroBanner(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(8.dp))
-                    .background(TeacherNeon.copy(alpha = 0.08f))
-                    .border(0.5.dp, TeacherNeon.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+                    .background(if (isDark) TeacherNeon.copy(alpha = 0.08f) else Color(0xFFECFDF5))
+                    .border(
+                        0.5.dp,
+                        if (isDark) TeacherNeon.copy(alpha = 0.25f) else Color(0xFFA7F3D0),
+                        RoundedCornerShape(8.dp)
+                    )
                     .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Text(
@@ -592,8 +628,10 @@ private fun KpiStatCard(
 @Composable
 private fun StudentGradebookItemCard(
     row: StudentGradebookRow,
+    activeScheme: String = "A",
     onClickDetail: () -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -631,7 +669,7 @@ private fun StudentGradebookItemCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(NeonBlue.copy(alpha = 0.12f))
+                                .background(NeonBlue.copy(alpha = if (isDark) 0.12f else 0.15f))
                                 .border(0.5.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 6.dp, vertical = 1.dp)
                         ) {
@@ -654,54 +692,108 @@ private fun StudentGradebookItemCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(CosmicBlack.copy(alpha = 0.45f))
+                    .background(if (isDark) Color(0xFF18181B) else Color(0xFFF8FAFC))
                     .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
                     .padding(10.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    // Row 1: Sumatif Modul (M1, M2, M3, Rerata)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ScoreCell(label = "M1", value = row.sumatifM1.toInt().toString())
-                        ScoreCell(label = "M2", value = row.sumatifM2.toInt().toString())
-                        ScoreCell(label = "M3", value = row.sumatifM3.toInt().toString())
-                        ScoreCell(
-                            label = "RERATA",
-                            value = if (row.avgSumatif > 0) String.format(Locale.US, "%.1f", row.avgSumatif) else "-",
-                            isHighlight = true
-                        )
-                    }
+                    if (activeScheme == "B") {
+                        // ── SKEMA B (MURNI MODUL KESETARAAN PKBM) ────────────
+                        // Row 1: Sumatif Modul (M1, M2, M3, M4)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ScoreCell(label = "MODUL 1", value = row.sumatifM1.toInt().toString())
+                            ScoreCell(label = "MODUL 2", value = row.sumatifM2.toInt().toString())
+                            ScoreCell(label = "MODUL 3", value = row.sumatifM3.toInt().toString())
+                            ScoreCell(label = "MODUL 4", value = row.sumatifM4.toInt().toString())
+                        }
 
-                    // Divider
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(0.5.dp)
-                            .background(GlassBorder)
-                    )
+                        // Divider
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(0.5.dp)
+                                .background(GlassBorder)
+                        )
 
-                    // Row 2: Ujian & Evaluasi Akhir (ATS, SAS, N. Akhir, Predikat)
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        ScoreCell(label = "ATS (20%)", value = row.ats.toInt().toString())
-                        ScoreCell(label = "SAS (20%)", value = row.sas.toInt().toString())
-                        ScoreCell(
-                            label = "N. AKHIR",
-                            value = if (row.finalScore > 0) row.finalScore.toInt().toString() else "-",
-                            isHighlight = true,
-                            highlightColor = if (row.finalScore >= 75) NeonSuccess else if (row.finalScore > 0) NeonError else TextTertiary
+                        // Row 2: Rerata Modul (100%), Nilai Akhir, Predikat, KKTP
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ScoreCell(
+                                label = "RERATA (100%)",
+                                value = if (row.avgSumatif > 0) String.format(Locale.US, "%.1f", row.avgSumatif) else "-",
+                                isHighlight = true
+                            )
+                            ScoreCell(
+                                label = "N. AKHIR",
+                                value = if (row.finalScore > 0) row.finalScore.toInt().toString() else "-",
+                                isHighlight = true,
+                                highlightColor = if (row.finalScore >= 75) NeonSuccess else if (row.finalScore > 0) NeonError else TextTertiary
+                            )
+                            ScoreCell(
+                                label = "PREDIKAT",
+                                value = row.letterGrade,
+                                isHighlight = true
+                            )
+                            ScoreCell(
+                                label = "STATUS KKTP",
+                                value = if (row.finalScore >= 75) "TUNTAS" else if (row.finalScore > 0) "REMEDIAL" else "-",
+                                isHighlight = true,
+                                highlightColor = if (row.finalScore >= 75) NeonSuccess else if (row.finalScore > 0) NeonError else TextTertiary
+                            )
+                        }
+                    } else {
+                        // ── SKEMA A (STANDAR MERDEKA: 60/20/20) ──────────────
+                        // Row 1: Sumatif Modul (M1, M2, M3, Rerata)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ScoreCell(label = "M1", value = row.sumatifM1.toInt().toString())
+                            ScoreCell(label = "M2", value = row.sumatifM2.toInt().toString())
+                            ScoreCell(label = "M3", value = row.sumatifM3.toInt().toString())
+                            ScoreCell(
+                                label = "RERATA",
+                                value = if (row.avgSumatif > 0) String.format(Locale.US, "%.1f", row.avgSumatif) else "-",
+                                isHighlight = true
+                            )
+                        }
+
+                        // Divider
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(0.5.dp)
+                                .background(GlassBorder)
                         )
-                        ScoreCell(
-                            label = "PRED",
-                            value = row.letterGrade,
-                            isHighlight = true
-                        )
+
+                        // Row 2: Ujian & Evaluasi Akhir (ATS, SAS, N. Akhir, Predikat)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ScoreCell(label = "ATS (20%)", value = row.ats.toInt().toString())
+                            ScoreCell(label = "SAS (20%)", value = row.sas.toInt().toString())
+                            ScoreCell(
+                                label = "N. AKHIR",
+                                value = if (row.finalScore > 0) row.finalScore.toInt().toString() else "-",
+                                isHighlight = true,
+                                highlightColor = if (row.finalScore >= 75) NeonSuccess else if (row.finalScore > 0) NeonError else TextTertiary
+                            )
+                            ScoreCell(
+                                label = "PRED",
+                                value = row.letterGrade,
+                                isHighlight = true
+                            )
+                        }
                     }
                 }
             }
@@ -714,8 +806,12 @@ private fun StudentGradebookItemCard(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(TeacherNeon.copy(alpha = 0.12f))
-                        .border(0.5.dp, TeacherNeon.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                        .background(if (isDark) TeacherNeon.copy(alpha = 0.12f) else Color(0xFFD1FAE5))
+                        .border(
+                            0.5.dp,
+                            if (isDark) TeacherNeon.copy(alpha = 0.4f) else Color(0xFF6EE7B7),
+                            RoundedCornerShape(8.dp)
+                        )
                         .clickable(onClick = onClickDetail)
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
@@ -730,7 +826,7 @@ private fun StudentGradebookItemCard(
                             modifier = Modifier.size(12.dp)
                         )
                         Text(
-                            text = "Detail Capaian",
+                            text = if (activeScheme == "B") "Input Modul & Capaian" else "Detail Capaian",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = TeacherNeon
@@ -768,23 +864,24 @@ private fun ScoreCell(
 
 @Composable
 private fun GradeStatusPill(status: String) {
+    val isDark = LocalIsDarkTheme.current
     val (bg, border, text, label) = when (status) {
         "Tuntas KKTP" -> Quad(
-            NeonSuccess.copy(alpha = 0.12f),
-            NeonSuccess.copy(alpha = 0.4f),
+            NeonSuccess.copy(alpha = if (isDark) 0.12f else 0.15f),
+            NeonSuccess.copy(alpha = if (isDark) 0.4f else 0.5f),
             NeonSuccess,
             "Tuntas KKTP"
         )
         "Perlu Remedial" -> Quad(
-            NeonError.copy(alpha = 0.12f),
-            NeonError.copy(alpha = 0.4f),
+            NeonError.copy(alpha = if (isDark) 0.12f else 0.15f),
+            NeonError.copy(alpha = if (isDark) 0.4f else 0.5f),
             NeonError,
             "Perlu Remedial"
         )
         else -> Quad(
-            Color(0xFF334155).copy(alpha = 0.4f),
-            Color(0xFF64748B).copy(alpha = 0.4f),
-            Color(0xFFCBD5E1),
+            if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFF1F5F9),
+            if (isDark) Color(0xFF64748B).copy(alpha = 0.4f) else Color(0xFFCBD5E1),
+            if (isDark) Color(0xFFCBD5E1) else Color(0xFF475569),
             "Belum Diinput"
         )
     }
@@ -819,11 +916,13 @@ fun GradeDetailModalSheet(
     activeScheme: String,
     isSaving: Boolean,
     onDismiss: () -> Unit,
-    onSave: (m1: Double, m2: Double, m3: Double, ats: Double, sas: Double, highest: String, lowest: String, notes: String) -> Unit,
+    onSave: (m1: Double, m2: Double, m3: Double, ats: Double, sas: Double, highest: String, lowest: String, notes: String, m4: Double) -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
     var m1Text by remember { mutableStateOf(if (row.sumatifM1 > 0) row.sumatifM1.toInt().toString() else "") }
     var m2Text by remember { mutableStateOf(if (row.sumatifM2 > 0) row.sumatifM2.toInt().toString() else "") }
     var m3Text by remember { mutableStateOf(if (row.sumatifM3 > 0) row.sumatifM3.toInt().toString() else "") }
+    var m4Text by remember { mutableStateOf(if (row.sumatifM4 > 0) row.sumatifM4.toInt().toString() else "") }
     var atsText by remember { mutableStateOf(if (row.ats > 0) row.ats.toInt().toString() else "") }
     var sasText by remember { mutableStateOf(if (row.sas > 0) row.sas.toInt().toString() else "") }
     var highestDesc by remember { mutableStateOf(row.highestCompetencyDesc) }
@@ -833,11 +932,16 @@ fun GradeDetailModalSheet(
     val m1Val = m1Text.toDoubleOrNull() ?: 0.0
     val m2Val = m2Text.toDoubleOrNull() ?: 0.0
     val m3Val = m3Text.toDoubleOrNull() ?: 0.0
+    val m4Val = m4Text.toDoubleOrNull() ?: 0.0
     val atsVal = atsText.toDoubleOrNull() ?: 0.0
     val sasVal = sasText.toDoubleOrNull() ?: 0.0
 
-    val previewEval = remember(m1Val, m2Val, m3Val, atsVal, sasVal, activeScheme) {
-        computeKurikulumMerdekaGrade(m1Val, m2Val, m3Val, atsVal, sasVal, activeScheme)
+    val previewEval = remember(m1Val, m2Val, m3Val, m4Val, atsVal, sasVal, activeScheme) {
+        if (activeScheme == "B") {
+            computeKurikulumMerdekaGrade(m1Val, m2Val, m3Val, atsVal = 0.0, sasVal = 0.0, scheme = "B", m4 = m4Val)
+        } else {
+            computeKurikulumMerdekaGrade(m1Val, m2Val, m3Val, atsVal = atsVal, sasVal = sasVal, scheme = "A")
+        }
     }
 
     ModalBottomSheet(
@@ -871,7 +975,7 @@ fun GradeDetailModalSheet(
             ) {
                 Column {
                     Text(
-                        text = "Input Nilai & Capaian",
+                        text = if (activeScheme == "B") "Input Nilai Modul Kesetaraan (Skema B)" else "Input Nilai & Asesmen (Skema A)",
                         fontSize = 17.sp,
                         fontWeight = FontWeight.Black,
                         color = TextPrimary
@@ -893,8 +997,12 @@ fun GradeDetailModalSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(12.dp))
-                    .background(TeacherNeon.copy(alpha = 0.08f))
-                    .border(0.5.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    .background(if (isDark) TeacherNeon.copy(alpha = 0.08f) else Color(0xFFECFDF5))
+                    .border(
+                        0.5.dp,
+                        if (isDark) TeacherNeon.copy(alpha = 0.3f) else Color(0xFFA7F3D0),
+                        RoundedCornerShape(12.dp)
+                    )
                     .padding(12.dp)
             ) {
                 Row(
@@ -909,95 +1017,175 @@ fun GradeDetailModalSheet(
                 }
             }
 
-            // Numerical Inputs Grid
-            Text(
-                text = "SUMATIF MODUL & ASESMEN",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TeacherNeon,
-                letterSpacing = 1.sp
-            )
+            // Numerical Inputs Grid (DIFFERENTIATED FOR SKEMA A VS SKEMA B)
+            if (activeScheme == "B") {
+                // ── SKEMA B: HANYA SUMATIF MODUL (100% RERATA, TANPA ATS & SAS) ──
+                Text(
+                    text = "SUMATIF MODUL KESETARAAN (100% RATA-RATA MODUL)",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TeacherNeon,
+                    letterSpacing = 1.sp
+                )
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = m1Text,
-                    onValueChange = { m1Text = it.take(3) },
-                    label = { Text("M1", fontSize = 11.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = TeacherNeon,
-                        unfocusedBorderColor = GlassBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                    ),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = m2Text,
-                    onValueChange = { m2Text = it.take(3) },
-                    label = { Text("M2", fontSize = 11.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = TeacherNeon,
-                        unfocusedBorderColor = GlassBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                    ),
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = m3Text,
-                    onValueChange = { m3Text = it.take(3) },
-                    label = { Text("M3", fontSize = 11.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = TeacherNeon,
-                        unfocusedBorderColor = GlassBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                    ),
-                    singleLine = true
-                )
-            }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = m1Text,
+                        onValueChange = { m1Text = it.take(3) },
+                        label = { Text("Modul 1 (M1)", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = m2Text,
+                        onValueChange = { m2Text = it.take(3) },
+                        label = { Text("Modul 2 (M2)", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                OutlinedTextField(
-                    value = atsText,
-                    onValueChange = { atsText = it.take(3) },
-                    label = { Text("ATS (20%)", fontSize = 11.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = TeacherNeon,
-                        unfocusedBorderColor = GlassBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                    ),
-                    singleLine = true
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = m3Text,
+                        onValueChange = { m3Text = it.take(3) },
+                        label = { Text("Modul 3 (M3)", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = m4Text,
+                        onValueChange = { m4Text = it.take(3) },
+                        label = { Text("Modul 4 (M4)", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                }
+            } else {
+                // ── SKEMA A: SUMATIF MODUL (60%) + ATS (20%) + SAS (20%) ─────────
+                Text(
+                    text = "SUMATIF MODUL (60%) & ASESMEN (40%)",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TeacherNeon,
+                    letterSpacing = 1.sp
                 )
-                OutlinedTextField(
-                    value = sasText,
-                    onValueChange = { sasText = it.take(3) },
-                    label = { Text("SAS (20%)", fontSize = 11.sp) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = TeacherNeon,
-                        unfocusedBorderColor = GlassBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                    ),
-                    singleLine = true
-                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = m1Text,
+                        onValueChange = { m1Text = it.take(3) },
+                        label = { Text("M1", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = m2Text,
+                        onValueChange = { m2Text = it.take(3) },
+                        label = { Text("M2", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = m3Text,
+                        onValueChange = { m3Text = it.take(3) },
+                        label = { Text("M3", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedTextField(
+                        value = atsText,
+                        onValueChange = { atsText = it.take(3) },
+                        label = { Text("ATS (20%)", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                    OutlinedTextField(
+                        value = sasText,
+                        onValueChange = { sasText = it.take(3) },
+                        label = { Text("SAS (20%)", fontSize = 11.sp) },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                        modifier = Modifier.weight(1f),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = TeacherNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                        ),
+                        singleLine = true
+                    )
+                }
             }
 
             // Qualitative Competency Descriptions
@@ -1072,14 +1260,21 @@ fun GradeDetailModalSheet(
 
                 Button(
                     onClick = {
-                        onSave(m1Val, m2Val, m3Val, atsVal, sasVal, highestDesc, lowestDesc, notesText)
+                        onSave(m1Val, m2Val, m3Val, atsVal, sasVal, highestDesc, lowestDesc, notesText, m4Val)
                     },
                     modifier = Modifier.weight(1.5f),
-                    colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon, contentColor = Color.Black),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = TeacherNeon,
+                        contentColor = if (isDark) Color.Black else Color.White
+                    ),
                     enabled = !isSaving
                 ) {
                     if (isSaving) {
-                        CircularProgressIndicator(modifier = Modifier.size(16.dp), color = Color.Black, strokeWidth = 2.dp)
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            color = if (isDark) Color.Black else Color.White,
+                            strokeWidth = 2.dp
+                        )
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                             Icon(Icons.Default.Save, null, modifier = Modifier.size(16.dp))

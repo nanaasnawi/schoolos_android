@@ -28,12 +28,16 @@ data class RoleTabConfig(
 
 @Composable
 fun rememberRoleTabs(): List<RoleTabConfig> {
-    return remember {
+    val neonBlue = NeonBlue
+    val studentNeon = StudentNeon
+    val teacherNeon = TeacherNeon
+    val parentNeon = ParentNeon
+    return remember(neonBlue, studentNeon, teacherNeon, parentNeon) {
         listOf(
             RoleTabConfig(
                 title = "Semua",
                 icon = Icons.Default.Person,
-                accentColor = NeonBlue,
+                accentColor = neonBlue,
                 secondaryColor = Color(0xFF38BDF8),
                 inputLabel = "Username / Identitas",
                 inputPlaceholder = "Masukkan username atau identitas",
@@ -41,7 +45,7 @@ fun rememberRoleTabs(): List<RoleTabConfig> {
             RoleTabConfig(
                 title = "Siswa",
                 icon = Icons.Default.School,
-                accentColor = StudentNeon,
+                accentColor = studentNeon,
                 secondaryColor = Color(0xFFA855F7),
                 inputLabel = "NISN / Username",
                 inputPlaceholder = "Masukkan 10 digit NISN atau username",
@@ -51,7 +55,7 @@ fun rememberRoleTabs(): List<RoleTabConfig> {
             RoleTabConfig(
                 title = "Guru",
                 icon = Icons.AutoMirrored.Filled.MenuBook,
-                accentColor = TeacherNeon,
+                accentColor = teacherNeon,
                 secondaryColor = Color(0xFF34D399),
                 inputLabel = "NIP / NUPTK / Username",
                 inputPlaceholder = "Masukkan NIP, NUPTK, atau username",
@@ -61,7 +65,7 @@ fun rememberRoleTabs(): List<RoleTabConfig> {
             RoleTabConfig(
                 title = "Wali",
                 icon = Icons.Default.People,
-                accentColor = ParentNeon,
+                accentColor = parentNeon,
                 secondaryColor = Color(0xFFFB7185),
                 inputLabel = "Username Akun Ibu",
                 inputPlaceholder = "Contoh: ibu_<nisn> atau username",
