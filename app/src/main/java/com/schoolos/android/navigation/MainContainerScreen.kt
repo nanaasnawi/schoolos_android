@@ -103,11 +103,11 @@ fun MainContainerScreen(
     // Role-based nav items with modern custom vector icons
     val navItems: List<BottomNavItem> = when {
         isPrincipal -> listOf(
-            BottomNavItem(Screen.Home.route,        "Beranda", CoreR.drawable.ic_modern_home),
-            BottomNavItem(Screen.Sessions.route,    "Jadwal",  CoreR.drawable.ic_modern_calendar),
-            BottomNavItem(Screen.Supervision.route, "Warning", CoreR.drawable.ic_modern_warning),
-            BottomNavItem(Screen.Grades.route,      "Leger",   CoreR.drawable.ic_modern_grades),
-            BottomNavItem(Screen.Profile.route,     "Akun",    CoreR.drawable.ic_modern_profile),
+            BottomNavItem(Screen.Home.route,     "Beranda", CoreR.drawable.ic_modern_home),
+            BottomNavItem(Screen.Sessions.route, "Jadwal",  CoreR.drawable.ic_modern_calendar),
+            BottomNavItem(Screen.AtRisk.route,   "Warning", CoreR.drawable.ic_modern_warning),
+            BottomNavItem(Screen.Grades.route,   "Leger",   CoreR.drawable.ic_modern_grades),
+            BottomNavItem(Screen.Profile.route,  "Akun",    CoreR.drawable.ic_modern_profile),
         )
         isTeacher -> listOf(
             BottomNavItem(Screen.Home.route,        "Beranda",     CoreR.drawable.ic_modern_home),
