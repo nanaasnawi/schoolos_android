@@ -47,6 +47,8 @@ import com.schoolos.android.core.designsystem.GlassBorder2
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
+import com.schoolos.android.core.auth.isPkbmInstitution
+import com.schoolos.android.core.auth.resolveRoleDisplay
 import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.domain.model.User
 
@@ -58,18 +60,14 @@ fun ProfileHeaderCard(
     isParent: Boolean,
     displayContact: String,
     className: String = "",
+    schoolName: String = "",
     serverBaseUrl: String = "",
     isUploading: Boolean = false,
     isPrincipal: Boolean = false,
     onAvatarClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
-    val roleLabel = when {
-        isPrincipal -> "KEPALA SEKOLAH"
-        isTeacher -> "GURU"
-        isParent -> "WALI MURID"
-        else -> "SISWA"
-    }
+    val roleLabel = resolveRoleDisplay(user?.role, schoolName, isFormalUpper = true)
     val avatarIcon = when {
         isTeacher -> Icons.Default.Person
         isParent -> Icons.Default.Face
@@ -266,19 +264,25 @@ fun ProfileHeaderCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
+                val isPkbm = isPkbmInstitution(schoolName)
                 val pillData: List<Pair<String, String>> = when {
+                    isPrincipal -> listOf(
+                        "ROLE" to if (isPkbm) "Kepala PKBM" else "Kepala Sekolah",
+                        "LEMBAGA" to if (isPkbm) "PKBM" else "Sekolah",
+                        "STATUS" to "Aktif",
+                    )
                     isTeacher -> listOf(
-                        "ROLE" to "Pengajar",
+                        "ROLE" to if (isPkbm) "Tutor" else "Pengajar",
                         "STATUS" to "Aktif",
                         "AKUN" to (user?.email?.substringBefore("@")?.ifBlank { "-" } ?: "-"),
                     )
                     isParent -> listOf(
-                        "ROLE" to "Wali",
+                        "ROLE" to if (isPkbm) "Wali WB" else "Wali",
                         "STATUS" to "Resmi",
                         "AKUN" to (user?.name?.ifBlank { "-" } ?: "-"),
                     )
                     else -> listOf(
-                        "ROLE" to "Siswa",
+                        "ROLE" to if (isPkbm) "Warga Belajar" else "Siswa",
                         "KELAS" to className.ifBlank { "-" },
                         "STATUS" to "Aktif",
                     )

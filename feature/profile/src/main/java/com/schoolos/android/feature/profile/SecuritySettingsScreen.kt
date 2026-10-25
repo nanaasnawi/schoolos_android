@@ -75,6 +75,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.auth.isParentRole
 import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
+import com.schoolos.android.core.auth.resolveRoleDisplay
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicDark
 import com.schoolos.android.core.designsystem.CosmicNavy
@@ -112,12 +113,7 @@ fun SecuritySettingsScreen(
         isParent -> ParentNeon
         else -> StudentNeon
     }
-    val roleLabel = when {
-        isPrincipal -> "Kepala Sekolah"
-        isTeacher -> "Guru Pengampu"
-        isParent -> "Wali Murid"
-        else -> "Siswa Aktif"
-    }
+    val roleLabel = resolveRoleDisplay(state.user?.role, state.schoolName, isFormalUpper = false)
 
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }

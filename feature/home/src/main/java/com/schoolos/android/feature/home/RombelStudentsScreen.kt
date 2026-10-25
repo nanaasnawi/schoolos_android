@@ -34,9 +34,11 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.WarningAmber
 import androidx.compose.material3.Button
@@ -85,6 +87,33 @@ private fun formatClassName(raw: String?): String {
     }
 }
 
+private fun getRombelPackageTier(name: String): String {
+    val upper = name.uppercase()
+    return when {
+        upper.contains("PAKET A") || upper.contains("KELAS 4") || upper.contains("KELAS 5") || upper.contains("KELAS 6") -> "PAKET A (Setara SD • Fase A–C)"
+        upper.contains("PAKET B") || upper.contains("KELAS 7") || upper.contains("KELAS 8") || upper.contains("KELAS 9") -> "PAKET B (Setara SMP • Fase D)"
+        upper.contains("PAKET C") || upper.contains("KELAS 10") || upper.contains("KELAS 11") || upper.contains("KELAS 12") -> "PAKET C (Setara SMA • Fase E–F)"
+        else -> "Rombongan Belajar Kesetaraan"
+    }
+}
+
+private fun getRombelLevelAndFase(name: String): String {
+    val upper = name.uppercase()
+    return when {
+        upper.contains("PAKET A 4") -> "Tingkat 2 / Derajat Awal 2 • Fase B"
+        upper.contains("PAKET A 5") || upper.contains("PAKET A 6") -> "Tingkat 2 / Derajat Awal 2 • Fase C"
+        upper.contains("PAKET A") -> "Pendidikan Kesetaraan SD • Fase A–C"
+        upper.contains("PAKET B 7") || upper.contains("PAKET B 8") -> "Tingkat 3 / Derajat Dasar 1 • Fase D"
+        upper.contains("PAKET B 9") -> "Tingkat 4 / Derajat Dasar 2 • Fase D"
+        upper.contains("PAKET B") -> "Pendidikan Kesetaraan SMP • Fase D"
+        upper.contains("PAKET C 10") -> "Tingkat 5 / Derajat Mahir 1 • Fase E"
+        upper.contains("PAKET C 11") -> "Tingkat 5 / Derajat Mahir 1 • Fase F"
+        upper.contains("PAKET C 12") -> "Tingkat 6 / Derajat Mahir 2 • Fase F"
+        upper.contains("PAKET C") -> "Pendidikan Kesetaraan SMA • Fase E–F"
+        else -> "Program Pendidikan Kesetaraan"
+    }
+}
+
 @Composable
 fun RombelStudentsScreen(
     className: String? = null,
@@ -112,12 +141,19 @@ fun RombelStudentsScreen(
     val maleCount = uiState.maleCount
     val femaleCount = uiState.femaleCount
     val isPrincipal = uiState.isPrincipal
-    val isSupervisionMode = isPrincipal || (className != null && className.equals("ALL", ignoreCase = true))
+    val isSupervisionMode = isPrincipal || (className != null && (className.equals("ALL", ignoreCase = true) || className.equals("SUPERVISION", ignoreCase = true)))
+    var supervisionTab by remember(className) { mutableStateOf(if (isSupervisionMode) 0 else 1) }
 
-    val titleText = if (isSupervisionMode) "Pengawasan Seluruh Rombel" else "Rekap Warga Belajar & Presensi"
+    val titleText = if (isSupervisionMode) {
+        if (supervisionTab == 0) "Supervisi 13 Rombel PKBM"
+        else if (selectedFilter == "ALL" || selectedFilter.isBlank()) "Pengawasan Seluruh Warga Belajar"
+        else "Warga Belajar ${formatClassName(selectedFilter)}"
+    } else "Rekap Warga Belajar & Presensi"
+
     val subtitleText = if (isSupervisionMode) {
-        if (filteredStudents.isNotEmpty()) "${filteredStudents.size} Warga Belajar Terdaftar"
-        else "Pengawasan Rombel PKBM"
+        if (supervisionTab == 0) "${uiState.availableClasses.size} Rombel Belajar • ${students.size} Warga Belajar Terdaftar"
+        else if (selectedFilter == "ALL" || selectedFilter.isBlank()) "${students.size} Warga Belajar Terdaftar • PKBM As-Salafiyah"
+        else "${filteredStudents.size} WB ($maleCount L • $femaleCount P) • ${formatClassName(selectedFilter)}"
     } else if (selectedFilter == "ALL" || selectedFilter.isBlank()) {
         if (filteredStudents.isNotEmpty()) "Semua Rombel Diampu • ${filteredStudents.size} WB ($maleCount L • $femaleCount P)"
         else "Semua Rombel Diampu"
@@ -138,6 +174,93 @@ fun RombelStudentsScreen(
             onBack = onBack,
         )
 
+        // ── DUAL TAB SEGMENTED CONTROL (Supervisi 13 Rombel vs Seluruh WB) ──
+        if (isSupervisionMode) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    val tab0Selected = supervisionTab == 0
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (tab0Selected) TeacherNeon.copy(alpha = 0.2f) else Color.Transparent)
+                            .border(
+                                width = if (tab0Selected) 0.8.dp else 0.dp,
+                                color = if (tab0Selected) TeacherNeon.copy(alpha = 0.5f) else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable { supervisionTab = 0 }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.School,
+                                contentDescription = null,
+                                tint = if (tab0Selected) TeacherNeon else TextTertiary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = "Supervisi 13 Rombel",
+                                fontSize = 11.5.sp,
+                                fontWeight = if (tab0Selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (tab0Selected) TeacherNeon else TextSecondary
+                            )
+                        }
+                    }
+
+                    val tab1Selected = supervisionTab == 1
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (tab1Selected) NeonBlue.copy(alpha = 0.2f) else Color.Transparent)
+                            .border(
+                                width = if (tab1Selected) 0.8.dp else 0.dp,
+                                color = if (tab1Selected) NeonBlue.copy(alpha = 0.5f) else Color.Transparent,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable { supervisionTab = 1 }
+                            .padding(vertical = 8.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.People,
+                                contentDescription = null,
+                                tint = if (tab1Selected) NeonBlue else TextTertiary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                            Text(
+                                text = "Warga Belajar (${students.size})",
+                                fontSize = 11.5.sp,
+                                fontWeight = if (tab1Selected) FontWeight.Bold else FontWeight.Medium,
+                                color = if (tab1Selected) NeonBlue else TextSecondary
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         PullRefreshContainer(
             isRefreshing = uiState.isRefreshing,
             onRefresh = { viewModel.loadStudents(selectedFilter, isPullRefresh = true) },
@@ -145,11 +268,80 @@ fun RombelStudentsScreen(
                 .fillMaxWidth()
                 .weight(1f),
         ) {
-            Column(
-                modifier = Modifier.fillMaxSize()
-            ) {
+            if (isSupervisionMode && supervisionTab == 0) {
+                RombelSupervisionView(
+                    classes = uiState.availableClasses,
+                    students = students,
+                    isLoading = isLoading,
+                    onRombelClick = { rombelName ->
+                        viewModel.selectClassFilter(rombelName)
+                        supervisionTab = 1
+                    }
+                )
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxSize()
+                ) {
 
-        // ── 1. FILTER TABS KELAS DIAMPU ───────────────────────────────────────
+            // Active Class Filter Notification Banner
+            if (isSupervisionMode && selectedFilter != "ALL" && selectedFilter.isNotBlank()) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 4.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    color = CosmicNavy,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.4f))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(TeacherNeon)
+                            )
+                            Text(
+                                text = "Menampilkan: ${formatClassName(selectedFilter)} (${filteredStudents.size} WB)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TeacherNeon
+                            )
+                        }
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Ke 13 Rombel",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonBlue,
+                                modifier = Modifier.clickable { supervisionTab = 0 }
+                            )
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Reset Filter",
+                                tint = TextTertiary,
+                                modifier = Modifier
+                                    .size(14.dp)
+                                    .clickable { viewModel.selectClassFilter("ALL") }
+                            )
+                        }
+                    }
+                }
+            }
+
+            // ── 1. FILTER TABS KELAS DIAMPU ───────────────────────────────────────
         if (uiState.availableClasses.isNotEmpty()) {
             LazyRow(
                 modifier = Modifier
@@ -497,6 +689,7 @@ fun RombelStudentsScreen(
 }
 }
 }
+}
 
 @Composable
 private fun AttendanceCountPill(label: String, count: Int, color: Color, modifier: Modifier = Modifier) {
@@ -700,6 +893,243 @@ private fun AttendanceStatusOption(
                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                 color = if (isSelected) Color.White else TextTertiary
             )
+        }
+    }
+}
+
+@Composable
+private fun RombelSupervisionView(
+    classes: List<com.schoolos.android.domain.model.AcademicClass>,
+    students: List<ClassStudent>,
+    isLoading: Boolean,
+    onRombelClick: (String) -> Unit,
+) {
+    if (isLoading && classes.isEmpty()) {
+        com.schoolos.android.core.designsystem.ShimmerList(
+            count = 6,
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+        )
+        return
+    }
+
+    val tierOrder = listOf(
+        "PAKET A (Setara SD • Fase A–C)",
+        "PAKET B (Setara SMP • Fase D)",
+        "PAKET C (Setara SMA • Fase E–F)",
+        "Rombongan Belajar Kesetaraan",
+    )
+    val grouped = classes.groupBy { getRombelPackageTier(it.name) }
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .navigationBarsPadding(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        // Summary Header Hero
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(TeacherNeon.copy(alpha = 0.12f))
+                                .border(0.5.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 8.dp, vertical = 3.dp),
+                        ) {
+                            Text(
+                                text = "DIREKTORI SUPERVISI ROMBEL",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TeacherNeon,
+                                letterSpacing = 0.5.sp,
+                            )
+                        }
+
+                        Text(
+                            text = "${classes.size} Rombel Terdaftar",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextSecondary,
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        AttendanceCountPill(
+                            label = "Total WB",
+                            count = students.size,
+                            color = NeonBlue,
+                            modifier = Modifier.weight(1f),
+                        )
+                        AttendanceCountPill(
+                            label = "Laki-laki",
+                            count = students.count { it.gender?.trim()?.uppercase() == "L" },
+                            color = TeacherNeon,
+                            modifier = Modifier.weight(1f),
+                        )
+                        AttendanceCountPill(
+                            label = "Perempuan",
+                            count = students.count { it.gender?.trim()?.uppercase() == "P" },
+                            color = AccentNeonPink,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            }
+        }
+
+        // Tiers
+        for (tier in tierOrder) {
+            val rombelsInTier = grouped[tier] ?: continue
+            if (rombelsInTier.isEmpty()) continue
+
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = tier.uppercase(),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TeacherNeon,
+                        letterSpacing = 0.5.sp,
+                    )
+                    Text(
+                        text = "${rombelsInTier.size} Rombel",
+                        fontSize = 11.sp,
+                        color = TextTertiary,
+                    )
+                }
+            }
+
+            items(rombelsInTier, key = { it.id }) { cls ->
+                val clsStudents = students.filter { it.className.equals(cls.name, ignoreCase = true) }
+                val mCount = clsStudents.count { it.gender?.trim()?.uppercase() == "L" }
+                val fCount = clsStudents.count { it.gender?.trim()?.uppercase() == "P" }
+
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onRombelClick(cls.name) },
+                    shape = RoundedCornerShape(12.dp),
+                    color = CosmicNavy,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(CosmicSurface2)
+                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.School,
+                                    contentDescription = null,
+                                    tint = TeacherNeon,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
+
+                            Spacer(Modifier.width(12.dp))
+
+                            Column {
+                                Text(
+                                    text = formatClassName(cls.name),
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary,
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = getRombelLevelAndFase(cls.name),
+                                    fontSize = 11.sp,
+                                    color = TextSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(4.dp))
+                                            .background(NeonBlue.copy(alpha = 0.12f))
+                                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                                    ) {
+                                        Text(
+                                            text = "${clsStudents.size} WB",
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = NeonBlue,
+                                        )
+                                    }
+                                    Text(
+                                        text = "$mCount L • $fCount P",
+                                        fontSize = 10.sp,
+                                        color = TextTertiary,
+                                    )
+                                }
+                            }
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                        ) {
+                            Text(
+                                text = "Buka Siswa",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TeacherNeon,
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = null,
+                                tint = TeacherNeon,
+                                modifier = Modifier.size(13.dp),
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

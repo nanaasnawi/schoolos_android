@@ -89,7 +89,7 @@ fun GradeDetailScreen(
                                 .border(0.5.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text("KEPALA SEKOLAH", color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(com.schoolos.android.core.auth.resolveRoleDisplay(state.userRole, isFormalUpper = true), color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     } else if (isTeacher) {
                         Box(
@@ -99,7 +99,7 @@ fun GradeDetailScreen(
                                 .border(0.5.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text("GURU", color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(com.schoolos.android.core.auth.resolveRoleDisplay(state.userRole, isFormalUpper = true), color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     } else {
                         StatusChip(label = "Aktif")
