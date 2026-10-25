@@ -16,6 +16,7 @@ import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
+import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.SupervisorAccount
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Icon
@@ -320,7 +321,7 @@ fun LazyListScope.principalContent(
                 .clip(RoundedCornerShape(14.dp))
                 .background(CosmicNavy)
                 .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
-                .clickable { onNavigateToRombelStudents("ALL") }
+                .clickable { onNavigateToRombelStudents("SUPERVISION") }
                 .padding(14.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -416,13 +417,8 @@ fun LazyListScope.principalContent(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val assignmentsCount = if (teacherAssignments.isNotEmpty()) {
-                    "${teacherAssignments.size} Tugas"
-                } else if (pendingAssignmentsCount.isNotBlank() && pendingAssignmentsCount != "0") {
-                    "$pendingAssignmentsCount Tugas"
-                } else {
-                    "0 Tugas"
-                }
+                val actualAssignmentCount = pendingAssignmentsCount.toIntOrNull() ?: if (teacherAssignments.isNotEmpty()) teacherAssignments.size else 0
+                val assignmentsCount = if (actualAssignmentCount > 0) "$actualAssignmentCount Tugas" else "0 Tugas"
 
                 PrincipalKpiCard(
                     title = "Tugas & Modul",
@@ -434,13 +430,19 @@ fun LazyListScope.principalContent(
                     modifier = Modifier.weight(1f),
                 )
 
+                val quizzesDisplay = if (quizzesCount.isNotBlank() && quizzesCount != "0") {
+                    "$quizzesCount Ujian/Kuis"
+                } else {
+                    "Asesmen CBT"
+                }
+
                 PrincipalKpiCard(
-                    title = "Buku Leger Nilai",
-                    value = "Audit Capaian",
-                    subtitle = "Rekap KKTP & rapor",
-                    icon = Icons.Default.Assessment,
+                    title = "Ujian & Asesmen",
+                    value = quizzesDisplay,
+                    subtitle = "Evaluasi CBT & kuis",
+                    icon = Icons.Default.Quiz,
                     accentColor = NeonBlue,
-                    onClick = onNavigateToGrades,
+                    onClick = onNavigateToQuizzes,
                     modifier = Modifier.weight(1f),
                 )
             }
@@ -451,7 +453,7 @@ fun LazyListScope.principalContent(
             ) {
                 PrincipalKpiCard(
                     title = "Maklumat & Memo",
-                    value = "Pusat Disposisi",
+                    value = "Pusat Broadcast",
                     subtitle = "Kirim instruksi resmi",
                     icon = Icons.Default.Campaign,
                     accentColor = NeonWarning,
@@ -572,7 +574,7 @@ fun LazyListScope.principalContent(
             PrincipalSectionHeader(
                 title = "Monitoring Tugas Warga Belajar",
                 subtitle = "Rekapitulasi penugasan aktif dari tutor",
-                count = teacherAssignments.size,
+                count = pendingAssignmentsCount.toIntOrNull() ?: teacherAssignments.size,
                 actionLabel = "Lihat Semua",
                 onActionClick = onNavigateToAssignments,
             )

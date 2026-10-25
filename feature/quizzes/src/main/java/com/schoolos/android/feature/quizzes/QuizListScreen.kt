@@ -81,11 +81,7 @@ fun QuizListScreen(
                             .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = when {
-                                isPrincipal -> "KEPALA SEKOLAH"
-                                isTeacher -> "GURU"
-                                else -> "SISWA"
-                            },
+                            text = com.schoolos.android.core.auth.resolveRoleDisplay(if (isPrincipal) "principal" else if (isTeacher) "teacher" else "student", isFormalUpper = true),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isTeacher) TeacherNeon else StudentNeon,

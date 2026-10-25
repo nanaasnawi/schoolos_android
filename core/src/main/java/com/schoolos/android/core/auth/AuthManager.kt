@@ -50,6 +50,35 @@ fun isSubjectLockedTeacher(role: String?): Boolean {
         !l.contains("admin") && !l.contains("operator")
 }
 
+fun isPkbmInstitution(schoolName: String?): Boolean {
+    if (schoolName.isNullOrBlank()) return true // default in this context
+    val l = schoolName.lowercase()
+    return l.contains("pkbm") || l.contains("pusat kegiatan belajar") || l.contains("kesetaraan")
+}
+
+fun resolveRoleDisplay(role: String?, schoolName: String? = null, isFormalUpper: Boolean = true): String {
+    val isPkbm = isPkbmInstitution(schoolName)
+    val isPrin = isPrincipalRole(role)
+    val isTeach = isTeacherRole(role) && !isPrin
+    val isPar = isParentRole(role)
+
+    return if (isFormalUpper) {
+        when {
+            isPrin -> if (isPkbm) "KEPALA PKBM" else "KEPALA SEKOLAH"
+            isTeach -> if (isPkbm) "TUTOR" else "GURU"
+            isPar -> if (isPkbm) "WALI WARGA BELAJAR" else "WALI MURID"
+            else -> if (isPkbm) "WARGA BELAJAR" else "SISWA"
+        }
+    } else {
+        when {
+            isPrin -> if (isPkbm) "Kepala PKBM" else "Kepala Sekolah"
+            isTeach -> if (isPkbm) "Tutor" else "Guru"
+            isPar -> if (isPkbm) "Wali WB" else "Wali Murid"
+            else -> if (isPkbm) "Warga Belajar" else "Siswa"
+        }
+    }
+}
+
 data class AuthState(
     val accessToken: String? = null,
     val refreshToken: String? = null,

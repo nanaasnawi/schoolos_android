@@ -32,6 +32,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.auth.isParentRole
 import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
+import com.schoolos.android.core.auth.resolveRoleDisplay
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.ExecutiveTopBar
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
@@ -167,12 +168,7 @@ fun ProfileScreen(
         else -> StudentNeon
     }
 
-    val roleLabel = when {
-        isPrincipal -> "KEPALA SEKOLAH"
-        isTeacher -> "GURU"
-        isParent -> "WALI MURID"
-        else -> "SISWA"
-    }
+    val roleLabel = resolveRoleDisplay(user?.role, state.schoolName, isFormalUpper = true)
 
     val displayContact: String = when {
         isParent -> {
@@ -211,6 +207,7 @@ fun ProfileScreen(
                 isParent = isParent,
                 displayContact = displayContact,
                 className = state.className,
+                schoolName = state.schoolName,
                 isUploading = isUploadingPhoto,
                 isPrincipal = isPrincipal,
                 onAvatarClick = { showAvatarPreviewDialog = true },
