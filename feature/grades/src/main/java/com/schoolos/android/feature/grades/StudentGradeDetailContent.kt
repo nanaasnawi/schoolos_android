@@ -633,7 +633,7 @@ fun StudentGradeDetailContent(
                         modifier = Modifier.weight(1f)
                     )
                     AnalyticsMiniTile(
-                        label = "Kelulusan",
+                        label = "Ketuntasan",
                         value = kktpStatusText,
                         color = kktpStatusColor,
                         modifier = Modifier.weight(1f)
