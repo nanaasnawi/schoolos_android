@@ -393,8 +393,10 @@ fun NavGraph(
                 ),
             ) { backStackEntry ->
                 val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
+                val className = backStackEntry.arguments?.getString("className")
                 AssignmentListScreen(
                     subjectId = subjectId,
+                    className = className,
                     onBack = { navController.popBackStack() },
                     onAssignmentClick = { id -> navController.navigate(Screen.AssignmentDetail.createRoute(id)) },
                     onCreateAssignment = { navController.navigate(Screen.AssignmentCreator.route) },
@@ -447,8 +449,10 @@ fun NavGraph(
                 ),
             ) { backStackEntry ->
                 val subjectId = backStackEntry.arguments?.getString("subjectId") ?: ""
+                val className = backStackEntry.arguments?.getString("className")
                 QuizListScreen(
                     subjectId = subjectId,
+                    className = className,
                     onBack = { navController.popBackStack() },
                     onQuizClick = { id -> navController.navigate(Screen.QuizDetail.createRoute(id)) },
                     onCreateQuiz = { navController.navigate(Screen.QuizBuilder.route) },

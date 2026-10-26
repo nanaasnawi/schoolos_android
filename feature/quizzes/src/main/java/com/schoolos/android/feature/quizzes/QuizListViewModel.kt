@@ -18,6 +18,7 @@ data class QuizListUiState(
     val userRole: String = "student",
     val quizzes: List<Quiz> = emptyList(),
     val subjectFilter: String? = null,
+    val classFilter: String? = null,
 )
 
 @HiltViewModel
@@ -35,6 +36,9 @@ class QuizListViewModel @Inject constructor(
 
     /** Optional subject filter passed via navigation (e.g. from a session detail). */
     private var subjectFilter: String? = savedStateHandle.get<String>("subjectId")?.takeIf { it.isNotBlank() }
+
+    /** Optional class/rombel filter passed via navigation (e.g. from a session detail). */
+    private var classFilter: String? = savedStateHandle.get<String>("className")?.takeIf { it.isNotBlank() }
 
     init {
         viewModelScope.launch {
@@ -91,12 +95,25 @@ class QuizListViewModel @Inject constructor(
                         quizzes
                     }
 
-                    val filtered = subjectFilter?.let { filter -> updatedQuizzes.filter { q -> com.schoolos.android.core.designsystem.matchesSubjectFilter(q.subjectName, filter) } } ?: updatedQuizzes
+                    var filtered = updatedQuizzes
+                    subjectFilter?.let { filter ->
+                        filtered = filtered.filter { q ->
+                            com.schoolos.android.core.designsystem.matchesSubjectFilter(q.subjectName, filter) ||
+                            (q.subjectName.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesSubjectFilter(q.title, filter))
+                        }
+                    }
+                    classFilter?.let { filter ->
+                        filtered = filtered.filter { q ->
+                            com.schoolos.android.core.designsystem.matchesClassFilter(q.className, filter) ||
+                            (q.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(q.title, filter))
+                        }
+                    }
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
                         quizzes = filtered.sortedByDescending { it.createdAt },
                         subjectFilter = subjectFilter,
+                        classFilter = classFilter,
                     )
                 }
                 .onFailure { e ->

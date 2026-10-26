@@ -159,6 +159,7 @@ fun matchesClassFilter(itemClass: String?, filterClass: String?): Boolean {
 fun SubjectFilterChip(
     subject: String,
     className: String? = null,
+    canClear: Boolean = false,
     onClear: (() -> Unit)? = null,
     onClearSubject: (() -> Unit)? = null,
     onClearClass: (() -> Unit)? = null,
@@ -229,17 +230,19 @@ fun SubjectFilterChip(
                 }
             }
 
-            val clearAction = onClear ?: onClearSubject ?: onClearClass
-            if (clearAction != null) {
-                Spacer(Modifier.width(8.dp))
-                Icon(
-                    Icons.Default.Close,
-                    contentDescription = "Hapus filter",
-                    tint = TextTertiary,
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clickable(onClick = clearAction),
-                )
+            if (canClear) {
+                val clearAction = onClear ?: onClearSubject ?: onClearClass
+                if (clearAction != null) {
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        contentDescription = "Hapus filter",
+                        tint = TextTertiary,
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clickable(onClick = clearAction),
+                    )
+                }
             }
         }
     }

@@ -75,6 +75,7 @@ fun AssignmentListScreen(
     onCreateAssignment: () -> Unit = {},
     onCreateQuiz: () -> Unit = {},
     subjectId: String = "",
+    className: String? = null,
     viewModel: AssignmentListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -183,12 +184,13 @@ fun AssignmentListScreen(
                             }
                         }
 
-                        // ── ACTIVE SUBJECT FILTER (from session detail) ──────
-                        if (state.subjectFilter != null) {
+                        // ── ACTIVE SUBJECT / CLASS FILTER (from session detail) ──────
+                        if (state.subjectFilter != null || state.classFilter != null) {
                             item {
                                 SubjectFilterChip(
-                                    subject = state.subjectFilter!!,
-                                    onClear = if (subjectId.isNotBlank()) null else viewModel::clearSubjectFilter,
+                                    subject = state.subjectFilter.orEmpty(),
+                                    className = state.classFilter,
+                                    canClear = false,
                                 )
                             }
                         }
