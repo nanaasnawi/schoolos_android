@@ -10,6 +10,7 @@ import com.schoolos.android.core.common.SettingsManager
 import com.schoolos.android.domain.model.GamificationStatus
 import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.OfficialTeacherBiodata
+import com.schoolos.android.domain.model.StudentDossier
 import com.schoolos.android.domain.model.User
 import com.schoolos.android.domain.repository.AuthRepository
 import com.schoolos.android.domain.repository.GamificationRepository
@@ -58,6 +59,11 @@ data class ProfileUiState(
     val officialTeacherBiodata: OfficialTeacherBiodata? = null,
     val officialTeacherBiodataLoading: Boolean = false,
     val officialTeacherBiodataError: String? = null,
+    // Digital Dossier & Document Vault (ADR-0020)
+    val studentDossier: StudentDossier? = null,
+    val studentDossierLoading: Boolean = false,
+    val studentDossierError: String? = null,
+    val isUploadingDocument: Boolean = false,
 )
 
 @HiltViewModel
@@ -179,6 +185,51 @@ class ProfileViewModel @Inject constructor(
                         )
                     }
             }
+        }
+    }
+
+    fun loadStudentDossier() {
+        viewModelScope.launch {
+            if (authManager.isLoggedIn) {
+                _state.value = _state.value.copy(studentDossierLoading = true, studentDossierError = null)
+                authRepository.getStudentDossier()
+                    .onSuccess { dossier ->
+                        _state.value = _state.value.copy(
+                            studentDossier = dossier,
+                            studentDossierLoading = false,
+                            studentDossierError = null,
+                        )
+                    }
+                    .onFailure { err ->
+                        _state.value = _state.value.copy(
+                            studentDossierLoading = false,
+                            studentDossierError = err.localizedMessage ?: "Gagal memuat berkas persyaratan siswa.",
+                        )
+                    }
+            }
+        }
+    }
+
+    fun uploadStudentDocument(
+        documentType: String,
+        bytes: ByteArray,
+        filename: String,
+        mimeType: String,
+        notes: String? = null,
+        onComplete: (Boolean, String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isUploadingDocument = true)
+            authRepository.uploadStudentDocument(documentType, bytes, filename, mimeType, notes)
+                .onSuccess {
+                    _state.value = _state.value.copy(isUploadingDocument = false)
+                    loadStudentDossier()
+                    onComplete(true, null)
+                }
+                .onFailure { err ->
+                    _state.value = _state.value.copy(isUploadingDocument = false)
+                    onComplete(false, err.localizedMessage ?: "Gagal mengunggah berkas.")
+                }
         }
     }
 

@@ -129,6 +129,7 @@ sealed class Screen(val route: String) {
     data object ProfileAbout : Screen("profile/about")
     data object OfficialBiodata : Screen("profile/official-biodata")
     data object OfficialGtkBiodata : Screen("profile/official-gtk-biodata")
+    data object StudentDossier : Screen("profile/student-dossier")
 
     // System Maintenance Route
     data object Maintenance : Screen("maintenance")

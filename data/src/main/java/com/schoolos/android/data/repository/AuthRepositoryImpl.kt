@@ -10,6 +10,8 @@ import com.schoolos.android.data.remote.dto.LoginRequest
 import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.OfficialTeacherBiodata
 import com.schoolos.android.domain.model.SchoolContactInfo
+import com.schoolos.android.domain.model.StudentDocumentItem
+import com.schoolos.android.domain.model.StudentDossier
 import com.schoolos.android.domain.model.User
 import com.schoolos.android.domain.repository.AuthRepository
 import kotlinx.coroutines.Dispatchers
@@ -465,6 +467,75 @@ class AuthRepositoryImpl @Inject constructor(
             classesAssigned = currentAuth.className?.takeIf { it.isNotBlank() },
             status = "Active",
             fotoProfile = currentAuth.avatarUrl,
+        )
+    }
+
+    override suspend fun getStudentDossier(): Result<StudentDossier> = runCatching {
+        val response = api.getMyStudentDossier()
+        val data = response.data ?: throw Exception(response.error?.message ?: "Data berkas tidak ditemukan")
+        StudentDossier(
+            studentId = data.studentId,
+            nisn = data.nisn,
+            fullName = data.fullName,
+            className = data.className,
+            programTier = data.programTier,
+            programTierLabel = data.programTierLabel,
+            isComplete = data.isComplete,
+            completenessPercentage = data.completenessPercentage,
+            requiredCount = data.requiredCount,
+            verifiedCount = data.verifiedCount,
+            pendingCount = data.pendingCount,
+            rejectedCount = data.rejectedCount,
+            documents = data.documents.map { doc ->
+                StudentDocumentItem(
+                    id = doc.id,
+                    documentType = doc.documentType,
+                    label = doc.label,
+                    description = doc.description,
+                    isRequired = doc.isRequired,
+                    status = doc.status,
+                    fileUrl = doc.fileUrl,
+                    fileName = doc.fileName,
+                    fileSizeBytes = doc.fileSizeBytes,
+                    mimeType = doc.mimeType,
+                    verifiedAt = doc.verifiedAt,
+                    rejectionReason = doc.rejectionReason,
+                    notes = doc.notes,
+                    updatedAt = doc.updatedAt
+                )
+            }
+        )
+    }
+
+    override suspend fun uploadStudentDocument(
+        documentType: String,
+        bytes: ByteArray,
+        filename: String,
+        mimeType: String,
+        notes: String?
+    ): Result<StudentDocumentItem> = runCatching {
+        val typePart = documentType.toRequestBody("text/plain".toMediaTypeOrNull())
+        val notesPart = notes?.toRequestBody("text/plain".toMediaTypeOrNull())
+        val fileReqBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+        val filePart = MultipartBody.Part.createFormData("file", filename, fileReqBody)
+
+        val response = api.uploadMyStudentDocument(typePart, filePart, notesPart)
+        val data = response.data ?: throw Exception(response.error?.message ?: "Gagal mengunggah berkas")
+        StudentDocumentItem(
+            id = data.id,
+            documentType = data.documentType,
+            label = data.label,
+            description = data.description,
+            isRequired = data.isRequired,
+            status = data.status,
+            fileUrl = data.fileUrl,
+            fileName = data.fileName,
+            fileSizeBytes = data.fileSizeBytes,
+            mimeType = data.mimeType,
+            verifiedAt = data.verifiedAt,
+            rejectionReason = data.rejectionReason,
+            notes = data.notes,
+            updatedAt = data.updatedAt
         )
     }
 }

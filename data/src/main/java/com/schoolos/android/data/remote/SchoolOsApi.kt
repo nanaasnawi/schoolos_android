@@ -1,6 +1,7 @@
 package com.schoolos.android.data.remote
 
 import okhttp3.MultipartBody
+import okhttp3.RequestBody
 import com.schoolos.android.data.remote.dto.*
 import retrofit2.http.*
 
@@ -49,6 +50,18 @@ interface SchoolOsApi {
 
     @GET("students/{id}")
     suspend fun getStudentProfile(@Path("id") id: String): ApiResponse<OfficialStudentBiodataDto>
+
+    // Digital Student Dossier & Document Vault (ADR-0020)
+    @GET("students/me/documents")
+    suspend fun getMyStudentDossier(): ApiResponse<StudentDossierDto>
+
+    @Multipart
+    @POST("students/me/documents")
+    suspend fun uploadMyStudentDocument(
+        @Part("document_type") documentType: RequestBody,
+        @Part file: MultipartBody.Part,
+        @Part("notes") notes: RequestBody? = null
+    ): ApiResponse<DocumentItemDto>
 
     // Official Verified Dapodik GTK / Teacher Biodata
     @GET("teachers/me/official-profile")

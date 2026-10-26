@@ -39,6 +39,7 @@ import com.schoolos.android.feature.profile.ProfileScreen
 import com.schoolos.android.feature.profile.SchoolHelpContactScreen
 import com.schoolos.android.feature.profile.SecuritySettingsScreen
 import com.schoolos.android.feature.profile.StudentOfficialProfileScreen
+import com.schoolos.android.feature.profile.StudentDossierScreen
 import com.schoolos.android.feature.profile.TeacherOfficialProfileScreen
 import com.schoolos.android.feature.progress.ProgressScreen
 import com.schoolos.android.feature.quizzes.QuizAttemptScreen
@@ -666,6 +667,9 @@ fun NavGraph(
                     onNavigateToOfficialGtkBiodata = {
                         navController.navigate(Screen.OfficialGtkBiodata.route)
                     },
+                    onNavigateToStudentDossier = {
+                        navController.navigate(Screen.StudentDossier.route)
+                    },
                 )
             }
             composable(Screen.ProfileSecurity.route) {
@@ -695,6 +699,11 @@ fun NavGraph(
             }
             composable(Screen.OfficialGtkBiodata.route) {
                 TeacherOfficialProfileScreen(
+                    onBack = { navController.popBackStack() }
+                )
+            }
+            composable(Screen.StudentDossier.route) {
+                StudentDossierScreen(
                     onBack = { navController.popBackStack() }
                 )
             }
