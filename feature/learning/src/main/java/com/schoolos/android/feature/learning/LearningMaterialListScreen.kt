@@ -95,9 +95,7 @@ fun LearningMaterialListScreen(
                     SubjectFilterChip(
                         subject = state.subjectFilter.orEmpty(),
                         className = state.classFilter,
-                        onClear = viewModel::clearFilters,
-                        onClearSubject = viewModel::clearSubjectFilter,
-                        onClearClass = viewModel::clearClassFilter,
+                        canClear = false,
                     )
                 }
             }

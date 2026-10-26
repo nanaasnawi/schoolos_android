@@ -23,6 +23,7 @@ data class AssignmentListUiState(
     val dueSoon: List<Assignment> = emptyList(),
     val completed: List<Assignment> = emptyList(),
     val subjectFilter: String? = null,
+    val classFilter: String? = null,
 )
 
 @HiltViewModel
@@ -40,6 +41,9 @@ class AssignmentListViewModel @Inject constructor(
 
     /** Optional subject filter passed via navigation (e.g. from a session detail). */
     private var subjectFilter: String? = savedStateHandle.get<String>("subjectId")?.takeIf { it.isNotBlank() }
+
+    /** Optional class/rombel filter passed via navigation (e.g. from a session detail). */
+    private var classFilter: String? = savedStateHandle.get<String>("className")?.takeIf { it.isNotBlank() }
 
     init {
         viewModelScope.launch {
@@ -70,7 +74,19 @@ class AssignmentListViewModel @Inject constructor(
             repository.getAssignments(classId)
                 .onSuccess { assignments ->
                     hasLoadedInitialData = true
-                    val filtered = subjectFilter?.let { filter -> assignments.filter { a -> com.schoolos.android.core.designsystem.matchesSubjectFilter(a.subjectName, filter) } } ?: assignments
+                    var filtered = assignments
+                    subjectFilter?.let { filter ->
+                        filtered = filtered.filter { a ->
+                            com.schoolos.android.core.designsystem.matchesSubjectFilter(a.subjectName, filter) ||
+                            (a.subjectName.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesSubjectFilter(a.title, filter))
+                        }
+                    }
+                    classFilter?.let { filter ->
+                        filtered = filtered.filter { a ->
+                            com.schoolos.android.core.designsystem.matchesClassFilter(a.className, filter) ||
+                            (a.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(a.title, filter))
+                        }
+                    }
                     val grouped = groupAssignments(filtered)
                     _state.value = _state.value.copy(
                         isLoading = false,
@@ -79,6 +95,7 @@ class AssignmentListViewModel @Inject constructor(
                         dueSoon = grouped.dueSoon,
                         completed = grouped.completed,
                         subjectFilter = subjectFilter,
+                        classFilter = classFilter,
                     )
                 }
                 .onFailure { e ->

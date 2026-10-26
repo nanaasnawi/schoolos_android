@@ -33,6 +33,7 @@ fun QuizListScreen(
     onQuizClick: (String) -> Unit = {},
     onCreateQuiz: () -> Unit = {},
     subjectId: String = "",
+    className: String? = null,
     viewModel: QuizListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -121,12 +122,13 @@ fun QuizListScreen(
                     contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    // Active Subject Filter
-                    if (state.subjectFilter != null) {
+                    // Active Subject / Class Filter (from session/schedule)
+                    if (state.subjectFilter != null || state.classFilter != null) {
                         item {
                             SubjectFilterChip(
-                                subject = state.subjectFilter!!,
-                                onClear = if (subjectId.isNotBlank()) null else viewModel::clearSubjectFilter,
+                                subject = state.subjectFilter.orEmpty(),
+                                className = state.classFilter,
+                                canClear = false,
                             )
                         }
                     }
