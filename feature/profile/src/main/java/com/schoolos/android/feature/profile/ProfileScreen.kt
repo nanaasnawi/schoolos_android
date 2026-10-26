@@ -43,6 +43,7 @@ import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.feature.profile.components.EditProfileFieldDialog
 import com.schoolos.android.feature.profile.components.OfficialBiodataNavigationCard
 import com.schoolos.android.feature.profile.components.OfficialGtkBiodataNavigationCard
+import com.schoolos.android.feature.profile.components.StudentDossierNavigationCard
 import com.schoolos.android.feature.profile.components.ParentStudentCard
 import com.schoolos.android.feature.profile.components.ProfileAvatarActionDialog
 import com.schoolos.android.feature.profile.components.ProfileAvatarPreviewDialog
@@ -65,6 +66,7 @@ fun ProfileScreen(
     onNavigateToAbout: () -> Unit = {},
     onNavigateToOfficialBiodata: () -> Unit = {},
     onNavigateToOfficialGtkBiodata: () -> Unit = onNavigateToOfficialBiodata,
+    onNavigateToStudentDossier: () -> Unit = {},
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -241,11 +243,14 @@ fun ProfileScreen(
                 },
             )
 
-            // 3.5 Dedicated Navigation Button: "Biodata Pokok Resmi"
+            // 3.5 Dedicated Navigation Button: "Biodata Pokok Resmi" & "Pemberkasan Digital"
             if (!isTeacher && !isParent && !isPrincipal) {
-                // Khusus Murid / Siswa
+                // Khusus Murid / Siswa: Biodata Pokok & Pemberkasan Digital
                 OfficialBiodataNavigationCard(
                     onClick = onNavigateToOfficialBiodata,
+                )
+                StudentDossierNavigationCard(
+                    onClick = onNavigateToStudentDossier,
                 )
             } else if (isTeacher || isPrincipal) {
                 // Khusus Pendidik & Tenaga Kependidikan (GTK / Guru / Tutor / Kepala Sekolah)

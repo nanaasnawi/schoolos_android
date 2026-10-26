@@ -3,6 +3,8 @@ package com.schoolos.android.domain.repository
 import com.schoolos.android.domain.model.OfficialStudentBiodata
 import com.schoolos.android.domain.model.OfficialTeacherBiodata
 import com.schoolos.android.domain.model.SchoolContactInfo
+import com.schoolos.android.domain.model.StudentDocumentItem
+import com.schoolos.android.domain.model.StudentDossier
 import com.schoolos.android.domain.model.User
 
 interface AuthRepository {
@@ -26,5 +28,13 @@ interface AuthRepository {
     suspend fun getMyQrBadge(): Result<String>
     suspend fun getOfficialBiodata(): Result<OfficialStudentBiodata>
     suspend fun getTeacherOfficialBiodata(): Result<OfficialTeacherBiodata>
+    suspend fun getStudentDossier(): Result<StudentDossier>
+    suspend fun uploadStudentDocument(
+        documentType: String,
+        bytes: ByteArray,
+        filename: String,
+        mimeType: String,
+        notes: String? = null
+    ): Result<StudentDocumentItem>
 }
 
