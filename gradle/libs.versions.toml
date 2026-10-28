@@ -25,6 +25,7 @@ google-services = "4.4.2"
 firebase-bom = "33.7.0"
 play-app-update = "2.1.0"
 zxing = "3.5.3"
+mlkit-document-scanner = "16.0.0"
 
 
 [libraries]
@@ -90,6 +91,7 @@ firebase-database = { group = "com.google.firebase", name = "firebase-database-k
 play-app-update = { group = "com.google.android.play", name = "app-update", version.ref = "play-app-update" }
 play-app-update-ktx = { group = "com.google.android.play", name = "app-update-ktx", version.ref = "play-app-update" }
 zxing-core = { group = "com.google.zxing", name = "core", version.ref = "zxing" }
+mlkit-document-scanner = { group = "com.google.android.gms", name = "play-services-mlkit-document-scanner", version.ref = "mlkit-document-scanner" }
 
 
 [plugins]
