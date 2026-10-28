@@ -43,6 +43,7 @@ class LoginViewModel @Inject constructor(
     private val authRepository: AuthRepository,
     private val authManager: AuthManager,
     private val api: SchoolOsApi,
+    private val apiClient: com.schoolos.android.core.network.ApiClient,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(LoginUiState())
@@ -139,7 +140,7 @@ class LoginViewModel @Inject constructor(
             }
 
             val distinctCandidates = candidates.filter { it.isNotBlank() && (isEmulator || (!it.contains("10.0.2.2") && !it.contains("127.0.0.1"))) }.distinct()
-            val client = OkHttpClient.Builder()
+            val client = apiClient.httpClient.newBuilder()
                 .connectTimeout(3, TimeUnit.SECONDS)
                 .readTimeout(4, TimeUnit.SECONDS)
                 .build()
@@ -152,25 +153,25 @@ class LoginViewModel @Inject constructor(
                     try {
                         val target = cand.trimEnd('/') + "/system/mobile-config"
                         val req = Request.Builder().url(target).get().build()
-                        val res = client.newCall(req).execute()
-                        if (res.isSuccessful) {
-                            val body = res.body?.string().orEmpty()
-                            if (body.isNotBlank()) {
-                                val root = JSONObject(body)
-                                val data = root.optJSONObject("data")
-                                val sUrl = data?.optString("server_url")
-                                val sName = data?.optString("server_name")
-                                if (!sUrl.isNullOrBlank() && sUrl.startsWith("http")) {
-                                    foundUrl = sUrl.trim()
-                                    serverName = sName
-                                    break
-                                } else {
-                                    foundUrl = cand
-                                    serverName = sName
-                                    break
+                        client.newCall(req).execute().use { res ->
+                            if (res.isSuccessful) {
+                                val body = res.body?.string().orEmpty()
+                                if (body.isNotBlank()) {
+                                    val root = JSONObject(body)
+                                    val data = root.optJSONObject("data")
+                                    val sUrl = data?.optString("server_url")
+                                    val sName = data?.optString("server_name")
+                                    if (!sUrl.isNullOrBlank() && sUrl.startsWith("http")) {
+                                        foundUrl = sUrl.trim()
+                                        serverName = sName
+                                    } else {
+                                        foundUrl = cand
+                                        serverName = sName
+                                    }
                                 }
                             }
                         }
+                        if (!foundUrl.isNullOrBlank()) break
                     } catch (_: Exception) {
                         // Try next candidate
                     }
@@ -215,9 +216,8 @@ class LoginViewModel @Inject constructor(
             val updated = authManager.getCustomServerUrl() ?: BuildConfig.API_BASE_URL
             _state.value = _state.value.copy(customServerUrl = updated)
 
-            // Test connection
-            val client = OkHttpClient.Builder()
-                .dns(com.schoolos.android.core.network.ResilientDns())
+            // Test connection reusing shared connection pool
+            val client = apiClient.httpClient.newBuilder()
                 .connectTimeout(10, TimeUnit.SECONDS)
                 .readTimeout(10, TimeUnit.SECONDS)
                 .build()
@@ -227,12 +227,13 @@ class LoginViewModel @Inject constructor(
             withContext(Dispatchers.IO) {
                 try {
                     val req = Request.Builder().url(updated.trimEnd('/') + "/system/mobile-config").get().build()
-                    val res = client.newCall(req).execute()
-                    if (res.isSuccessful) {
-                        success = true
-                        testMsg = "Server aktif & terverifikasi!"
-                    } else {
-                        testMsg = "Server merespons kode: ${res.code}"
+                    client.newCall(req).execute().use { res ->
+                        if (res.isSuccessful) {
+                            success = true
+                            testMsg = "Server aktif & terverifikasi!"
+                        } else {
+                            testMsg = "Server merespons kode: ${res.code}"
+                        }
                     }
                 } catch (e: Exception) {
                     val msg = e.message ?: ""

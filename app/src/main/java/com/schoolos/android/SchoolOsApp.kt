@@ -13,10 +13,13 @@ class SchoolOsApp : Application() {
         super.onCreate()
         try {
             com.schoolos.android.core.common.BuildConfig.API_BASE_URL = BuildConfig.API_BASE_URL
+            com.schoolos.android.core.common.BuildConfig.APP_VERSION = BuildConfig.VERSION_NAME
         } catch (_: Throwable) {}
-        try {
-            Timber.plant(Timber.DebugTree())
-        } catch (_: Throwable) {}
+        if (BuildConfig.DEBUG) {
+            try {
+                Timber.plant(Timber.DebugTree())
+            } catch (_: Throwable) {}
+        }
 
         // Global uncaught exception logger
         val defaultHandler = Thread.getDefaultUncaughtExceptionHandler()

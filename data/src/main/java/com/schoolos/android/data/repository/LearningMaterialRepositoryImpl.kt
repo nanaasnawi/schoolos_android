@@ -56,34 +56,31 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             } ?: emptyList()
 
             try {
-                materialDao.clearAll()
-                if (materials.isNotEmpty()) {
-                    val now = System.currentTimeMillis()
-                    val entities = materials.mapIndexed { idx, m ->
-                        LearningMaterialEntity(
-                            id = m.id,
-                            title = m.title,
-                            description = m.description,
-                            materialType = m.materialType.name,
-                            contentBody = m.contentBody,
-                            mediaUrl = m.mediaUrl,
-                            thumbnailUrl = m.thumbnailUrl,
-                            subject = m.subject,
-                            size = m.size,
-                            isCompleted = m.isCompleted,
-                            completedCount = m.completedCount,
-                            teacherName = m.teacherName,
-                            teacherId = m.teacherId,
-                            className = m.className,
-                            classId = m.classId,
-                            startPage = m.startPage,
-                            endPage = m.endPage,
-                            createdAt = m.createdAt,
-                            cachedAt = now - (idx * 1000L),
-                        )
-                    }
-                    materialDao.insertAll(entities)
+                val now = System.currentTimeMillis()
+                val entities = materials.mapIndexed { idx, m ->
+                    LearningMaterialEntity(
+                        id = m.id,
+                        title = m.title,
+                        description = m.description,
+                        materialType = m.materialType.name,
+                        contentBody = m.contentBody,
+                        mediaUrl = m.mediaUrl,
+                        thumbnailUrl = m.thumbnailUrl,
+                        subject = m.subject,
+                        size = m.size,
+                        isCompleted = m.isCompleted,
+                        completedCount = m.completedCount,
+                        teacherName = m.teacherName,
+                        teacherId = m.teacherId,
+                        className = m.className,
+                        classId = m.classId,
+                        startPage = m.startPage,
+                        endPage = m.endPage,
+                        createdAt = m.createdAt,
+                        cachedAt = now - (idx * 1000L),
+                    )
                 }
+                materialDao.replaceAll(entities)
             } catch (_: Exception) {}
             return@runCatching materials
         } catch (e: Exception) {
@@ -259,6 +256,9 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         fileName: String,
         mimeType: String
     ): Result<String> = runCatching {
+        if (bytes.size > 25 * 1024 * 1024) {
+            throw IllegalArgumentException("Ukuran berkas melebihi batas maksimal 25 MB.")
+        }
         val mediaType = mimeType.toMediaTypeOrNull()
         val requestBody = bytes.toRequestBody(mediaType)
         val part = okhttp3.MultipartBody.Part.createFormData("file", fileName, requestBody)

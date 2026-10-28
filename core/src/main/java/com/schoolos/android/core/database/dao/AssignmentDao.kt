@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.schoolos.android.core.database.entity.AssignmentEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -23,4 +24,11 @@ interface AssignmentDao {
 
     @Query("DELETE FROM assignments")
     suspend fun clearAll()
+
+    @Transaction
+    suspend fun replaceAll(assignments: List<AssignmentEntity>) {
+        clearAll()
+        insertAll(assignments)
+    }
 }
+

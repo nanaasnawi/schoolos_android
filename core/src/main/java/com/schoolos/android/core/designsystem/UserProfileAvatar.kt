@@ -64,17 +64,15 @@ fun buildNoCacheAvatarImageRequest(
     val fullUrl = resolveAvatarUrl(avatarUrl, serverBaseUrl) ?: return null
     return ImageRequest.Builder(context)
         .data(fullUrl)
-        // CRITICAL: Jangan simpan foto profil ke local disk storage atau cache!
-        // Always retrieve fresh from the PostgreSQL database directly
-        .diskCachePolicy(CachePolicy.DISABLED)
-        .memoryCachePolicy(CachePolicy.DISABLED)
+        .diskCachePolicy(CachePolicy.ENABLED)
+        .memoryCachePolicy(CachePolicy.ENABLED)
         .crossfade(true)
         .build()
 }
 
 /**
- * Profile avatar component that strictly avoids local disk storage & cache.
- * Photos are stored directly in PostgreSQL database and loaded on-demand.
+ * Profile avatar component with Coil memory and disk caching enabled.
+ * Cache invalidation on upload is handled via cache-busting query parameters.
  */
 @Composable
 fun UserProfileAvatar(
@@ -160,9 +158,8 @@ fun UserProfileAvatar(
         if (fullUrl != null) {
             ImageRequest.Builder(context)
                 .data(fullUrl)
-                // STRICT: Never store photo into local disk storage / cache
-                .diskCachePolicy(CachePolicy.DISABLED)
-                .memoryCachePolicy(CachePolicy.DISABLED)
+                .diskCachePolicy(CachePolicy.ENABLED)
+                .memoryCachePolicy(CachePolicy.ENABLED)
                 .crossfade(true)
                 .build()
         } else null

@@ -119,27 +119,20 @@ class TodayViewModel @Inject constructor(
 
         // For teachers: strictly filter sessions to those taught by this teacher
         // For principals: keep all sessions for executive bird's-eye view across all classes
+        val cleanTeacherName = teacherName.trim().replace(Regex("\\s+"), " ").lowercase()
         val scopedSessions = if (isPrincipal) {
             allSessions
-        } else if (isTeacher && (teacherUserId.isNotBlank() || teacherName.isNotBlank())) {
+        } else if (isTeacher && (teacherUserId.isNotBlank() || cleanTeacherName.isNotBlank())) {
             allSessions.filter { s ->
                 val uidMatch = teacherUserId.isNotBlank() && (
                     s.teacherId.equals(teacherUserId, ignoreCase = true) ||
                     s.substituteTeacherId?.equals(teacherUserId, ignoreCase = true) == true
                 )
-                val sTeacher = s.teacherName?.trim()
-                val sSubTeacher = s.substituteTeacherName?.trim()
-                val nameMatch = teacherName.isNotBlank() && (
-                    (!sTeacher.isNullOrBlank() && (
-                        sTeacher.equals(teacherName, ignoreCase = true) ||
-                        sTeacher.contains(teacherName, ignoreCase = true) ||
-                        teacherName.contains(sTeacher, ignoreCase = true)
-                    )) ||
-                    (!sSubTeacher.isNullOrBlank() && (
-                        sSubTeacher.equals(teacherName, ignoreCase = true) ||
-                        sSubTeacher.contains(teacherName, ignoreCase = true) ||
-                        teacherName.contains(sSubTeacher, ignoreCase = true)
-                    ))
+                val sTeacher = s.teacherName?.trim()?.replace(Regex("\\s+"), " ")?.lowercase()
+                val sSubTeacher = s.substituteTeacherName?.trim()?.replace(Regex("\\s+"), " ")?.lowercase()
+                val nameMatch = cleanTeacherName.isNotBlank() && (
+                    (!sTeacher.isNullOrBlank() && sTeacher == cleanTeacherName) ||
+                    (!sSubTeacher.isNullOrBlank() && sSubTeacher == cleanTeacherName)
                 )
                 uidMatch || nameMatch
             }

@@ -330,10 +330,16 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun logout() {
+    fun logout(onComplete: () -> Unit = {}) {
         viewModelScope.launch {
             _state.value = _state.value.copy(loggingOut = true)
-            authRepository.logout()
+            try {
+                authRepository.logout()
+            } finally {
+                _state.value = _state.value.copy(loggingOut = false)
+                onComplete()
+            }
         }
     }
 }
+

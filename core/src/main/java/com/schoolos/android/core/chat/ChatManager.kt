@@ -16,6 +16,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -114,42 +117,45 @@ class ChatManager @Inject constructor(
     private var cachedAuth: AuthState? = null
     val currentAuth: AuthState? get() = cachedAuth
 
+    private fun normalizePersonName(name: String?): String {
+        if (name.isNullOrBlank()) return ""
+        return name.trim().lowercase().replace(Regex("\\s+"), " ")
+    }
+
+    private fun isSameStudentIdentity(
+        candidateId: String?,
+        candidateName: String?,
+        myUid: String?,
+        myName: String?,
+    ): Boolean {
+        val cleanCandidateId = candidateId?.trim().orEmpty()
+        val cleanMyUid = myUid?.trim().orEmpty()
+        val matchesId = cleanMyUid.isNotBlank() && cleanCandidateId.isNotBlank() && (
+            cleanCandidateId.equals(cleanMyUid, ignoreCase = true) ||
+                cleanCandidateId.replace("-", "").equals(cleanMyUid.replace("-", ""), ignoreCase = true)
+            )
+        if (matchesId) return true
+        // Only fall back to exact normalized full-name match if studentId is missing/non-UUID
+        val normCandidate = normalizePersonName(candidateName)
+        val normMyName = normalizePersonName(myName)
+        return normMyName.isNotBlank() && normCandidate.isNotBlank() && normCandidate == normMyName
+    }
+
     fun filterThreadsForUser(threadList: List<ChatThread>, auth: AuthState? = cachedAuth): List<ChatThread> {
         if (auth == null || !auth.isLoggedIn) return emptyList()
         if (auth.isTeacher) {
             return threadList
         }
-        val myUid = auth.userId ?: ""
-        val myName = auth.name?.trim() ?: ""
         return threadList.filter { t ->
-            val matchesId = myUid.isNotBlank() && (
-                t.studentId.equals(myUid, ignoreCase = true) ||
-                t.studentId.replace("-", "").equals(myUid.replace("-", ""), ignoreCase = true)
-            )
-            val matchesName = myName.isNotBlank() && (
-                t.studentName.equals(myName, ignoreCase = true) ||
-                t.studentName.contains(myName, ignoreCase = true) ||
-                myName.contains(t.studentName, ignoreCase = true)
-            )
-            matchesId || matchesName
+            isSameStudentIdentity(t.studentId, t.studentName, auth.userId, auth.name)
         }
     }
 
     fun isThreadOwnedByCurrentStudent(thread: ChatThread): Boolean {
-        val auth = cachedAuth ?: return true
+        val auth = cachedAuth ?: return false
+        if (!auth.isLoggedIn) return false
         if (auth.isTeacher) return true
-        val myUid = auth.userId ?: ""
-        val myName = auth.name?.trim() ?: ""
-        val matchesId = myUid.isNotBlank() && (
-            thread.studentId.equals(myUid, ignoreCase = true) ||
-            thread.studentId.replace("-", "").equals(myUid.replace("-", ""), ignoreCase = true)
-        )
-        val matchesName = myName.isNotBlank() && (
-            thread.studentName.equals(myName, ignoreCase = true) ||
-            thread.studentName.contains(myName, ignoreCase = true) ||
-            myName.contains(thread.studentName, ignoreCase = true)
-        )
-        return matchesId || matchesName
+        return isSameStudentIdentity(thread.studentId, thread.studentName, auth.userId, auth.name)
     }
 
     // Clean initial state to avoid cross-user bleed before auth resolution
@@ -160,6 +166,8 @@ class ChatManager @Inject constructor(
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
 
     private var pollingJob: kotlinx.coroutines.Job? = null
+    private var threadDetailJob: kotlinx.coroutines.Job? = null
+    private var activeDetailThreadId: String? = null
     private var activeSubscribers = 0
 
     init {
@@ -183,6 +191,9 @@ class ChatManager @Inject constructor(
                 if (newUid != oldUid || wasLoggedIn != isLoggedIn) {
                     // Identity changed: immediately wipe threads from memory to prevent leak!
                     _threads.value = emptyList()
+                    threadDetailJob?.cancel()
+                    threadDetailJob = null
+                    activeDetailThreadId = null
                     if (isLoggedIn && !newUid.isNullOrBlank()) {
                         val userCached = loadFromDisk(newUid)
                         _threads.value = filterThreadsForUser(userCached, auth)
@@ -195,57 +206,65 @@ class ChatManager @Inject constructor(
             }
         }
 
-        // Real-time listener for all inquiries from Firebase Realtime Database
+        // Real-time listener scoped strictly to the user's known thread IDs (never root /inquiries)
         scope.launch {
-            firebaseRtdbManager.observeAllInquiries().collectLatest { rtdbMap ->
-                if (rtdbMap.isNotEmpty()) {
-                    val auth = cachedAuth ?: return@collectLatest
-                    val currentList = _threads.value
-                    var hasChanges = false
-                    val updatedList = currentList.map { thread ->
-                        val rtdbData = rtdbMap[thread.id]
-                        if (rtdbData != null) {
-                            val rtdbStatusStr = rtdbData["status"] as? String
-                            val rtdbStatus = when (rtdbStatusStr?.uppercase()) {
-                                "ANSWERED" -> InquiryStatus.ANSWERED
-                                "WAITING_REPLY", "OPEN" -> InquiryStatus.WAITING_REPLY
-                                else -> thread.status
-                            }
-                            val rtdbLastMsg = rtdbData["lastMessageContent"] as? String
-                            val rtdbLastMsgAt = (rtdbData["lastMessageAt"] as? Number)?.toLong() ?: thread.lastUpdated
-                            val rtdbLastSender = rtdbData["lastSenderName"] as? String
-                            val rtdbTeacherReadAt = (rtdbData["teacherLastReadAt"] as? Number)?.toLong()
-                            val rtdbReadStatusLabel = rtdbData["readStatusLabel"] as? String
+            @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+            _threads
+                .map { list -> list.map { it.id }.filter { it.isNotBlank() }.toSet() }
+                .distinctUntilChanged()
+                .flatMapLatest { ids ->
+                    firebaseRtdbManager.observeThreadSummaries(ids)
+                }
+                .collectLatest { rtdbMap: Map<String, Map<String, Any>> ->
+                    if (rtdbMap.isNotEmpty()) {
+                        val auth = cachedAuth ?: return@collectLatest
+                        if (!auth.isLoggedIn) return@collectLatest
+                        val currentList = _threads.value
+                        var hasChanges = false
+                        val updatedList = currentList.map { thread ->
+                            val rtdbData = rtdbMap[thread.id]
+                            if (rtdbData != null) {
+                                val rtdbStatusStr = rtdbData["status"] as? String
+                                val rtdbStatus = when (rtdbStatusStr?.uppercase()) {
+                                    "ANSWERED" -> InquiryStatus.ANSWERED
+                                    "WAITING_REPLY", "OPEN" -> InquiryStatus.WAITING_REPLY
+                                    else -> thread.status
+                                }
+                                val rtdbLastMsg = rtdbData["lastMessageContent"] as? String
+                                val rtdbLastMsgAt = (rtdbData["lastMessageAt"] as? Number)?.toLong() ?: thread.lastUpdated
+                                val rtdbLastSender = rtdbData["lastSenderName"] as? String
+                                val rtdbTeacherReadAt = (rtdbData["teacherLastReadAt"] as? Number)?.toLong()
+                                val rtdbReadStatusLabel = rtdbData["readStatusLabel"] as? String
 
-                            val isStatusChanged = thread.status != rtdbStatus
-                            val isMsgChanged = rtdbLastMsg != null && thread.lastMessage?.content != rtdbLastMsg
-                            val isReadChanged = rtdbTeacherReadAt != null && rtdbTeacherReadAt != thread.teacherLastReadAt
-                            val isLabelChanged = rtdbReadStatusLabel != null && rtdbReadStatusLabel != thread.readStatusLabel
+                                val isStatusChanged = thread.status != rtdbStatus
+                                val isMsgChanged = rtdbLastMsg != null && thread.lastMessage?.content != rtdbLastMsg
+                                val isReadChanged = rtdbTeacherReadAt != null && rtdbTeacherReadAt != thread.teacherLastReadAt
+                                val isLabelChanged = rtdbReadStatusLabel != null && rtdbReadStatusLabel != thread.readStatusLabel
 
-                            if (isStatusChanged || isMsgChanged || isReadChanged || isLabelChanged) {
-                                hasChanges = true
-                                thread.copy(
-                                    status = rtdbStatus,
-                                    lastUpdated = rtdbLastMsgAt.coerceAtLeast(thread.lastUpdated),
-                                    lastMessageContent = rtdbLastMsg ?: thread.lastMessageContent,
-                                    lastSenderName = rtdbLastSender ?: thread.lastSenderName,
-                                    teacherLastReadAt = rtdbTeacherReadAt ?: thread.teacherLastReadAt,
-                                    readStatusLabel = rtdbReadStatusLabel ?: thread.readStatusLabel,
-                                    messageCount = if (thread.messages.isNotEmpty()) thread.messages.size else (thread.messageCount.coerceAtLeast(if (rtdbLastMsg != null) 1 else 0)),
-                                )
+                                if (isStatusChanged || isMsgChanged || isReadChanged || isLabelChanged) {
+                                    hasChanges = true
+                                    thread.copy(
+                                        status = rtdbStatus,
+                                        lastUpdated = rtdbLastMsgAt.coerceAtLeast(thread.lastUpdated),
+                                        lastMessageContent = rtdbLastMsg ?: thread.lastMessageContent,
+                                        lastSenderName = rtdbLastSender ?: thread.lastSenderName,
+                                        teacherLastReadAt = rtdbTeacherReadAt ?: thread.teacherLastReadAt,
+                                        readStatusLabel = rtdbReadStatusLabel ?: thread.readStatusLabel,
+                                        messageCount = if (thread.messages.isNotEmpty()) thread.messages.size else (thread.messageCount.coerceAtLeast(if (rtdbLastMsg != null) 1 else 0)),
+                                    )
+                                } else {
+                                    thread
+                                }
                             } else {
                                 thread
                             }
-                        } else {
-                            thread
+                        }
+                        if (hasChanges) {
+                            _threads.value = updatedList
+                            saveToDisk(updatedList, auth.userId)
                         }
                     }
-                    if (hasChanges) {
-                        _threads.value = updatedList
-                        saveToDisk(updatedList, auth.userId)
-                    }
                 }
-            }
         }
 
         // Initial fetch from database
@@ -254,7 +273,7 @@ class ChatManager @Inject constructor(
         // Automatically sync whenever internet connection is restored
         scope.launch {
             networkMonitor.isOnline.collectLatest { online ->
-                if (online) {
+                if (online && cachedAuth?.isLoggedIn == true) {
                     try {
                         syncFromDatabase()
                     } catch (e: Exception) {
@@ -266,15 +285,39 @@ class ChatManager @Inject constructor(
     }
 
     /**
+     * Full sandbox purge on logout: cancel polling & active RTDB listeners, clear memory & disk caches.
+     */
+    @Synchronized
+    fun clearOnLogout() {
+        activeSubscribers = 0
+        pollingJob?.cancel()
+        pollingJob = null
+        threadDetailJob?.cancel()
+        threadDetailJob = null
+        activeDetailThreadId = null
+        _threads.value = emptyList()
+        try {
+            context.filesDir.listFiles()?.forEach { file ->
+                if (file.name.startsWith("chat_threads_cache")) {
+                    file.delete()
+                }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Failed to delete chat cache files on logout")
+        }
+    }
+
+    /**
      * Start live polling when Chat UI is active and visible on screen.
      */
+    @Synchronized
     fun startPolling() {
         activeSubscribers++
         if (pollingJob?.isActive == true) return
         pollingJob = scope.launch {
             while (isActive) {
                 delay(8000)
-                if (isOnline.value) {
+                if (isOnline.value && cachedAuth?.isLoggedIn == true) {
                     try {
                         syncFromDatabase()
                     } catch (e: Exception) {
@@ -288,6 +331,7 @@ class ChatManager @Inject constructor(
     /**
      * Stop live polling when user leaves Chat UI to save battery & cellular bandwidth.
      */
+    @Synchronized
     fun stopPolling() {
         activeSubscribers = (activeSubscribers - 1).coerceAtLeast(0)
         if (activeSubscribers == 0) {
@@ -327,19 +371,8 @@ class ChatManager @Inject constructor(
             val rawDbThreads = response.data
             // Strictly filter server response if student to guarantee isolation
             val dbThreads = if (auth.isStudent) {
-                val myUid = auth.userId ?: ""
-                val myName = auth.name?.trim() ?: ""
                 rawDbThreads.filter { dto ->
-                    val matchesId = myUid.isNotBlank() && (
-                        dto.studentId.equals(myUid, ignoreCase = true) ||
-                        dto.studentId.replace("-", "").equals(myUid.replace("-", ""), ignoreCase = true)
-                    )
-                    val matchesName = myName.isNotBlank() && (
-                        dto.studentName.equals(myName, ignoreCase = true) ||
-                        dto.studentName.contains(myName, ignoreCase = true) ||
-                        myName.contains(dto.studentName, ignoreCase = true)
-                    )
-                    matchesId || matchesName
+                    isSameStudentIdentity(dto.studentId, dto.studentName, auth.userId, auth.name)
                 }
             } else {
                 rawDbThreads
@@ -446,28 +479,33 @@ class ChatManager @Inject constructor(
     }
 
     fun loadThreadDetail(threadId: String) {
-        // Start real-time Firebase RTDB listener for active thread immediately
-        scope.launch {
-            firebaseRtdbManager.observeThreadMessages(threadId).collect { rtdbMsgs ->
-                _threads.value = _threads.value.map { th ->
-                    if (th.id == threadId) {
-                        val lastMsg = rtdbMsgs.lastOrNull()
-                        val updatedStatus = if (lastMsg?.isFromTeacher == true) {
-                            InquiryStatus.ANSWERED
-                        } else if (rtdbMsgs.isNotEmpty()) {
-                            InquiryStatus.WAITING_REPLY
-                        } else {
-                            th.status
-                        }
-                        th.copy(
-                            messages = rtdbMsgs,
-                            status = updatedStatus,
-                            lastUpdated = lastMsg?.timestamp ?: th.lastUpdated,
-                            lastMessageContent = lastMsg?.content ?: th.lastMessageContent,
-                            lastSenderName = lastMsg?.senderName ?: th.lastSenderName,
-                            messageCount = rtdbMsgs.size,
-                        )
-                    } else th
+        if (threadId.isBlank()) return
+        // Cancel any previous thread message listener before starting a new one
+        if (activeDetailThreadId != threadId || threadDetailJob?.isActive != true) {
+            threadDetailJob?.cancel()
+            activeDetailThreadId = threadId
+            threadDetailJob = scope.launch {
+                firebaseRtdbManager.observeThreadMessages(threadId).collect { rtdbMsgs ->
+                    _threads.value = _threads.value.map { th ->
+                        if (th.id == threadId) {
+                            val lastMsg = rtdbMsgs.lastOrNull()
+                            val updatedStatus = if (lastMsg?.isFromTeacher == true) {
+                                InquiryStatus.ANSWERED
+                            } else if (rtdbMsgs.isNotEmpty()) {
+                                InquiryStatus.WAITING_REPLY
+                            } else {
+                                th.status
+                            }
+                            th.copy(
+                                messages = rtdbMsgs,
+                                status = updatedStatus,
+                                lastUpdated = lastMsg?.timestamp ?: th.lastUpdated,
+                                lastMessageContent = lastMsg?.content ?: th.lastMessageContent,
+                                lastSenderName = lastMsg?.senderName ?: th.lastSenderName,
+                                messageCount = rtdbMsgs.size,
+                            )
+                        } else th
+                    }
                 }
             }
         }
@@ -486,18 +524,7 @@ class ChatManager @Inject constructor(
 
                     // Student security: ignore thread if it does not belong to the current student
                     if (auth != null && auth.isStudent) {
-                        val myUid = auth.userId ?: ""
-                        val myName = auth.name?.trim() ?: ""
-                        val matchesId = myUid.isNotBlank() && (
-                            detail.thread.studentId.equals(myUid, ignoreCase = true) ||
-                            detail.thread.studentId.replace("-", "").equals(myUid.replace("-", ""), ignoreCase = true)
-                        )
-                        val matchesName = myName.isNotBlank() && (
-                            detail.thread.studentName.equals(myName, ignoreCase = true) ||
-                            detail.thread.studentName.contains(myName, ignoreCase = true) ||
-                            myName.contains(detail.thread.studentName, ignoreCase = true)
-                        )
-                        if (!matchesId && !matchesName) {
+                        if (!isSameStudentIdentity(detail.thread.studentId, detail.thread.studentName, auth.userId, auth.name)) {
                             Timber.w("Refusing to display unowned thread ${detail.thread.id} to student ${auth.name}")
                             return@launch
                         }
@@ -603,7 +630,9 @@ class ChatManager @Inject constructor(
     }
 
     fun getThread(threadId: String): ChatThread? {
-        loadThreadDetail(threadId)
+        if (activeDetailThreadId != threadId || threadDetailJob?.isActive != true) {
+            loadThreadDetail(threadId)
+        }
         return _threads.value.find { it.id == threadId }
     }
 

@@ -32,6 +32,14 @@ class MaintenanceManager @Inject constructor(
     )
     val maintenanceMessage: StateFlow<String> = _maintenanceMessage.asStateFlow()
 
+    private val healthClient: OkHttpClient by lazy {
+        OkHttpClient.Builder()
+            .dns(ResilientDns())
+            .connectTimeout(3, TimeUnit.SECONDS)
+            .readTimeout(5, TimeUnit.SECONDS)
+            .build()
+    }
+
     init {
         scope.launch {
             firebaseRtdbManager.observeSystemMaintenanceStatus().collect { active ->
@@ -66,56 +74,57 @@ class MaintenanceManager @Inject constructor(
             listOf(BuildConfig.API_BASE_URL, primaryUrl)
         }.filter { isEmulator || (!it.contains("10.0.2.2") && !it.contains("127.0.0.1")) }.distinct()
 
-        val client = OkHttpClient.Builder()
-            .connectTimeout(3, TimeUnit.SECONDS)
-            .readTimeout(5, TimeUnit.SECONDS)
-            .build()
-
         for (candidateUrl in candidateUrls) {
             try {
                 val statusUrl = candidateUrl.trimEnd('/') + "/system/maintenance-status"
                 val request = Request.Builder().url(statusUrl).get().build()
-                val response = client.newCall(request).execute()
+                val matched = healthClient.newCall(request).execute().use { response ->
+                    if (response.isSuccessful || response.code == 503 || response.code == 423) {
+                        // Candidate is live! Persist if different from primary
+                        if (candidateUrl != primaryUrl) {
+                            try {
+                                authManager.saveCustomServerUrl(candidateUrl)
+                            } catch (_: Exception) {}
+                        }
 
-                if (response.isSuccessful || response.code == 503 || response.code == 423) {
-                    // Candidate is live! Persist if different from primary
-                    if (candidateUrl != primaryUrl) {
-                        try {
-                            authManager.saveCustomServerUrl(candidateUrl)
-                        } catch (_: Exception) {}
-                    }
+                        if (response.code == 503 || response.code == 423) {
+                            setMaintenance(true, "Server merespons kode 503 (Mode Pemeliharaan Aktif).")
+                            return@withContext true
+                        }
 
-                    if (response.code == 503 || response.code == 423) {
-                        setMaintenance(true, "Server merespons kode 503 (Mode Pemeliharaan Aktif).")
-                        return@withContext true
-                    }
-
-                    val bodyStr = response.body?.string().orEmpty()
-                    if (bodyStr.isNotBlank()) {
-                        val root = JSONObject(bodyStr)
-                        val data = root.optJSONObject("data")
-                        val isMode = data?.optBoolean("maintenance_mode", false) ?: false
-                        val msg = data?.optString("maintenance_message")
-                        setMaintenance(isMode, if (!msg.isNullOrBlank()) msg else null)
+                        val bodyStr = response.body?.string().orEmpty()
+                        if (bodyStr.isNotBlank()) {
+                            val root = JSONObject(bodyStr)
+                            val data = root.optJSONObject("data")
+                            val isMode = data?.optBoolean("maintenance_mode", false) ?: false
+                            val msg = data?.optString("maintenance_message")
+                            setMaintenance(isMode, if (!msg.isNullOrBlank()) msg else null)
+                        } else {
+                            setMaintenance(false)
+                        }
+                        true
                     } else {
-                        setMaintenance(false)
+                        false
                     }
+                }
 
+                if (matched) {
                     // Auto-sync latest mobile server URL configured centrally by Super Admin
                     try {
                         val mobileConfigUrl = candidateUrl.trimEnd('/') + "/system/mobile-config"
                         val mobileReq = Request.Builder().url(mobileConfigUrl).get().build()
-                        val mobileRes = client.newCall(mobileReq).execute()
-                        if (mobileRes.isSuccessful) {
-                            val mBody = mobileRes.body?.string().orEmpty()
-                            if (mBody.isNotBlank()) {
-                                val mRoot = JSONObject(mBody)
-                                val mData = mRoot.optJSONObject("data")
-                                val remoteUrl = mData?.optString("server_url")
-                                if (!remoteUrl.isNullOrBlank() && remoteUrl.startsWith("http")) {
-                                    val cleanRemote = remoteUrl.trim()
-                                    if (cleanRemote != candidateUrl) {
-                                        authManager.saveCustomServerUrl(cleanRemote)
+                        healthClient.newCall(mobileReq).execute().use { mobileRes ->
+                            if (mobileRes.isSuccessful) {
+                                val mBody = mobileRes.body?.string().orEmpty()
+                                if (mBody.isNotBlank()) {
+                                    val mRoot = JSONObject(mBody)
+                                    val mData = mRoot.optJSONObject("data")
+                                    val remoteUrl = mData?.optString("server_url")
+                                    if (!remoteUrl.isNullOrBlank() && remoteUrl.startsWith("http")) {
+                                        val cleanRemote = remoteUrl.trim()
+                                        if (cleanRemote != candidateUrl) {
+                                            authManager.saveCustomServerUrl(cleanRemote)
+                                        }
                                     }
                                 }
                             }

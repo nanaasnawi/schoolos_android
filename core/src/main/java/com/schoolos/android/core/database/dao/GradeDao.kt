@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.schoolos.android.core.database.entity.GradeEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -26,4 +27,11 @@ interface GradeDao {
 
     @Query("DELETE FROM grades")
     suspend fun clearAll()
+
+    @Transaction
+    suspend fun replaceAll(grades: List<GradeEntity>) {
+        clearAll()
+        insertAll(grades)
+    }
 }
+

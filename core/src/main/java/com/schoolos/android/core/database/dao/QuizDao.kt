@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.schoolos.android.core.database.entity.QuizEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -24,6 +25,12 @@ interface QuizDao {
     @Query("DELETE FROM quizzes")
     suspend fun clearAll()
 
+    @Transaction
+    suspend fun replaceAll(quizzes: List<QuizEntity>) {
+        clearAll()
+        insertAll(quizzes)
+    }
+
     @Query("DELETE FROM quizzes WHERE id = :id")
     suspend fun deleteById(id: String)
 
@@ -35,4 +42,17 @@ interface QuizDao {
 
     @Query("DELETE FROM quiz_questions WHERE quizId = :quizId")
     suspend fun deleteQuestionsForQuiz(quizId: String)
+
+    @Query("DELETE FROM quiz_questions")
+    suspend fun clearAllQuestions()
+
+    @Transaction
+    suspend fun replaceQuestionsForQuiz(
+        quizId: String,
+        questions: List<com.schoolos.android.core.database.entity.QuizQuestionEntity>,
+    ) {
+        deleteQuestionsForQuiz(quizId)
+        insertQuestions(questions)
+    }
 }
+

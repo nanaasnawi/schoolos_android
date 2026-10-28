@@ -155,9 +155,8 @@ fun ProfileHeaderCard(
                             val imageRequest = remember(fullAvatarUrl) {
                                 ImageRequest.Builder(context)
                                     .data(fullAvatarUrl)
-                                    // STRICT: Jangan simpan foto profil ke local disk storage atau cache
-                                    .diskCachePolicy(CachePolicy.DISABLED)
-                                    .memoryCachePolicy(CachePolicy.DISABLED)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .memoryCachePolicy(CachePolicy.ENABLED)
                                     .crossfade(true)
                                     .build()
                             }

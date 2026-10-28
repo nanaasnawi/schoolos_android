@@ -173,16 +173,21 @@ fun MaintenanceScreen(
                             }
                         }
                         settings.javaScriptEnabled = true
-                        settings.domStorageEnabled = true
+                        settings.domStorageEnabled = false
                         settings.allowFileAccess = true
-                        settings.allowContentAccess = true
-                        settings.allowFileAccessFromFileURLs = true
-                        settings.allowUniversalAccessFromFileURLs = true
+                        settings.allowContentAccess = false
+                        settings.allowFileAccessFromFileURLs = false
+                        settings.allowUniversalAccessFromFileURLs = false
                         settings.loadWithOverviewMode = true
                         settings.useWideViewPort = true
                         setBackgroundColor(android.graphics.Color.TRANSPARENT)
                         loadUrl("file:///android_asset/phone_maintenance.html")
                     }
+                },
+                onRelease = { webView ->
+                    webView.stopLoading()
+                    webView.loadUrl("about:blank")
+                    webView.destroy()
                 },
                 modifier = Modifier
                     .fillMaxWidth()

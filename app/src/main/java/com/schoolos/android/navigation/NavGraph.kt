@@ -643,6 +643,7 @@ fun NavGraph(
                 ProfileScreen(
                     onLogout = {
                         scope.launch {
+                            chatManager.clearOnLogout()
                             authManager.clearSession()
                             navController.navigate(Screen.Auth.route) {
                                 popUpTo(0) { inclusive = true }

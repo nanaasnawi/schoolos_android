@@ -35,6 +35,7 @@ import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
 import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.StudentDocumentItem
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,6 +44,7 @@ fun StudentDossierScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val state by viewModel.state.collectAsState()
     val dossier = state.studentDossier
     val isLoading = state.studentDossierLoading
@@ -52,6 +54,24 @@ fun StudentDossierScreen(
     var activeUploadingDocType by remember { mutableStateOf<String?>(null) }
     var selectedDocForUpload by remember { mutableStateOf<StudentDocumentItem?>(null) }
 
+    suspend fun readUriBytesIfWithinLimit(uri: Uri, maxBytes: Long = 5L * 1024L * 1024L): ByteArray {
+        return kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val contentResolver = context.contentResolver
+            val declaredSize = contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                val idx = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                if (idx >= 0 && cursor.moveToFirst() && !cursor.isNull(idx)) cursor.getLong(idx) else null
+            }
+            if (declaredSize != null && declaredSize > maxBytes) {
+                throw IllegalArgumentException("Ukuran berkas melebihi batas maksimal 5 MB.")
+            }
+            val bytes = contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: ByteArray(0)
+            if (bytes.size > maxBytes) {
+                throw IllegalArgumentException("Ukuran berkas melebihi batas maksimal 5 MB.")
+            }
+            bytes
+        }
+    }
+
     // Google Play Services ML Kit Document Scanner (CamScanner AI auto edge-detect, perspective crop, and PDF output)
     val scannerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartIntentSenderForResult()
@@ -60,60 +80,55 @@ fun StudentDossierScreen(
             val scanningResult = GmsDocumentScanningResult.fromActivityResultIntent(result.data)
             if (scanningResult != null && activeUploadingDocType != null) {
                 val docType = activeUploadingDocType!!
-                try {
-                    val contentResolver = context.contentResolver
-                    val pdf = scanningResult.pdf
-                    if (pdf != null) {
-                        val inputStream = contentResolver.openInputStream(pdf.uri)
-                        val bytes = inputStream?.readBytes() ?: ByteArray(0)
-                        inputStream?.close()
-
-                        if (bytes.isNotEmpty()) {
-                            val filename = "${docType.lowercase()}_scan.pdf"
-                            viewModel.uploadStudentDocument(
-                                documentType = docType,
-                                bytes = bytes,
-                                filename = filename,
-                                mimeType = "application/pdf",
-                                notes = "Dipindai rapi via CamScanner AI Android (${pdf.pageCount} halaman)"
-                            ) { success, msg ->
-                                if (success) {
-                                    Toast.makeText(context, "✅ Dokumen PDF berhasil dipindai dan diunggah!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, msg ?: "Gagal mengunggah dokumen", Toast.LENGTH_LONG).show()
+                scope.launch {
+                    try {
+                        val pdf = scanningResult.pdf
+                        if (pdf != null) {
+                            val bytes = readUriBytesIfWithinLimit(pdf.uri)
+                            if (bytes.isNotEmpty()) {
+                                val filename = "${docType.lowercase()}_scan.pdf"
+                                viewModel.uploadStudentDocument(
+                                    documentType = docType,
+                                    bytes = bytes,
+                                    filename = filename,
+                                    mimeType = "application/pdf",
+                                    notes = "Dipindai rapi via CamScanner AI Android (${pdf.pageCount} halaman)"
+                                ) { success, msg ->
+                                    if (success) {
+                                        Toast.makeText(context, "✅ Dokumen PDF berhasil dipindai dan diunggah!", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, msg ?: "Gagal mengunggah dokumen", Toast.LENGTH_LONG).show()
+                                    }
                                 }
+                                return@launch
                             }
-                            return@rememberLauncherForActivityResult
                         }
-                    }
 
-                    // Fallback to individual page JPEG if PDF format was unavailable
-                    val pages = scanningResult.pages
-                    if (!pages.isNullOrEmpty()) {
-                        val firstPage = pages[0]
-                        val inputStream = contentResolver.openInputStream(firstPage.imageUri)
-                        val bytes = inputStream?.readBytes() ?: ByteArray(0)
-                        inputStream?.close()
-
-                        if (bytes.isNotEmpty()) {
-                            val filename = "${docType.lowercase()}_scan.jpg"
-                            viewModel.uploadStudentDocument(
-                                documentType = docType,
-                                bytes = bytes,
-                                filename = filename,
-                                mimeType = "image/jpeg",
-                                notes = "Dipindai rapi via CamScanner AI Android"
-                            ) { success, msg ->
-                                if (success) {
-                                    Toast.makeText(context, "✅ Berkas berhasil dipindai dan diunggah!", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, msg ?: "Gagal mengunggah berkas", Toast.LENGTH_LONG).show()
+                        // Fallback to individual page JPEG if PDF format was unavailable
+                        val pages = scanningResult.pages
+                        if (!pages.isNullOrEmpty()) {
+                            val firstPage = pages[0]
+                            val bytes = readUriBytesIfWithinLimit(firstPage.imageUri)
+                            if (bytes.isNotEmpty()) {
+                                val filename = "${docType.lowercase()}_scan.jpg"
+                                viewModel.uploadStudentDocument(
+                                    documentType = docType,
+                                    bytes = bytes,
+                                    filename = filename,
+                                    mimeType = "image/jpeg",
+                                    notes = "Dipindai rapi via CamScanner AI Android"
+                                ) { success, msg ->
+                                    if (success) {
+                                        Toast.makeText(context, "✅ Berkas berhasil dipindai dan diunggah!", Toast.LENGTH_SHORT).show()
+                                    } else {
+                                        Toast.makeText(context, msg ?: "Gagal mengunggah berkas", Toast.LENGTH_LONG).show()
+                                    }
                                 }
                             }
                         }
+                    } catch (e: Exception) {
+                        Toast.makeText(context, e.localizedMessage ?: "Gagal memproses hasil scan", Toast.LENGTH_LONG).show()
                     }
-                } catch (e: Exception) {
-                    Toast.makeText(context, "Gagal memproses hasil scan: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
                 }
             }
         }
@@ -125,41 +140,40 @@ fun StudentDossierScreen(
     ) { uri: Uri? ->
         if (uri != null && activeUploadingDocType != null) {
             val docType = activeUploadingDocType!!
-            try {
-                val contentResolver = context.contentResolver
-                val mimeType = contentResolver.getType(uri) ?: "image/jpeg"
-                val inputStream = contentResolver.openInputStream(uri)
-                val bytes = inputStream?.readBytes() ?: ByteArray(0)
-                inputStream?.close()
+            scope.launch {
+                try {
+                    val mimeType = context.contentResolver.getType(uri) ?: "image/jpeg"
+                    val bytes = readUriBytesIfWithinLimit(uri)
 
-                if (bytes.isEmpty()) {
-                    Toast.makeText(context, "Berkas kosong atau tidak dapat dibaca", Toast.LENGTH_SHORT).show()
-                    return@rememberLauncherForActivityResult
-                }
-
-                val ext = when (mimeType) {
-                    "application/pdf" -> "pdf"
-                    "image/png" -> "png"
-                    "image/webp" -> "webp"
-                    else -> "jpg"
-                }
-                val filename = "${docType.lowercase()}_upload.$ext"
-
-                viewModel.uploadStudentDocument(
-                    documentType = docType,
-                    bytes = bytes,
-                    filename = filename,
-                    mimeType = mimeType,
-                    notes = "Diunggah mandiri oleh Siswa dari Aplikasi Android"
-                ) { success, msg ->
-                    if (success) {
-                        Toast.makeText(context, "✅ Berkas berhasil diunggah!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, msg ?: "Gagal mengunggah berkas", Toast.LENGTH_LONG).show()
+                    if (bytes.isEmpty()) {
+                        Toast.makeText(context, "Berkas kosong atau tidak dapat dibaca", Toast.LENGTH_SHORT).show()
+                        return@launch
                     }
+
+                    val ext = when (mimeType) {
+                        "application/pdf" -> "pdf"
+                        "image/png" -> "png"
+                        "image/webp" -> "webp"
+                        else -> "jpg"
+                    }
+                    val filename = "${docType.lowercase()}_upload.$ext"
+
+                    viewModel.uploadStudentDocument(
+                        documentType = docType,
+                        bytes = bytes,
+                        filename = filename,
+                        mimeType = mimeType,
+                        notes = "Diunggah mandiri oleh Siswa dari Aplikasi Android"
+                    ) { success, msg ->
+                        if (success) {
+                            Toast.makeText(context, "✅ Berkas berhasil diunggah!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, msg ?: "Gagal mengunggah berkas", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, e.localizedMessage ?: "Gagal membaca berkas", Toast.LENGTH_LONG).show()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Kesalahan: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
         }
     }

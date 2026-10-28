@@ -34,12 +34,14 @@ class NotificationRepositoryImpl @Inject constructor(
             val response = api.getNotifications(page)
             val notifications = response.data?.items?.map { it.dtoToDomain() } ?: emptyList()
             if (userId.isNotEmpty()) {
-                if (page == 1) {
-                    try { notificationDao.clearAll() } catch (_: Exception) {}
-                }
-                if (notifications.isNotEmpty()) {
-                    notificationDao.insertAll(notifications.map { it.toEntity(userId) })
-                }
+                val entities = notifications.map { it.toEntity(userId) }
+                try {
+                    if (page == 1) {
+                        notificationDao.replaceAll(entities)
+                    } else if (entities.isNotEmpty()) {
+                        notificationDao.insertAll(entities)
+                    }
+                } catch (_: Exception) {}
             }
             notifications
         } else {
