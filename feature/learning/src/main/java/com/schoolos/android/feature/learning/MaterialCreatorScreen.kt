@@ -3,6 +3,9 @@ package com.schoolos.android.feature.learning
 import android.net.Uri
 import android.provider.OpenableColumns
 import android.widget.Toast
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
@@ -73,6 +76,34 @@ private fun queryFileName(context: android.content.Context, uri: Uri): String? {
         }
     }
     return result
+}
+
+private const val MAX_MATERIAL_UPLOAD_BYTES = 25L * 1024L * 1024L // 25 MB
+
+private suspend fun readMaterialUriBytes(
+    context: android.content.Context,
+    uri: Uri,
+    maxBytes: Long = MAX_MATERIAL_UPLOAD_BYTES
+): ByteArray = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    if (uri.scheme == "content") {
+        context.contentResolver.query(uri, arrayOf(OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val sizeIdx = cursor.getColumnIndex(OpenableColumns.SIZE)
+                if (sizeIdx >= 0 && !cursor.isNull(sizeIdx)) {
+                    val fileSize = cursor.getLong(sizeIdx)
+                    if (fileSize > maxBytes) {
+                        throw IllegalArgumentException("Ukuran berkas melebihi batas maksimal 25 MB.")
+                    }
+                }
+            }
+        }
+    }
+    val bytes = context.contentResolver.openInputStream(uri)?.use { stream -> stream.readBytes() }
+        ?: throw IllegalArgumentException("Gagal membaca berkas yang dipilih.")
+    if (bytes.size > maxBytes) {
+        throw IllegalArgumentException("Ukuran berkas melebihi batas maksimal 25 MB.")
+    }
+    bytes
 }
 
 private val EmeraldGradient = Brush.linearGradient(
@@ -288,15 +319,22 @@ fun MaterialCreatorScreen(
         return
     }
 
+    val coroutineScope = rememberCoroutineScope()
+
     val documentPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val rawName = queryFileName(context, it) ?: "modul_ajar_${System.currentTimeMillis()}.pdf"
-            val fileName = if (!rawName.contains(".")) "$rawName.pdf" else rawName
-            val bytes = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
-            if (bytes != null) {
-                viewModel.uploadFile(bytes, fileName, "application/pdf")
+            coroutineScope.launch {
+                try {
+                    val rawName = withContext(Dispatchers.IO) { queryFileName(context, it) }
+                        ?: "modul_ajar_${System.currentTimeMillis()}.pdf"
+                    val fileName = if (!rawName.contains(".")) "$rawName.pdf" else rawName
+                    val bytes = readMaterialUriBytes(context, it)
+                    viewModel.uploadFile(bytes, fileName, "application/pdf")
+                } catch (err: Exception) {
+                    Toast.makeText(context, err.message ?: "Gagal membaca dokumen.", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -305,18 +343,23 @@ fun MaterialCreatorScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val mime = context.contentResolver.getType(it) ?: "image/jpeg"
-            val ext = when (mime) {
-                "image/png" -> ".png"
-                "image/webp" -> ".webp"
-                "image/gif" -> ".gif"
-                else -> ".jpg"
-            }
-            val rawName = queryFileName(context, it) ?: "gambar_materi_${System.currentTimeMillis()}$ext"
-            val fileName = if (!rawName.contains(".")) "$rawName$ext" else rawName
-            val bytes = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
-            if (bytes != null) {
-                viewModel.uploadFile(bytes, fileName, mime)
+            coroutineScope.launch {
+                try {
+                    val mime = context.contentResolver.getType(it) ?: "image/jpeg"
+                    val ext = when (mime) {
+                        "image/png" -> ".png"
+                        "image/webp" -> ".webp"
+                        "image/gif" -> ".gif"
+                        else -> ".jpg"
+                    }
+                    val rawName = withContext(Dispatchers.IO) { queryFileName(context, it) }
+                        ?: "gambar_materi_${System.currentTimeMillis()}$ext"
+                    val fileName = if (!rawName.contains(".")) "$rawName$ext" else rawName
+                    val bytes = readMaterialUriBytes(context, it)
+                    viewModel.uploadFile(bytes, fileName, mime)
+                } catch (err: Exception) {
+                    Toast.makeText(context, err.message ?: "Gagal membaca gambar.", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }
@@ -2424,6 +2467,7 @@ private fun RichBlockEditorSection(
 ) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
+    val blockScope = rememberCoroutineScope()
     var activeBlockId by remember { mutableStateOf<String?>(null) }
     var showUrlInputDialog by remember { mutableStateOf(false) }
     var inputImageUrl by remember { mutableStateOf("") }
@@ -2432,17 +2476,21 @@ private fun RichBlockEditorSection(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         uri?.let {
-            val mime = context.contentResolver.getType(it) ?: "image/jpeg"
-            val bytes = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
-            if (bytes != null) {
-                viewModel.uploadFile(bytes, "infografis_${System.currentTimeMillis()}.jpg", mime, onUploaded = { url ->
-                    if (activeBlockId != null) {
-                        onUpdateBlock(activeBlockId!!, url)
-                        activeBlockId = null
-                    } else {
-                        onAddBlockWithContent(ContentBlockType.IMAGE, url)
-                    }
-                })
+            blockScope.launch {
+                try {
+                    val mime = context.contentResolver.getType(it) ?: "image/jpeg"
+                    val bytes = readMaterialUriBytes(context, it)
+                    viewModel.uploadFile(bytes, "infografis_${System.currentTimeMillis()}.jpg", mime, onUploaded = { url ->
+                        if (activeBlockId != null) {
+                            onUpdateBlock(activeBlockId!!, url)
+                            activeBlockId = null
+                        } else {
+                            onAddBlockWithContent(ContentBlockType.IMAGE, url)
+                        }
+                    })
+                } catch (err: Exception) {
+                    Toast.makeText(context, err.message ?: "Gagal membaca gambar.", Toast.LENGTH_LONG).show()
+                }
             }
         }
     }

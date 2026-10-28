@@ -23,9 +23,11 @@ import javax.inject.Singleton
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
+    @dagger.hilt.android.qualifiers.ApplicationContext private val context: android.content.Context,
     private val api: SchoolOsApi,
     private val authManager: AuthManager,
     private val appDatabase: AppDatabase,
+    private val chatManager: com.schoolos.android.core.chat.ChatManager,
 ) : AuthRepository {
 
     private suspend fun resolveClassId(explicitClassId: String?, className: String?): String? {
@@ -119,13 +121,45 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout() {
         withContext(Dispatchers.IO) {
-            authManager.clearSession()
             try {
-                appDatabase.clearAllTables()
-                Timber.i("Local database tables successfully purged on logout")
+                chatManager.clearOnLogout()
+            } catch (e: Exception) {
+                Timber.w(e, "Failed clearing ChatManager on logout")
+            }
+
+            try {
+                // Purge all user-cached tables while preserving unsynced offline submissions in submission_queue
+                appDatabase.gradeDao().clearAll()
+                appDatabase.assignmentDao().clearAll()
+                appDatabase.quizDao().clearAllQuestions()
+                appDatabase.quizDao().clearAll()
+                appDatabase.learningMaterialDao().clearAll()
+                appDatabase.notificationDao().clearAll()
+                appDatabase.sessionAttendanceDao().clearAll()
+                appDatabase.sessionDao().clearAll()
+                appDatabase.submissionQueueDao().clearSynced()
+                Timber.i("Local user database tables purged on logout (unsynced submissions preserved)")
             } catch (e: Exception) {
                 Timber.e(e, "Error clearing local database tables during logout")
             }
+
+            // Clear user-scoped SharedPreferences caches
+            val prefsToClear = listOf(
+                "schoolos_reading_history",
+                "schoolos_notif_sync",
+                "schoolos_notif_dedup",
+                "teacher_schedule_reminders",
+            )
+            prefsToClear.forEach { prefName ->
+                try {
+                    context.getSharedPreferences(prefName, android.content.Context.MODE_PRIVATE)
+                        .edit()
+                        .clear()
+                        .apply()
+                } catch (_: Exception) {}
+            }
+
+            authManager.clearSession()
         }
     }
 
@@ -221,13 +255,18 @@ class AuthRepositoryImpl @Inject constructor(
         filename: String,
         mimeType: String
     ): Result<String> = runCatching {
+        if (bytes.size > 5 * 1024 * 1024) {
+            throw Exception("Ukuran foto profil melebihi batas maksimal 5 MB.")
+        }
         val mediaType = mimeType.toMediaTypeOrNull()
         val requestBody = bytes.toRequestBody(mediaType)
         val part = MultipartBody.Part.createFormData("avatar", filename, requestBody)
         val response = api.uploadAvatar(part)
         val data = response.data ?: throw Exception(response.error?.message ?: "Gagal mengunggah foto profil.")
-        authManager.updateUserAvatar(data.avatarUrl)
-        data.avatarUrl
+        val separator = if (data.avatarUrl.contains("?")) "&" else "?"
+        val bustedUrl = "${data.avatarUrl}${separator}v=${System.currentTimeMillis()}"
+        authManager.updateUserAvatar(bustedUrl)
+        bustedUrl
     }
 
     override suspend fun updateProfile(
@@ -514,6 +553,9 @@ class AuthRepositoryImpl @Inject constructor(
         mimeType: String,
         notes: String?
     ): Result<StudentDocumentItem> = runCatching {
+        if (bytes.size > 5 * 1024 * 1024) {
+            throw Exception("Ukuran berkas persyaratan melebihi batas maksimal 5 MB.")
+        }
         val typePart = documentType.toRequestBody("text/plain".toMediaTypeOrNull())
         val notesPart = notes?.toRequestBody("text/plain".toMediaTypeOrNull())
         val fileReqBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())

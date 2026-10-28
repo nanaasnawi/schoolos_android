@@ -88,17 +88,18 @@ class MainActivity : ComponentActivity() {
                 .addOnCompleteListener { task ->
                     if (task.isSuccessful) {
                         val token = task.result
-                        timber.log.Timber.d("FCM Token: %s", token)
+                        timber.log.Timber.d("FCM Token retrieved")
                         getSharedPreferences("schoolos_fcm", Context.MODE_PRIVATE)
                             .edit()
                             .putString("fcm_token", token)
                             .apply()
                     }
                 }
-            
+
             lifecycleScope.launch {
                 authManager.authState.collect { auth ->
                     if (auth.isLoggedIn) {
+                        notificationSyncManager.start()
                         com.schoolos.android.notification.SchoolOsFirebaseMessagingService.syncUserTopics(
                             userId = auth.userId,
                             classId = auth.classId,
@@ -107,6 +108,7 @@ class MainActivity : ComponentActivity() {
                             context = this@MainActivity,
                         )
                     } else {
+                        notificationSyncManager.stop()
                         com.schoolos.android.notification.SchoolOsFirebaseMessagingService.unsubscribeUserTopics(this@MainActivity)
                     }
                 }

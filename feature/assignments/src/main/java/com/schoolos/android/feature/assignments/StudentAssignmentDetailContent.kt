@@ -105,6 +105,11 @@ fun StudentAssignmentDetailContent(
     essayAnswers: Map<String, String> = emptyMap(),
     onPgAnswerSelected: (questionId: String, choiceId: String) -> Unit = { _, _ -> },
     onEssayAnswerChanged: (questionId: String, text: String) -> Unit = { _, _ -> },
+    attachedFileUrl: String? = null,
+    attachedFileName: String? = null,
+    isUploadingFile: Boolean = false,
+    onPickAttachment: (() -> Unit)? = null,
+    onClearAttachment: (() -> Unit)? = null,
 ) {
     val dueInfo = dueDateInfo(assignment.dueAt)
     val isSubmitted = submission != null && submission.status.lowercase() !in listOf("draft")

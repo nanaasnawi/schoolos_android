@@ -26,6 +26,9 @@ import androidx.compose.material3.Scaffold
 import android.widget.Toast
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -67,10 +70,60 @@ fun AssignmentDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     var content by remember { mutableStateOf("") }
     var showConfirm by remember { mutableStateOf(false) }
     var pgAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
     var essayAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
+
+    val attachmentPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
+        contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        uri?.let {
+            scope.launch {
+                runCatching {
+                    val maxBytes = 25L * 1024L * 1024L
+                    val (fileName, mimeType, bytes) = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        var resolvedName: String? = null
+                        if (it.scheme == "content") {
+                            context.contentResolver.query(
+                                it,
+                                arrayOf(android.provider.OpenableColumns.DISPLAY_NAME, android.provider.OpenableColumns.SIZE),
+                                null,
+                                null,
+                                null
+                            )?.use { cursor ->
+                                if (cursor.moveToFirst()) {
+                                    val nameIdx = cursor.getColumnIndex(android.provider.OpenableColumns.DISPLAY_NAME)
+                                    if (nameIdx >= 0 && !cursor.isNull(nameIdx)) {
+                                        resolvedName = cursor.getString(nameIdx)
+                                    }
+                                    val sizeIdx = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                                    if (sizeIdx >= 0 && !cursor.isNull(sizeIdx)) {
+                                        val size = cursor.getLong(sizeIdx)
+                                        if (size > maxBytes) {
+                                            throw IllegalArgumentException("Ukuran berkas lampiran melebihi batas maksimal 25 MB.")
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        val mime = context.contentResolver.getType(it) ?: "application/octet-stream"
+                        val name = resolvedName ?: it.lastPathSegment?.substringAfterLast('/') ?: "lampiran_tugas_${System.currentTimeMillis()}"
+                        val data = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
+                            ?: throw IllegalArgumentException("Gagal membaca berkas lampiran.")
+                        if (data.size > maxBytes) {
+                            throw IllegalArgumentException("Ukuran berkas lampiran melebihi batas maksimal 25 MB.")
+                        }
+                        Triple(name, mime, data)
+                    }
+                    viewModel.uploadAttachment(bytes, fileName, mimeType)
+                }.onFailure { err ->
+                    Toast.makeText(context, err.message ?: "Gagal membaca berkas lampiran.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     LaunchedEffect(state.submitSuccess) {
         if (state.submitSuccess) {
@@ -204,6 +257,11 @@ fun AssignmentDetailScreen(
                                     onEssayAnswerChanged = { qId, text ->
                                         essayAnswers = essayAnswers + (qId to text)
                                     },
+                                    attachedFileUrl = state.attachedFileUrl,
+                                    attachedFileName = state.attachedFileName,
+                                    isUploadingFile = state.isUploadingFile,
+                                    onPickAttachment = { attachmentPickerLauncher.launch("*/*") },
+                                    onClearAttachment = viewModel::clearAttachment,
                                 )
                             }
                         }

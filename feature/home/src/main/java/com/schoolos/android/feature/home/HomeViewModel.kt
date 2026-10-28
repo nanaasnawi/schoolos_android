@@ -144,19 +144,12 @@ class HomeViewModel @Inject constructor(
     private var teacherScheduledClassIds: Set<String> = emptySet()
     private var teacherScheduledClassNames: Set<String> = emptySet()
 
+    private var lastUnreadRefreshTimestamp: Long = 0L
+
     init {
         observeAuthState()
         observeNotifications()
-        observeRealtimeData()
         startTeacherUrgentTicker()
-    }
-
-    private fun observeRealtimeData() {
-        viewModelScope.launch {
-            firebaseRtdbManager.observeAllInquiries().collect {
-                refreshUnreadCount()
-            }
-        }
     }
 
     private fun startTeacherUrgentTicker() {
@@ -199,10 +192,13 @@ class HomeViewModel @Inject constructor(
                 }
             }
         }
-        refreshUnreadCount()
+        refreshUnreadCount(force = true)
     }
 
-    fun refreshUnreadCount() {
+    fun refreshUnreadCount(force: Boolean = false) {
+        val now = System.currentTimeMillis()
+        if (!force && (now - lastUnreadRefreshTimestamp) < 5_000L) return
+        lastUnreadRefreshTimestamp = now
         viewModelScope.launch {
             notificationRepository.getUnreadCount().onSuccess { count ->
                 _state.update { it.copy(unreadCount = count) }
@@ -457,14 +453,10 @@ class HomeViewModel @Inject constructor(
                 val completedOrActive = effectiveTodaySessions.count {
                     it.status.equals("completed", ignoreCase = true) || it.status.equals("active", ignoreCase = true)
                 }
-                if (completedOrActive > 0) {
-                    val pct = (completedOrActive.toFloat() / effectiveTodaySessions.size.toFloat()) * 100f
-                    "${pct.toInt()}%"
-                } else {
-                    "100%"
-                }
+                val pct = (completedOrActive.toFloat() / effectiveTodaySessions.size.toFloat()) * 100f
+                "${pct.toInt()}%"
             } else {
-                "100%"
+                "0%"
             }
 
             _state.update { current ->
@@ -765,7 +757,7 @@ class HomeViewModel @Inject constructor(
 
     private fun isTeacherSession(session: LearningSession, teacherUserId: String, teacherName: String): Boolean {
         val cleanUserId = teacherUserId.trim()
-        val cleanName = teacherName.trim().lowercase()
+        val cleanName = teacherName.trim().replace(Regex("\\s+"), " ").lowercase()
 
         // 1. Direct ID matches
         if (cleanUserId.isNotBlank()) {
@@ -773,19 +765,15 @@ class HomeViewModel @Inject constructor(
             if (session.substituteTeacherId?.equals(cleanUserId, ignoreCase = true) == true) return true
         }
 
-        // 2. Name matches
+        // 2. Exact normalized full-name matches (never substring .contains)
         if (cleanName.isNotBlank()) {
-            val sTeacher = session.teacherName?.trim()?.lowercase()
-            if (!sTeacher.isNullOrBlank()) {
-                if (sTeacher == cleanName || sTeacher.contains(cleanName) || cleanName.contains(sTeacher)) {
-                    return true
-                }
+            val sTeacher = session.teacherName?.trim()?.replace(Regex("\\s+"), " ")?.lowercase()
+            if (!sTeacher.isNullOrBlank() && sTeacher == cleanName) {
+                return true
             }
-            val sSubTeacher = session.substituteTeacherName?.trim()?.lowercase()
-            if (!sSubTeacher.isNullOrBlank()) {
-                if (sSubTeacher == cleanName || sSubTeacher.contains(cleanName) || cleanName.contains(sSubTeacher)) {
-                    return true
-                }
+            val sSubTeacher = session.substituteTeacherName?.trim()?.replace(Regex("\\s+"), " ")?.lowercase()
+            if (!sSubTeacher.isNullOrBlank() && sSubTeacher == cleanName) {
+                return true
             }
         }
 

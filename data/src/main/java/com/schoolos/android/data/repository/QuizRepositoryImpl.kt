@@ -40,11 +40,11 @@ class QuizRepositoryImpl @Inject constructor(
             val response = api.getQuizzes(classId.ifBlank { null })
             val quizzes = response.data?.map { it.dtoToDomain() } ?: emptyList()
             try {
+                val entities = quizzes.map { it.toEntity() }
                 if (classId.isBlank()) {
-                    quizDao.clearAll()
-                }
-                if (quizzes.isNotEmpty()) {
-                    quizDao.insertAll(quizzes.map { it.toEntity() })
+                    quizDao.replaceAll(entities)
+                } else if (entities.isNotEmpty()) {
+                    quizDao.insertAll(entities)
                 }
             } catch (_: Exception) {}
             return@runCatching quizzes
@@ -123,8 +123,7 @@ class QuizRepositoryImpl @Inject constructor(
                         )
                     }
                     try {
-                        quizDao.deleteQuestionsForQuiz(quizId)
-                        quizDao.insertQuestions(entities)
+                        quizDao.replaceQuestionsForQuiz(quizId, entities)
                     } catch (_: Exception) {}
                     return@runCatching questions
                 }

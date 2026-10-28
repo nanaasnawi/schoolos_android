@@ -26,11 +26,32 @@ class NotificationSyncManager @Inject constructor(
     private val notificationRepository: NotificationRepository,
     private val authManager: AuthManager,
     private val maintenanceManager: MaintenanceManager,
+    private val apiClient: com.schoolos.android.core.network.ApiClient,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val prefs = context.getSharedPreferences("schoolos_notif_sync", Context.MODE_PRIVATE)
     private var isStarted = false
+    private var sseJob: kotlinx.coroutines.Job? = null
+    private var pollingJob: kotlinx.coroutines.Job? = null
 
+    private val sseClient: OkHttpClient by lazy {
+        apiClient.httpClient.newBuilder()
+            .connectTimeout(15, TimeUnit.SECONDS)
+            .readTimeout(0, TimeUnit.MILLISECONDS)
+            .build()
+    }
+
+    init {
+        scope.launch {
+            authManager.authState.collectLatest { auth ->
+                if (!auth.isLoggedIn) {
+                    stop()
+                }
+            }
+        }
+    }
+
+    @Synchronized
     fun start() {
         if (isStarted) return
         isStarted = true
@@ -39,7 +60,8 @@ class NotificationSyncManager @Inject constructor(
         listenSseStream()
 
         // 2. Periodic Polling & Maintenance Check (every 15 seconds)
-        scope.launch {
+        pollingJob?.cancel()
+        pollingJob = scope.launch {
             while (isActive) {
                 try {
                     val isMaint = maintenanceManager.checkServerStatus()
@@ -52,93 +74,98 @@ class NotificationSyncManager @Inject constructor(
         }
     }
 
-    private fun listenSseStream() {
-        scope.launch {
-            val client = OkHttpClient.Builder()
-                .dns(com.schoolos.android.core.network.ResilientDns())
-                .connectTimeout(15, TimeUnit.SECONDS)
-                .readTimeout(0, TimeUnit.MILLISECONDS)
-                .build()
+    @Synchronized
+    fun stop() {
+        isStarted = false
+        sseJob?.cancel()
+        sseJob = null
+        pollingJob?.cancel()
+        pollingJob = null
+        try {
+            prefs.edit().clear().apply()
+        } catch (_: Exception) {}
+    }
 
+    private fun listenSseStream() {
+        sseJob?.cancel()
+        sseJob = scope.launch {
             while (isActive) {
                 try {
                     val token = authManager.getAccessToken()
                     if (!token.isNullOrBlank()) {
-                    val rawUrl = authManager.getCustomServerUrl() ?: com.schoolos.android.core.common.BuildConfig.API_BASE_URL
-                    val baseUrl = if (rawUrl.contains("/api/v1")) {
-                        rawUrl.trimEnd('/')
-                    } else {
-                        rawUrl.trimEnd('/') + "/api/v1"
-                    }
-                    val streamUrl = "$baseUrl/announcements/stream"
+                        val rawUrl = authManager.getCustomServerUrl() ?: com.schoolos.android.core.common.BuildConfig.API_BASE_URL
+                        val baseUrl = if (rawUrl.contains("/api/v1")) {
+                            rawUrl.trimEnd('/')
+                        } else {
+                            rawUrl.trimEnd('/') + "/api/v1"
+                        }
+                        val streamUrl = "$baseUrl/announcements/stream"
 
-                    val request = Request.Builder()
-                        .url(streamUrl)
-                        .addHeader("Accept", "text/event-stream")
-                        .addHeader("Authorization", "Bearer $token")
-                        .build()
+                        val request = Request.Builder()
+                            .url(streamUrl)
+                            .addHeader("Accept", "text/event-stream")
+                            .addHeader("Authorization", "Bearer $token")
+                            .build()
 
-                    client.newCall(request).execute().use { response ->
-                        if (response.isSuccessful) {
-                            val source = response.body?.source()
-                            while (isActive && source != null && !source.exhausted()) {
-                                val line = source.readUtf8Line() ?: break
-                                if (line.startsWith("data:")) {
-                                    val jsonStr = line.removePrefix("data:").trim()
-                                    if (jsonStr.isNotBlank()) {
-                                        try {
-                                            val obj = JSONObject(jsonStr)
-                                            val id = obj.optString("id")
-                                            val action = obj.optString("action", "")
+                        sseClient.newCall(request).execute().use { response ->
+                            if (response.isSuccessful) {
+                                val source = response.body?.source()
+                                while (isActive && source != null && !source.exhausted()) {
+                                    val line = source.readUtf8Line() ?: break
+                                    if (line.startsWith("data:")) {
+                                        val jsonStr = line.removePrefix("data:").trim()
+                                        if (jsonStr.isNotBlank()) {
+                                            try {
+                                                val obj = JSONObject(jsonStr)
+                                                val id = obj.optString("id")
+                                                val action = obj.optString("action", "")
 
-                                            if (action.equals("delete", ignoreCase = true)) {
-                                                // Admin menghapus / menarik notifikasi ini secara remote
-                                                val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
-                                                if (id.isNotBlank()) {
-                                                    nm?.cancel(id.hashCode())
+                                                if (action.equals("delete", ignoreCase = true)) {
+                                                    val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
+                                                    if (id.isNotBlank()) {
+                                                        nm?.cancel(id.hashCode())
+                                                    }
+                                                    val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
+                                                    if (shownIds.contains(id)) {
+                                                        val mutableShown = shownIds.toMutableSet()
+                                                        mutableShown.remove(id)
+                                                        prefs.edit().putStringSet("shown_notif_ids", mutableShown).apply()
+                                                    }
+                                                    scope.launch {
+                                                        try { syncNotifications() } catch (_: Exception) {}
+                                                    }
+                                                } else {
+                                                    val title = obj.optString("title")
+                                                    val content = obj.optString("content")
+
+                                                    val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
+                                                    if (id.isNotBlank() && !shownIds.contains(id)) {
+                                                        val mutableShownIds = shownIds.toMutableSet()
+                                                        mutableShownIds.add(id)
+                                                        prefs.edit().putStringSet("shown_notif_ids", mutableShownIds).apply()
+
+                                                        SystemNotificationHelper.showNotification(
+                                                            context = context,
+                                                            notificationId = id.hashCode(),
+                                                            title = title,
+                                                            message = content
+                                                        )
+                                                    }
                                                 }
-                                                val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
-                                                if (shownIds.contains(id)) {
-                                                    val mutableShown = shownIds.toMutableSet()
-                                                    mutableShown.remove(id)
-                                                    prefs.edit().putStringSet("shown_notif_ids", mutableShown).apply()
-                                                }
-                                                // Trigger sinkronisasi ulang agar UI app langsung terupdate
-                                                scope.launch {
-                                                    try { syncNotifications() } catch (_: Exception) {}
-                                                }
-                                            } else {
-                                                val title = obj.optString("title")
-                                                val content = obj.optString("content")
-
-                                                val shownIds = prefs.getStringSet("shown_notif_ids", emptySet()) ?: emptySet()
-                                                if (id.isNotBlank() && !shownIds.contains(id)) {
-                                                    val mutableShownIds = shownIds.toMutableSet()
-                                                    mutableShownIds.add(id)
-                                                    prefs.edit().putStringSet("shown_notif_ids", mutableShownIds).apply()
-
-                                                    SystemNotificationHelper.showNotification(
-                                                        context = context,
-                                                        notificationId = id.hashCode(),
-                                                        title = title,
-                                                        message = content
-                                                    )
-                                                }
-                                            }
-                                        } catch (_: Exception) {}
+                                            } catch (_: Exception) {}
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+                } catch (_: Exception) {
+                    // Connection dropped, retry after 5 seconds
                 }
-            } catch (_: Exception) {
-                // Connection dropped, retry after 5 seconds
+                delay(5_000)
             }
-            delay(5_000)
         }
     }
-}
 
 suspend fun syncNotifications() {
     try {

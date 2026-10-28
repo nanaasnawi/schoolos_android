@@ -27,8 +27,11 @@ class TokenRefreshInterceptor @Inject constructor(
 
     private val json = Json { ignoreUnknownKeys = true }
 
+    private val refreshLock = Any()
+
     private val refreshClient by lazy {
         OkHttpClient.Builder()
+            .dns(ResilientDns())
             .connectTimeout(15, TimeUnit.SECONDS)
             .readTimeout(15, TimeUnit.SECONDS)
             .writeTimeout(15, TimeUnit.SECONDS)
@@ -58,49 +61,63 @@ class TokenRefreshInterceptor @Inject constructor(
             return null
         }
 
-        val refreshToken = authManager.getRefreshTokenSync()
-        if (refreshToken.isNullOrBlank()) {
-            return null
-        }
+        val requestToken = response.request.header("Authorization")
+            ?.removePrefix("Bearer ")
+            ?.trim()
 
-        return try {
-            val body = json.encodeToString(
-                RefreshBody.serializer(),
-                RefreshBody(refreshToken),
-            )
-            val originalUrl = response.request.url
-            val refreshHttpUrl = originalUrl.newBuilder()
-                .encodedPath("/api/v1/auth/refresh")
-                .query(null)
-                .build()
-
-            val refreshResponse = refreshClient.newCall(
-                Request.Builder()
-                    .url(refreshHttpUrl)
-                    .post(body.toRequestBody("application/json".toMediaType()))
+        synchronized(refreshLock) {
+            // If another thread already refreshed the token while we waited for the lock, reuse it
+            val latestAccessToken = authManager.getAccessTokenSync()
+            if (!latestAccessToken.isNullOrBlank() && latestAccessToken != requestToken) {
+                return response.request.newBuilder()
+                    .header("Authorization", "Bearer $latestAccessToken")
                     .build()
-            ).execute()
+            }
 
-            if (!refreshResponse.isSuccessful) {
-                if (refreshResponse.code == 401) {
-                    authManager.clearSessionSync()
-                }
+            val refreshToken = authManager.getRefreshTokenSync()
+            if (refreshToken.isNullOrBlank()) {
                 return null
             }
 
-            val responseBody = refreshResponse.body?.string() ?: return null
-            val tokenResponse = json.decodeFromString<RefreshResult>(responseBody)
+            return try {
+                val body = json.encodeToString(
+                    RefreshBody.serializer(),
+                    RefreshBody(refreshToken),
+                )
+                val originalUrl = response.request.url
+                val refreshHttpUrl = originalUrl.newBuilder()
+                    .encodedPath("/api/v1/auth/refresh")
+                    .query(null)
+                    .build()
 
-            authManager.updateTokensSync(
-                accessToken = tokenResponse.accessToken,
-                refreshToken = tokenResponse.refreshToken,
-            )
+                val refreshRequest = Request.Builder()
+                    .url(refreshHttpUrl)
+                    .post(body.toRequestBody("application/json".toMediaType()))
+                    .build()
 
-            response.request.newBuilder()
-                .header("Authorization", "Bearer ${tokenResponse.accessToken}")
-                .build()
-        } catch (_: Exception) {
-            null
+                refreshClient.newCall(refreshRequest).execute().use { refreshResponse ->
+                    if (!refreshResponse.isSuccessful) {
+                        if (refreshResponse.code == 401) {
+                            authManager.clearSessionSync()
+                        }
+                        return null
+                    }
+
+                    val responseBody = refreshResponse.body?.string() ?: return null
+                    val tokenResponse = json.decodeFromString<RefreshResult>(responseBody)
+
+                    authManager.updateTokensSync(
+                        accessToken = tokenResponse.accessToken,
+                        refreshToken = tokenResponse.refreshToken,
+                    )
+
+                    response.request.newBuilder()
+                        .header("Authorization", "Bearer ${tokenResponse.accessToken}")
+                        .build()
+                }
+            } catch (_: Exception) {
+                null
+            }
         }
     }
 }

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.schoolos.android.core.database.entity.LearningMaterialEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -26,4 +27,11 @@ interface LearningMaterialDao {
 
     @Query("DELETE FROM learning_materials")
     suspend fun clearAll()
+
+    @Transaction
+    suspend fun replaceAll(materials: List<LearningMaterialEntity>) {
+        clearAll()
+        insertAll(materials)
+    }
 }
+

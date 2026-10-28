@@ -1,21 +1,20 @@
 package com.schoolos.android.core.designsystem
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.pdf.PdfRenderer
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.util.LruCache
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,8 +34,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.core.graphics.createBitmap
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.io.File
@@ -49,8 +49,69 @@ data class SharedRenderedPdfPage(
     val bitmap: ImageBitmap
 )
 
+private class BookPdfRenderSession(
+    private val pfd: ParcelFileDescriptor,
+    private val renderer: PdfRenderer,
+    private val screenWidth: Int,
+) {
+    val pageCount: Int = renderer.pageCount
+    private val mutex = Mutex()
+    private val cache = LruCache<Int, ImageBitmap>(5)
+    @Volatile
+    private var isClosed = false
+
+    suspend fun renderPage(pageNumber1Based: Int): ImageBitmap? {
+        cache.get(pageNumber1Based)?.let { return it }
+        return withContext(Dispatchers.IO) {
+            mutex.withLock {
+                if (isClosed) return@withLock null
+                cache.get(pageNumber1Based)?.let { return@withLock it }
+                val idx = (pageNumber1Based - 1).coerceIn(0, (pageCount - 1).coerceAtLeast(0))
+                var page: PdfRenderer.Page? = null
+                try {
+                    page = renderer.openPage(idx)
+                    val factor = (screenWidth.toFloat() / page.width.toFloat()).coerceIn(1.0f, 1.6f)
+                    val bmpWidth = (page.width * factor).toInt().coerceAtLeast(1)
+                    val bmpHeight = (page.height * factor).toInt().coerceAtLeast(1)
+                    val renderBmp = Bitmap.createBitmap(bmpWidth, bmpHeight, Bitmap.Config.ARGB_8888)
+                    renderBmp.eraseColor(android.graphics.Color.WHITE)
+                    page.render(renderBmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    val compactBmp = renderBmp.copy(Bitmap.Config.RGB_565, false) ?: renderBmp
+                    if (compactBmp !== renderBmp) {
+                        renderBmp.recycle()
+                    }
+                    val imageBitmap = compactBmp.asImageBitmap()
+                    cache.put(pageNumber1Based, imageBitmap)
+                    imageBitmap
+                } catch (t: Throwable) {
+                    Timber.e(t, "Failed rendering book PDF page $pageNumber1Based")
+                    null
+                } finally {
+                    try {
+                        page?.close()
+                    } catch (_: Throwable) {}
+                }
+            }
+        }
+    }
+
+    fun close() {
+        isClosed = true
+        try {
+            cache.evictAll()
+        } catch (_: Throwable) {}
+        try {
+            renderer.close()
+        } catch (_: Throwable) {}
+        try {
+            pfd.close()
+        } catch (_: Throwable) {}
+    }
+}
+
 /**
  * Full-screen in-app book reader dialog for SIBI Kemendikdasmen textbooks and learning modules.
+ * Renders pages lazily on-demand with a bounded 5-page LruCache and RGB_565 bitmaps.
  */
 @Composable
 fun BookReaderDialog(
@@ -64,7 +125,8 @@ fun BookReaderDialog(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    var pages by remember { mutableStateOf<List<SharedRenderedPdfPage>>(emptyList()) }
+    var downloadedFile by remember { mutableStateOf<File?>(null) }
+    var session by remember { mutableStateOf<BookPdfRenderSession?>(null) }
     var totalDocPages by remember { mutableIntStateOf(0) }
     var isLoading by remember { mutableStateOf(true) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -74,9 +136,10 @@ fun BookReaderDialog(
     var offsetX by remember { mutableFloatStateOf(0f) }
     var offsetY by remember { mutableFloatStateOf(0f) }
 
-    LaunchedEffect(pdfUrl, startPage, endPage) {
+    LaunchedEffect(pdfUrl) {
         isLoading = true
         errorMessage = null
+        downloadedFile = null
         withContext(Dispatchers.IO) {
             try {
                 val cleanUrl = pdfUrl.trim()
@@ -93,27 +156,29 @@ fun BookReaderDialog(
                 var downloadSuccess = pdfFile.exists() && pdfFile.length() > 5000
 
                 if (!downloadSuccess && (cleanUrl.startsWith("http://", ignoreCase = true) || cleanUrl.startsWith("https://", ignoreCase = true))) {
+                    var connection: HttpURLConnection? = null
                     try {
-                        val connection = URL(cleanUrl).openConnection() as HttpURLConnection
-                        connection.connectTimeout = 15000
-                        connection.readTimeout = 60000
-                        connection.instanceFollowRedirects = true
-                        connection.setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
+                        connection = (URL(cleanUrl).openConnection() as HttpURLConnection).apply {
+                            connectTimeout = 15000
+                            readTimeout = 60000
+                            instanceFollowRedirects = true
+                            setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
+                        }
                         connection.connect()
 
                         val code = connection.responseCode
                         if (code in 200..299) {
                             val tempFile = File(context.cacheDir, "${cacheFileName}.tmp")
-                            val inputStream = connection.inputStream
-                            val outputStream = FileOutputStream(tempFile)
-                            val buffer = ByteArray(16384)
-                            var bytesRead: Int
-                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                                outputStream.write(buffer, 0, bytesRead)
+                            connection.inputStream.use { inputStream ->
+                                FileOutputStream(tempFile).use { outputStream ->
+                                    val buffer = ByteArray(16384)
+                                    var bytesRead: Int
+                                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                        outputStream.write(buffer, 0, bytesRead)
+                                    }
+                                    outputStream.flush()
+                                }
                             }
-                            outputStream.flush()
-                            outputStream.close()
-                            inputStream.close()
 
                             if (tempFile.length() > 5000) {
                                 if (pdfFile.exists()) pdfFile.delete()
@@ -123,6 +188,10 @@ fun BookReaderDialog(
                         }
                     } catch (e: Exception) {
                         Timber.e(e, "Failed to download PDF: $cleanUrl")
+                    } finally {
+                        try {
+                            connection?.disconnect()
+                        } catch (_: Throwable) {}
                     }
                 }
 
@@ -134,50 +203,69 @@ fun BookReaderDialog(
                     return@withContext
                 }
 
-                val pfd = ParcelFileDescriptor.open(pdfFile, ParcelFileDescriptor.MODE_READ_ONLY)
-                val renderer = PdfRenderer(pfd)
-                totalDocPages = renderer.pageCount
-
-                val reqStart = startPage ?: 1
-                val maxAllowedPages = 10
-                val reqEnd = endPage ?: minOf(totalDocPages, reqStart + maxAllowedPages - 1)
-
-                val startIndex = (reqStart - 1).coerceIn(0, totalDocPages - 1)
-                val endIndex = (reqEnd - 1).coerceIn(startIndex, minOf(totalDocPages - 1, startIndex + maxAllowedPages - 1))
-
-                val renderedBitmaps = mutableListOf<SharedRenderedPdfPage>()
-                val displayMetrics = context.resources.displayMetrics
-                val screenWidth = displayMetrics.widthPixels
-
-                for (idx in startIndex..endIndex) {
-                    val page = renderer.openPage(idx)
-                    val factor = (screenWidth.toFloat() / page.width.toFloat()).coerceIn(1.0f, 1.8f)
-                    val bmpWidth = (page.width * factor).toInt()
-                    val bmpHeight = (page.height * factor).toInt()
-                    val bitmap = createBitmap(bmpWidth, bmpHeight)
-                    bitmap.eraseColor(android.graphics.Color.WHITE)
-                    page.render(bitmap, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    page.close()
-                    renderedBitmaps.add(
-                        SharedRenderedPdfPage(pageNumber = idx + 1, bitmap = bitmap.asImageBitmap())
-                    )
-                }
-
-                renderer.close()
-                pfd.close()
-
                 withContext(Dispatchers.Main) {
-                    pages = renderedBitmaps
-                    val targetPage = initialPage.coerceIn(reqStart, reqEnd)
-                    val initIndex = renderedBitmaps.indexOfFirst { it.pageNumber == targetPage }.coerceAtLeast(0)
-                    currentPageIndex = initIndex
-                    isLoading = false
+                    downloadedFile = pdfFile
                 }
             } catch (e: Exception) {
                 withContext(Dispatchers.Main) {
                     errorMessage = "Gagal memproses buku: ${e.localizedMessage}"
                     isLoading = false
                 }
+            }
+        }
+    }
+
+    DisposableEffect(downloadedFile) {
+        val file = downloadedFile
+        var activeSession: BookPdfRenderSession? = null
+        if (file != null && file.exists()) {
+            try {
+                val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
+                val renderer = PdfRenderer(pfd)
+                val screenWidth = context.resources.displayMetrics.widthPixels
+                activeSession = BookPdfRenderSession(pfd, renderer, screenWidth)
+                session = activeSession
+                totalDocPages = activeSession.pageCount
+                val reqStart = (startPage ?: 1).coerceIn(1, totalDocPages.coerceAtLeast(1))
+                val reqEnd = (endPage ?: totalDocPages).coerceIn(reqStart, totalDocPages.coerceAtLeast(1))
+                val targetPage = initialPage.coerceIn(reqStart, reqEnd)
+                currentPageIndex = (targetPage - reqStart).coerceAtLeast(0)
+                isLoading = false
+            } catch (t: Throwable) {
+                Timber.e(t, "Failed opening PdfRenderer in BookReaderDialog")
+                errorMessage = "Gagal membuka buku: ${t.localizedMessage}"
+                isLoading = false
+            }
+        }
+        onDispose {
+            activeSession?.close()
+            if (session === activeSession) {
+                session = null
+            }
+        }
+    }
+
+    val activeSession = session
+    val pageNumbers = remember(totalDocPages, startPage, endPage) {
+        if (totalDocPages <= 0) {
+            emptyList()
+        } else {
+            val s = (startPage ?: 1).coerceIn(1, totalDocPages)
+            val e = (endPage ?: totalDocPages).coerceIn(s, totalDocPages)
+            (s..e).toList()
+        }
+    }
+
+    val currentPageNumber = pageNumbers.getOrElse(currentPageIndex) { 1 }
+    var currentBitmap by remember(activeSession, currentPageNumber) { mutableStateOf<ImageBitmap?>(null) }
+
+    LaunchedEffect(activeSession, currentPageNumber) {
+        if (activeSession != null && pageNumbers.isNotEmpty()) {
+            currentBitmap = activeSession.renderPage(currentPageNumber)
+            // Pre-warm next page in background into bounded LruCache(5)
+            val nextPageIdx = currentPageIndex + 1
+            if (nextPageIdx in pageNumbers.indices) {
+                activeSession.renderPage(pageNumbers[nextPageIdx])
             }
         }
     }
@@ -220,8 +308,8 @@ fun BookReaderDialog(
                             overflow = TextOverflow.Ellipsis
                         )
                         Text(
-                            text = if (pages.isNotEmpty()) {
-                                "$subject • Halaman ${pages[currentPageIndex].pageNumber} dari ${totalDocPages.coerceAtLeast(pages.size)}"
+                            text = if (pageNumbers.isNotEmpty()) {
+                                "$subject • Halaman $currentPageNumber dari ${totalDocPages.coerceAtLeast(pageNumbers.size)}"
                             } else {
                                 subject
                             },
@@ -259,7 +347,7 @@ fun BookReaderDialog(
                 }
             },
             bottomBar = {
-                if (pages.isNotEmpty()) {
+                if (pageNumbers.isNotEmpty()) {
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
                         color = Color(0xFF0F172A).copy(alpha = 0.96f),
@@ -284,7 +372,7 @@ fun BookReaderDialog(
                                         if (currentPageIndex > 0) {
                                             currentPageIndex--
                                             scale = 1f; offsetX = 0f; offsetY = 0f
-                                            onPageChanged(pages[currentPageIndex].pageNumber)
+                                            onPageChanged(pageNumbers[currentPageIndex])
                                         }
                                     }
                                     .padding(horizontal = 16.dp),
@@ -304,7 +392,7 @@ fun BookReaderDialog(
                                     .padding(horizontal = 14.dp, vertical = 6.dp)
                             ) {
                                 Text(
-                                    text = "${currentPageIndex + 1} / ${pages.size}",
+                                    text = "${currentPageIndex + 1} / ${pageNumbers.size}",
                                     color = Color.White,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold
@@ -315,12 +403,12 @@ fun BookReaderDialog(
                                 modifier = Modifier
                                     .height(44.dp)
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (currentPageIndex < pages.size - 1) NeonBlue else Color.White.copy(alpha = 0.10f))
-                                    .clickable(enabled = currentPageIndex < pages.size - 1) {
-                                        if (currentPageIndex < pages.size - 1) {
+                                    .background(if (currentPageIndex < pageNumbers.size - 1) NeonBlue else Color.White.copy(alpha = 0.10f))
+                                    .clickable(enabled = currentPageIndex < pageNumbers.size - 1) {
+                                        if (currentPageIndex < pageNumbers.size - 1) {
                                             currentPageIndex++
                                             scale = 1f; offsetX = 0f; offsetY = 0f
-                                            onPageChanged(pages[currentPageIndex].pageNumber)
+                                            onPageChanged(pageNumbers[currentPageIndex])
                                         }
                                     }
                                     .padding(horizontal = 16.dp),
@@ -384,7 +472,7 @@ fun BookReaderDialog(
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
-                } else if (pages.isNotEmpty()) {
+                } else if (pageNumbers.isNotEmpty()) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -417,14 +505,24 @@ fun BookReaderDialog(
                                 .fillMaxSize()
                                 .padding(horizontal = 8.dp, vertical = 8.dp)
                         ) {
-                            Image(
-                                bitmap = pages[currentPageIndex].bitmap,
-                                contentDescription = "Halaman ${pages[currentPageIndex].pageNumber}",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.White)
-                            )
+                            val bmp = currentBitmap
+                            if (bmp != null) {
+                                Image(
+                                    bitmap = bmp,
+                                    contentDescription = "Halaman $currentPageNumber",
+                                    contentScale = ContentScale.Fit,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.White)
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = NeonBlue)
+                                }
+                            }
                         }
                     }
                 }
@@ -432,3 +530,4 @@ fun BookReaderDialog(
         }
     }
 }
+

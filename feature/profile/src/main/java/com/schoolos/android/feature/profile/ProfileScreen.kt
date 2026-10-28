@@ -29,6 +29,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import kotlinx.coroutines.launch
 import com.schoolos.android.core.auth.isParentRole
 import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
@@ -70,6 +71,7 @@ fun ProfileScreen(
     viewModel: ProfileViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val state by viewModel.state.collectAsState()
     val user = state.user
     val isUploadingPhoto by viewModel.isUploadingPhoto.collectAsState()
@@ -84,23 +86,44 @@ fun ProfileScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri: Uri? ->
         if (uri != null) {
-            try {
-                val inputStream = context.contentResolver.openInputStream(uri)
-                val rawBytes = inputStream?.readBytes()
-                inputStream?.close()
-                if (rawBytes != null && rawBytes.isNotEmpty()) {
-                    val compressedBytes = compressAndScaleImage(rawBytes, maxDimension = 1024, quality = 80)
-                    val filename = "photo_${System.currentTimeMillis()}.jpg"
-                    viewModel.uploadProfilePhoto(compressedBytes, filename, "image/jpeg") { success, err ->
-                        if (success) {
-                            Toast.makeText(context, "Foto profil berhasil disimpan langsung ke database PostgreSQL!", Toast.LENGTH_SHORT).show()
-                        } else {
-                            Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
+            scope.launch {
+                try {
+                    val maxBytes = 5L * 1024L * 1024L
+                    val declaredSize = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        context.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.SIZE), null, null, null)?.use { cursor ->
+                            val sizeIdx = cursor.getColumnIndex(android.provider.OpenableColumns.SIZE)
+                            if (sizeIdx >= 0 && cursor.moveToFirst() && !cursor.isNull(sizeIdx)) {
+                                cursor.getLong(sizeIdx)
+                            } else null
                         }
                     }
+                    if (declaredSize != null && declaredSize > maxBytes) {
+                        Toast.makeText(context, "Ukuran berkas foto melebihi batas maksimal 5 MB.", Toast.LENGTH_LONG).show()
+                        return@launch
+                    }
+
+                    val compressedBytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        val rawBytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                        if (rawBytes != null && rawBytes.size > maxBytes) {
+                            throw IllegalArgumentException("Ukuran berkas foto melebihi batas maksimal 5 MB.")
+                        }
+                        if (rawBytes != null && rawBytes.isNotEmpty()) {
+                            compressAndScaleImage(rawBytes, maxDimension = 1024, quality = 80)
+                        } else null
+                    }
+                    if (compressedBytes != null && compressedBytes.isNotEmpty()) {
+                        val filename = "photo_${System.currentTimeMillis()}.jpg"
+                        viewModel.uploadProfilePhoto(compressedBytes, filename, "image/jpeg") { success, err ->
+                            if (success) {
+                                Toast.makeText(context, "Foto profil berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, e.localizedMessage ?: "Gagal membaca berkas gambar", Toast.LENGTH_LONG).show()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Gagal membaca berkas gambar: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -109,19 +132,22 @@ fun ProfileScreen(
         contract = ActivityResultContracts.TakePicturePreview()
     ) { bitmap: Bitmap? ->
         if (bitmap != null) {
-            try {
-                // In-memory scaling: tidak pernah disimpan ke local storage / file cache perangkat
-                val compressedBytes = compressAndScaleBitmap(bitmap, maxDimension = 1024, quality = 80)
-                val filename = "photo_cam_${System.currentTimeMillis()}.jpg"
-                viewModel.uploadProfilePhoto(compressedBytes, filename, "image/jpeg") { success, err ->
-                    if (success) {
-                        Toast.makeText(context, "Foto profil berhasil disimpan langsung ke database PostgreSQL!", Toast.LENGTH_SHORT).show()
-                    } else {
-                        Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
+            scope.launch {
+                try {
+                    val compressedBytes = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                        compressAndScaleBitmap(bitmap, maxDimension = 1024, quality = 80)
                     }
+                    val filename = "photo_cam_${System.currentTimeMillis()}.jpg"
+                    viewModel.uploadProfilePhoto(compressedBytes, filename, "image/jpeg") { success, err ->
+                        if (success) {
+                            Toast.makeText(context, "Foto profil berhasil disimpan!", Toast.LENGTH_SHORT).show()
+                        } else {
+                            Toast.makeText(context, err ?: "Gagal mengunggah foto", Toast.LENGTH_LONG).show()
+                        }
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Gagal mengambil foto dari kamera: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
                 }
-            } catch (e: Exception) {
-                Toast.makeText(context, "Gagal mengambil foto dari kamera: ${e.localizedMessage}", Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -349,7 +375,7 @@ fun ProfileScreen(
                 userName = user?.name,
                 onConfirmLogout = {
                     showLogoutDialog = false
-                    onLogout()
+                    viewModel.logout(onComplete = onLogout)
                 },
                 onDismissRequest = { showLogoutDialog = false },
             )

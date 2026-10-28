@@ -19,6 +19,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -1052,10 +1053,66 @@ private fun GradingDialog(
                 }
 
                 if (!submission.fileUrl.isNullOrBlank()) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Attachment, null, tint = NeonBlue, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Siswa melampirkan file dokumen", fontSize = 11.sp, color = NeonBlue)
+                    val context = androidx.compose.ui.platform.LocalContext.current
+                    val rawFileUrl = submission.fileUrl!!
+                    val resolvedFileUrl = remember(rawFileUrl) {
+                        if (rawFileUrl.startsWith("http://", ignoreCase = true) || rawFileUrl.startsWith("https://", ignoreCase = true)) {
+                            rawFileUrl
+                        } else {
+                            val host = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.substringBefore("/api/").trimEnd('/')
+                            "$host/${rawFileUrl.trimStart('/')}"
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(NeonBlue.copy(alpha = 0.12f))
+                            .border(1.dp, NeonBlue.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .clickable {
+                                runCatching {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(resolvedFileUrl)
+                                    ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                }
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                Icon(Icons.Default.Attachment, null, tint = NeonBlue, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Column {
+                                    Text(
+                                        "Lampiran Dokumen Siswa",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        rawFileUrl.substringAfterLast('/'),
+                                        fontSize = 10.sp,
+                                        color = NeonBlue,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(NeonBlue)
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) {
+                                Text("Buka Berkas", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
                     }
                 }
 

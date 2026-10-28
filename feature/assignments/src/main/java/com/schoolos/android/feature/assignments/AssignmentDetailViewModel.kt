@@ -24,6 +24,9 @@ data class AssignmentDetailUiState(
     val isSubmitting: Boolean = false,
     val submitSuccess: Boolean = false,
     val submitError: String? = null,
+    val isUploadingFile: Boolean = false,
+    val attachedFileUrl: String? = null,
+    val attachedFileName: String? = null,
     // Grading state
     val isGrading: Boolean = false,
     val gradeSuccess: Boolean = false,
@@ -34,6 +37,7 @@ data class AssignmentDetailUiState(
 class AssignmentDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: AssignmentRepository,
+    private val learningMaterialRepository: com.schoolos.android.domain.repository.LearningMaterialRepository,
     private val academicRepository: com.schoolos.android.domain.repository.AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
     private val gamificationRepository: com.schoolos.android.domain.repository.GamificationRepository,
@@ -136,13 +140,37 @@ class AssignmentDetailViewModel @Inject constructor(
                             (!sub.studentNisn.isNullOrBlank() && studentNisn.isNotBlank() && sub.studentNisn == studentNisn) ||
                             (!sub.studentName.isNullOrBlank() && studentName.isNotBlank() && sub.studentName.equals(studentName, ignoreCase = true))
                         )
-                    } ?: submissions.firstOrNull { it.status != "unsubmitted" }
+                    }
                 }
                 _state.value = _state.value.copy(
                     allSubmissions = mergedSubmissions,
                     submission = ownSubmission,
                 )
             }
+    }
+
+    fun uploadAttachment(bytes: ByteArray, fileName: String, mimeType: String) {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isUploadingFile = true, submitError = null)
+            learningMaterialRepository.uploadMaterialFile(bytes, fileName, mimeType)
+                .onSuccess { url ->
+                    _state.value = _state.value.copy(
+                        isUploadingFile = false,
+                        attachedFileUrl = url,
+                        attachedFileName = fileName,
+                    )
+                }
+                .onFailure { e ->
+                    _state.value = _state.value.copy(
+                        isUploadingFile = false,
+                        submitError = e.message ?: "Gagal mengunggah lampiran berkas.",
+                    )
+                }
+        }
+    }
+
+    fun clearAttachment() {
+        _state.value = _state.value.copy(attachedFileUrl = null, attachedFileName = null)
     }
 
     /**
@@ -173,12 +201,18 @@ class AssignmentDetailViewModel @Inject constructor(
             repository.submitAssignment(
                 assignmentId = assignmentId,
                 content = content.ifBlank { null },
-                fileUrl = null,
+                fileUrl = _state.value.attachedFileUrl,
                 answers = answers,
                 textAnswers = essayAnswers,
             )
                 .onSuccess { submission ->
-                    _state.value = _state.value.copy(isSubmitting = false, submitSuccess = true, submission = submission)
+                    _state.value = _state.value.copy(
+                        isSubmitting = false,
+                        submitSuccess = true,
+                        submission = submission,
+                        attachedFileUrl = null,
+                        attachedFileName = null,
+                    )
                     loadSubmissions()
 
                     viewModelScope.launch {

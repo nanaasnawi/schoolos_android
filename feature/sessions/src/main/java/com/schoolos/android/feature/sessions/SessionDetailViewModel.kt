@@ -118,7 +118,7 @@ class SessionDetailViewModel @Inject constructor(
             (!auth.identifier.isNullOrBlank() && classStudents.any { it.nisn.equals(auth.identifier, ignoreCase = true) && it.id == att.studentId }) ||
             (!auth.userId.isNullOrBlank() && (att.studentId == auth.userId || classStudents.any { it.id == auth.userId && it.id == att.studentId })) ||
             (!auth.name.isNullOrBlank() && classStudents.any { it.fullName.equals(auth.name, ignoreCase = true) && it.id == att.studentId })
-        } ?: attendanceList.firstOrNull()
+        }
 
         _state.value = _state.value.copy(
             attendance = attendanceList,

@@ -231,7 +231,7 @@ fun StudentSessionDetailContent(
         // Personal Attendance
         GlassCard(cornerRadius = 16.dp) {
             Column(modifier = Modifier.padding(12.dp)) {
-                val myAtt = myAttendance ?: attendance.firstOrNull()
+                val myAtt = myAttendance
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,

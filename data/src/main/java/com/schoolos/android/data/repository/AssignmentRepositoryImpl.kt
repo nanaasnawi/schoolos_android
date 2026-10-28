@@ -49,11 +49,11 @@ class AssignmentRepositoryImpl @Inject constructor(
             val response = api.getAssignments(queryClassId)
             val assignments = response.data?.map { it.dtoToDomain() } ?: emptyList()
             try {
+                val entities = assignments.map { it.toEntity() }
                 if (classId.isBlank()) {
-                    assignmentDao.clearAll()
-                }
-                if (assignments.isNotEmpty()) {
-                    assignmentDao.insertAll(assignments.map { it.toEntity() })
+                    assignmentDao.replaceAll(entities)
+                } else if (entities.isNotEmpty()) {
+                    assignmentDao.insertAll(entities)
                 }
             } catch (_: Exception) {}
             return@runCatching assignments

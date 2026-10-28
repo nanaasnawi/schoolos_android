@@ -11,7 +11,7 @@ plugins {
 
 val localProps = Properties().apply {
     val f = rootProject.file("local.properties")
-    if (f.exists()) load(f.inputStream())
+    if (f.exists()) f.inputStream().use { load(it) }
 }
 val rawDevUrl: String = localProps.getProperty("dev.serverUrl", "https://schoolosbackend-production.up.railway.app/api/v1/") ?: "https://schoolosbackend-production.up.railway.app/api/v1/"
 val devServerUrl: String = if (!rawDevUrl.trimEnd('/').endsWith("/api/v1")) "${rawDevUrl.trimEnd('/')}/api/v1/" else "${rawDevUrl.trimEnd('/')}/"
@@ -39,36 +39,42 @@ android {
     buildTypes {
         debug {
             buildConfigField("String", "API_BASE_URL", "\"$devServerUrl\"")
-            buildConfigField("String", "YOUTUBE_API_KEY", "\"${localProps.getProperty("youtube.apiKey", "")}\"")
         }
         release {
             buildConfigField("String", "API_BASE_URL", "\"$prodServerUrl\"")
-            buildConfigField("String", "YOUTUBE_API_KEY", "\"${localProps.getProperty("youtube.apiKey", "")}\"")
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             ndk {
                 debugSymbolLevel = "FULL"
             }
-            
-            val keystoreProp = localProps.getProperty("release.keystoreFile")?.replace("\\:", ":")
+
+            val keystoreProp = (localProps.getProperty("release.keystoreFile") ?: System.getenv("RELEASE_KEYSTORE_FILE"))?.replace("\\:", ":")
             val resolvedKeystore = when {
                 !keystoreProp.isNullOrEmpty() && file(keystoreProp).exists() -> file(keystoreProp)
                 !keystoreProp.isNullOrEmpty() && rootProject.file(keystoreProp).exists() -> rootProject.file(keystoreProp)
                 rootProject.file("keystore/schoolos-upload.jks").exists() -> rootProject.file("keystore/schoolos-upload.jks")
                 else -> null
             }
-            if (resolvedKeystore != null && resolvedKeystore.exists()) {
+            val resolvedStorePassword = localProps.getProperty("release.storePassword") ?: System.getenv("RELEASE_STORE_PASSWORD")
+            val resolvedKeyAlias = localProps.getProperty("release.keyAlias") ?: System.getenv("RELEASE_KEY_ALIAS")
+            val resolvedKeyPassword = localProps.getProperty("release.keyPassword") ?: System.getenv("RELEASE_KEY_PASSWORD")
+
+            if (resolvedKeystore != null && resolvedKeystore.exists() &&
+                !resolvedStorePassword.isNullOrBlank() &&
+                !resolvedKeyAlias.isNullOrBlank() &&
+                !resolvedKeyPassword.isNullOrBlank()
+            ) {
                 val releaseSigning = signingConfigs.create("release") {
                     storeFile = resolvedKeystore
-                    storePassword = localProps.getProperty("release.storePassword", "jzgXawzZWVMzUF3DYrHqm9Xs")
-                    keyAlias = localProps.getProperty("release.keyAlias", "schoolos-upload")
-                    keyPassword = localProps.getProperty("release.keyPassword", "jzgXawzZWVMzUF3DYrHqm9Xs")
+                    storePassword = resolvedStorePassword
+                    keyAlias = resolvedKeyAlias
+                    keyPassword = resolvedKeyPassword
                 }
                 signingConfig = releaseSigning
                 logger.lifecycle(">>> SIGNING RELEASE WITH KEYSTORE: ${resolvedKeystore.absolutePath}")
             } else {
-                logger.warn(">>> WARNING: RELEASE KEYSTORE NOT FOUND! FALLING BACK TO DEBUG SIGNING")
+                logger.warn(">>> WARNING: RELEASE KEYSTORE OR CREDENTIALS NOT CONFIGURED! FALLING BACK TO DEBUG SIGNING")
                 signingConfig = signingConfigs.getByName("debug")
             }
         }

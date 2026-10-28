@@ -654,9 +654,8 @@ fun ProfileAvatarPreviewDialog(
                     val imageRequest = remember(fullAvatarUrl) {
                         ImageRequest.Builder(context)
                             .data(fullAvatarUrl)
-                            // STRICT: Foto profil tidak disimpan di local disk storage atau cache perangkat
-                            .diskCachePolicy(CachePolicy.DISABLED)
-                            .memoryCachePolicy(CachePolicy.DISABLED)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
                             .crossfade(true)
                             .build()
                     }

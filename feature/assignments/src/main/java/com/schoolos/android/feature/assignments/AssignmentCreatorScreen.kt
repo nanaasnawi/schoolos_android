@@ -1373,7 +1373,7 @@ private fun AssignmentReviewAndPublishScreen(
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Text(
-                                            "Soal #${idx + 1} • ${if (q.questionType == "multiple_choice") "Pilihan Ganda" else "Esai"}",
+                                            "Soal #${idx + 1} • ${if (q.questionType.equals("multiple_choice", ignoreCase = true) || q.questionType.equals("pg", ignoreCase = true)) "Pilihan Ganda" else "Esai"}",
                                             color = CyanAccent,
                                             fontWeight = FontWeight.Bold,
                                             fontSize = 11.sp

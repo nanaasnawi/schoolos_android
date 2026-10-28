@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.schoolos.android.core.database.entity.NotificationEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -24,6 +25,13 @@ interface NotificationDao {
     @Query("DELETE FROM notifications")
     suspend fun clearAll()
 
+    @Transaction
+    suspend fun replaceAll(notifications: List<NotificationEntity>) {
+        clearAll()
+        insertAll(notifications)
+    }
+
     @Query("SELECT * FROM notifications WHERE id = :id LIMIT 1")
     suspend fun getNotificationById(id: String): NotificationEntity?
 }
+

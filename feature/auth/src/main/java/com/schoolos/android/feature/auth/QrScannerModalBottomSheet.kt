@@ -391,11 +391,19 @@ private fun CameraPreviewView(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    val barcodeScanner = remember {
+        BarcodeScanning.getClient(
+            BarcodeScannerOptions.Builder()
+                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                .build()
+        )
+    }
     var hasScanned by remember { mutableStateOf(false) }
 
     DisposableEffect(Unit) {
         onDispose {
             cameraExecutor.shutdown()
+            runCatching { barcodeScanner.close() }
         }
     }
 
@@ -412,12 +420,6 @@ private fun CameraPreviewView(
                 val preview = Preview.Builder().build().also {
                     it.surfaceProvider = previewView.surfaceProvider
                 }
-
-                val barcodeScanner = BarcodeScanning.getClient(
-                    BarcodeScannerOptions.Builder()
-                        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-                        .build()
-                )
 
                 val imageAnalysis = ImageAnalysis.Builder()
                     .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
@@ -531,81 +533,92 @@ private fun processQrFromUri(
     onSuccess: (String) -> Unit,
     onError: (String) -> Unit,
 ) {
-    var decodedBitmap: android.graphics.Bitmap? = null
-    try {
-        val resolver = context.contentResolver
+    val mainExecutor = ContextCompat.getMainExecutor(context)
+    Executors.newSingleThreadExecutor().let { decodeExecutor ->
+        decodeExecutor.execute {
+            var decodedBitmap: android.graphics.Bitmap? = null
+            try {
+                val resolver = context.contentResolver
 
-        // Pass 1: Decode image bounds only without allocating pixel memory
-        val boundsOptions = BitmapFactory.Options().apply {
-            inJustDecodeBounds = true
-        }
-        resolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, boundsOptions)
-        }
-
-        if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) {
-            onError("Gagal mengidentifikasi dimensi gambar dari galeri.")
-            return
-        }
-
-        // Pass 2: Calculate inSampleSize to downsample image to optimal target size (~1280px max)
-        val maxTargetDimension = 1280
-        val maxDimension = maxOf(boundsOptions.outWidth, boundsOptions.outHeight)
-        var calculatedSampleSize = 1
-        while ((maxDimension / calculatedSampleSize) > maxTargetDimension) {
-            calculatedSampleSize *= 2
-        }
-
-        val decodeOptions = BitmapFactory.Options().apply {
-            inJustDecodeBounds = false
-            inSampleSize = calculatedSampleSize
-            inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
-        }
-
-        decodedBitmap = resolver.openInputStream(uri)?.use { stream ->
-            BitmapFactory.decodeStream(stream, null, decodeOptions)
-        }
-
-        if (decodedBitmap == null) {
-            onError("Gagal memuat file gambar dari galeri.")
-            return
-        }
-
-        val bitmapToScan = decodedBitmap
-        val inputImage = InputImage.fromBitmap(bitmapToScan, 0)
-        val scanner = BarcodeScanning.getClient(
-            BarcodeScannerOptions.Builder()
-                .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
-                .build()
-        )
-
-        scanner.process(inputImage)
-            .addOnSuccessListener { barcodes ->
-                val detected = barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }
-                if (detected != null && detected.rawValue != null) {
-                    onSuccess(detected.rawValue!!)
-                } else {
-                    onError("Tidak ditemukan QR Code yang valid pada gambar tersebut.")
+                // Pass 1: Decode image bounds only without allocating pixel memory
+                val boundsOptions = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = true
                 }
-            }
-            .addOnFailureListener { e ->
-                onError("Gagal memindai gambar: ${e.localizedMessage ?: "Error tidak diketahui"}")
-            }
-            .addOnCompleteListener {
-                // Prevent memory leak by recycling native bitmap pixels once ML Kit is done
-                if (!bitmapToScan.isRecycled) {
-                    bitmapToScan.recycle()
+                resolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream, null, boundsOptions)
                 }
+
+                if (boundsOptions.outWidth <= 0 || boundsOptions.outHeight <= 0) {
+                    mainExecutor.execute { onError("Gagal mengidentifikasi dimensi gambar dari galeri.") }
+                    return@execute
+                }
+
+                // Pass 2: Calculate inSampleSize to downsample image to optimal target size (~1280px max)
+                val maxTargetDimension = 1280
+                val maxDimension = maxOf(boundsOptions.outWidth, boundsOptions.outHeight)
+                var calculatedSampleSize = 1
+                while ((maxDimension / calculatedSampleSize) > maxTargetDimension) {
+                    calculatedSampleSize *= 2
+                }
+
+                val decodeOptions = BitmapFactory.Options().apply {
+                    inJustDecodeBounds = false
+                    inSampleSize = calculatedSampleSize
+                    inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888
+                }
+
+                decodedBitmap = resolver.openInputStream(uri)?.use { stream ->
+                    BitmapFactory.decodeStream(stream, null, decodeOptions)
+                }
+
+                if (decodedBitmap == null) {
+                    mainExecutor.execute { onError("Gagal memuat file gambar dari galeri.") }
+                    return@execute
+                }
+
+                val bitmapToScan = decodedBitmap
+                val inputImage = InputImage.fromBitmap(bitmapToScan, 0)
+                val scanner = BarcodeScanning.getClient(
+                    BarcodeScannerOptions.Builder()
+                        .setBarcodeFormats(Barcode.FORMAT_QR_CODE)
+                        .build()
+                )
+
+                scanner.process(inputImage)
+                    .addOnSuccessListener(mainExecutor) { barcodes ->
+                        val detected = barcodes.firstOrNull { !it.rawValue.isNullOrBlank() }
+                        if (detected != null && detected.rawValue != null) {
+                            onSuccess(detected.rawValue!!)
+                        } else {
+                            onError("Tidak ditemukan QR Code yang valid pada gambar tersebut.")
+                        }
+                    }
+                    .addOnFailureListener(mainExecutor) { e ->
+                        onError("Gagal memindai gambar: ${e.localizedMessage ?: "Error tidak diketahui"}")
+                    }
+                    .addOnCompleteListener {
+                        runCatching { scanner.close() }
+                        if (!bitmapToScan.isRecycled) {
+                            bitmapToScan.recycle()
+                        }
+                    }
+            } catch (oom: OutOfMemoryError) {
+                if (decodedBitmap != null && !decodedBitmap.isRecycled) {
+                    decodedBitmap.recycle()
+                }
+                mainExecutor.execute {
+                    onError("Memori perangkat tidak mencukupi untuk memproses gambar beresolusi tinggi ini.")
+                }
+            } catch (e: Exception) {
+                if (decodedBitmap != null && !decodedBitmap.isRecycled) {
+                    decodedBitmap.recycle()
+                }
+                mainExecutor.execute {
+                    onError("Terjadi kesalahan saat memproses gambar: ${e.localizedMessage}")
+                }
+            } finally {
+                decodeExecutor.shutdown()
             }
-    } catch (oom: OutOfMemoryError) {
-        if (decodedBitmap != null && !decodedBitmap.isRecycled) {
-            decodedBitmap.recycle()
         }
-        onError("Memori perangkat tidak mencukupi untuk memproses gambar beresolusi tinggi ini.")
-    } catch (e: Exception) {
-        if (decodedBitmap != null && !decodedBitmap.isRecycled) {
-            decodedBitmap.recycle()
-        }
-        onError("Terjadi kesalahan saat memproses gambar: ${e.localizedMessage}")
     }
 }

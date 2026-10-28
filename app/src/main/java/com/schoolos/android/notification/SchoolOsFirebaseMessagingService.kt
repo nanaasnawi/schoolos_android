@@ -132,7 +132,7 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
 
     override fun onNewToken(token: String) {
         super.onNewToken(token)
-        Timber.d("FCM Registration Token: %s", token)
+        Timber.d("FCM Registration Token refreshed")
         val prefs = applicationContext.getSharedPreferences(PREFS_FCM, MODE_PRIVATE)
         prefs.edit()
             .putString("fcm_token", token)

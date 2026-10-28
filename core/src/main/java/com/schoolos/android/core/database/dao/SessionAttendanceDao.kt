@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Transaction
 import com.schoolos.android.core.database.entity.SessionAttendanceEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -23,4 +24,14 @@ interface SessionAttendanceDao {
 
     @Query("DELETE FROM session_attendances WHERE sessionId = :sessionId")
     suspend fun clearSessionAttendance(sessionId: String)
+
+    @Query("DELETE FROM session_attendances")
+    suspend fun clearAll()
+
+    @Transaction
+    suspend fun replaceSessionAttendance(sessionId: String, attendances: List<SessionAttendanceEntity>) {
+        clearSessionAttendance(sessionId)
+        insertAll(attendances)
+    }
 }
+

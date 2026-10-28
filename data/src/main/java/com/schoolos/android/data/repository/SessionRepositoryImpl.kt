@@ -25,9 +25,11 @@ class SessionRepositoryImpl @Inject constructor(
             val response = api.getSessions(cleanClassId)
             val sessions = response.data?.map { it.toDomain() } ?: emptyList()
             try {
-                sessionDao.clearAll()
-                if (sessions.isNotEmpty()) {
-                    sessionDao.insertAll(sessions.map { it.toEntity() })
+                val entities = sessions.map { it.toEntity() }
+                if (cleanClassId.isNullOrBlank()) {
+                    sessionDao.replaceAll(entities)
+                } else if (entities.isNotEmpty()) {
+                    sessionDao.insertAll(entities)
                 }
             } catch (_: Exception) {}
             return@runCatching sessions
@@ -67,8 +69,7 @@ class SessionRepositoryImpl @Inject constructor(
             val response = api.getSessionAttendance(sessionId)
             val attendances = response.data?.map { it.toDomain() }
             if (attendances != null) {
-                attendanceDao.clearSessionAttendance(sessionId)
-                attendanceDao.insertAll(attendances.map { it.toEntity() })
+                attendanceDao.replaceSessionAttendance(sessionId, attendances.map { it.toEntity() })
                 return@runCatching attendances
             }
         } catch (e: Exception) {

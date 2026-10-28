@@ -365,44 +365,51 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
     }
 
     /**
-     * Observe real-time thread summaries from Firebase RTDB.
+     * Observe real-time thread summaries scoped strictly to the specified thread IDs.
+     * Avoids subscribing to the unscoped root `/inquiries` node across all tenants.
      */
-    fun observeAllInquiries(): Flow<Map<String, Map<String, Any>>> = callbackFlow {
-        val inquiriesRef = rootRef.child("inquiries")
-
-        val listener = object : ValueEventListener {
-            override fun onDataChange(snapshot: DataSnapshot) {
-                val resultMap = mutableMapOf<String, Map<String, Any>>()
-                for (threadSnap in snapshot.children) {
-                    val threadId = threadSnap.key ?: continue
-                    val metaSnap = threadSnap.child("metadata")
-                    val summarySnap = threadSnap.child("summary")
-
-                    val itemMap = mutableMapOf<String, Any>()
-                    itemMap["id"] = threadId
-
-                    metaSnap.children.forEach { c ->
-                        c.value?.let { v -> itemMap[c.key ?: ""] = v }
-                    }
-                    summarySnap.children.forEach { c ->
-                        c.value?.let { v -> itemMap[c.key ?: ""] = v }
-                    }
-
-                    resultMap[threadId] = itemMap
-                }
-                trySend(resultMap)
-            }
-
-            override fun onCancelled(error: DatabaseError) {
-                Timber.w("Firebase RTDB observeAllInquiries cancelled: ${error.message}")
-            }
+    fun observeThreadSummaries(threadIds: Set<String>): Flow<Map<String, Map<String, Any>>> = callbackFlow {
+        val cleanIds = threadIds.filter { it.isNotBlank() }.toSet()
+        if (cleanIds.isEmpty()) {
+            trySend(emptyMap())
+            awaitClose { }
+            return@callbackFlow
         }
 
-        inquiriesRef.addValueEventListener(listener)
+        val currentSummaries = java.util.concurrent.ConcurrentHashMap<String, Map<String, Any>>()
+        val listeners = mutableListOf<Pair<DatabaseReference, ValueEventListener>>()
+
+        for (threadId in cleanIds) {
+            val summaryRef = rootRef.child("inquiries").child(threadId).child("summary")
+            val listener = object : ValueEventListener {
+                override fun onDataChange(snapshot: DataSnapshot) {
+                    val itemMap = mutableMapOf<String, Any>("id" to threadId)
+                    snapshot.children.forEach { c ->
+                        c.value?.let { v -> itemMap[c.key ?: ""] = v }
+                    }
+                    currentSummaries[threadId] = itemMap
+                    trySend(currentSummaries.toMap())
+                }
+
+                override fun onCancelled(error: DatabaseError) {
+                    Timber.w("Firebase RTDB observeThreadSummaries cancelled for $threadId: ${error.message}")
+                }
+            }
+            summaryRef.addValueEventListener(listener)
+            listeners.add(summaryRef to listener)
+        }
+
         awaitClose {
-            inquiriesRef.removeEventListener(listener)
+            listeners.forEach { (ref, listener) ->
+                try {
+                    ref.removeEventListener(listener)
+                } catch (_: Exception) {}
+            }
         }
     }
+
+    @Deprecated("Avoid unscoped root /inquiries listener; use observeThreadSummaries(threadIds) instead")
+    fun observeAllInquiries(): Flow<Map<String, Map<String, Any>>> = kotlinx.coroutines.flow.flowOf(emptyMap())
 
     /**
      * Observe real-time system maintenance status node.
