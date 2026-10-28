@@ -1,8 +1,12 @@
 package com.schoolos.android.feature.profile
 
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +30,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.google.mlkit.vision.documentscanner.GmsDocumentScannerOptions
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanning
+import com.google.mlkit.vision.documentscanner.GmsDocumentScanningResult
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.StudentDocumentItem
 
@@ -43,6 +50,74 @@ fun StudentDossierScreen(
     val errorMessage = state.studentDossierError
 
     var activeUploadingDocType by remember { mutableStateOf<String?>(null) }
+    var selectedDocForUpload by remember { mutableStateOf<StudentDocumentItem?>(null) }
+
+    // Google Play Services ML Kit Document Scanner (CamScanner AI auto edge-detect, perspective crop, and PDF output)
+    val scannerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartIntentSenderForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val scanningResult = GmsDocumentScanningResult.fromActivityResultIntent(result.data)
+            if (scanningResult != null && activeUploadingDocType != null) {
+                val docType = activeUploadingDocType!!
+                try {
+                    val contentResolver = context.contentResolver
+                    val pdf = scanningResult.pdf
+                    if (pdf != null) {
+                        val inputStream = contentResolver.openInputStream(pdf.uri)
+                        val bytes = inputStream?.readBytes() ?: ByteArray(0)
+                        inputStream?.close()
+
+                        if (bytes.isNotEmpty()) {
+                            val filename = "${docType.lowercase()}_scan.pdf"
+                            viewModel.uploadStudentDocument(
+                                documentType = docType,
+                                bytes = bytes,
+                                filename = filename,
+                                mimeType = "application/pdf",
+                                notes = "Dipindai rapi via CamScanner AI Android (${pdf.pageCount} halaman)"
+                            ) { success, msg ->
+                                if (success) {
+                                    Toast.makeText(context, "✅ Dokumen PDF berhasil dipindai dan diunggah!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, msg ?: "Gagal mengunggah dokumen", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                            return@rememberLauncherForActivityResult
+                        }
+                    }
+
+                    // Fallback to individual page JPEG if PDF format was unavailable
+                    val pages = scanningResult.pages
+                    if (!pages.isNullOrEmpty()) {
+                        val firstPage = pages[0]
+                        val inputStream = contentResolver.openInputStream(firstPage.imageUri)
+                        val bytes = inputStream?.readBytes() ?: ByteArray(0)
+                        inputStream?.close()
+
+                        if (bytes.isNotEmpty()) {
+                            val filename = "${docType.lowercase()}_scan.jpg"
+                            viewModel.uploadStudentDocument(
+                                documentType = docType,
+                                bytes = bytes,
+                                filename = filename,
+                                mimeType = "image/jpeg",
+                                notes = "Dipindai rapi via CamScanner AI Android"
+                            ) { success, msg ->
+                                if (success) {
+                                    Toast.makeText(context, "✅ Berkas berhasil dipindai dan diunggah!", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    Toast.makeText(context, msg ?: "Gagal mengunggah berkas", Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Toast.makeText(context, "Gagal memproses hasil scan: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
 
     // System File Picker for Image / PDF
     val filePickerLauncher = rememberLauncherForActivityResult(
@@ -86,6 +161,40 @@ fun StudentDossierScreen(
             } catch (e: Exception) {
                 Toast.makeText(context, "Kesalahan: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
             }
+        }
+    }
+
+    val startDocScanner: (String) -> Unit = { docType ->
+        activeUploadingDocType = docType
+        val activity = findActivity(context)
+        if (activity != null) {
+            val options = GmsDocumentScannerOptions.Builder()
+                .setGalleryImportAllowed(true)
+                .setPageLimit(10)
+                .setResultFormats(
+                    GmsDocumentScannerOptions.RESULT_FORMAT_JPEG,
+                    GmsDocumentScannerOptions.RESULT_FORMAT_PDF
+                )
+                .setScannerMode(GmsDocumentScannerOptions.SCANNER_MODE_FULL)
+                .build()
+
+            val scanner = GmsDocumentScanning.getClient(options)
+            scanner.getStartScanIntent(activity)
+                .addOnSuccessListener { intentSender ->
+                    try {
+                        val request = IntentSenderRequest.Builder(intentSender).build()
+                        scannerLauncher.launch(request)
+                    } catch (e: Exception) {
+                        Toast.makeText(context, "Membuka pemilih berkas...", Toast.LENGTH_SHORT).show()
+                        filePickerLauncher.launch("*/*")
+                    }
+                }
+                .addOnFailureListener { e ->
+                    Toast.makeText(context, "Scanner tidak tersedia: ${e.localizedMessage}. Menggunakan pemilih berkas...", Toast.LENGTH_SHORT).show()
+                    filePickerLauncher.launch("*/*")
+                }
+        } else {
+            filePickerLauncher.launch("*/*")
         }
     }
 
@@ -311,12 +420,160 @@ fun StudentDossierScreen(
                             doc = doc,
                             isUploadingThis = isUploading && activeUploadingDocType == doc.documentType,
                             onUploadClick = {
-                                activeUploadingDocType = doc.documentType
-                                filePickerLauncher.launch("image/*")
+                                selectedDocForUpload = doc
                             }
                         )
                     }
                 }
+            }
+        }
+    }
+
+    // CamScanner AI & File Picker Modal BottomSheet
+    if (selectedDocForUpload != null) {
+        val targetDoc = selectedDocForUpload!!
+        ModalBottomSheet(
+            onDismissRequest = { selectedDocForUpload = null },
+            containerColor = CosmicNavy,
+            dragHandle = { BottomSheetDefaults.DragHandle(color = GlassBorder) }
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 12.dp)
+                    .navigationBarsPadding()
+            ) {
+                Text(
+                    text = "Unggah ${targetDoc.label}",
+                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold),
+                    color = TextPrimary
+                )
+                Text(
+                    text = "Pilih metode pemindaian atau ambil berkas dari HP:",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(top = 2.dp, bottom = 16.dp)
+                )
+
+                // Option 1: AI Scanner (CamScanner Mode -> PDF)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            val docType = targetDoc.documentType
+                            selectedDocForUpload = null
+                            startDocScanner(docType)
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = CosmicBlack),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, StudentNeon.copy(alpha = 0.6f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(StudentNeon.copy(alpha = 0.2f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CameraAlt,
+                                contentDescription = null,
+                                tint = StudentNeon,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    text = "Scan Otomatis (Rapi & PDF)",
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary,
+                                    fontSize = 14.sp
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(Color(0xFF10B981).copy(alpha = 0.2f))
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        text = "CamScanner AI",
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color(0xFF10B981)
+                                    )
+                                }
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Otomatis merapikan sudut kertas, menghilangkan bayangan, mencerahkan teks, dan langsung membuat format PDF jernih.",
+                                fontSize = 11.sp,
+                                color = TextSecondary,
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Option 2: File Picker (Images & PDF)
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            activeUploadingDocType = targetDoc.documentType
+                            selectedDocForUpload = null
+                            filePickerLauncher.launch("*/*")
+                        },
+                    shape = RoundedCornerShape(12.dp),
+                    colors = CardDefaults.cardColors(containerColor = CosmicBlack),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .background(Color(0x22FFFFFF)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Folder,
+                                contentDescription = null,
+                                tint = TextPrimary,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Pilih Berkas dari HP (Galeri / PDF)",
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                fontSize = 14.sp
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "Pilih foto dokumen atau file PDF yang sudah tersimpan di memori HP Anda.",
+                                fontSize = 11.sp,
+                                color = TextSecondary,
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
             }
         }
     }
@@ -494,3 +751,15 @@ fun StatusPill(status: String) {
         )
     }
 }
+
+private fun findActivity(context: Context): Activity? {
+    var current = context
+    while (current is ContextWrapper) {
+        if (current is Activity) {
+            return current
+        }
+        current = current.baseContext
+    }
+    return null
+}
+
