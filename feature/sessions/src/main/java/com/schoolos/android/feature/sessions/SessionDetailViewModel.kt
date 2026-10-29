@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.LearningSession
 import com.schoolos.android.domain.model.SessionAttendance
 import com.schoolos.android.domain.repository.AcademicRepository
@@ -68,7 +69,10 @@ class SessionDetailViewModel @Inject constructor(
                     loadAttendanceAndStudents(session)
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Session not found")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.toHumanReadableError("Sesi pelajaran tidak ditemukan atau telah berakhir.")
+                    )
                 }
         }
     }
@@ -153,7 +157,7 @@ class SessionDetailViewModel @Inject constructor(
                 _state.value = _state.value.copy(
                     studentItems = currentList,
                     updatingStudentId = null,
-                    snackbarMessage = "Gagal menyimpan: ${e.message}",
+                    snackbarMessage = e.toHumanReadableError("Gagal menyimpan data presensi."),
                 )
             }
         }
@@ -183,7 +187,7 @@ class SessionDetailViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         studentItems = currentList,
                         isBulkSaving = false,
-                        snackbarMessage = "Gagal menyimpan: ${e.message}",
+                        snackbarMessage = e.toHumanReadableError("Gagal menyimpan presensi semua siswa."),
                     )
                 }
         }
@@ -211,7 +215,7 @@ class SessionDetailViewModel @Inject constructor(
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         isBulkSaving = false,
-                        snackbarMessage = "Gagal menyimpan: ${e.message}",
+                        snackbarMessage = e.toHumanReadableError("Gagal menyimpan presensi siswa."),
                     )
                 }
         }
@@ -232,7 +236,7 @@ class SessionDetailViewModel @Inject constructor(
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        snackbarMessage = "Gagal mengajukan keterangan: ${e.message}",
+                        snackbarMessage = e.toHumanReadableError("Gagal mengajukan keterangan izin/sakit."),
                     )
                 }
         }

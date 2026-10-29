@@ -3,6 +3,7 @@ package com.schoolos.android.feature.quizzes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.QuizAttempt
 import com.schoolos.android.domain.model.QuizQuestion
 import com.schoolos.android.domain.repository.AnswerInput
@@ -67,7 +68,10 @@ class QuizAttemptViewModel @Inject constructor(
                     )
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to load questions")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.toHumanReadableError("Gagal memuat butir soal ujian CBT. Periksa koneksi internet Anda.")
+                    )
                 }
         }
     }
@@ -153,7 +157,10 @@ class QuizAttemptViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isSubmitting = false, submitError = e.message ?: "Failed to submit")
+                    _state.value = _state.value.copy(
+                        isSubmitting = false,
+                        submitError = e.toHumanReadableError("Gagal mengirimkan lembar jawaban ujian CBT. Periksa koneksi internet Anda.")
+                    )
                 }
         }
     }

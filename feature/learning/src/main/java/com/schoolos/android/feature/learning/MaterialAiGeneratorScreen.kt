@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.designsystem.AiGenerationLoadingOverlay
 import com.schoolos.android.core.designsystem.AiGenerationType
 import com.schoolos.android.domain.model.AcademicClass
@@ -137,7 +138,7 @@ fun MaterialAiGeneratorScreen(
                     currentStep = MaterialGenStep.VERIFY
                 }.onFailure { err ->
                     if (err !is kotlinx.coroutines.CancellationException) {
-                        errorMessage = err.message ?: "Gagal menyusun materi pembelajaran dengan AI"
+                        errorMessage = err.toHumanReadableError(fallback = "Gagal menyusun materi pembelajaran dengan AI. Silakan periksa koneksi dan coba lagi.")
                         currentStep = MaterialGenStep.CONFIGURE
                     }
                 }

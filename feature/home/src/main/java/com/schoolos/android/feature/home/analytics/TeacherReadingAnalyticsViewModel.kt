@@ -5,6 +5,7 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.MaterialSummaryItem
 import com.schoolos.android.domain.model.StudentReadingRow
 import com.schoolos.android.domain.model.TeacherReadingMetrics
@@ -175,7 +176,7 @@ class TeacherReadingAnalyticsViewModel @Inject constructor(
                         it.copy(
                             isLoading = false,
                             isRefreshing = false,
-                            error = e.localizedMessage ?: "Gagal memuat analitik literasi guru.",
+                            error = e.toHumanReadableError("Gagal memuat analitik literasi guru. Periksa koneksi internet Anda."),
                         )
                     }
                 }
@@ -185,7 +186,7 @@ class TeacherReadingAnalyticsViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.localizedMessage ?: "Terjadi kesalahan sistem.",
+                        error = e.toHumanReadableError("Gagal memuat analitik literasi guru. Periksa koneksi internet Anda."),
                     )
                 }
             }
@@ -264,7 +265,7 @@ class TeacherReadingAnalyticsViewModel @Inject constructor(
             _state.update { it.copy(userMessage = "File rekap CSV berhasil disiapkan.") }
         } catch (e: Exception) {
             Timber.e(e, "Error exporting CSV")
-            _state.update { it.copy(userMessage = "Gagal mengekspor CSV: ${e.localizedMessage}") }
+            _state.update { it.copy(userMessage = e.toHumanReadableError("Gagal menyiapkan berkas rekap CSV.")) }
         }
     }
 }

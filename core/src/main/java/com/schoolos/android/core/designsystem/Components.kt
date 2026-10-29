@@ -44,10 +44,13 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.SportsBasketball
 import androidx.compose.material.icons.filled.Subject
-import androidx.compose.material.icons.filled.Translate
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import com.schoolos.android.core.common.toHumanReadableError
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -767,6 +770,7 @@ fun ErrorState(
     onRetry: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val humanizedMessage = remember(message) { message.toHumanReadableError() }
     Column(
         modifier = modifier.fillMaxSize().padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -784,7 +788,30 @@ fun ErrorState(
                 modifier = Modifier.size(36.dp), tint = NeonError)
         }
         Spacer(Modifier.height(16.dp))
-        Text(message, fontSize = 14.sp, color = NeonError, textAlign = TextAlign.Center, fontWeight = FontWeight.Medium)
+        Text(
+            text = humanizedMessage,
+            fontSize = 14.sp,
+            color = NeonError,
+            textAlign = TextAlign.Center,
+            fontWeight = FontWeight.Medium,
+            lineHeight = 20.sp,
+        )
+        if (onRetry != null) {
+            Spacer(Modifier.height(18.dp))
+            Button(
+                onClick = onRetry,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = NeonError.copy(alpha = 0.12f),
+                    contentColor = NeonError,
+                ),
+                shape = RoundedCornerShape(12.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, NeonError.copy(alpha = 0.3f)),
+            ) {
+                Icon(Icons.Default.Refresh, contentDescription = null, tint = NeonError, modifier = Modifier.size(16.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Coba Lagi", color = NeonError, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            }
+        }
     }
 }
 
@@ -1201,7 +1228,7 @@ fun subjectIcon(subject: String): ImageVector = when {
     subject.contains("Sains", ignoreCase = true)            -> Icons.Default.Science
     subject.contains("IPS", ignoreCase = true)              -> Icons.Default.Public
     subject.contains("Bahasa Indonesia", ignoreCase = true) -> Icons.Default.MenuBook
-    subject.contains("Bahasa Inggris", ignoreCase = true)   -> Icons.Default.Translate
+    subject.contains("Bahasa Inggris", ignoreCase = true)   -> Icons.Default.School
     subject.contains("PKn", ignoreCase = true)              -> Icons.Default.AccountBalance
     subject.contains("Agama", ignoreCase = true)            -> Icons.Default.Mosque
     subject.contains("Seni", ignoreCase = true)             -> Icons.Default.Palette

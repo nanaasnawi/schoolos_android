@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.GeneratedCurriculumQuestion
@@ -146,7 +147,7 @@ fun AssignmentAiGeneratorScreen(
                     currentStep = GeneratorStep.VERIFY
                 }.onFailure { err ->
                     if (err !is kotlinx.coroutines.CancellationException) {
-                        errorMessage = err.message ?: "Gagal menyusun tugas dengan AI"
+                        errorMessage = err.toHumanReadableError(fallback = "Gagal menyusun penugasan dengan AI. Silakan periksa koneksi dan coba lagi.")
                         currentStep = GeneratorStep.CONFIGURE
                     }
                 }
@@ -243,7 +244,7 @@ fun AssignmentAiGeneratorScreen(
                                     ) {
                                         Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = Color(0xFFDC2626))
                                         Spacer(Modifier.width(8.dp))
-                                        Text(errorMessage ?: "", color = Color(0xFF991B1B), fontSize = 12.sp)
+                                        Text(errorMessage?.toHumanReadableError() ?: "", color = Color(0xFF991B1B), fontSize = 12.sp)
                                     }
                                 }
                             }

@@ -2,6 +2,7 @@ package com.schoolos.android.feature.notifications
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.repository.NotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -47,7 +48,10 @@ class BroadcastViewModel @Inject constructor(
             ).onSuccess {
                 _state.value = _state.value.copy(isLoading = false, success = true)
             }.onFailure { e ->
-                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to send broadcast")
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.toHumanReadableError("Gagal mengirimkan pengumuman siaran. Periksa koneksi internet Anda.")
+                )
             }
         }
     }

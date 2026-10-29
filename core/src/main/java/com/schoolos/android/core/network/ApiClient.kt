@@ -63,6 +63,7 @@ class ApiClient @Inject constructor(
         OkHttpClient.Builder()
             .dns(ResilientDns())
             .addInterceptor(DynamicHostInterceptor(authManager))
+            .addInterceptor(NetworkErrorInterceptor())
             .addInterceptor(MaintenanceInterceptor(maintenanceManager))
             .addInterceptor(AuthInterceptor(authManager))
             .addInterceptor(RetryInterceptor())

@@ -2,6 +2,7 @@ package com.schoolos.android.feature.learning
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.MaterialType
@@ -214,7 +215,7 @@ class MaterialCreatorViewModel @Inject constructor(
             } catch (e: Exception) {
                 _state.value = _state.value.copy(
                     isSearchingYoutube = false,
-                    youtubeSearchError = e.message ?: "Terjadi kesalahan koneksi"
+                    youtubeSearchError = e.toHumanReadableError("Gagal mencari video YouTube.")
                 )
             }
         }
@@ -367,7 +368,7 @@ class MaterialCreatorViewModel @Inject constructor(
                 .onFailure { err ->
                     _state.value = _state.value.copy(
                         isUploadingFile = false,
-                        error = err.message ?: "Gagal mengunggah file materi: ${err.localizedMessage}"
+                        error = err.toHumanReadableError("Gagal mengunggah berkas materi.")
                     )
                 }
         }
@@ -415,7 +416,7 @@ class MaterialCreatorViewModel @Inject constructor(
             }.onFailure { err ->
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = err.message ?: "Gagal membuat materi ajar."
+                    error = err.toHumanReadableError("Gagal membuat materi ajar. Periksa koneksi internet Anda.")
                 )
             }
         }
@@ -461,7 +462,7 @@ class MaterialCreatorViewModel @Inject constructor(
             }.onFailure { err ->
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = err.message ?: "Gagal menugaskan materi buku perpustakaan."
+                    error = err.toHumanReadableError("Gagal menugaskan materi buku perpustakaan.")
                 )
             }
         }
@@ -510,8 +511,9 @@ class MaterialCreatorViewModel @Inject constructor(
                 _state.value = _state.value.copy(isGeneratingAi = false)
                 onSuccess(res.title, res.description)
             }.onFailure { err ->
-                _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
-                onError(err.message ?: "Gagal menyusun materi dengan AI")
+                val humanMsg = err.toHumanReadableError("Gagal menyusun materi pembelajaran dengan AI. Silakan coba kembali.")
+                _state.value = _state.value.copy(isGeneratingAi = false, error = humanMsg)
+                onError(humanMsg)
             }
         }
     }

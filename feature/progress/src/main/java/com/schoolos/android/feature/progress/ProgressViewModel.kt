@@ -2,6 +2,7 @@ package com.schoolos.android.feature.progress
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.Progress
 import com.schoolos.android.domain.repository.ProgressRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,7 +63,7 @@ class ProgressViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.message ?: "Failed to load progress",
+                        error = e.toHumanReadableError("Gagal memuat progres capaian belajar. Periksa koneksi internet Anda."),
                     )
                 }
         }

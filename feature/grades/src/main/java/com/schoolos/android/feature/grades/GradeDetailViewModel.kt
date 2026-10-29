@@ -3,6 +3,7 @@ package com.schoolos.android.feature.grades
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.GradeEntry
 import com.schoolos.android.domain.model.SubjectGradeDetail
 import com.schoolos.android.domain.model.SubjectGradeSummary
@@ -81,7 +82,10 @@ class GradeDetailViewModel @Inject constructor(
                     )
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to load grades")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.toHumanReadableError("Gagal memuat rincian nilai. Periksa koneksi internet Anda.")
+                    )
                 }
         }
     }

@@ -2,6 +2,7 @@ package com.schoolos.android.feature.quizzes
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.repository.AcademicRepository
@@ -151,12 +152,14 @@ class QuizBuilderViewModel @Inject constructor(
                     )
                     onSuccessCallback()
                 }.onFailure { err ->
-                    _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
-                    onError(err.message ?: "Gagal membuat draft kuis di server")
+                    val humanMsg = err.toHumanReadableError("Gagal menyimpan rancangan kuis CBT di server.")
+                    _state.value = _state.value.copy(isGeneratingAi = false, error = humanMsg)
+                    onError(humanMsg)
                 }
             }.onFailure { err ->
-                _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
-                onError(err.message ?: "Gagal memproses soal otomatis")
+                val humanMsg = err.toHumanReadableError("Gagal menyusun paket kuis CBT dengan AI.")
+                _state.value = _state.value.copy(isGeneratingAi = false, error = humanMsg)
+                onError(humanMsg)
             }
         }
     }
@@ -348,7 +351,10 @@ class QuizBuilderViewModel @Inject constructor(
                     currentStep = 2
                 )
             }.onFailure { e ->
-                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to create quiz")
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.toHumanReadableError("Gagal membuat kuis CBT baru. Periksa koneksi internet Anda.")
+                )
             }
         }
     }
@@ -401,7 +407,10 @@ class QuizBuilderViewModel @Inject constructor(
                 )
                 onSuccessCallback()
             }.onFailure { e ->
-                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Gagal menambahkan butir soal kuis.")
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.toHumanReadableError("Gagal menambahkan butir soal kuis.")
+                )
             }
         }
     }
@@ -536,7 +545,7 @@ class QuizBuilderViewModel @Inject constructor(
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         isLoading = false,
-                        error = e.message ?: "Gagal menerbitkan kuis"
+                        error = e.toHumanReadableError("Gagal menerbitkan kuis CBT.")
                     )
                 }
         }

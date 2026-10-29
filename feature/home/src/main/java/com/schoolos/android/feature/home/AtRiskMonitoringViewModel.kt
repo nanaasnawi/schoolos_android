@@ -2,6 +2,7 @@ package com.schoolos.android.feature.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AtRiskStats
 import com.schoolos.android.domain.model.AtRiskStudent
@@ -114,7 +115,7 @@ class AtRiskMonitoringViewModel @Inject constructor(
                             it.copy(
                                 isLoading = false,
                                 isRefreshing = false,
-                                error = err.message ?: "Gagal memuat data siswa perlu perhatian",
+                                error = err.toHumanReadableError("Gagal memuat data siswa perlu perhatian. Periksa koneksi internet Anda."),
                                 availableClasses = classes,
                             )
                         }
@@ -126,7 +127,7 @@ class AtRiskMonitoringViewModel @Inject constructor(
                     it.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.message ?: "Gagal memuat data siswa perlu perhatian"
+                        error = e.toHumanReadableError("Gagal memuat data siswa perlu perhatian. Periksa koneksi internet Anda.")
                     )
                 }
             }
@@ -188,7 +189,7 @@ class AtRiskMonitoringViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             sendingStudentId = null,
-                            userMessage = "Gagal mengirim pengingat: ${err.message}"
+                            userMessage = err.toHumanReadableError("Gagal mengirim pengingat ke siswa.")
                         )
                     }
                 }
@@ -223,7 +224,7 @@ class AtRiskMonitoringViewModel @Inject constructor(
                     _state.update {
                         it.copy(
                             isSendingBatch = false,
-                            userMessage = "Gagal mengirim pengingat serentak: ${err.message}"
+                            userMessage = err.toHumanReadableError("Gagal mengirim pengingat serentak.")
                         )
                     }
                 }

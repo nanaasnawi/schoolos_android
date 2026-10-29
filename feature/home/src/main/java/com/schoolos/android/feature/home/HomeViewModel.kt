@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.auth.AuthState
 import com.schoolos.android.core.notification.TeacherScheduleReminderManager
 import com.schoolos.android.core.reading.ReadingHistoryManager
@@ -231,7 +232,7 @@ class HomeViewModel @Inject constructor(
                     _state.update { it.copy(schoolHealthMetrics = metrics) }
                 }
             }.onFailure { err ->
-                onComplete("Gagal mengeksekusi keputusan: ${err.message ?: "Terjadi kesalahan sistem"}")
+                onComplete(err.toHumanReadableError("Gagal mengeksekusi keputusan pimpinan."))
             }
         }
     }
