@@ -63,7 +63,7 @@ fun GradebookListScreen(
         topBar = {
             ExecutiveTopBar(
                 title = if (isPrincipal) "Buku Nilai (Teacher Gradebook)"
-                    else if (isTeacher) "Buku Nilai Guru"
+                    else if (isTeacher) "Analisis & Buku Nilai Guru"
                     else "Buku Nilai",
                 subtitle = if (isPrincipal || isTeacher) "Standar Kurikulum Merdeka (Kemendikdasmen RI)"
                     else "Rekapitulasi Capaian Modul",
