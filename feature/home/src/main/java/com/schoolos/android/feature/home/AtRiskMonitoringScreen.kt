@@ -88,6 +88,7 @@ import com.schoolos.android.domain.model.AtRiskStudent
 
 @Composable
 fun AtRiskMonitoringScreen(
+    showHeader: Boolean = true,
     onBack: (() -> Unit)? = null,
     onNavigateToStudentDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)? = null,
     viewModel: AtRiskMonitoringViewModel = hiltViewModel(),
@@ -108,12 +109,14 @@ fun AtRiskMonitoringScreen(
         containerColor = CosmicBlack,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            AtRiskTopHeader(
-                onBack = onBack,
-                isDark = isDark,
-                isRefreshing = state.isRefreshing,
-                onRefresh = { viewModel.refresh() }
-            )
+            if (showHeader) {
+                AtRiskTopHeader(
+                    onBack = onBack,
+                    isDark = isDark,
+                    isRefreshing = state.isRefreshing,
+                    onRefresh = { viewModel.refresh() }
+                )
+            }
         }
     ) { padding ->
         LazyColumn(

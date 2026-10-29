@@ -25,6 +25,7 @@ import com.schoolos.android.feature.auth.LoginScreen
 import com.schoolos.android.feature.grades.GradeDetailScreen
 import com.schoolos.android.feature.grades.GradebookListScreen
 import com.schoolos.android.feature.home.AtRiskMonitoringScreen
+import com.schoolos.android.feature.home.analytics.TeacherAnalyticsHubScreen
 import com.schoolos.android.feature.home.HomeScreen
 import com.schoolos.android.feature.home.RombelStudentsScreen
 import com.schoolos.android.feature.home.StudentDetailScreen
@@ -510,16 +511,63 @@ fun NavGraph(
                 QuizResultScreen(onBack = { navController.popBackStack(Screen.Home.route, false) })
             }
 
+            // Teacher Analytics Hub (Literasi & Baca, Early Warning, Buku Nilai)
+            composable(Screen.TeacherAnalytics.route) {
+                TeacherAnalyticsHubScreen(
+                    initialTab = 0,
+                    onBack = null,
+                    onNavigateToStudentDetail = { studentId, name, nisn, className ->
+                        navController.navigate(
+                            Screen.StudentDetail.createRoute(
+                                studentId = studentId,
+                                studentName = name,
+                                nisn = nisn,
+                                gender = "",
+                                className = className,
+                                phone = "",
+                                email = "",
+                            )
+                        )
+                    },
+                    onNavigateToGradeDetail = { subjectId, subjectName ->
+                        navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
+                    }
+                )
+            }
+
             // Gradebook
             composable(Screen.Grades.route) {
                 val isPrincipal = authState?.isPrincipal == true
                 val isTeacher = authState?.isTeacher == true
-                GradebookListScreen(
-                    onBack = if (isPrincipal || isTeacher) null else { { navController.popBackStack() } },
-                    onSubjectClick = { subjectId, subjectName ->
-                        navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
-                    },
-                )
+                if (isTeacher) {
+                    TeacherAnalyticsHubScreen(
+                        initialTab = 2,
+                        onBack = null,
+                        onNavigateToStudentDetail = { studentId, name, nisn, className ->
+                            navController.navigate(
+                                Screen.StudentDetail.createRoute(
+                                    studentId = studentId,
+                                    studentName = name,
+                                    nisn = nisn,
+                                    gender = "",
+                                    className = className,
+                                    phone = "",
+                                    email = "",
+                                )
+                            )
+                        },
+                        onNavigateToGradeDetail = { subjectId, subjectName ->
+                            navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
+                        }
+                    )
+                } else {
+                    GradebookListScreen(
+                        onBack = if (isPrincipal) null else { { navController.popBackStack() } },
+                        onSubjectClick = { subjectId, subjectName ->
+                            navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
+                        },
+                    )
+                }
             }
             composable(
                 route = Screen.GradeDetail.route,
@@ -760,22 +808,46 @@ fun NavGraph(
             // Early Warning System / At-Risk Monitoring Screen (Halaman Warning)
             composable(Screen.AtRisk.route) {
                 val isPrincipal = authState?.isPrincipal == true
-                AtRiskMonitoringScreen(
-                    onBack = if (isPrincipal) null else { { navController.popBackStack() } },
-                    onNavigateToStudentDetail = { studentId, name, nisn, className ->
-                        navController.navigate(
-                            Screen.StudentDetail.createRoute(
-                                studentId = studentId,
-                                studentName = name,
-                                nisn = nisn,
-                                gender = "",
-                                className = className,
-                                phone = "",
-                                email = "",
+                val isTeacher = authState?.isTeacher == true
+                if (isTeacher) {
+                    TeacherAnalyticsHubScreen(
+                        initialTab = 1,
+                        onBack = { navController.popBackStack() },
+                        onNavigateToStudentDetail = { studentId, name, nisn, className ->
+                            navController.navigate(
+                                Screen.StudentDetail.createRoute(
+                                    studentId = studentId,
+                                    studentName = name,
+                                    nisn = nisn,
+                                    gender = "",
+                                    className = className,
+                                    phone = "",
+                                    email = "",
+                                )
                             )
-                        )
-                    }
-                )
+                        },
+                        onNavigateToGradeDetail = { subjectId, subjectName ->
+                            navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
+                        }
+                    )
+                } else {
+                    AtRiskMonitoringScreen(
+                        onBack = if (isPrincipal) null else { { navController.popBackStack() } },
+                        onNavigateToStudentDetail = { studentId, name, nisn, className ->
+                            navController.navigate(
+                                Screen.StudentDetail.createRoute(
+                                    studentId = studentId,
+                                    studentName = name,
+                                    nisn = nisn,
+                                    gender = "",
+                                    className = className,
+                                    phone = "",
+                                    email = "",
+                                )
+                            )
+                        }
+                    )
+                }
             }
 
             // Rombel Students List (Homeroom Teacher View)
