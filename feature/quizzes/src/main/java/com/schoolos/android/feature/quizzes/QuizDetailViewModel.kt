@@ -3,6 +3,7 @@ package com.schoolos.android.feature.quizzes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.Quiz
 import com.schoolos.android.domain.model.QuizAttempt
 import com.schoolos.android.domain.repository.QuizRepository
@@ -120,7 +121,10 @@ class QuizDetailViewModel @Inject constructor(
                     )
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Quiz not found")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.toHumanReadableError("Kuis CBT tidak ditemukan atau telah dihapus.")
+                    )
                 }
         }
     }
@@ -132,7 +136,9 @@ class QuizDetailViewModel @Inject constructor(
                     load()
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(error = e.message ?: "Gagal menilai pengerjaan kuis")
+                    _state.value = _state.value.copy(
+                        error = e.toHumanReadableError("Gagal menilai pengerjaan kuis.")
+                    )
                 }
         }
     }
@@ -146,7 +152,7 @@ class QuizDetailViewModel @Inject constructor(
                 if (verifyRes.isFailure) {
                     _state.value = _state.value.copy(
                         isStarting = false,
-                        startError = verifyRes.exceptionOrNull()?.message ?: "Token ujian CBT tidak valid",
+                        startError = verifyRes.exceptionOrNull().toHumanReadableError("Token ujian CBT tidak valid."),
                     )
                     return@launch
                 }
@@ -156,9 +162,10 @@ class QuizDetailViewModel @Inject constructor(
                     _state.value = _state.value.copy(isStarting = false, attempt = attempt)
                 }
                 .onFailure { e ->
-                    val errorMsg = e.message ?: "Gagal memulai kuis"
-                    val isMaxLimit = errorMsg.contains("batas maksimal", ignoreCase = true) ||
-                            errorMsg.contains("Maximum attempt limit", ignoreCase = true)
+                    val rawMsg = e?.message ?: ""
+                    val isMaxLimit = rawMsg.contains("batas maksimal", ignoreCase = true) ||
+                            rawMsg.contains("Maximum attempt limit", ignoreCase = true)
+                    val errorMsg = e.toHumanReadableError("Gagal memulai kuis CBT.")
                     _state.value = _state.value.copy(
                         isStarting = false,
                         startError = errorMsg,
@@ -177,7 +184,10 @@ class QuizDetailViewModel @Inject constructor(
                     load()
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isPublishing = false, startError = e.message ?: "Gagal mempublikasikan kuis")
+                    _state.value = _state.value.copy(
+                        isPublishing = false,
+                        startError = e.toHumanReadableError("Gagal mempublikasikan kuis.")
+                    )
                 }
         }
     }
@@ -191,7 +201,10 @@ class QuizDetailViewModel @Inject constructor(
                     onSuccess()
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isLoading = false, startError = e.message ?: "Gagal menghapus kuis")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        startError = e.toHumanReadableError("Gagal menghapus kuis.")
+                    )
                 }
         }
     }

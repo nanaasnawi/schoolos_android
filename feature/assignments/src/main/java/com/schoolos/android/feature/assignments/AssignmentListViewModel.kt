@@ -3,6 +3,7 @@ package com.schoolos.android.feature.assignments
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.repository.AssignmentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -103,7 +104,7 @@ class AssignmentListViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.message ?: "Failed to load assignments",
+                        error = e.toHumanReadableError("Gagal memuat daftar penugasan. Periksa koneksi internet Anda."),
                     )
                 }
         }

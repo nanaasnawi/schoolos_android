@@ -4,6 +4,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.designsystem.BaseNeonBlue
 import com.schoolos.android.core.designsystem.StudentPrimary
 import com.schoolos.android.core.designsystem.TeacherPrimary
@@ -108,7 +109,7 @@ class LearningViewModel @Inject constructor(
                         .onFailure { err ->
                             hasLoadedInitialData = true
                             _state.value = _state.value.copy(
-                                error = err.message ?: "Gagal memuat modul pembelajaran."
+                                error = err.toHumanReadableError(fallback = "Gagal memuat modul pembelajaran. Periksa koneksi internet Anda.")
                             )
                         }
                 }
@@ -134,7 +135,7 @@ class LearningViewModel @Inject constructor(
                         }
                         .onFailure { err ->
                             _state.value = _state.value.copy(
-                                error = err.message ?: "Gagal memperbarui modul pembelajaran."
+                                error = err.toHumanReadableError(fallback = "Gagal memperbarui modul pembelajaran. Periksa koneksi internet Anda.")
                             )
                         }
                 }
@@ -286,7 +287,7 @@ class LearningViewModel @Inject constructor(
                         if (it.id == id) it.copy(isCompleted = currentCompleted) else it
                     }
                     filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
-                    onResult?.invoke(false, err.message ?: "Gagal menandai materi selesai")
+                    onResult?.invoke(false, err.toHumanReadableError(fallback = "Gagal menandai materi selesai. Silakan coba lagi."))
                 }
         }
     }
@@ -383,8 +384,9 @@ class LearningViewModel @Inject constructor(
                     onResult(true, null)
                 }
                 .onFailure { err ->
-                    _state.value = _state.value.copy(isLoading = false, error = err.message)
-                    onResult(false, err.message)
+                    val humanMsg = err.toHumanReadableError("Gagal menghapus materi pembelajaran.")
+                    _state.value = _state.value.copy(isLoading = false, error = humanMsg)
+                    onResult(false, humanMsg)
                 }
         }
     }
@@ -414,8 +416,9 @@ class LearningViewModel @Inject constructor(
                     onResult(true, null)
                 }
                 .onFailure { err ->
-                    _state.value = _state.value.copy(isLoading = false, error = err.message)
-                    onResult(false, err.message)
+                    val humanMsg = err.toHumanReadableError("Gagal memperbarui materi pembelajaran.")
+                    _state.value = _state.value.copy(isLoading = false, error = humanMsg)
+                    onResult(false, humanMsg)
                 }
         }
     }

@@ -2,6 +2,7 @@ package com.schoolos.android.feature.assignments
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.AssignmentChoice
@@ -123,8 +124,9 @@ class AssignmentCreatorViewModel @Inject constructor(
                 )
                 onGenerated(result.title, result.instructions ?: "")
             }.onFailure { err ->
-                _state.value = _state.value.copy(isGeneratingAi = false, error = err.message)
-                onError(err.message ?: "Gagal membuat tugas otomatis")
+                val humanMsg = err.toHumanReadableError("Gagal menyusun penugasan dengan AI. Silakan coba kembali.")
+                _state.value = _state.value.copy(isGeneratingAi = false, error = humanMsg)
+                onError(humanMsg)
             }
         }
     }
@@ -356,7 +358,10 @@ class AssignmentCreatorViewModel @Inject constructor(
             ).onSuccess {
                 _state.value = _state.value.copy(isLoading = false, success = true)
             }.onFailure { e ->
-                _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Failed to create assignment")
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.toHumanReadableError("Gagal membuat penugasan baru. Periksa koneksi internet Anda.")
+                )
             }
         }
     }

@@ -3,6 +3,7 @@ package com.schoolos.android.feature.auth
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.common.BuildConfig
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.domain.repository.AuthRepository
@@ -236,12 +237,7 @@ class LoginViewModel @Inject constructor(
                         }
                     }
                 } catch (e: Exception) {
-                    val msg = e.message ?: ""
-                    testMsg = if (msg.contains("Unable to resolve host", ignoreCase = true) || msg.contains("No address associated", ignoreCase = true)) {
-                        "URL disimpan, namun domain server tidak dapat ditemukan (periksa koneksi/DNS)."
-                    } else {
-                        "URL disimpan, namun server belum merespons: ${msg.ifBlank { "Connection error" }}"
-                    }
+                    testMsg = "URL disimpan, namun " + e.toHumanReadableError("server sekolah belum dapat dijangkau saat ini.")
                 }
             }
 
@@ -283,18 +279,7 @@ class LoginViewModel @Inject constructor(
             authRepository.login(s.username.trim(), s.password)
                 .onSuccess { _state.value = _state.value.copy(isLoading = false, isLoggedIn = true) }
                 .onFailure { e ->
-                    val errMsg = e.message ?: ""
-                    val formatted = when {
-                        errMsg.contains("Failed to connect", ignoreCase = true)
-                            || errMsg.contains("CLEARTEXT", ignoreCase = true)
-                            || errMsg.contains("Connection refused", ignoreCase = true)
-                            || errMsg.contains("timeout", ignoreCase = true)
-                            || errMsg.contains("Unable to resolve host", ignoreCase = true)
-                            || errMsg.contains("No address associated", ignoreCase = true) -> {
-                            "Gagal terhubung ke server. Periksa koneksi internet Anda atau hubungi Administrator Sekolah."
-                        }
-                        else -> errMsg.ifBlank { "Login gagal. Silakan periksa kembali akun Anda." }
-                    }
+                    val formatted = e.toHumanReadableError(fallback = "Nama pengguna atau kata sandi tidak cocok. Silakan periksa kembali.")
                     _state.value = _state.value.copy(
                         isLoading = false,
                         error = formatted
@@ -340,18 +325,7 @@ class LoginViewModel @Inject constructor(
                     _state.value = _state.value.copy(isLoading = false, isLoggedIn = true)
                 }
                 .onFailure { e ->
-                    val errMsg = e.message ?: ""
-                    val formatted = when {
-                        errMsg.contains("Failed to connect", ignoreCase = true)
-                            || errMsg.contains("CLEARTEXT", ignoreCase = true)
-                            || errMsg.contains("Connection refused", ignoreCase = true)
-                            || errMsg.contains("timeout", ignoreCase = true)
-                            || errMsg.contains("Unable to resolve host", ignoreCase = true)
-                            || errMsg.contains("No address associated", ignoreCase = true) -> {
-                            "Gagal terhubung ke server. Periksa koneksi internet Anda atau hubungi Administrator Sekolah."
-                        }
-                        else -> errMsg.ifBlank { "QR Login gagal. Silakan gunakan QR Code aktif yang sah." }
-                    }
+                    val formatted = e.toHumanReadableError(fallback = "QR Login gagal. Silakan gunakan QR Code aktif yang sah.")
                     _state.value = _state.value.copy(
                         isLoading = false,
                         error = formatted

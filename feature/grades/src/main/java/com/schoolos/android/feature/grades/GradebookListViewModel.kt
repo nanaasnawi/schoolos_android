@@ -2,6 +2,7 @@ package com.schoolos.android.feature.grades
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.ClassStudent
@@ -344,7 +345,7 @@ class GradebookListViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isSaving = false,
-                        error = "Gagal menyimpan nilai: ${err.message}"
+                        error = err.toHumanReadableError("Gagal menyimpan nilai siswa. Periksa koneksi internet Anda.")
                     )
                 }
             }
@@ -524,7 +525,7 @@ class GradebookListViewModel @Inject constructor(
                         availableSubjects = allSubjects,
                         selectedSubjectId = selectedSubjId,
                         selectedSubjectName = selectedSubjName,
-                        error = if (_state.value.subjects.isEmpty() && emptySummaries.isEmpty()) e.message ?: "Gagal memuat buku nilai" else null,
+                        error = if (_state.value.subjects.isEmpty() && emptySummaries.isEmpty()) e.toHumanReadableError("Gagal memuat buku nilai. Periksa koneksi internet Anda.") else null,
                     )
                 }
         }

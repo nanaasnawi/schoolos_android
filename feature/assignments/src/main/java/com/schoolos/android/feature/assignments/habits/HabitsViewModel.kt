@@ -3,6 +3,7 @@ package com.schoolos.android.feature.assignments.habits
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.CanonicalHabitsList
 import com.schoolos.android.domain.model.HabitEntry
 import com.schoolos.android.domain.repository.HabitRepository
@@ -232,7 +233,7 @@ class HabitsViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isSaving = false,
-                        errorMessage = err.message ?: "Gagal menyimpan jurnal kebiasaan"
+                        errorMessage = err.toHumanReadableError("Gagal menyimpan jurnal kebiasaan. Periksa koneksi internet Anda.")
                     )
                 }
             }
@@ -282,7 +283,7 @@ class HabitsViewModel @Inject constructor(
                 _state.update {
                     it.copy(
                         isVerifying = false,
-                        errorMessage = err.message ?: "Gagal memverifikasi jurnal ananda"
+                        errorMessage = err.toHumanReadableError("Gagal memverifikasi jurnal ananda. Periksa koneksi internet Anda.")
                     )
                 }
             }

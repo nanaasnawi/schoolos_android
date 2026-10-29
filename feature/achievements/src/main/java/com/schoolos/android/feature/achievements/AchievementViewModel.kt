@@ -2,6 +2,7 @@ package com.schoolos.android.feature.achievements
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.Achievement
 import com.schoolos.android.domain.repository.AchievementRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -60,7 +61,7 @@ class AchievementViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.message ?: "Failed to load achievements",
+                        error = e.toHumanReadableError("Gagal memuat data pencapaian siswa. Periksa koneksi internet Anda."),
                     )
                 }
         }

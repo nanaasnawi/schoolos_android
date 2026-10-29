@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.common.toHumanReadableError
+import androidx.compose.runtime.remember
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.TextPrimary
@@ -91,8 +93,9 @@ fun LoginErrorToast(
                             modifier = Modifier.size(18.dp),
                         )
                     }
+                    val displayMessage = remember(errorMessage) { errorMessage.toHumanReadableError() }
                     Text(
-                        text = errorMessage,
+                        text = displayMessage,
                         color = TextPrimary,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,

@@ -3,6 +3,7 @@ package com.schoolos.android.feature.home
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.Achievement
 import com.schoolos.android.domain.model.ClassStudent
 import com.schoolos.android.domain.model.OfficialStudentBiodata
@@ -113,7 +114,7 @@ class StudentDetailViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        errorMessage = e.message ?: "Gagal memuat rincian data siswa"
+                        errorMessage = e.toHumanReadableError("Gagal memuat rincian data siswa. Periksa koneksi internet Anda.")
                     )
                 }
             }

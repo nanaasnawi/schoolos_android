@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
@@ -163,7 +164,7 @@ fun QuizAiGeneratorScreen(
                     currentStep = QuizGenStep.VERIFY
                 }.onFailure { err ->
                     if (err !is kotlinx.coroutines.CancellationException) {
-                        errorMessage = err.message ?: "Gagal menyusun paket kuis CBT dengan AI"
+                        errorMessage = err.toHumanReadableError(fallback = "Gagal menyusun paket kuis CBT dengan AI. Silakan periksa koneksi dan coba lagi.")
                         currentStep = QuizGenStep.CONFIGURE
                     }
                 }

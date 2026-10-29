@@ -2,6 +2,7 @@ package com.schoolos.android.feature.notifications
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.Notification
 import com.schoolos.android.domain.repository.NotificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -62,7 +63,7 @@ class NotificationListViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.message ?: "Failed to load notifications",
+                        error = e.toHumanReadableError(fallback = "Gagal memuat notifikasi. Periksa koneksi internet Anda."),
                     )
                 }
             repository.getUnreadCount().onSuccess { count ->

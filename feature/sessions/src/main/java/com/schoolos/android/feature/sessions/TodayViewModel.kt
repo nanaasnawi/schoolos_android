@@ -3,6 +3,7 @@ package com.schoolos.android.feature.sessions
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.LearningSession
 import com.schoolos.android.domain.repository.SessionRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -100,7 +101,7 @@ class TodayViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.message ?: "Gagal memuat jadwal pelajaran",
+                        error = e.toHumanReadableError("Gagal memuat jadwal pelajaran. Periksa koneksi internet Anda."),
                     )
                 }
         }

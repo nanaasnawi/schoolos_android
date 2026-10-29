@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.common.Settings
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.common.SettingsManager
 import com.schoolos.android.domain.model.GamificationStatus
 import com.schoolos.android.domain.model.OfficialStudentBiodata
@@ -159,7 +160,7 @@ class ProfileViewModel @Inject constructor(
                     .onFailure { err ->
                         _state.value = _state.value.copy(
                             officialBiodataLoading = false,
-                            officialBiodataError = err.localizedMessage ?: "Gagal memuat biodata pokok resmi.",
+                            officialBiodataError = err.toHumanReadableError(fallback = "Gagal memuat biodata pokok resmi."),
                         )
                     }
             }
@@ -181,7 +182,7 @@ class ProfileViewModel @Inject constructor(
                     .onFailure { err ->
                         _state.value = _state.value.copy(
                             officialTeacherBiodataLoading = false,
-                            officialTeacherBiodataError = err.localizedMessage ?: "Gagal memuat profil resmi GTK.",
+                            officialTeacherBiodataError = err.toHumanReadableError(fallback = "Gagal memuat profil resmi GTK."),
                         )
                     }
             }
@@ -203,7 +204,7 @@ class ProfileViewModel @Inject constructor(
                     .onFailure { err ->
                         _state.value = _state.value.copy(
                             studentDossierLoading = false,
-                            studentDossierError = err.localizedMessage ?: "Gagal memuat berkas persyaratan siswa.",
+                            studentDossierError = err.toHumanReadableError(fallback = "Gagal memuat berkas persyaratan siswa."),
                         )
                     }
             }
@@ -228,7 +229,7 @@ class ProfileViewModel @Inject constructor(
                 }
                 .onFailure { err ->
                     _state.value = _state.value.copy(isUploadingDocument = false)
-                    onComplete(false, err.localizedMessage ?: "Gagal mengunggah berkas.")
+                    onComplete(false, err.toHumanReadableError(fallback = "Gagal mengunggah berkas."))
                 }
         }
     }
@@ -293,7 +294,7 @@ class ProfileViewModel @Inject constructor(
                 }
                 .onFailure { error ->
                     isUploadingPhoto.value = false
-                    onComplete(false, error.localizedMessage ?: "Gagal mengunggah foto profil.")
+                    onComplete(false, error.toHumanReadableError(fallback = "Gagal mengunggah foto profil."))
                 }
         }
     }
@@ -322,10 +323,10 @@ class ProfileViewModel @Inject constructor(
                     } catch (_: Exception) {}
                     onComplete(true, null)
                 }.onFailure { err ->
-                    onComplete(false, err.localizedMessage ?: "Gagal memperbarui data di server.")
+                    onComplete(false, err.toHumanReadableError(fallback = "Gagal memperbarui data di server."))
                 }
             } catch (e: Exception) {
-                onComplete(false, e.localizedMessage ?: "Gagal memperbarui data.")
+                onComplete(false, e.toHumanReadableError(fallback = "Gagal memperbarui data."))
             }
         }
     }

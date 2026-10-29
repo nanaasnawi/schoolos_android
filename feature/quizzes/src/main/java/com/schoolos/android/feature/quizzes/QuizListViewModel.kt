@@ -3,6 +3,7 @@ package com.schoolos.android.feature.quizzes
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.Quiz
 import com.schoolos.android.domain.repository.QuizRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -121,7 +122,7 @@ class QuizListViewModel @Inject constructor(
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
-                        error = e.message ?: "Failed to load quizzes",
+                        error = e.toHumanReadableError("Gagal memuat daftar kuis CBT. Periksa koneksi internet Anda."),
                     )
                 }
         }

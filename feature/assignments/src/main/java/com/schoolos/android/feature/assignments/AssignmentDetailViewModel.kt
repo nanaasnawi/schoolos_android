@@ -3,6 +3,7 @@ package com.schoolos.android.feature.assignments
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.AssignmentSubmission
 import com.schoolos.android.domain.repository.AssignmentRepository
@@ -79,7 +80,10 @@ class AssignmentDetailViewModel @Inject constructor(
                     loadSubmissions()
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isLoading = false, error = e.message ?: "Assignment not found")
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.toHumanReadableError("Penugasan tidak ditemukan atau telah dihapus.")
+                    )
                 }
         }
     }
@@ -163,7 +167,7 @@ class AssignmentDetailViewModel @Inject constructor(
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         isUploadingFile = false,
-                        submitError = e.message ?: "Gagal mengunggah lampiran berkas.",
+                        submitError = e.toHumanReadableError("Gagal mengunggah berkas lampiran. Silakan coba kembali."),
                     )
                 }
         }
@@ -235,7 +239,10 @@ class AssignmentDetailViewModel @Inject constructor(
                     }
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isSubmitting = false, submitError = e.message ?: "Failed to submit")
+                    _state.value = _state.value.copy(
+                        isSubmitting = false,
+                        submitError = e.toHumanReadableError("Gagal mengumpulkan penugasan. Periksa koneksi internet Anda.")
+                    )
                 }
         }
     }
@@ -257,7 +264,10 @@ class AssignmentDetailViewModel @Inject constructor(
                     loadSubmissions()
                 }
                 .onFailure { e ->
-                    _state.value = _state.value.copy(isGrading = false, gradeError = e.message ?: "Gagal menyimpan nilai")
+                    _state.value = _state.value.copy(
+                        isGrading = false,
+                        gradeError = e.toHumanReadableError("Gagal menyimpan nilai tugas. Silakan coba lagi.")
+                    )
                 }
         }
     }
