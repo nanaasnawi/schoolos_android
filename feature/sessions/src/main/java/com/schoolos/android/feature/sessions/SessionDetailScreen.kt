@@ -1,66 +1,21 @@
 package com.schoolos.android.feature.sessions
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Snackbar
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface
-import com.schoolos.android.core.designsystem.ErrorState
-import com.schoolos.android.core.designsystem.ExecutiveTopBar
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.LoadingState
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.StatusChip
-import com.schoolos.android.core.designsystem.StudentNeon
-import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
-import com.schoolos.android.core.designsystem.subjectGradient
-import com.schoolos.android.core.designsystem.subjectIcon
+import com.schoolos.android.core.designsystem.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SessionDetailScreen(
-    onBack: () -> Unit = {},
+    onBack: UnitCallback = {},
     onOpenAssignments: (String, String?) -> Unit = { _, _ -> },
     onOpenQuizzes: (String, String?) -> Unit = { _, _ -> },
     onOpenMaterials: (String, String?) -> Unit = { _, _ -> },
@@ -88,15 +43,16 @@ fun SessionDetailScreen(
             SnackbarHost(snackbarHostState) { data ->
                 Snackbar(
                     snackbarData = data,
-                    containerColor = androidx.compose.ui.graphics.Color(0xFF1E2A3A),
+                    containerColor = CosmicNavy,
                     contentColor = TextPrimary,
                 )
             }
         },
         topBar = {
+            // Clean TopBar: "Detail Jadwal" with no redundant duplicate subject title
             ExecutiveTopBar(
-                title = subject,
-                subtitle = if (isPrincipal) "Monitoring Sesi • $roomText" else "Jadwal Pembelajaran • $roomText",
+                title = "Detail Jadwal",
+                subtitle = if (isPrincipal) "Supervisi Kelas • $roomText" else "Jadwal Pembelajaran • $roomText",
                 onBack = onBack,
             )
         }
@@ -112,9 +68,6 @@ fun SessionDetailScreen(
                     ErrorState(message = state.error!!, onRetry = viewModel::load)
                 }
                 session != null -> {
-                    val s = session
-                    val gradient = subjectGradient(subject)
-                    val icon = subjectIcon(subject)
                     val isTeacher = isTeacherRole(state.userRole) || isPrincipal
                     val accentColor = if (isTeacher) TeacherNeon else StudentNeon
 
@@ -131,79 +84,10 @@ fun SessionDetailScreen(
                             .padding(horizontal = 14.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // ── 1. COMPACT EXECUTIVE SESSION HERO CARD ────────────
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(CosmicNavy, CosmicSurface)
-                                    )
-                                )
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                                .padding(16.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(52.dp)
-                                        .clip(RoundedCornerShape(14.dp))
-                                        .background(Brush.linearGradient(gradient))
-                                        .border(1.dp, Color.White.copy(alpha = 0.2f), RoundedCornerShape(14.dp)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = null,
-                                        tint = Color.White,
-                                        modifier = Modifier.size(26.dp)
-                                    )
-                                }
-
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(
-                                        text = subject,
-                                        fontSize = 17.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = TextPrimary,
-                                        lineHeight = 22.sp,
-                                    )
-                                    Spacer(Modifier.height(3.dp))
-                                    Text(
-                                        text = roomText,
-                                        fontSize = 12.sp,
-                                        color = TextSecondary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                    Spacer(Modifier.height(8.dp))
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        StatusChip(label = s.status)
-                                        Text(
-                                            text = "•",
-                                            fontSize = 11.sp,
-                                            color = TextTertiary,
-                                        )
-                                        Text(
-                                            text = "Sesi Terjadwal Resmi",
-                                            fontSize = 11.sp,
-                                            color = TextTertiary
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        // ── 2. ROLE-BASED SESSION CONTENT ─────────────────────
+                        // ── ROLE-BASED SESSION CONTENT ─────────────────────
                         if (isTeacher) {
                             TeacherSessionDetailContent(
-                                session = s,
+                                session = session,
                                 attendance = state.attendance,
                                 students = state.studentItems,
                                 onUpdateAttendance = viewModel::updateAttendance,
@@ -217,7 +101,7 @@ fun SessionDetailScreen(
                             )
                         } else {
                             StudentSessionDetailContent(
-                                session = s,
+                                session = session,
                                 attendance = state.attendance,
                                 myAttendance = state.myAttendance,
                                 onOpenAssignments = openAssignments,
@@ -235,3 +119,5 @@ fun SessionDetailScreen(
         }
     }
 }
+
+typealias UnitCallback = () -> Unit

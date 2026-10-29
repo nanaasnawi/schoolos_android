@@ -14,6 +14,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -39,9 +40,6 @@ import androidx.compose.ui.window.Dialog
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 
-private val IndigoGradient = Brush.linearGradient(
-    colors = listOf(Color(0xFF4338CA), Color(0xFF2563EB), Color(0xFF0891B2))
-)
 private val IndigoPrimary  = Color(0xFF4338CA)
 private val IndigoAccent   = Color(0xFF2563EB)
 private val CyanAccent     = Color(0xFF0891B2)
@@ -221,21 +219,26 @@ fun AssignmentCreatorScreen(
                 ) {
                     OutlinedButton(
                         onClick = { showPreview = !showPreview },
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.6f))
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (showPreview) NeonWarning else TextPrimary
+                        ),
+                        border = androidx.compose.foundation.BorderStroke(
+                            1.dp,
+                            if (showPreview) NeonWarning.copy(alpha = 0.5f) else GlassBorder
+                        )
                     ) {
                         Icon(
-                            if (showPreview) Icons.Default.Close else Icons.Default.Visibility,
+                            if (showPreview) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = null,
                             modifier = Modifier.size(17.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            if (showPreview) "Tutup" else "Preview",
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 13.sp
+                            if (showPreview) "Sembunyikan" else "Lihat Preview",
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 12.sp
                         )
                     }
 
@@ -248,19 +251,20 @@ fun AssignmentCreatorScreen(
                             showPrePublishReview = true
                         },
                         enabled = title.isNotBlank() && !state.isLoading,
-                        shape = RoundedCornerShape(14.dp),
-                        modifier = Modifier.weight(1.4f).height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.weight(1.3f).height(48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = TeacherNeon,
-                            contentColor = Color.White
+                            contentColor = Color.White,
+                            disabledContainerColor = TeacherNeon.copy(alpha = 0.35f)
                         )
                     ) {
                         if (state.isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
                         } else {
-                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(17.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Pratinjau & Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Lanjut Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -275,23 +279,14 @@ fun AssignmentCreatorScreen(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // ── AI ASSIGNMENT GENERATOR CALLOUT CARD ──
+            // ── AI ASSIGNMENT GENERATOR CALLOUT CARD (ZERO GRADIENT, SLEEK EXECUTIVE) ──
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showAiGenerateDialog = true },
-                shape = RoundedCornerShape(16.dp),
-                color = if (LocalIsDarkTheme.current) CosmicNavy else MaterialTheme.colorScheme.surface,
-                border = androidx.compose.foundation.BorderStroke(
-                    1.dp,
-                    Brush.horizontalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.tertiary,
-                            MaterialTheme.colorScheme.primary
-                        )
-                    )
-                ),
-                shadowElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp
+                shape = RoundedCornerShape(14.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
             ) {
                 Row(
                     modifier = Modifier
@@ -307,86 +302,113 @@ fun AssignmentCreatorScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(
-                                            MaterialTheme.colorScheme.tertiary,
-                                            MaterialTheme.colorScheme.primary
-                                        )
-                                    )
-                                ),
+                                .background(CosmicSurface2)
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                tint = TeacherNeon,
+                                modifier = Modifier.size(19.dp)
                             )
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text(
-                                text = "Generate Tugas (AI)",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "Generate Tugas (AI)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(TeacherNeon.copy(alpha = 0.12f))
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        "Asisten Guru",
+                                        color = TeacherNeon,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                             Text(
                                 text = "Sintesis tugas & soal otomatis berbasis Kurikulum Merdeka",
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = TextSecondary,
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
                     }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 
             // ── LIVE STUDENT PREVIEW CARD ──
             AnimatedVisibility(visible = showPreview) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(TeacherNeon.copy(alpha = 0.05f))
-                        .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                        .padding(16.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = CosmicNavy,
+                    border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.4f))
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(TeacherNeon))
-                                Text("Preview Tampilan Siswa", color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Box(modifier = Modifier.size(7.dp).clip(CircleShape).background(TeacherNeon))
+                                Text("Pratinjau Tampilan Siswa", color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
-                            AssignmentChip("Tenggat: $selectedDueDays Hari", NeonWarning)
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(NeonWarning.copy(alpha = 0.12f))
+                                    .border(0.5.dp, NeonWarning.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Text("Tenggat: $selectedDueDays Hari", color = NeonWarning, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                            }
                         }
                         Text(
-                            text = title.ifBlank { "Judul Tugas Anda Akan Muncul Di Sini" },
-                            color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Black
+                            text = title.ifBlank { "Tugas: ${selectedSubject.ifBlank { "Mata Pelajaran" }}" },
+                            color = TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = description.ifBlank { "Deskripsi dan panduan ringkas pengerjaan tugas oleh guru..." },
-                            color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp
+                            color = TextSecondary, fontSize = 12.sp, lineHeight = 16.sp, maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             AssignmentChip(selectedSubject.ifBlank { "Mata Pelajaran" }, NeonBlue)
                             AssignmentChip(selectedClass.ifBlank { "Rombel" }, TeacherNeon)
                             if (state.assignmentFormat != "HOMEWORK_PR") {
                                 val count = state.questions.size
-                                AssignmentChip("$count Soal Terstruktur", CyanAccent)
+                                AssignmentChip("$count Soal Terstruktur", NeonBlue)
                             }
                             AssignmentChip("Maks $displayMaxScore Poin", NeonSuccess)
                         }
@@ -395,20 +417,22 @@ fun AssignmentCreatorScreen(
             }
 
             // ── SECTION 1: SASARAN & ROMBEL ──
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                    .padding(16.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     AssignmentSectionHeader(
                         number = 1,
                         title = "Sasaran & Rombel Belajar",
-                        subtitle = "Tentukan rombel kelas dan mata pelajaran target",
-                        numberColor = TeacherNeon
+                        subtitle = "Tentukan rombel kelas dan mata pelajaran target"
                     )
 
                     AssignmentDropdown(
@@ -444,20 +468,22 @@ fun AssignmentCreatorScreen(
             }
 
             // ── SECTION 2: FORMAT / METODE PENGISIAN TUGAS ──
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                    .padding(16.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = CosmicNavy,
+                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     AssignmentSectionHeader(
                         number = 2,
                         title = "Format / Metode Pengisian Tugas",
-                        subtitle = "Pilih cara siswa mengumpulkan jawaban tugas",
-                        numberColor = TeacherNeon
+                        subtitle = "Pilih cara siswa mengumpulkan jawaban tugas"
                     )
 
                     Row(
@@ -467,47 +493,50 @@ fun AssignmentCreatorScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         listOf(
-                            Triple("STRUCTURED_QUESTIONS", "PG & Essay", "Dikerjakan online"),
-                            Triple("HOMEWORK_PR", "PR / Berkas", "Upload Foto/PDF"),
-                            Triple("HYBRID", "Kombinasi", "Soal + Upload")
-                        ).forEach { (formatKey, label, sublabel) ->
+                            Triple("STRUCTURED_QUESTIONS", "PG & Essay", "Dikerjakan online" to Icons.Default.Quiz),
+                            Triple("HOMEWORK_PR", "PR / Berkas", "Upload Foto/PDF" to Icons.Default.UploadFile),
+                            Triple("HYBRID", "Kombinasi", "Soal + Upload" to Icons.Default.Layers)
+                        ).forEach { (formatKey, label, sub) ->
+                            val (sublabel, formatIcon) = sub
                             val isSelected = state.assignmentFormat == formatKey
-                            Box(
+                            Surface(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (isSelected) TeacherContainer else CosmicSurface2
-                                    )
-                                    .border(
-                                        width = if (isSelected) 1.5.dp else 0.5.dp,
-                                        color = if (isSelected) TeacherNeon else GlassBorder,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
-                                    .clickable { viewModel.setAssignmentFormat(formatKey) }
-                                    .padding(vertical = 12.dp, horizontal = 6.dp),
-                                contentAlignment = Alignment.Center
+                                    .clickable { viewModel.setAssignmentFormat(formatKey) },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) TeacherNeon.copy(alpha = 0.12f) else CosmicSurface2,
+                                border = androidx.compose.foundation.BorderStroke(
+                                    width = if (isSelected) 1.dp else 0.5.dp,
+                                    color = if (isSelected) TeacherNeon else GlassBorder
+                                )
                             ) {
                                 Column(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
+                                    Icon(
+                                        imageVector = formatIcon,
+                                        contentDescription = null,
+                                        tint = if (isSelected) TeacherNeon else TextTertiary,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(Modifier.height(6.dp))
                                     Text(
-                                        label,
-                                        color = if (isSelected) TeacherBrandText else TextPrimary,
+                                        text = label,
+                                        color = if (isSelected) TeacherNeon else TextPrimary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.Center,
                                         maxLines = 1
                                     )
-                                    Spacer(Modifier.height(3.dp))
+                                    Spacer(Modifier.height(2.dp))
                                     Text(
-                                        sublabel,
-                                        color = if (isSelected) TeacherBrandText.copy(alpha = 0.85f) else TextTertiary,
+                                        text = sublabel,
+                                        color = if (isSelected) TeacherNeon.copy(alpha = 0.8f) else TextSecondary,
                                         fontSize = 9.sp,
                                         textAlign = TextAlign.Center,
-                                        lineHeight = 11.sp,
                                         maxLines = 1
                                     )
                                 }
@@ -1042,36 +1071,48 @@ private fun QuestionBuilderCard(
 private fun AssignmentChip(text: String, color: Color) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(6.dp))
             .background(color.copy(alpha = 0.12f))
-            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-            .padding(horizontal = 9.dp, vertical = 4.dp)
+            .border(0.5.dp, color.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(
             text = text,
             color = color,
             fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            maxLines = 1
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1,
+            softWrap = false
         )
     }
 }
 
 @Composable
-private fun AssignmentSectionHeader(number: Int, title: String, subtitle: String, numberColor: Color) {
+private fun AssignmentSectionHeader(
+    number: Int,
+    title: String,
+    subtitle: String,
+    numberColor: Color = TeacherNeon
+) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(
             modifier = Modifier
-                .size(30.dp)
-                .clip(CircleShape)
-                .background(numberColor),
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(CosmicSurface2)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Text(number.toString(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(
+                String.format(java.util.Locale.US, "%02d", number),
+                color = TeacherNeon,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold
+            )
         }
         Column {
-            Text(title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-            Text(subtitle, color = TextTertiary, fontSize = 11.sp)
+            Text(title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = TextSecondary, fontSize = 11.sp)
         }
     }
 }
@@ -1090,55 +1131,111 @@ private fun AssignmentDropdown(
     onSelect: (String) -> Unit
 ) {
     val isLocked = label.contains("Terkunci")
-    ExposedDropdownMenuBox(
-        expanded = if (isLocked && options.size <= 1) false else expanded,
-        onExpandedChange = { if (!isLocked || options.size > 1) { if (!expanded) onExpand() else onDismiss() } }
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            leadingIcon = {
-                Icon(icon, contentDescription = null, tint = if (isLocked) TextTertiary else accentColor, modifier = Modifier.size(20.dp))
-            },
-            trailingIcon = {
-                if (!isLocked || options.size > 1) {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                }
-            },
-            modifier = Modifier.fillMaxWidth().menuAnchor(),
-            shape = RoundedCornerShape(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = if (isLocked) GlassBorder2 else accentColor,
-                unfocusedBorderColor = GlassBorder,
-                focusedLabelColor = if (isLocked) TextTertiary else accentColor,
-                focusedLeadingIconColor = if (isLocked) TextTertiary else accentColor,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-                unfocusedLabelColor = TextTertiary
-            )
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = onDismiss,
-            modifier = Modifier.background(CosmicNavy)
+    if (isLocked) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = CosmicSurface2,
+            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
         ) {
-            options.forEach { option ->
-                val isSelected = option == value
-                DropdownMenuItem(
-                    text = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column {
                         Text(
-                            option,
-                            color = if (isSelected) accentColor else TextPrimary,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            text = "Mata Pelajaran (Terkunci)",
+                            fontSize = 11.sp,
+                            color = TextTertiary,
+                            fontWeight = FontWeight.Medium
                         )
-                    },
-                    onClick = { onSelect(option); onDismiss() },
-                    leadingIcon = if (isSelected) ({
-                        Icon(Icons.Default.Check, null, tint = accentColor, modifier = Modifier.size(16.dp))
-                    }) else null
+                        Text(
+                            text = value.ifBlank { "Mata Pelajaran Guru" },
+                            fontSize = 14.sp,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CosmicNavy)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        "Guru Pengampu",
+                        color = TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    } else {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { if (!expanded) onExpand() else onDismiss() }
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(label, fontSize = 12.sp) },
+                leadingIcon = {
+                    Icon(icon, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(18.dp))
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = TeacherNeon,
+                    unfocusedBorderColor = GlassBorder,
+                    focusedLabelColor = TeacherNeon,
+                    focusedLeadingIconColor = TeacherNeon,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    unfocusedLabelColor = TextTertiary
                 )
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = onDismiss,
+                modifier = Modifier.background(CosmicNavy)
+            ) {
+                options.forEach { option ->
+                    val isSelected = option == value
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                option,
+                                color = if (isSelected) TeacherNeon else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        onClick = { onSelect(option); onDismiss() },
+                        leadingIcon = if (isSelected) ({
+                            Icon(Icons.Default.Check, null, tint = TeacherNeon, modifier = Modifier.size(16.dp))
+                        }) else null
+                    )
+                }
             }
         }
     }

@@ -148,13 +148,9 @@ fun StudentSessionDetailContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(16.dp))
-                .background(
-                    Brush.linearGradient(
-                        colors = listOf(accentColor.copy(alpha = 0.08f), accentColor.copy(alpha = 0.03f)),
-                    )
-                )
-                .border(1.dp, accentColor.copy(alpha = 0.2f), RoundedCornerShape(16.dp))
-                .padding(12.dp),
+                .background(CosmicNavy)
+                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .padding(14.dp),
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -315,8 +311,8 @@ fun StudentSessionDetailContent(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(Brush.horizontalGradient(listOf(NeonWarning.copy(alpha = 0.12f), NeonBlue.copy(alpha = 0.12f))))
-                            .border(1.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .background(CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
                             .clickable { showExcuseDialog = true }
                             .padding(vertical = 10.dp, horizontal = 14.dp),
                         contentAlignment = Alignment.Center,
