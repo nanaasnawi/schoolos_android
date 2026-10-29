@@ -217,30 +217,36 @@ fun ProfileHeaderCard(
 
                 Spacer(Modifier.width(14.dp))
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
                     Text(
                         text = user?.name?.ifBlank { "Pengguna Akselerasi-Edu" } ?: "Pengguna Akselerasi-Edu",
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        lineHeight = 20.sp,
+                        fontWeight = FontWeight.Bold,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        letterSpacing = (-0.3).sp,
+                        letterSpacing = (-0.2).sp,
                     )
-                    Spacer(Modifier.height(3.dp))
-                    Text(
-                        text = displayContact,
-                        fontSize = 12.sp,
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Spacer(Modifier.height(3.dp))
+                    if (displayContact.isNotBlank()) {
+                        Text(
+                            text = displayContact,
+                            fontSize = 12.sp,
+                            lineHeight = 15.sp,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                     Text(
                         text = "Ketuk foto untuk lihat / ganti",
                         fontSize = 10.sp,
-                        color = roleNeon.copy(alpha = 0.85f),
+                        lineHeight = 13.sp,
+                        color = roleNeon.copy(alpha = 0.90f),
                         fontWeight = FontWeight.Medium,
                     )
                 }

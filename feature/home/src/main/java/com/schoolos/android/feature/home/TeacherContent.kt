@@ -888,99 +888,59 @@ private fun TeacherStudioConsole(
             .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp)),
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
-            // Workspace Header Bar
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(CosmicSurface2.copy(alpha = 0.5f))
-                    .padding(horizontal = 14.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(TeacherNeon),
-                    )
-                    Text(
-                        text = "TEACHER WORKSPACE & CREATOR HUB",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextSecondary,
-                        letterSpacing = 0.6.sp,
-                    )
-                }
-                Text(
-                    text = "4 Aksi Cepat",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextTertiary,
-                )
-            }
-
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = GlassBorder.copy(alpha = 0.5f),
-            )
-
             // 1. Buat Tugas
             StudioConsoleRow(
-                title = "Buat Tugas Baru",
-                subtitle = "PR, proyek mandiri, & lembar tugas siswa",
-                actionLabel = "+ Tugas",
+                title = "Buat Tugas",
+                subtitle = "PR, proyek, & lembar mandiri",
+                actionLabel = "+ Buat",
                 iconRes = CoreR.drawable.ic_modern_tasks,
                 accentColor = TeacherNeon,
                 onClick = onCreateAssignment,
             )
 
             HorizontalDivider(
-                modifier = Modifier.padding(start = 64.dp, end = 14.dp),
+                modifier = Modifier.padding(start = 62.dp, end = 14.dp),
                 thickness = 0.5.dp,
                 color = GlassBorder.copy(alpha = 0.35f),
             )
 
             // 2. Buat Kuis
             StudioConsoleRow(
-                title = "Buat Kuis & Evaluasi CBT",
-                subtitle = "Bank soal, kuis interaktif, & ujian online",
-                actionLabel = "+ Kuis",
+                title = "Buat Kuis",
+                subtitle = "Ujian CBT, bank soal, & evaluasi",
+                actionLabel = "+ Buat",
                 iconRes = CoreR.drawable.ic_modern_quiz,
                 accentColor = NeonWarning,
                 onClick = onCreateQuiz,
             )
 
             HorizontalDivider(
-                modifier = Modifier.padding(start = 64.dp, end = 14.dp),
+                modifier = Modifier.padding(start = 62.dp, end = 14.dp),
                 thickness = 0.5.dp,
                 color = GlassBorder.copy(alpha = 0.35f),
             )
 
             // 3. Bahan Ajar
             StudioConsoleRow(
-                title = "Bahan Ajar & Modul Digital",
-                subtitle = "Upload modul, materi ajar, & referensi PDF",
-                actionLabel = "Modul",
+                title = "Bahan Ajar",
+                subtitle = "Modul dokumen, materi, & PDF",
+                actionLabel = "Buka",
                 iconRes = CoreR.drawable.ic_modern_book,
                 accentColor = NeonSuccess,
                 onClick = onNavigateToLearning,
             )
 
             HorizontalDivider(
-                modifier = Modifier.padding(start = 64.dp, end = 14.dp),
+                modifier = Modifier.padding(start = 62.dp, end = 14.dp),
                 thickness = 0.5.dp,
                 color = GlassBorder.copy(alpha = 0.35f),
             )
 
             // 4. Buku Nilai
             StudioConsoleRow(
-                title = "Buku Nilai & Capaian KKTP",
-                subtitle = "Rekap capaian belajar, ketuntasan, & nilai rapor",
-                actionLabel = "Buku Nilai",
+                title = "Buku Nilai",
+                subtitle = "Rekap capaian & ketuntasan KKTP",
+                actionLabel = "Buka",
                 iconRes = CoreR.drawable.ic_modern_grades,
                 accentColor = NeonBlue,
                 onClick = onNavigateToGrades,
@@ -1009,17 +969,17 @@ private fun StudioConsoleRow(
         // Squircle Icon
         Box(
             modifier = Modifier
-                .size(38.dp)
-                .clip(RoundedCornerShape(10.dp))
+                .size(36.dp)
+                .clip(RoundedCornerShape(9.dp))
                 .background(accentColor.copy(alpha = 0.12f))
-                .border(0.8.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
+                .border(0.7.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(9.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = title,
                 tint = accentColor,
-                modifier = Modifier.size(19.dp),
+                modifier = Modifier.size(18.dp),
             )
         }
 
@@ -1030,7 +990,7 @@ private fun StudioConsoleRow(
         ) {
             Text(
                 text = title,
-                fontSize = 13.sp,
+                fontSize = 13.5.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary,
                 maxLines = 1,
@@ -1045,22 +1005,23 @@ private fun StudioConsoleRow(
             )
         }
 
-        // Action Pill
+        // Action Button (Uniform fixed geometry: 66.dp x 28.dp for razor-sharp alignment)
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(6.dp))
-                .background(accentColor.copy(alpha = 0.10f))
-                .border(0.6.dp, accentColor.copy(alpha = 0.32f), RoundedCornerShape(6.dp))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
+                .width(66.dp)
+                .height(28.dp)
+                .clip(RoundedCornerShape(7.dp))
+                .background(accentColor.copy(alpha = 0.12f))
+                .border(0.6.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(7.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 Text(
                     text = actionLabel,
-                    fontSize = 10.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     color = accentColor,
                 )
@@ -1068,7 +1029,7 @@ private fun StudioConsoleRow(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
                     tint = accentColor,
-                    modifier = Modifier.size(10.dp),
+                    modifier = Modifier.size(11.dp),
                 )
             }
         }
