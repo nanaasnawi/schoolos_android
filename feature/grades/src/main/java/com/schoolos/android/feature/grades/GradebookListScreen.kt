@@ -27,6 +27,7 @@ import com.schoolos.android.domain.model.SubjectGradeSummary
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GradebookListScreen(
+    showHeader: Boolean = true,
     onBack: (() -> Unit)? = null,
     onSubjectClick: (String, String) -> Unit = { _, _ -> },
     viewModel: GradebookListViewModel = hiltViewModel(),
@@ -61,14 +62,16 @@ fun GradebookListScreen(
         containerColor = CosmicBlack,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            ExecutiveTopBar(
-                title = if (isPrincipal) "Buku Nilai (Teacher Gradebook)"
-                    else if (isTeacher) "Analisis & Buku Nilai Guru"
-                    else "Buku Nilai",
-                subtitle = if (isPrincipal || isTeacher) "Standar Kurikulum Merdeka (Kemendikdasmen RI)"
-                    else "Rekapitulasi Capaian Modul",
-                onBack = onBack,
-            )
+            if (showHeader) {
+                ExecutiveTopBar(
+                    title = if (isPrincipal) "Buku Nilai (Teacher Gradebook)"
+                        else if (isTeacher) "Analisis & Buku Nilai Guru"
+                        else "Buku Nilai",
+                    subtitle = if (isPrincipal || isTeacher) "Standar Kurikulum Merdeka (Kemendikdasmen RI)"
+                        else "Rekapitulasi Capaian Modul",
+                    onBack = onBack,
+                )
+            }
         }
     ) { padding ->
         PullRefreshContainer(

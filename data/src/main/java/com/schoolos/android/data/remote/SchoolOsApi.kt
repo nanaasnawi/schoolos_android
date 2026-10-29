@@ -244,6 +244,9 @@ interface SchoolOsApi {
         @Path("id") id: String
     ): ApiResponse<List<com.schoolos.android.data.remote.dto.MaterialStudentCompletionDto>>
 
+    @GET("learning/materials/analytics/reading-summary")
+    suspend fun getReadingSummary(): ApiResponse<com.schoolos.android.data.remote.dto.ReadingSummaryResponseDto>
+
     // Library Books (Katalog Buku Kurikulum & Perpustakaan Digital)
     @GET("learning/library/books")
     suspend fun getLibraryBooks(

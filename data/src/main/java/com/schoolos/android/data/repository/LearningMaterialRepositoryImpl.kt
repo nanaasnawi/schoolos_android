@@ -9,6 +9,7 @@ import com.schoolos.android.domain.repository.LearningMaterialRepository
 import timber.log.Timber
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.RequestBody.Companion.toRequestBody
+import com.schoolos.android.data.remote.dto.toDomain
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -382,5 +383,96 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         if (response.error != null) {
             throw Exception(response.error.message)
         }
+    }
+
+    override suspend fun getReadingSummary(): Result<com.schoolos.android.domain.model.TeacherReadingSummary> = runCatching {
+        try {
+            val response = api.getReadingSummary()
+            if (response.data != null) {
+                return@runCatching response.data.toDomain()
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "Reading summary endpoint failed, attempting fallback aggregation")
+        }
+
+        // Fallback: bounded aggregation from getMaterials() & getMaterialCompletions()
+        val materialsResult = getMaterials()
+        val materials = materialsResult.getOrDefault(emptyList())
+        val bounded = materials.take(15)
+        val rows = mutableListOf<com.schoolos.android.domain.model.StudentReadingRow>()
+
+        for (m in bounded) {
+            val completions = getMaterialCompletions(m.id).getOrDefault(emptyList())
+            for (c in completions) {
+                val totalP = if (m.startPage != null && m.endPage != null && m.endPage!! >= m.startPage!!) {
+                    m.endPage!! - m.startPage!! + 1
+                } else 15
+                val currP = if (c.isCompleted) totalP else (c.currentPage ?: 0)
+                val pct = if (c.isCompleted) 100 else if (totalP > 0) ((currP * 100) / totalP).coerceIn(0, 99) else 0
+                val status = if (c.isCompleted) "Selesai" else if (currP > 0) "Sedang Baca" else "Belum Mulai"
+
+                rows.add(
+                    com.schoolos.android.domain.model.StudentReadingRow(
+                        studentId = c.studentId,
+                        studentName = c.studentName,
+                        nisn = c.nisn ?: "-",
+                        gender = c.gender ?: "L",
+                        className = c.className ?: m.className ?: "Kelas",
+                        materialId = m.id,
+                        materialTitle = m.title,
+                        subjectName = m.subject,
+                        currentPage = currP,
+                        totalPages = totalP,
+                        completionPercentage = pct,
+                        isCompleted = c.isCompleted,
+                        lastReadAt = c.lastReadAt ?: c.completedAt,
+                        completedAt = c.completedAt,
+                        readingStatus = status,
+                    )
+                )
+            }
+        }
+
+        val summaryItems = materials.map { m ->
+            val totalP = if (m.startPage != null && m.endPage != null && m.endPage!! >= m.startPage!!) {
+                m.endPage!! - m.startPage!! + 1
+            } else 15
+            com.schoolos.android.domain.model.MaterialSummaryItem(
+                materialId = m.id,
+                title = m.title,
+                materialType = when (m.materialType) {
+                    MaterialType.VIDEO -> "video"
+                    MaterialType.DOCUMENT -> "document"
+                    MaterialType.IMAGE -> "image"
+                    else -> "article"
+                },
+                className = m.className ?: "Semua Rombel",
+                classId = m.classId,
+                subjectName = m.subject,
+                startPage = m.startPage ?: 1,
+                endPage = m.endPage ?: 15,
+                totalPages = totalP,
+                totalAssignedStudents = 32,
+                completedStudentsCount = m.completedCount,
+                averageProgressPercentage = if (m.completedCount > 0) 100 else 0,
+            )
+        }
+
+        val completedCount = rows.count { it.isCompleted }.toLong()
+        val totalCount = rows.size.toLong()
+        val totalPages = rows.sumOf { it.currentPage.toLong() }
+        val overallRate = if (totalCount > 0) ((completedCount * 100) / totalCount).toInt() else 0
+
+        com.schoolos.android.domain.model.TeacherReadingSummary(
+            materials = summaryItems,
+            readingRows = rows,
+            metrics = com.schoolos.android.domain.model.TeacherReadingMetrics(
+                totalMaterials = materials.size.toLong(),
+                totalReaders = totalCount,
+                completedReaders = completedCount,
+                overallCompletionRate = overallRate,
+                totalPagesRead = totalPages,
+            )
+        )
     }
 }

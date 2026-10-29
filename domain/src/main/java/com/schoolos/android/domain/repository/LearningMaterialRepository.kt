@@ -45,4 +45,5 @@ interface LearningMaterialRepository {
         endPage: Int? = null
     ): Result<LearningMaterial>
     suspend fun deleteMaterial(id: String): Result<Unit>
+    suspend fun getReadingSummary(): Result<com.schoolos.android.domain.model.TeacherReadingSummary>
 }
