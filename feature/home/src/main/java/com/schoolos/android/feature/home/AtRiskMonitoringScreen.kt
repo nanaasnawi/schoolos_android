@@ -393,23 +393,8 @@ private fun EarlyWarningHeroBanner(
     isDark: Boolean,
     onSendBatch: () -> Unit,
 ) {
-    val bannerBg = if (isDark) {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFF2D0607),
-                Color(0xFF190405)
-            )
-        )
-    } else {
-        Brush.verticalGradient(
-            colors = listOf(
-                Color(0xFFFFF1F2),
-                Color(0xFFFFE4E6)
-            )
-        )
-    }
-
-    val bannerBorder = if (isDark) Color(0xFFEF4444).copy(alpha = 0.35f) else Color(0xFFFECDD3)
+    val bannerBg = if (isDark) CosmicNavy else Color.White
+    val bannerBorder = if (isDark) GlassBorder else Color(0xFFE2E8F0)
 
     Box(
         modifier = Modifier

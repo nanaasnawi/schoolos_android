@@ -511,7 +511,7 @@ fun NavGraph(
                 QuizResultScreen(onBack = { navController.popBackStack(Screen.Home.route, false) })
             }
 
-            // Teacher Analytics Hub (Literasi & Baca, Early Warning, Buku Nilai)
+            // Teacher Analytics Hub (Literasi & Bacaan, Early Warning)
             composable(Screen.TeacherAnalytics.route) {
                 TeacherAnalyticsHubScreen(
                     initialTab = 0,
@@ -528,9 +528,6 @@ fun NavGraph(
                                 email = "",
                             )
                         )
-                    },
-                    onNavigateToGradeDetail = { subjectId, subjectName ->
-                        navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
                     }
                 )
             }
@@ -539,35 +536,12 @@ fun NavGraph(
             composable(Screen.Grades.route) {
                 val isPrincipal = authState?.isPrincipal == true
                 val isTeacher = authState?.isTeacher == true
-                if (isTeacher) {
-                    TeacherAnalyticsHubScreen(
-                        initialTab = 2,
-                        onBack = null,
-                        onNavigateToStudentDetail = { studentId, name, nisn, className ->
-                            navController.navigate(
-                                Screen.StudentDetail.createRoute(
-                                    studentId = studentId,
-                                    studentName = name,
-                                    nisn = nisn,
-                                    gender = "",
-                                    className = className,
-                                    phone = "",
-                                    email = "",
-                                )
-                            )
-                        },
-                        onNavigateToGradeDetail = { subjectId, subjectName ->
-                            navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
-                        }
-                    )
-                } else {
-                    GradebookListScreen(
-                        onBack = if (isPrincipal) null else { { navController.popBackStack() } },
-                        onSubjectClick = { subjectId, subjectName ->
-                            navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
-                        },
-                    )
-                }
+                GradebookListScreen(
+                    onBack = if (isPrincipal || isTeacher) null else { { navController.popBackStack() } },
+                    onSubjectClick = { subjectId, subjectName ->
+                        navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
+                    },
+                )
             }
             composable(
                 route = Screen.GradeDetail.route,
@@ -825,9 +799,6 @@ fun NavGraph(
                                     email = "",
                                 )
                             )
-                        },
-                        onNavigateToGradeDetail = { subjectId, subjectName ->
-                            navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
                         }
                     )
                 } else {
