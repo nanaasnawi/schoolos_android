@@ -11,6 +11,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
@@ -20,8 +21,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -75,7 +78,7 @@ fun AtRiskMonitoringScreen(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 96.dp)
             ) {
-                // 1. Executive Early Warning Hero Banner
+                // 1. Compact Early Warning Action Card
                 item {
                     EarlyWarningHeroBanner(
                         totalAtRisk = state.stats.total,
@@ -85,25 +88,23 @@ fun AtRiskMonitoringScreen(
                     )
                 }
 
-                // 2. 4 Stat KPI Cards (Uniform with Literasi Tab)
+                // 2. Interactive KPI Filter Tiles (Combined Stats + Filter)
                 item {
-                    Spacer(Modifier.height(12.dp))
-                    StatKpiGrid(
+                    Spacer(Modifier.height(6.dp))
+                    AtRiskInteractiveStatBar(
                         stats = state.stats,
-                        isDark = isDark
+                        selectedCategory = state.selectedCategoryFilter,
+                        onSelectCategory = { viewModel.onSelectCategoryFilter(it) }
                     )
                 }
 
-                // 3. Compact Search & Filter Toolbar
+                // 3. Compact Search & Rombel Filter Toolbar
                 item {
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(6.dp))
                     AtRiskFilterToolbar(
                         searchQuery = state.searchQuery,
                         onSearchChange = { viewModel.onSearchQueryChanged(it) },
                         onClearSearch = { viewModel.onSearchQueryChanged(""); focusManager.clearFocus() },
-                        selectedCategory = state.selectedCategoryFilter,
-                        onSelectCategory = { viewModel.onSelectCategoryFilter(it) },
-                        stats = state.stats,
                         classes = state.availableClasses.map { it.name },
                         selectedClass = state.selectedClassFilter,
                         onSelectClass = { viewModel.onSelectClassFilter(it) },
@@ -111,9 +112,9 @@ fun AtRiskMonitoringScreen(
                     )
                 }
 
-                // 4. Section Header & Student Count
+                // 4. Compact Section Header & Student Count
                 item {
-                    Spacer(Modifier.height(14.dp))
+                    Spacer(Modifier.height(8.dp))
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -123,19 +124,19 @@ fun AtRiskMonitoringScreen(
                     ) {
                         Text(
                             text = "DAFTAR SISWA PERLU PERHATIAN",
-                            fontSize = 11.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 0.6.sp,
                             color = TextTertiary
                         )
                         Text(
                             text = "${state.filteredStudents.size} Peserta Didik",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
                             color = if (state.filteredStudents.isNotEmpty()) NeonError else TextTertiary
                         )
                     }
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(4.dp))
                 }
 
                 // 5. Loading / Error / Empty States
@@ -335,270 +336,199 @@ private fun EarlyWarningHeroBanner(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(14.dp),
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(12.dp),
         color = CosmicNavy,
         border = BorderStroke(0.5.dp, if (totalAtRisk > 0) NeonError.copy(alpha = 0.35f) else GlassBorder)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            // Top Badge Row
             Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.weight(1f)
             ) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = NeonError.copy(alpha = 0.1f),
-                    border = BorderStroke(0.5.dp, NeonError.copy(alpha = 0.25f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(NeonError)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "EARLY WARNING SYSTEM",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.4.sp,
-                            color = NeonError
-                        )
-                    }
-                }
-
-                if (totalAtRisk > 0) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = NeonError.copy(alpha = 0.12f),
-                        border = BorderStroke(0.5.dp, NeonError.copy(alpha = 0.3f))
-                    ) {
-                        Text(
-                            text = "$totalAtRisk Perlu Tindakan",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonError,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Daftar Siswa Perlu Perhatian",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
-
-            Spacer(Modifier.height(2.dp))
-
-            Text(
-                text = "Pemantauan komprehensif kendala belajar: keterlambatan membaca materi modul, tugas belum dikumpulkan, atau nilai di bawah KKM.",
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color = TextSecondary
-            )
-
-            Spacer(Modifier.height(12.dp))
-
-            // Action Button: Kirim Pengingat Serentak (Clean, solid executive button)
-            Button(
-                onClick = onSendBatch,
-                enabled = !isSendingBatch && totalAtRisk > 0,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(44.dp),
-                shape = RoundedCornerShape(10.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = if (totalAtRisk > 0) NeonError else TextDisabled,
-                    contentColor = Color.White
-                )
-            ) {
-                if (isSendingBatch) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(16.dp),
-                        strokeWidth = 2.dp,
-                        color = Color.White
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Mengirimkan Pengingat...",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                } else {
-                    Icon(
-                        imageVector = Icons.Default.Notifications,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Kirim Pengingat Serentak ($totalAtRisk Siswa)",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ─── KPI Cards (Uniform with Literasi Tab) ────────────────────────────────────
-
-@Composable
-private fun StatKpiGrid(
-    stats: com.schoolos.android.domain.model.AtRiskStats,
-    isDark: Boolean,
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            AtRiskKpiCard(
-                title = "Total Perlu Perhatian",
-                value = stats.total.toString(),
-                caption = "Peserta didik",
-                icon = Icons.Default.Warning,
-                accentColor = NeonError,
-                isDark = isDark,
-                modifier = Modifier.weight(1f)
-            )
-            AtRiskKpiCard(
-                title = "Materi Tertinggal",
-                value = stats.unreadMaterials.toString(),
-                caption = "Belum selesai",
-                icon = Icons.AutoMirrored.Filled.MenuBook,
-                accentColor = AccentNeonAmber,
-                isDark = isDark,
-                modifier = Modifier.weight(1f)
-            )
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            AtRiskKpiCard(
-                title = "Tugas Tertunda",
-                value = stats.overdueAssignments.toString(),
-                caption = "Belum kumpul",
-                icon = Icons.AutoMirrored.Filled.Assignment,
-                accentColor = NeonWarning,
-                isDark = isDark,
-                modifier = Modifier.weight(1f)
-            )
-            AtRiskKpiCard(
-                title = "Di Bawah Standar KKM",
-                value = stats.lowScores.toString(),
-                caption = "Perlu remedial",
-                icon = Icons.AutoMirrored.Filled.TrendingDown,
-                accentColor = NeonError,
-                isDark = isDark,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun AtRiskKpiCard(
-    title: String,
-    value: String,
-    caption: String,
-    icon: ImageVector,
-    accentColor: Color,
-    isDark: Boolean,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = value,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = if (value != "0") accentColor else TextPrimary
-                )
-
                 Box(
                     modifier = Modifier
-                        .size(30.dp)
+                        .size(34.dp)
                         .clip(RoundedCornerShape(8.dp))
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                        .background(NeonError.copy(alpha = 0.12f))
+                        .border(0.5.dp, NeonError.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = accentColor,
-                        modifier = Modifier.size(16.dp)
+                        imageVector = Icons.Default.Warning,
+                        contentDescription = null,
+                        tint = NeonError,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
+                Column(verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = if (totalAtRisk > 0) "$totalAtRisk Siswa Perlu Perhatian" else "Kondisi Siswa Terpantau Aman",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = if (totalAtRisk > 0) "Kendala materi, tugas, atau nilai KKM" else "Tidak ada indikasi kendala belajar aktif",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.width(8.dp))
 
-            Text(
-                text = title,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            if (totalAtRisk > 0) {
+                Button(
+                    onClick = onSendBatch,
+                    enabled = !isSendingBatch,
+                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
+                    modifier = Modifier.height(32.dp),
+                    shape = RoundedCornerShape(8.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonError,
+                        contentColor = Color.White
+                    )
+                ) {
+                    if (isSendingBatch) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp),
+                            strokeWidth = 1.5.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Notifications,
+                            contentDescription = null,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Ingatkan",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ─── Interactive KPI Stat & Category Filter Bar ──────────────────────────────
+
+@Composable
+private fun AtRiskInteractiveStatBar(
+    stats: com.schoolos.android.domain.model.AtRiskStats,
+    selectedCategory: String,
+    onSelectCategory: (String) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        StatFilterTile(
+            count = stats.total,
+            label = "Semua",
+            icon = Icons.Default.Warning,
+            isSelected = selectedCategory == "ALL",
+            accentColor = NeonBlue,
+            onClick = { onSelectCategory("ALL") }
+        )
+        StatFilterTile(
+            count = stats.unreadMaterials,
+            label = "Materi",
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            isSelected = selectedCategory == "UNREAD_MATERIAL",
+            accentColor = AccentNeonAmber,
+            onClick = { onSelectCategory("UNREAD_MATERIAL") }
+        )
+        StatFilterTile(
+            count = stats.overdueAssignments,
+            label = "Tugas",
+            icon = Icons.AutoMirrored.Filled.Assignment,
+            isSelected = selectedCategory == "OVERDUE_ASSIGNMENT",
+            accentColor = NeonWarning,
+            onClick = { onSelectCategory("OVERDUE_ASSIGNMENT") }
+        )
+        StatFilterTile(
+            count = stats.lowScores,
+            label = "Di Bawah KKM",
+            icon = Icons.AutoMirrored.Filled.TrendingDown,
+            isSelected = selectedCategory == "LOW_SCORE",
+            accentColor = NeonError,
+            onClick = { onSelectCategory("LOW_SCORE") }
+        )
+    }
+}
+
+@Composable
+private fun StatFilterTile(
+    count: Int,
+    label: String,
+    icon: ImageVector,
+    isSelected: Boolean,
+    accentColor: Color,
+    onClick: () -> Unit,
+) {
+    val bg = if (isSelected) accentColor.copy(alpha = 0.14f) else CosmicNavy
+    val border = if (isSelected) accentColor.copy(alpha = 0.45f) else GlassBorder
+    val fg = if (isSelected) accentColor else TextSecondary
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp),
+        color = bg,
+        border = BorderStroke(if (isSelected) 1.dp else 0.5.dp, border)
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = fg,
+                modifier = Modifier.size(13.dp)
             )
-
-            Spacer(Modifier.height(2.dp))
-
             Text(
-                text = caption,
-                fontSize = 10.sp,
-                color = TextTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                text = count.toString(),
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (isSelected) TextPrimary else fg
+            )
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isSelected) TextPrimary else TextTertiary
             )
         }
     }
 }
 
-// ─── Filter Toolbar & Chips ───────────────────────────────────────────────────
+// ─── Filter Toolbar & Rombel Chips ───────────────────────────────────────────
 
 @Composable
 private fun AtRiskFilterToolbar(
     searchQuery: String,
     onSearchChange: (String) -> Unit,
     onClearSearch: () -> Unit,
-    selectedCategory: String,
-    onSelectCategory: (String) -> Unit,
-    stats: com.schoolos.android.domain.model.AtRiskStats,
     classes: List<String>,
     selectedClass: String,
     onSelectClass: (String) -> Unit,
@@ -608,86 +538,62 @@ private fun AtRiskFilterToolbar(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Compact Search Field
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchChange,
-            placeholder = {
-                Text(
-                    text = "Cari siswa, NISN, atau kendala belajar...",
-                    fontSize = 12.sp,
-                    color = TextTertiary
-                )
-            },
-            leadingIcon = {
+        // Compact Search Field (Custom Surface with BasicTextField - Zero Clipping!)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(38.dp),
+            shape = RoundedCornerShape(8.dp),
+            color = CosmicNavy,
+            border = BorderStroke(0.5.dp, GlassBorder)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
                     tint = TextTertiary,
                     modifier = Modifier.size(16.dp)
                 )
-            },
-            trailingIcon = {
-                if (searchQuery.isNotBlank()) {
-                    IconButton(onClick = onClearSearch) {
-                        Icon(
-                            imageVector = Icons.Default.Clear,
-                            contentDescription = "Clear",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(16.dp)
-                        )
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchChange,
+                    singleLine = true,
+                    textStyle = TextStyle(
+                        fontSize = 12.sp,
+                        color = TextPrimary
+                    ),
+                    cursorBrush = SolidColor(NeonError),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { innerTextField ->
+                        if (searchQuery.isEmpty()) {
+                            Text(
+                                text = "Cari siswa, NISN, atau kendala belajar...",
+                                fontSize = 12.sp,
+                                color = TextTertiary
+                            )
+                        }
+                        innerTextField()
                     }
+                )
+                if (searchQuery.isNotBlank()) {
+                    Icon(
+                        imageVector = Icons.Default.Clear,
+                        contentDescription = "Clear",
+                        tint = TextSecondary,
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clickable(onClick = onClearSearch)
+                    )
                 }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = CosmicNavy,
-                unfocusedContainerColor = CosmicNavy,
-                focusedBorderColor = NeonError,
-                unfocusedBorderColor = GlassBorder,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(46.dp)
-        )
-
-        // Category Filter Pills (Horizontal Scroll)
-        val categoryScroll = rememberScrollState()
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(categoryScroll),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            AtRiskFilterPill(
-                label = "Semua (${stats.total})",
-                selected = selectedCategory == "ALL",
-                accentColor = NeonBlue,
-                onClick = { onSelectCategory("ALL") }
-            )
-            AtRiskFilterPill(
-                label = "Materi Tertinggal (${stats.unreadMaterials})",
-                selected = selectedCategory == "UNREAD_MATERIAL",
-                accentColor = AccentNeonAmber,
-                onClick = { onSelectCategory("UNREAD_MATERIAL") }
-            )
-            AtRiskFilterPill(
-                label = "Tugas Tertunda (${stats.overdueAssignments})",
-                selected = selectedCategory == "OVERDUE_ASSIGNMENT",
-                accentColor = NeonWarning,
-                onClick = { onSelectCategory("OVERDUE_ASSIGNMENT") }
-            )
-            AtRiskFilterPill(
-                label = "Di Bawah KKM (${stats.lowScores})",
-                selected = selectedCategory == "LOW_SCORE",
-                accentColor = NeonError,
-                onClick = { onSelectCategory("LOW_SCORE") }
-            )
+            }
         }
 
         // Rombel Selector Chips (Horizontal Scroll)
@@ -717,9 +623,9 @@ private fun AtRiskFilterToolbar(
                     Text(
                         text = label,
                         fontSize = 11.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
                         color = if (isSelected) NeonBlue else TextSecondary,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }

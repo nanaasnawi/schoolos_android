@@ -65,7 +65,7 @@ fun TeacherReadingAnalyticsContent(
 
             // ── 2. 4 KPI METRIC SUMMARY CARDS ────────────────────────────────
             item {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(6.dp))
                 ReadingMetricsGrid(
                     metrics = state.dynamicMetrics,
                     isDark = isDark
@@ -74,7 +74,7 @@ fun TeacherReadingAnalyticsContent(
 
             // ── 3. FILTER CONTROLS (SEARCH & DROPDOWNS) ──────────────────────
             item {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(6.dp))
                 ReadingFilterSection(
                     classes = state.availableClasses,
                     selectedClass = state.selectedClassFilter,
@@ -91,7 +91,7 @@ fun TeacherReadingAnalyticsContent(
 
             // ── 4. STATUS FILTER TABS ────────────────────────────────────────
             item {
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(6.dp))
                 ReadingStatusFilterTabs(
                     selectedStatus = state.selectedStatusFilter,
                     statusCounts = state.statusCounts,
@@ -102,7 +102,7 @@ fun TeacherReadingAnalyticsContent(
 
             // ── 5. SECTION TITLE & STUDENT LIST ──────────────────────────────
             item {
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(6.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -184,92 +184,80 @@ private fun ReadingAnalyticsHeroHeader(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(14.dp),
+            .padding(horizontal = 16.dp, vertical = 2.dp),
+        shape = RoundedCornerShape(12.dp),
         color = CosmicNavy,
         border = BorderStroke(0.5.dp, GlassBorder)
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
             Row(
-                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // Badge Workstation
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = NeonBlue.copy(alpha = 0.1f),
-                    border = BorderStroke(0.5.dp, NeonBlue.copy(alpha = 0.25f))
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(NeonBlue.copy(alpha = 0.12f))
+                        .border(0.5.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(NeonBlue)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "TEACHER WORKSTATION",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonBlue,
-                            letterSpacing = 0.4.sp
-                        )
-                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                        contentDescription = null,
+                        tint = NeonBlue,
+                        modifier = Modifier.size(17.dp)
+                    )
                 }
-
-                // Live Sync badge
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = NeonSuccess.copy(alpha = 0.1f),
-                    border = BorderStroke(0.5.dp, NeonSuccess.copy(alpha = 0.25f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(NeonSuccess)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Live Sync",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = NeonSuccess
-                        )
-                    }
+                Column(verticalArrangement = Arrangement.Center) {
+                    Text(
+                        text = "Teacher Analytics & Reading Progress",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = "Monitoring progres literasi & keterbacaan materi",
+                        fontSize = 11.sp,
+                        color = TextSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
-
-            Text(
-                text = "Teacher Analytics & Reading Progress",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
-
-            Spacer(Modifier.height(2.dp))
-
-            Text(
-                text = "Monitoring keterbacaan materi & capaian literasi digital siswa secara real-time.",
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
-                color = TextSecondary
-            )
+            Surface(
+                shape = RoundedCornerShape(6.dp),
+                color = NeonSuccess.copy(alpha = 0.1f),
+                border = BorderStroke(0.5.dp, NeonSuccess.copy(alpha = 0.25f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(NeonSuccess)
+                    )
+                    Text(
+                        text = "Live Sync",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = NeonSuccess
+                    )
+                }
+            }
         }
     }
 }
@@ -279,133 +267,73 @@ private fun ReadingMetricsGrid(
     metrics: TeacherReadingMetrics,
     isDark: Boolean,
 ) {
-    Column(
+    Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+            .padding(horizontal = 16.dp)
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Card 1: Total Materi Terbit (Blue)
-            MetricKpiCard(
-                title = "Materi & Modul Terbit",
-                value = metrics.totalMaterials.toString(),
-                caption = "Total modul digital",
-                icon = Icons.AutoMirrored.Filled.MenuBook,
-                accentColor = NeonBlue,
-                isDark = isDark,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Card 2: Siswa Aktif Membaca (Indigo)
-            MetricKpiCard(
-                title = "Siswa Aktif Membaca",
-                value = metrics.totalReaders.toString(),
-                caption = "Peserta didik terdata",
-                icon = Icons.Default.Group,
-                accentColor = StudentNeon,
-                isDark = isDark,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            // Card 3: Tingkat Ketercapaian (Emerald)
-            MetricKpiCard(
-                title = "Tingkat Ketercapaian",
-                value = "${metrics.overallCompletionRate}%",
-                caption = "${metrics.completedReaders} siswa tuntas membaca",
-                icon = Icons.Default.CheckCircle,
-                accentColor = NeonSuccess,
-                isDark = isDark,
-                modifier = Modifier.weight(1f)
-            )
-
-            // Card 4: Halaman Digital Kumulatif (Amber)
-            MetricKpiCard(
-                title = "Halaman Kumulatif",
-                value = String.format(Locale.US, "%,d", metrics.totalPagesRead),
-                caption = "Total lembar materi dibaca",
-                icon = Icons.Default.AutoStories,
-                accentColor = AccentNeonAmber,
-                isDark = isDark,
-                modifier = Modifier.weight(1f)
-            )
-        }
+        CompactMetricTile(
+            title = "Materi Terbit",
+            value = metrics.totalMaterials.toString(),
+            icon = Icons.AutoMirrored.Filled.MenuBook,
+            accentColor = NeonBlue
+        )
+        CompactMetricTile(
+            title = "Siswa Pembaca",
+            value = metrics.totalReaders.toString(),
+            icon = Icons.Default.Group,
+            accentColor = StudentNeon
+        )
+        CompactMetricTile(
+            title = "Ketercapaian",
+            value = "${metrics.overallCompletionRate}%",
+            icon = Icons.Default.CheckCircle,
+            accentColor = NeonSuccess
+        )
+        CompactMetricTile(
+            title = "Total Halaman",
+            value = String.format(Locale.US, "%,d", metrics.totalPagesRead),
+            icon = Icons.Default.AutoStories,
+            accentColor = AccentNeonAmber
+        )
     }
 }
 
 @Composable
-private fun MetricKpiCard(
+private fun CompactMetricTile(
     title: String,
     value: String,
-    caption: String,
     icon: ImageVector,
     accentColor: Color,
-    isDark: Boolean,
-    modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(8.dp),
         color = CosmicNavy,
         border = BorderStroke(0.5.dp, GlassBorder)
     ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = value,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = TextPrimary
-                )
-
-                Box(
-                    modifier = Modifier
-                        .size(30.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = title,
-                        tint = accentColor,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(6.dp))
-
+        Row(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(13.dp)
+            )
+            Text(
+                text = value,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
             Text(
                 text = title,
                 fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextSecondary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(Modifier.height(2.dp))
-
-            Text(
-                text = caption,
-                fontSize = 10.sp,
-                color = TextTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                color = TextTertiary
             )
         }
     }

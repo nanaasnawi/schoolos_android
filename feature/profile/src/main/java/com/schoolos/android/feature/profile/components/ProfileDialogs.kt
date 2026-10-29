@@ -39,6 +39,12 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.SheetState
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
@@ -76,35 +82,99 @@ import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileChangePasswordDialog(
+fun ProfileChangePasswordBottomSheet(
     context: Context,
     onDismissRequest: () -> Unit,
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
 ) {
     var currentPassword by remember { mutableStateOf("") }
     var newPassword by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var showPassword by remember { mutableStateOf(false) }
 
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
         containerColor = CosmicNavy,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(NeonBlue.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Default.Lock, null, tint = NeonBlue, modifier = Modifier.size(20.dp))
-                }
-                Spacer(Modifier.width(10.dp))
-                Text("Ganti Kata Sandi", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
-            }
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 8.dp)
+                    .width(44.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(NeonBlue.copy(alpha = 0.4f)),
+            )
         },
-        text = {
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+                .navigationBarsPadding()
+                .imePadding(),
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(NeonBlue.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = NeonBlue,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Ganti Kata Sandi",
+                            color = TextPrimary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            text = "Amankan akses masuk akun Anda",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(CosmicBlack),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Tutup",
+                        tint = TextTertiary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -122,6 +192,7 @@ fun ProfileChangePasswordDialog(
                         unfocusedTextColor = TextPrimary,
                     ),
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                 )
 
                 OutlinedTextField(
@@ -137,6 +208,7 @@ fun ProfileChangePasswordDialog(
                         unfocusedTextColor = TextPrimary,
                     ),
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                 )
 
                 OutlinedTextField(
@@ -162,38 +234,69 @@ fun ProfileChangePasswordDialog(
                         unfocusedTextColor = TextPrimary,
                     ),
                     modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
                 )
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    if (currentPassword.isBlank() || newPassword.isBlank()) {
-                        Toast.makeText(context, "Harap isi kata sandi!", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (newPassword.length < 6) {
-                        Toast.makeText(context, "Kata sandi baru minimal 6 karakter!", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    if (newPassword != confirmPassword) {
-                        Toast.makeText(context, "Konfirmasi sandi tidak cocok!", Toast.LENGTH_SHORT).show()
-                        return@Button
-                    }
-                    Toast.makeText(context, "Kata sandi berhasil diperbarui!", Toast.LENGTH_LONG).show()
-                    onDismissRequest()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = NeonSuccess),
-                shape = RoundedCornerShape(10.dp),
+
+            Spacer(Modifier.height(18.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("Simpan Sandi", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                Button(
+                    onClick = onDismissRequest,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CosmicBlack,
+                        contentColor = TextSecondary,
+                    ),
+                ) {
+                    Text("Batal", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+                }
+
+                Button(
+                    onClick = {
+                        if (currentPassword.isBlank() || newPassword.isBlank()) {
+                            Toast.makeText(context, "Harap isi kata sandi!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (newPassword.length < 6) {
+                            Toast.makeText(context, "Kata sandi baru minimal 6 karakter!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        if (newPassword != confirmPassword) {
+                            Toast.makeText(context, "Konfirmasi sandi tidak cocok!", Toast.LENGTH_SHORT).show()
+                            return@Button
+                        }
+                        Toast.makeText(context, "Kata sandi berhasil diperbarui!", Toast.LENGTH_LONG).show()
+                        onDismissRequest()
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(46.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonSuccess),
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text("Simpan Sandi", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                }
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Tutup", color = TextSecondary, fontSize = 13.sp)
-            }
-        },
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileChangePasswordDialog(
+    context: Context,
+    onDismissRequest: () -> Unit,
+) {
+    ProfileChangePasswordBottomSheet(
+        context = context,
+        onDismissRequest = onDismissRequest,
     )
 }
 
@@ -403,70 +506,259 @@ fun ProfileAboutDialog(
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileLogoutBottomSheet(
+    userName: String?,
+    onConfirmLogout: () -> Unit,
+    onDismissRequest: () -> Unit,
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+) {
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        containerColor = CosmicNavy,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 8.dp)
+                    .width(44.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(NeonError.copy(alpha = 0.4f)),
+            )
+        },
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+                .navigationBarsPadding(),
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(NeonError.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = null,
+                            tint = NeonError,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Konfirmasi Keluar Akun",
+                            color = TextPrimary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            text = "Sesi aktif Anda akan diakhiri",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(CosmicBlack),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Tutup",
+                        tint = TextTertiary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(CosmicBlack)
+                    .border(1.dp, NeonError.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                    .padding(14.dp),
+            ) {
+                Text(
+                    text = "Apakah Anda yakin ingin keluar dari akun ${userName ?: "ini"}?\nAnda harus login kembali untuk mengakses jadwal pelajaran, tugas, kuis, dan data akademik.",
+                    color = TextSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                )
+            }
+
+            Spacer(Modifier.height(18.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Button(
+                    onClick = onConfirmLogout,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(46.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = NeonError),
+                ) {
+                    Text(
+                        text = "Ya, Keluar Akun",
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                    )
+                }
+
+                Button(
+                    onClick = onDismissRequest,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = CosmicBlack,
+                        contentColor = TextSecondary,
+                    ),
+                ) {
+                    Text(
+                        text = "Batal",
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileLogoutDialog(
     userName: String?,
     onConfirmLogout: () -> Unit,
     onDismissRequest: () -> Unit,
 ) {
-    AlertDialog(
+    ProfileLogoutBottomSheet(
+        userName = userName,
+        onConfirmLogout = onConfirmLogout,
         onDismissRequest = onDismissRequest,
-        containerColor = CosmicNavy,
-        title = {
-            Text("Konfirmasi Keluar Akun", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
-        },
-        text = {
-            Text(
-                text = "Apakah Anda yakin ingin keluar dari akun ${userName ?: "ini"}? Anda harus login kembali untuk mengakses jadwal dan modul pembelajaran.",
-                color = TextSecondary,
-                fontSize = 13.sp,
-                lineHeight = 18.sp,
-            )
-        },
-        confirmButton = {
-            Button(
-                onClick = onConfirmLogout,
-                colors = ButtonDefaults.buttonColors(containerColor = NeonError),
-                shape = RoundedCornerShape(10.dp),
-            ) {
-                Text("Ya, Keluar", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-            }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Batal", color = TextSecondary, fontSize = 13.sp)
-            }
-        },
     )
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProfileAvatarActionDialog(
+fun ProfileAvatarActionBottomSheet(
     hasCustomPhoto: Boolean,
     onViewPhoto: () -> Unit,
     onTakePhoto: () -> Unit,
     onPickGallery: () -> Unit,
     onDismissRequest: () -> Unit,
+    sheetState: SheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
 ) {
-    AlertDialog(
+    ModalBottomSheet(
         onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
         containerColor = CosmicNavy,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(NeonBlue.copy(alpha = 0.15f)),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Icon(Icons.Default.CameraAlt, null, tint = NeonBlue, modifier = Modifier.size(20.dp))
-                }
-                Spacer(Modifier.width(10.dp))
-                Text("Foto Profil", color = TextPrimary, fontSize = 17.sp, fontWeight = FontWeight.Black)
-            }
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+        dragHandle = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 12.dp, bottom = 8.dp)
+                    .width(44.dp)
+                    .height(4.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(NeonBlue.copy(alpha = 0.4f)),
+            )
         },
-        text = {
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 24.dp)
+                .navigationBarsPadding(),
+        ) {
+            // Header Row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(NeonBlue.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CameraAlt,
+                            contentDescription = null,
+                            tint = NeonBlue,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+                    Column {
+                        Text(
+                            text = "Foto Profil",
+                            color = TextPrimary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            text = "Kelola foto identitas akun Anda",
+                            color = TextSecondary,
+                            fontSize = 12.sp,
+                        )
+                    }
+                }
+
+                IconButton(
+                    onClick = onDismissRequest,
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(CosmicBlack),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Tutup",
+                        tint = TextTertiary,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+
+            // Options List
             Column(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -475,9 +767,9 @@ fun ProfileAvatarActionDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
+                            .clip(RoundedCornerShape(14.dp))
                             .background(CosmicBlack)
-                            .border(1.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
                             .clickable {
                                 onDismissRequest()
                                 onViewPhoto()
@@ -487,7 +779,7 @@ fun ProfileAvatarActionDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
+                                    .size(38.dp)
                                     .clip(CircleShape)
                                     .background(NeonBlue.copy(alpha = 0.15f)),
                                 contentAlignment = Alignment.Center,
@@ -497,7 +789,7 @@ fun ProfileAvatarActionDialog(
                             Spacer(Modifier.width(12.dp))
                             Column(modifier = Modifier.weight(1f)) {
                                 Text("Lihat Foto Profil", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
-                                Text("Perbesar dan lihat tampilan foto", color = TextSecondary, fontSize = 11.sp)
+                                Text("Perbesar dan lihat tampilan foto saat ini", color = TextSecondary, fontSize = 11.sp)
                             }
                             Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
                         }
@@ -507,9 +799,9 @@ fun ProfileAvatarActionDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(CosmicBlack)
-                        .border(1.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                        .border(1.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
                         .clickable {
                             onDismissRequest()
                             onTakePhoto()
@@ -519,7 +811,7 @@ fun ProfileAvatarActionDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(38.dp)
                                 .clip(CircleShape)
                                 .background(NeonSuccess.copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center,
@@ -529,7 +821,7 @@ fun ProfileAvatarActionDialog(
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Ambil Foto via Kamera", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
-                            Text("Potret langsung menggunakan kamera HP", color = TextSecondary, fontSize = 11.sp)
+                            Text("Potret langsung menggunakan kamera perangkat", color = TextSecondary, fontSize = 11.sp)
                         }
                         Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
                     }
@@ -538,9 +830,9 @@ fun ProfileAvatarActionDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(CosmicBlack)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
                         .clickable {
                             onDismissRequest()
                             onPickGallery()
@@ -550,29 +842,58 @@ fun ProfileAvatarActionDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(38.dp)
                                 .clip(CircleShape)
-                                .background(TextSecondary.copy(alpha = 0.15f)),
+                                .background(Color(0xFFA78BFA).copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Default.Image, null, tint = TextPrimary, modifier = Modifier.size(20.dp))
+                            Icon(Icons.Default.Image, null, tint = Color(0xFFA78BFA), modifier = Modifier.size(20.dp))
                         }
                         Spacer(Modifier.width(12.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text("Pilih dari Galeri", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
-                            Text("Pilih gambar yang tersimpan di HP", color = TextSecondary, fontSize = 11.sp)
+                            Text("Pilih gambar yang tersimpan di galeri perangkat", color = TextSecondary, fontSize = 11.sp)
                         }
                         Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(16.dp))
                     }
                 }
             }
-        },
-        confirmButton = {},
-        dismissButton = {
-            TextButton(onClick = onDismissRequest) {
-                Text("Batal", color = TextSecondary, fontSize = 13.sp)
+
+            Spacer(Modifier.height(14.dp))
+
+            // Cancel Button
+            Button(
+                onClick = onDismissRequest,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(44.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = CosmicBlack,
+                    contentColor = TextSecondary,
+                ),
+            ) {
+                Text("Batal", fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
             }
-        },
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ProfileAvatarActionDialog(
+    hasCustomPhoto: Boolean,
+    onViewPhoto: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onPickGallery: () -> Unit,
+    onDismissRequest: () -> Unit,
+) {
+    ProfileAvatarActionBottomSheet(
+        hasCustomPhoto = hasCustomPhoto,
+        onViewPhoto = onViewPhoto,
+        onTakePhoto = onTakePhoto,
+        onPickGallery = onPickGallery,
+        onDismissRequest = onDismissRequest,
     )
 }
 

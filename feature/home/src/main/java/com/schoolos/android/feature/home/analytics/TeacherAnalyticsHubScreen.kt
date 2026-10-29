@@ -83,8 +83,6 @@ fun TeacherAnalyticsHubScreen(
                 onSelectTab = { selectedTab = it }
             )
 
-            Spacer(Modifier.height(4.dp))
-
             // ── TAB CONTENT CROSSFADE ────────────────────────────────────────
             Crossfade(
                 targetState = selectedTab,
@@ -127,7 +125,7 @@ private fun SegmentedHubTabs(
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp),
+            .padding(horizontal = 16.dp, vertical = 3.dp),
         shape = RoundedCornerShape(12.dp),
         color = CosmicSurface2,
         border = BorderStroke(0.5.dp, GlassBorder)
@@ -189,7 +187,7 @@ private fun HubTabItem(
         modifier = modifier
     ) {
         Row(
-            modifier = Modifier.padding(vertical = 9.dp, horizontal = 10.dp),
+            modifier = Modifier.padding(vertical = 7.dp, horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
