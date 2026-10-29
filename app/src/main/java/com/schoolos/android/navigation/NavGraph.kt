@@ -376,7 +376,7 @@ fun NavGraph(
             // Assignments
             composable(Screen.Assignments.route) {
                 AssignmentListScreen(
-                    onBack = null,
+                    onBack = { navController.popBackStack() },
                     onAssignmentClick = { id -> navController.navigate(Screen.AssignmentDetail.createRoute(id)) },
                     onCreateAssignment = { navController.navigate(Screen.AssignmentCreator.route) },
                     onCreateQuiz = { navController.navigate(Screen.QuizBuilder.route) },
@@ -513,8 +513,9 @@ fun NavGraph(
             // Gradebook
             composable(Screen.Grades.route) {
                 val isPrincipal = authState?.isPrincipal == true
+                val isTeacher = authState?.isTeacher == true
                 GradebookListScreen(
-                    onBack = if (isPrincipal) null else { { navController.popBackStack() } },
+                    onBack = if (isPrincipal || isTeacher) null else { { navController.popBackStack() } },
                     onSubjectClick = { subjectId, subjectName ->
                         navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
                     },

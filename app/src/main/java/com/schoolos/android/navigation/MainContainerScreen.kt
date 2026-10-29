@@ -112,7 +112,7 @@ fun MainContainerScreen(
         isTeacher -> listOf(
             BottomNavItem(Screen.Home.route,        "Beranda",     CoreR.drawable.ic_modern_home),
             BottomNavItem(Screen.Sessions.route,    "Kelas",       CoreR.drawable.ic_modern_classes),
-            BottomNavItem(Screen.Assignments.route, "Tugas",       CoreR.drawable.ic_modern_tasks),
+            BottomNavItem(Screen.Grades.route,      "Analisis",    CoreR.drawable.ic_modern_grades),
             BottomNavItem(Screen.Chat.route,        "Tanya Jawab", CoreR.drawable.ic_modern_chat),
             BottomNavItem(Screen.Profile.route,     "Akun",        CoreR.drawable.ic_modern_profile),
         )
