@@ -1,6 +1,7 @@
 package com.schoolos.android.feature.home
 
 import com.schoolos.android.core.R as CoreR
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -32,6 +33,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,6 +42,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -340,7 +343,7 @@ fun LazyListScope.teacherContent(
         }
     }
 
-    // ── 3. STUDIO AKSI PENGAJAR (2x2 Bento Action Cards) ─────────────────────────
+    // ── 3. STUDIO AKSI PENGAJAR (Executive Console Hub) ─────────────────────────
     item {
         TeacherSectionHeader(
             title = "Studio & Aksi Pengajar",
@@ -349,57 +352,12 @@ fun LazyListScope.teacherContent(
     }
 
     item {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                BentoActionCard(
-                    title = "Buat Tugas",
-                    subtitle = "PR & proyek mandiri",
-                    iconRes = CoreR.drawable.ic_modern_tasks,
-                    accentColor = TeacherNeon,
-                    badgeText = "Tugas",
-                    onClick = onNavigateToAssignmentCreator,
-                    modifier = Modifier.weight(1f),
-                )
-
-                BentoActionCard(
-                    title = "Buat Kuis",
-                    subtitle = "Bank soal & ujian online",
-                    iconRes = CoreR.drawable.ic_modern_quiz,
-                    accentColor = NeonWarning,
-                    badgeText = "Kuis",
-                    onClick = onNavigateToQuizBuilder,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                BentoActionCard(
-                    title = "Buku Nilai",
-                    subtitle = "Rekap capaian KKTP & rapor",
-                    iconRes = CoreR.drawable.ic_modern_grades,
-                    accentColor = NeonBlue,
-                    badgeText = "Nilai",
-                    onClick = onNavigateToGrades,
-                    modifier = Modifier.weight(1f),
-                )
-
-                BentoActionCard(
-                    title = "Bahan Ajar",
-                    subtitle = "Upload modul dokumen",
-                    iconRes = CoreR.drawable.ic_modern_book,
-                    accentColor = NeonSuccess,
-                    badgeText = "Modul",
-                    onClick = onNavigateToLearning,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-        }
+        TeacherStudioConsole(
+            onCreateAssignment = onNavigateToAssignmentCreator,
+            onCreateQuiz = onNavigateToQuizBuilder,
+            onNavigateToLearning = onNavigateToLearning,
+            onNavigateToGrades = onNavigateToGrades,
+        )
     }
 
     // ── 4. JADWAL MENGAJAR HARI INI ──────────────────────────────────────────────
@@ -906,6 +864,211 @@ private fun TeacherKpiCard(
                     color = TextTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
+                )
+            }
+        }
+    }
+}
+
+// ─── TEACHER STUDIO CONSOLE & ACTION HUB ─────────────────────────────────────
+
+@Composable
+private fun TeacherStudioConsole(
+    onCreateAssignment: () -> Unit,
+    onCreateQuiz: () -> Unit,
+    onNavigateToLearning: () -> Unit,
+    onNavigateToGrades: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .background(CosmicNavy)
+            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp)),
+    ) {
+        Column(modifier = Modifier.fillMaxWidth()) {
+            // Workspace Header Bar
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(CosmicSurface2.copy(alpha = 0.5f))
+                    .padding(horizontal = 14.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(TeacherNeon),
+                    )
+                    Text(
+                        text = "TEACHER WORKSPACE & CREATOR HUB",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextSecondary,
+                        letterSpacing = 0.6.sp,
+                    )
+                }
+                Text(
+                    text = "4 Aksi Cepat",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = TextTertiary,
+                )
+            }
+
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = GlassBorder.copy(alpha = 0.5f),
+            )
+
+            // 1. Buat Tugas
+            StudioConsoleRow(
+                title = "Buat Tugas Baru",
+                subtitle = "PR, proyek mandiri, & lembar tugas siswa",
+                actionLabel = "+ Tugas",
+                iconRes = CoreR.drawable.ic_modern_tasks,
+                accentColor = TeacherNeon,
+                onClick = onCreateAssignment,
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 64.dp, end = 14.dp),
+                thickness = 0.5.dp,
+                color = GlassBorder.copy(alpha = 0.35f),
+            )
+
+            // 2. Buat Kuis
+            StudioConsoleRow(
+                title = "Buat Kuis & Evaluasi CBT",
+                subtitle = "Bank soal, kuis interaktif, & ujian online",
+                actionLabel = "+ Kuis",
+                iconRes = CoreR.drawable.ic_modern_quiz,
+                accentColor = NeonWarning,
+                onClick = onCreateQuiz,
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 64.dp, end = 14.dp),
+                thickness = 0.5.dp,
+                color = GlassBorder.copy(alpha = 0.35f),
+            )
+
+            // 3. Bahan Ajar
+            StudioConsoleRow(
+                title = "Bahan Ajar & Modul Digital",
+                subtitle = "Upload modul, materi ajar, & referensi PDF",
+                actionLabel = "Modul",
+                iconRes = CoreR.drawable.ic_modern_book,
+                accentColor = NeonSuccess,
+                onClick = onNavigateToLearning,
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 64.dp, end = 14.dp),
+                thickness = 0.5.dp,
+                color = GlassBorder.copy(alpha = 0.35f),
+            )
+
+            // 4. Buku Nilai
+            StudioConsoleRow(
+                title = "Buku Nilai & Capaian KKTP",
+                subtitle = "Rekap capaian belajar, ketuntasan, & nilai rapor",
+                actionLabel = "Buku Nilai",
+                iconRes = CoreR.drawable.ic_modern_grades,
+                accentColor = NeonBlue,
+                onClick = onNavigateToGrades,
+            )
+        }
+    }
+}
+
+@Composable
+private fun StudioConsoleRow(
+    title: String,
+    subtitle: String,
+    actionLabel: String,
+    @DrawableRes iconRes: Int,
+    accentColor: Color,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // Squircle Icon
+        Box(
+            modifier = Modifier
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(accentColor.copy(alpha = 0.12f))
+                .border(0.8.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = title,
+                tint = accentColor,
+                modifier = Modifier.size(19.dp),
+            )
+        }
+
+        // Title and Subtitle
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.spacedBy(2.dp),
+        ) {
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = subtitle,
+                fontSize = 11.sp,
+                color = TextSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+
+        // Action Pill
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(accentColor.copy(alpha = 0.10f))
+                .border(0.6.dp, accentColor.copy(alpha = 0.32f), RoundedCornerShape(6.dp))
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = actionLabel,
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                )
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(10.dp),
                 )
             }
         }

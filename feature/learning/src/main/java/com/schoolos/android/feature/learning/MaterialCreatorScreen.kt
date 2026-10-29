@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -107,9 +108,6 @@ private suspend fun readMaterialUriBytes(
     bytes
 }
 
-private val EmeraldGradient = Brush.linearGradient(
-    colors = listOf(Color(0xFF059669), Color(0xFF0891B2), Color(0xFF1D4ED8))
-)
 private val EmeraldGlow     = Color(0xFF059669)
 private val TealAccent      = Color(0xFF0891B2)
 
@@ -388,16 +386,15 @@ fun MaterialCreatorScreen(
         bottomBar = {
             Surface(
                 color = CosmicNavy,
-                tonalElevation = 10.dp,
-                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .border(1.dp, GlassBorder, RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
+                tonalElevation = 8.dp,
+                shadowElevation = 12.dp,
+                border = BorderStroke(0.5.dp, GlassBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .navigationBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
@@ -408,18 +405,23 @@ fun MaterialCreatorScreen(
                         modifier = Modifier
                             .weight(1f)
                             .height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldGlow),
-                        border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.5f))
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            contentColor = if (showPreview) NeonWarning else TextPrimary
+                        ),
+                        border = BorderStroke(
+                            1.dp,
+                            if (showPreview) NeonWarning.copy(alpha = 0.5f) else GlassBorder
+                        )
                     ) {
                         Icon(
-                            if (showPreview) Icons.Default.Close else Icons.Default.Visibility,
+                            if (showPreview) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                             contentDescription = null,
-                            modifier = Modifier.size(16.dp)
+                            modifier = Modifier.size(17.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            if (showPreview) "Tutup Preview" else "Preview",
-                            fontWeight = FontWeight.Bold,
+                            if (showPreview) "Sembunyikan" else "Lihat Preview",
+                            fontWeight = FontWeight.SemiBold,
                             fontSize = 12.sp
                         )
                     }
@@ -467,19 +469,20 @@ fun MaterialCreatorScreen(
                         enabled = !state.isLoading && !state.isUploadingFile,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
-                            .weight(1.4f)
+                            .weight(1.3f)
                             .height(48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = EmeraldGlow,
+                            contentColor = Color.White,
                             disabledContainerColor = EmeraldGlow.copy(alpha = 0.35f)
                         )
                     ) {
                         if (state.isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(17.dp))
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(17.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Pratinjau & Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text("Lanjut Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -497,15 +500,18 @@ fun MaterialCreatorScreen(
         ) {
             // ── LIVE STUDENT FEED PREVIEW CARD ──
             AnimatedVisibility(visible = showPreview) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CosmicNavy)
-                        .border(1.dp, EmeraldGlow.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
-                        .padding(16.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = CosmicNavy,
+                    border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.4f))
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -517,11 +523,11 @@ fun MaterialCreatorScreen(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(8.dp)
+                                        .size(7.dp)
                                         .clip(CircleShape)
                                         .background(NeonSuccess)
                                 )
-                                Text("Preview Modul di HP Siswa", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                Text("Pratinjau Modul Siswa", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
                             Text("In-App Reader", color = TextTertiary, fontSize = 10.sp)
                         }
@@ -535,9 +541,17 @@ fun MaterialCreatorScreen(
                             text = description.ifBlank { "Deskripsi pengantar dan capaian kompetensi materi..." },
                             color = TextSecondary,
                             fontSize = 12.sp,
-                            maxLines = 3
+                            lineHeight = 16.sp,
+                            maxLines = 2,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Chip(label = selectedSubject.ifBlank { "Mata Pelajaran" }, color = EmeraldGlow)
                             Chip(label = selectedType.name, color = TealAccent)
                             if (selectedClass.isNotBlank()) {
@@ -548,23 +562,14 @@ fun MaterialCreatorScreen(
                 }
             }
 
-            // ── AI MATERIAL GENERATOR CALLOUT CARD ──
+            // ── AI MATERIAL GENERATOR CALLOUT CARD (ZERO GRADIENT, SLEEK EXECUTIVE) ──
             Surface(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showAiGenerateDialog = true },
-                shape = RoundedCornerShape(16.dp),
-                color = if (LocalIsDarkTheme.current) CosmicNavy else MaterialTheme.colorScheme.surface,
-                border = BorderStroke(
-                    1.dp,
-                    Brush.horizontalGradient(
-                        listOf(
-                            MaterialTheme.colorScheme.tertiary,
-                            MaterialTheme.colorScheme.primary
-                        )
-                    )
-                ),
-                shadowElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp
+                shape = RoundedCornerShape(14.dp),
+                color = CosmicNavy,
+                border = BorderStroke(0.5.dp, GlassBorder)
             ) {
                 Row(
                     modifier = Modifier
@@ -580,54 +585,72 @@ fun MaterialCreatorScreen(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(
-                                            MaterialTheme.colorScheme.tertiary,
-                                            MaterialTheme.colorScheme.primary
-                                        )
-                                    )
-                                ),
+                                .background(CosmicSurface2)
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.AutoAwesome,
                                 contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(20.dp)
+                                tint = EmeraldGlow,
+                                modifier = Modifier.size(19.dp)
                             )
                         }
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Text(
+                                    text = "Generate Materi (AI)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(4.dp))
+                                        .background(EmeraldGlow.copy(alpha = 0.12f))
+                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        "Asisten Guru",
+                                        color = EmeraldGlow,
+                                        fontSize = 9.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
                             Text(
-                                text = "Generate Materi (AI)",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Text(
-                                text = "Sintesis infografis majalah & artikel terstruktur otomatis",
+                                text = "Sintesis infografis & artikel pembelajaran terstruktur otomatis",
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                color = TextSecondary,
                                 maxLines = 1,
                                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                             )
                         }
                     }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(16.dp)
+                    )
                 }
             }
 
             // ── SECTION 1: SASARAN ROMBEL & MAPEL ──
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                    .padding(16.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = CosmicNavy,
+                border = BorderStroke(0.5.dp, GlassBorder)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     SectionHeader(
                         number = 1,
                         title = "Sasaran Rombel & Mapel",
@@ -668,20 +691,23 @@ fun MaterialCreatorScreen(
             }
 
             // ── SECTION 2: FORMAT MODUL PEMBELAJARAN ──
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                    .padding(16.dp)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = CosmicNavy,
+                border = BorderStroke(0.5.dp, GlassBorder)
             ) {
-                Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
                     SectionHeader(
                         number = 2,
                         title = "Format Modul Pembelajaran",
                         subtitle = "Pilih jenis konten media yang akan diunggah",
-                        accentColor = TealAccent
+                        accentColor = EmeraldGlow
                     )
 
                     Row(
@@ -697,42 +723,38 @@ fun MaterialCreatorScreen(
                             Triple(MaterialType.ARTICLE, "Artikel", Icons.Default.Article)
                         ).forEach { (type, label, icon) ->
                             val isSelected = selectedType == type
-                            Box(
+                            Surface(
                                 modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer else CosmicSurface2
-                                    )
-                                    .border(
-                                        width = if (isSelected) 1.5.dp else 0.5.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else GlassBorder,
-                                        shape = RoundedCornerShape(12.dp)
-                                    )
                                     .clickable {
                                         selectedType = type
                                         if (type != MaterialType.DOCUMENT) {
                                             selectedBook = null
                                         }
-                                    }
-                                    .padding(vertical = 12.dp, horizontal = 4.dp),
-                                contentAlignment = Alignment.Center
+                                    },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isSelected) EmeraldGlow.copy(alpha = 0.12f) else CosmicSurface2,
+                                border = BorderStroke(
+                                    width = if (isSelected) 1.dp else 0.5.dp,
+                                    color = if (isSelected) EmeraldGlow else GlassBorder
+                                )
                             ) {
                                 Column(
+                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally,
                                     verticalArrangement = Arrangement.Center
                                 ) {
                                     Icon(
-                                        icon,
+                                        imageVector = icon,
                                         contentDescription = label,
-                                        tint = if (isSelected) MaterialTheme.colorScheme.primary else TextSecondary,
-                                        modifier = Modifier.size(24.dp)
+                                        tint = if (isSelected) EmeraldGlow else TextTertiary,
+                                        modifier = Modifier.size(22.dp)
                                     )
                                     Spacer(Modifier.height(6.dp))
                                     Text(
-                                        label,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else TextPrimary,
+                                        text = label,
+                                        color = if (isSelected) EmeraldGlow else TextPrimary,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                         fontSize = 11.sp,
                                         textAlign = TextAlign.Center,
@@ -1318,31 +1340,29 @@ private fun SectionHeader(
     number: Int?,
     title: String,
     subtitle: String,
-    accentColor: Color
+    accentColor: Color = EmeraldGlow
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         if (number != null) {
             Box(
                 modifier = Modifier
-                    .size(30.dp)
-                    .clip(CircleShape)
-                    .background(accentColor),
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Text(number.toString(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
+                Text(
+                    String.format(java.util.Locale.US, "%02d", number),
+                    color = EmeraldGlow,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
-        } else {
-            Box(
-                modifier = Modifier
-                    .width(4.dp)
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Brush.linearGradient(listOf(accentColor, accentColor.copy(alpha = 0.3f))))
-            )
         }
         Column {
-            Text(title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            Text(subtitle, color = TextTertiary, fontSize = 11.sp)
+            Text(title, color = TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(subtitle, color = TextSecondary, fontSize = 11.sp)
         }
     }
 }
@@ -1352,10 +1372,11 @@ private fun Chip(label: String, color: Color) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(color.copy(alpha = 0.15f))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .background(color.copy(alpha = 0.12f))
+            .border(0.5.dp, color.copy(alpha = 0.3f), RoundedCornerShape(6.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
-        Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
     }
 }
 
@@ -1373,55 +1394,111 @@ private fun ModernDropdown(
     onSelect: (String) -> Unit
 ) {
     val isLocked = label.contains("Terkunci")
-    ExposedDropdownMenuBox(
-        expanded = if (isLocked && options.size <= 1) false else expanded,
-        onExpandedChange = { if (!isLocked || options.size > 1) { if (!expanded) onExpand() else onDismiss() } }
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            leadingIcon = {
-                Icon(icon, contentDescription = null, tint = if (isLocked) TextTertiary else accentColor, modifier = Modifier.size(20.dp))
-            },
-            trailingIcon = {
-                if (!isLocked || options.size > 1) {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                }
-            },
-            modifier = Modifier.fillMaxWidth().menuAnchor(),
-            shape = RoundedCornerShape(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = if (isLocked) GlassBorder2 else accentColor,
-                unfocusedBorderColor = GlassBorder,
-                focusedLabelColor = if (isLocked) TextTertiary else accentColor,
-                focusedLeadingIconColor = if (isLocked) TextTertiary else accentColor,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-                unfocusedLabelColor = TextTertiary
-            )
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = onDismiss,
-            modifier = Modifier.background(CosmicNavy)
+    if (isLocked) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            color = CosmicSurface2,
+            border = BorderStroke(0.5.dp, GlassBorder)
         ) {
-            options.forEach { option ->
-                val isSelected = option == value
-                DropdownMenuItem(
-                    text = {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Column {
                         Text(
-                            option,
-                            color = if (isSelected) accentColor else TextPrimary,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            text = "Mata Pelajaran (Terkunci)",
+                            fontSize = 11.sp,
+                            color = TextTertiary,
+                            fontWeight = FontWeight.Medium
                         )
-                    },
-                    onClick = { onSelect(option); onDismiss() },
-                    leadingIcon = if (isSelected) ({
-                        Icon(Icons.Default.Check, null, tint = accentColor, modifier = Modifier.size(16.dp))
-                    }) else null
+                        Text(
+                            text = value.ifBlank { "Mata Pelajaran Guru" },
+                            fontSize = 14.sp,
+                            color = TextPrimary,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(CosmicNavy)
+                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                        .padding(horizontal = 7.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        "Guru Pengampu",
+                        color = TextTertiary,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    } else {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { if (!expanded) onExpand() else onDismiss() }
+        ) {
+            OutlinedTextField(
+                value = value,
+                onValueChange = {},
+                readOnly = true,
+                label = { Text(label, fontSize = 12.sp) },
+                leadingIcon = {
+                    Icon(icon, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(18.dp))
+                },
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                modifier = Modifier.fillMaxWidth().menuAnchor(),
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = EmeraldGlow,
+                    unfocusedBorderColor = GlassBorder,
+                    focusedLabelColor = EmeraldGlow,
+                    focusedLeadingIconColor = EmeraldGlow,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary,
+                    unfocusedLabelColor = TextTertiary
                 )
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = onDismiss,
+                modifier = Modifier.background(CosmicNavy)
+            ) {
+                options.forEach { option ->
+                    val isSelected = option == value
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                option,
+                                color = if (isSelected) EmeraldGlow else TextPrimary,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                            )
+                        },
+                        onClick = { onSelect(option); onDismiss() },
+                        leadingIcon = if (isSelected) ({
+                            Icon(Icons.Default.Check, null, tint = EmeraldGlow, modifier = Modifier.size(16.dp))
+                        }) else null
+                    )
+                }
             }
         }
     }
@@ -1513,9 +1590,7 @@ private fun FileUploadedCard(
             onClick = onReplace,
             shape = RoundedCornerShape(10.dp),
             colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonBlue),
-            border = ButtonDefaults.outlinedButtonBorder().copy(
-                brush = Brush.linearGradient(listOf(NeonBlue, NeonBlue))
-            ),
+            border = BorderStroke(1.dp, NeonBlue),
             contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
         ) {
             Text("Ganti", fontSize = 11.sp, fontWeight = FontWeight.Bold)
@@ -1534,12 +1609,12 @@ private fun FileDropzone(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(14.dp))
             .background(accentColor.copy(alpha = 0.05f))
             .border(
-                width = 2.dp,
-                brush = Brush.linearGradient(listOf(accentColor.copy(alpha = 0.5f), accentColor.copy(alpha = 0.2f))),
-                shape = RoundedCornerShape(16.dp)
+                width = 1.dp,
+                color = accentColor.copy(alpha = 0.4f),
+                shape = RoundedCornerShape(14.dp)
             )
             .clickable(onClick = onClick)
             .padding(14.dp),
@@ -2297,7 +2372,7 @@ private fun YoutubeSearchSection(
                     },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = NeonBlue,
+                        focusedBorderColor = EmeraldGlow,
                         unfocusedBorderColor = GlassBorder,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary
@@ -2307,8 +2382,8 @@ private fun YoutubeSearchSection(
                 Button(
                     onClick = { if (searchQuery.isNotBlank()) viewModel.searchYoutube(searchQuery) },
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonBlue),
-                    modifier = Modifier.height(56.dp)
+                    colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow),
+                    modifier = Modifier.height(54.dp)
                 ) {
                     Icon(Icons.Default.Search, contentDescription = "Cari", tint = Color.White)
                 }
@@ -2339,14 +2414,15 @@ private fun YoutubeSearchSection(
                                 searchQuery = chip
                                 viewModel.searchYoutube(chip)
                             }
-                            .padding(horizontal = 10.dp, vertical = 6.dp)
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
                     ) {
                         Text(
                             text = chip,
                             color = TextSecondary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            maxLines = 1
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }

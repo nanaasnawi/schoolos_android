@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.sessions
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,23 +8,17 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.*
@@ -67,166 +62,243 @@ fun TeacherSessionDetailContent(
     val attendanceRate = if (totalCount > 0) (presentCount * 100 / totalCount) else 0
     val sessionPeriod = formatSessionPeriod(session.scheduledAt)
 
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    val rawSubject = session.subjectName ?: session.notes ?: "Pelajaran"
+    val subject = rawSubject.substringBefore(" • ").substringBefore(" (Ruang").trim()
+    val roomText = listOfNotNull(session.room ?: "Ruang Kelas", session.className).joinToString(" • ")
+    val icon = subjectIcon(subject)
 
-        // ── SESSION PERIOD & STATS HERO ──
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(20.dp))
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(accentColor.copy(alpha = 0.18f), CosmicNavy),
-                    )
-                )
-                .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                .padding(16.dp)
+    val timeText = session.scheduledAt?.let {
+        try {
+            val instant = java.time.Instant.parse(it)
+            val zdt = instant.atZone(java.time.ZoneId.of("Asia/Jakarta"))
+            val endTimeStr = session.endedAt?.let { end ->
+                val eZdt = java.time.Instant.parse(end).atZone(java.time.ZoneId.of("Asia/Jakarta"))
+                String.format(java.util.Locale.US, "%02d.%02d", eZdt.hour, eZdt.minute)
+            } ?: ""
+            if (endTimeStr.isNotBlank()) {
+                String.format(java.util.Locale.US, "%02d.%02d — %s WIB", zdt.hour, zdt.minute, endTimeStr)
+            } else {
+                String.format(java.util.Locale.US, "%02d.%02d WIB", zdt.hour, zdt.minute)
+            }
+        } catch (_: Exception) { "08.00 WIB" }
+    } ?: "08.00 WIB"
+
+    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+
+        // ── 1. UNIFIED EXECUTIVE SESSION CARD (ZERO GRADIENT, ZERO DUPLICATION) ──
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = CosmicNavy,
+            border = BorderStroke(0.5.dp, GlassBorder)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                // Period badge row
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                // Top Header Row: Icon + Subject + Class + Time Badge
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(accentColor.copy(alpha = 0.15f))
-                            .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Schedule, null, tint = accentColor, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                sessionPeriod,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Black,
-                                color = accentColor,
-                            )
-                        }
-                    }
-                    Text(
-                        text = session.scheduledAt?.let {
-                            try {
-                                val instant = java.time.Instant.parse(it)
-                                val zdt = instant.atZone(java.time.ZoneId.of("Asia/Jakarta"))
-                                String.format(java.util.Locale.US, "%02d.%02d — %s WIB",
-                                    zdt.hour, zdt.minute,
-                                    session.endedAt?.let { end ->
-                                        val eZdt = java.time.Instant.parse(end).atZone(java.time.ZoneId.of("Asia/Jakarta"))
-                                        String.format(java.util.Locale.US, "%02d.%02d", eZdt.hour, eZdt.minute)
-                                    } ?: ""
-                                )
-                            } catch (_: Exception) { "08.00 WIB" }
-                        } ?: "08.00 WIB",
-                        fontSize = 11.sp,
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Bold,
-                    )
-                }
-
-                // Attendance stats row
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    AttendanceMiniCard("HADIR", presentCount.toString(), NeonSuccess, Modifier.weight(1f))
-                    AttendanceMiniCard("TIDAK HADIR", absentCount.toString(), NeonError, Modifier.weight(1f))
-                    AttendanceMiniCard("KEHADIRAN", "$attendanceRate%", accentColor, Modifier.weight(1f))
-                }
-
-                // Attendance progress bar
-                if (totalCount > 0) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        // Squircle Icon Container (Zero gradient)
                         Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .height(6.dp)
-                                .clip(CircleShape)
-                                .background(accentColor.copy(alpha = 0.12f)),
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(CosmicSurface2)
+                                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth(presentCount.toFloat() / totalCount)
-                                    .height(6.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.horizontalGradient(listOf(accentColor, NeonSuccess)),
-                                    ),
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = NeonBlue,
+                                modifier = Modifier.size(22.dp)
                             )
                         }
-                        Text(
-                            "$presentCount dari $totalCount siswa hadir",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextTertiary,
+
+                        Spacer(Modifier.width(12.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = subject,
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = roomText,
+                                fontSize = 12.sp,
+                                color = TextSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.width(8.dp))
+
+                    // Period & Time Badge
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = CosmicSurface2,
+                        border = BorderStroke(0.5.dp, GlassBorder)
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            horizontalAlignment = Alignment.End
+                        ) {
+                            Text(
+                                text = sessionPeriod,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = NeonBlue
+                            )
+                            Text(
+                                text = timeText,
+                                fontSize = 10.sp,
+                                color = TextTertiary
+                            )
+                        }
+                    }
+                }
+
+                HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+
+                // Attendance Metrics Row (3 Clean Cards, Zero Gradients)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    AttendanceMetricBox(
+                        label = "HADIR",
+                        value = presentCount.toString(),
+                        color = NeonSuccess,
+                        modifier = Modifier.weight(1f)
+                    )
+                    AttendanceMetricBox(
+                        label = "TIDAK HADIR",
+                        value = absentCount.toString(),
+                        color = NeonError,
+                        modifier = Modifier.weight(1f)
+                    )
+                    AttendanceMetricBox(
+                        label = "KEHADIRAN",
+                        value = "$attendanceRate%",
+                        color = NeonBlue,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                // Solid Linear Progress Bar (No gradient)
+                if (totalCount > 0) {
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        LinearProgressIndicator(
+                            progress = { if (totalCount > 0) (presentCount.toFloat() / totalCount).coerceIn(0f, 1f) else 0f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(5.dp)
+                                .clip(RoundedCornerShape(3.dp)),
+                            color = NeonSuccess,
+                            trackColor = CosmicSurface2
                         )
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "$presentCount dari $totalCount siswa hadir",
+                                fontSize = 11.sp,
+                                color = TextTertiary
+                            )
+                            StatusChip(label = session.status)
+                        }
                     }
                 }
             }
         }
 
-        // ── RESOURCE HUB ──
-        SectionTitle("KELOLA SUMBER DAYA KELAS")
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                .padding(12.dp)
+        // ── 2. RESOURCE MANAGEMENT ACTIONS ──
+        Text(
+            text = "KELOLA SUMBER DAYA KELAS",
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextTertiary,
+            letterSpacing = 0.6.sp,
+            modifier = Modifier.padding(start = 4.dp, top = 2.dp)
+        )
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                ResourceAction(
-                    label = "Beri Tugas",
-                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_tasks,
-                    color = StudentNeon,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenAssignments(session.subjectName?.trim().orEmpty()) },
-                )
-                ResourceAction(
-                    label = "Buat Kuis",
-                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_quiz,
-                    color = NeonSuccess,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenQuizzes(session.subjectName?.trim().orEmpty()) },
-                )
-                ResourceAction(
-                    label = "Unggah Materi",
-                    iconRes = com.schoolos.android.core.R.drawable.ic_modern_book,
-                    color = NeonBlue,
-                    modifier = Modifier.weight(1f),
-                    onClick = { onOpenMaterials(session.subjectName?.trim().orEmpty()) },
-                )
-            }
+            ResourceActionCard(
+                label = "Beri Tugas",
+                hint = "Tugas & PR",
+                icon = Icons.AutoMirrored.Filled.Assignment,
+                accentColor = StudentNeon,
+                modifier = Modifier.weight(1f),
+                onClick = { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
+            )
+            ResourceActionCard(
+                label = "Buat Kuis",
+                hint = "Evaluasi CBT",
+                icon = Icons.Default.Quiz,
+                accentColor = NeonSuccess,
+                modifier = Modifier.weight(1f),
+                onClick = { onOpenQuizzes(session.subjectName?.trim().orEmpty()) }
+            )
+            ResourceActionCard(
+                label = "Unggah Materi",
+                hint = "Bahan Ajar",
+                icon = Icons.AutoMirrored.Filled.MenuBook,
+                accentColor = NeonBlue,
+                modifier = Modifier.weight(1f),
+                onClick = { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
+            )
         }
 
-        // ── ATTENDANCE ROSTER ──
+        // ── 3. ATTENDANCE ROSTER HEADER & ACTIONS ──
         Row(
-            modifier = Modifier.padding(start = 4.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 4.dp, top = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Text(
-                "Rekap Presensi Siswa",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Black,
-                color = TextPrimary,
-            )
-            if (totalCount > 0) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(accentColor.copy(alpha = 0.12f))
-                        .border(0.5.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp),
-                ) {
-                    Text("$totalCount Siswa", color = accentColor, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Rekap Presensi Siswa",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+                if (totalCount > 0) {
+                    Spacer(Modifier.width(8.dp))
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = CosmicSurface2,
+                        border = BorderStroke(0.5.dp, GlassBorder)
+                    ) {
+                        Text(
+                            text = "$totalCount Siswa",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonBlue,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
         }
@@ -234,170 +306,198 @@ fun TeacherSessionDetailContent(
         if (effectiveStudents.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 // Button Tandai Hadir Semua
-                Box(
+                Surface(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(NeonSuccess.copy(alpha = 0.12f))
-                        .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
-                        .clickable(enabled = !isBulkSaving) { onMarkAllPresent() }
-                        .padding(vertical = 10.dp, horizontal = 12.dp),
-                    contentAlignment = Alignment.Center,
+                        .height(40.dp)
+                        .clickable(enabled = !isBulkSaving, onClick = onMarkAllPresent),
+                    shape = RoundedCornerShape(10.dp),
+                    color = CosmicSurface2,
+                    border = BorderStroke(0.5.dp, GlassBorder)
                 ) {
                     Row(
+                        modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        horizontalArrangement = Arrangement.Center
                     ) {
                         Icon(
-                            Icons.Default.DoneAll,
+                            imageVector = Icons.Default.DoneAll,
                             contentDescription = null,
                             tint = NeonSuccess,
-                            modifier = Modifier.size(16.dp),
+                            modifier = Modifier.size(16.dp)
                         )
+                        Spacer(Modifier.width(6.dp))
                         Text(
-                            "Hadir Semua",
+                            text = "Hadir Semua",
                             color = NeonSuccess,
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
 
-                // Button Simpan Presensi
-                Box(
+                // Button Simpan Presensi (Solid button, zero gradient)
+                Button(
+                    onClick = onSaveAll,
+                    enabled = !isBulkSaving,
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(accentColor.copy(alpha = 0.15f))
-                        .border(0.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
-                        .clickable(enabled = !isBulkSaving) { onSaveAll() }
-                        .padding(vertical = 10.dp, horizontal = 12.dp),
-                    contentAlignment = Alignment.Center,
+                        .height(40.dp),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonBlue,
+                        contentColor = Color.White
+                    )
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                    ) {
-                        if (isBulkSaving) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                color = accentColor,
-                                strokeWidth = 2.dp,
-                            )
-                        } else {
-                            Icon(
-                                Icons.Default.Save,
-                                contentDescription = null,
-                                tint = accentColor,
-                                modifier = Modifier.size(16.dp),
-                            )
-                        }
+                    if (isBulkSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            color = Color.White,
+                            strokeWidth = 2.dp
+                        )
+                        Spacer(Modifier.width(6.dp))
                         Text(
-                            if (isBulkSaving) "Menyimpan..." else "Simpan Presensi",
-                            color = accentColor,
+                            text = "Menyimpan...",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Save,
+                            contentDescription = null,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Simpan Presensi",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
                         )
                     }
                 }
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                .padding(14.dp)
+        // ── 4. STUDENT ATTENDANCE ROSTER LIST ──
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = CosmicNavy,
+            border = BorderStroke(0.5.dp, GlassBorder)
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Column(
+                modifier = Modifier.padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
                 if (effectiveStudents.isEmpty()) {
-                    EmptyStateContent(
-                        message = "Data presensi belum tersedia",
-                        subtitle = "Presensi akan muncul setelah sesi dimulai",
-                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.EventAvailable,
+                            contentDescription = null,
+                            tint = TextTertiary,
+                            modifier = Modifier.size(36.dp)
+                        )
+                        Text(
+                            text = "Data presensi belum tersedia",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Presensi akan muncul setelah sesi dimulai.",
+                            fontSize = 11.sp,
+                            color = TextTertiary
+                        )
+                    }
                 } else {
                     effectiveStudents.forEachIndexed { idx, student ->
                         if (idx > 0) {
                             HorizontalDivider(
                                 color = GlassBorder,
                                 thickness = 0.5.dp,
-                                modifier = Modifier.padding(vertical = 4.dp),
+                                modifier = Modifier.padding(vertical = 4.dp)
                             )
                         }
                         val currentStatus = student.status.lowercase()
-                        val statusColor = when (currentStatus) {
-                            "present" -> NeonSuccess
-                            "sick" -> NeonBlue
-                            "excused" -> NeonWarning
-                            "absent" -> NeonError
-                            else -> TextTertiary
-                        }
+
                         Row(
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
                             val initial = student.studentName.firstOrNull()?.uppercase() ?: "${idx + 1}"
+                            // Avatar Box
                             Box(
                                 modifier = Modifier
-                                    .size(38.dp)
-                                    .clip(CircleShape)
-                                    .background(statusColor.copy(alpha = 0.12f))
-                                    .border(1.dp, statusColor.copy(alpha = 0.35f), CircleShape),
-                                contentAlignment = Alignment.Center,
+                                    .size(36.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(CosmicSurface2)
+                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                                contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    initial,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = statusColor,
-                                )
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    student.studentName,
-                                    fontSize = 14.sp,
+                                    text = initial,
+                                    fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary,
-                                    maxLines = 1,
-                                )
-                                val subText = student.nisn?.let { "NISN: $it" } ?: "ID: ${student.studentId.take(8)}"
-                                Text(
-                                    subText,
-                                    fontSize = 10.sp,
-                                    color = TextTertiary,
+                                    color = TextPrimary
                                 )
                             }
 
-                            // 4 Tombol Status Presensi: H=Hadir, S=Sakit, I=Izin, A=Alpa
+                            Spacer(Modifier.width(10.dp))
+
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = student.studentName,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                val subText = student.nisn?.let { "NISN: $it" } ?: "ID: ${student.studentId.take(8)}"
+                                Text(
+                                    text = subText,
+                                    fontSize = 10.5.sp,
+                                    color = TextTertiary
+                                )
+                            }
+
+                            Spacer(Modifier.width(8.dp))
+
+                            // 4 Segmented Attendance Buttons: H, S, I, A (High Contrast, Bold, Zero Gradient)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                                 AttendanceStatusButton(
                                     label = "H",
                                     selected = currentStatus == "present",
-                                    color = NeonSuccess,
+                                    activeColor = NeonSuccess,
                                     onClick = { onUpdateAttendance(student.studentId, "present") }
                                 )
                                 AttendanceStatusButton(
                                     label = "S",
                                     selected = currentStatus == "sick",
-                                    color = NeonBlue,
+                                    activeColor = NeonBlue,
                                     onClick = { onUpdateAttendance(student.studentId, "sick") }
                                 )
                                 AttendanceStatusButton(
                                     label = "I",
                                     selected = currentStatus == "excused",
-                                    color = NeonWarning,
+                                    activeColor = NeonWarning,
                                     onClick = { onUpdateAttendance(student.studentId, "excused") }
                                 )
                                 AttendanceStatusButton(
                                     label = "A",
                                     selected = currentStatus == "absent",
-                                    color = NeonError,
+                                    activeColor = NeonError,
                                     onClick = { onUpdateAttendance(student.studentId, "absent") }
                                 )
                             }
@@ -410,119 +510,113 @@ fun TeacherSessionDetailContent(
 }
 
 @Composable
-private fun AttendanceStatusButton(
+private fun AttendanceMetricBox(
     label: String,
-    selected: Boolean,
+    value: String,
     color: Color,
-    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = Modifier
-            .size(30.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (selected) color else color.copy(alpha = 0.08f))
-            .border(1.dp, if (selected) color else color.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(10.dp),
+        color = CosmicSurface2,
+        border = BorderStroke(0.5.dp, GlassBorder)
     ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Black,
-            color = if (selected) Color.Black else color,
-        )
-    }
-}
-
-@Composable
-private fun SectionTitle(title: String) {
-    Text(
-        title,
-        fontSize = 10.sp,
-        fontWeight = FontWeight.ExtraBold,
-        color = TextTertiary,
-        letterSpacing = 1.sp,
-        modifier = Modifier.padding(start = 4.dp, bottom = 4.dp),
-    )
-}
-
-@Composable
-private fun AttendanceMiniCard(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(color.copy(alpha = 0.08f))
-            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-            .padding(vertical = 10.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, fontSize = 20.sp, fontWeight = FontWeight.Black, color = color)
-            Text(label, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = TextTertiary)
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = color
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = label,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextTertiary
+            )
         }
     }
 }
 
 @Composable
-private fun ResourceAction(
+private fun ResourceActionCard(
     label: String,
-    icon: ImageVector? = null,
-    @androidx.annotation.DrawableRes iconRes: Int? = null,
-    color: Color,
+    hint: String,
+    icon: ImageVector,
+    accentColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(color.copy(alpha = 0.08f))
-            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(6.dp),
+    Surface(
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = CosmicNavy,
+        border = BorderStroke(0.5.dp, GlassBorder)
     ) {
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .clip(CircleShape)
-                .background(color.copy(alpha = 0.15f)),
-            contentAlignment = Alignment.Center,
+        Column(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            if (iconRes != null) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(CosmicSurface2)
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                contentAlignment = Alignment.Center
+            ) {
                 Icon(
-                    painter = painterResource(id = iconRes),
+                    imageVector = icon,
                     contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(18.dp),
+                    tint = accentColor,
+                    modifier = Modifier.size(18.dp)
                 )
-            } else if (icon != null) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(18.dp))
             }
+            Text(
+                text = label,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary
+            )
+            Text(
+                text = hint,
+                fontSize = 9.sp,
+                color = TextTertiary
+            )
         }
-        Text(label, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
     }
 }
 
 @Composable
-private fun EmptyStateContent(message: String, subtitle: String) {
-    Column(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+private fun AttendanceStatusButton(
+    label: String,
+    selected: Boolean,
+    activeColor: Color,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(8.dp),
+        color = if (selected) activeColor else CosmicSurface2,
+        border = BorderStroke(
+            0.5.dp,
+            if (selected) activeColor else GlassBorder
+        ),
+        modifier = Modifier.size(32.dp)
     ) {
-        Box(
-            modifier = Modifier
-                .size(52.dp)
-                .clip(CircleShape)
-                .background(NeonBlueBg)
-                .border(1.dp, NeonBlue.copy(alpha = 0.2f), CircleShape),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Default.Assignment, contentDescription = null,
-                modifier = Modifier.size(24.dp), tint = NeonBlue)
+        Box(contentAlignment = Alignment.Center) {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = if (selected) Color.White else TextSecondary
+            )
         }
-        Text(message, fontSize = 13.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
-        Text(subtitle, fontSize = 11.sp, color = TextTertiary)
     }
 }
