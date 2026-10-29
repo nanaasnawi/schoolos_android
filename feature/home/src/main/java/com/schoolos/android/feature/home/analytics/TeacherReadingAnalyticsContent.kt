@@ -1,8 +1,6 @@
 package com.schoolos.android.feature.home.analytics
 
 import java.util.Locale
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -24,18 +22,15 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.MenuBook
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -54,13 +49,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -68,15 +60,13 @@ import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicDark
 import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.ErrorBg
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.InfoBg
 import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.NeonWarning
+import com.schoolos.android.core.designsystem.PullRefreshContainer
 import com.schoolos.android.core.designsystem.SuccessBg
-import com.schoolos.android.core.designsystem.TextDisabled
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
@@ -89,7 +79,6 @@ fun TeacherReadingAnalyticsContent(
     state: TeacherReadingAnalyticsUiState,
     isDark: Boolean,
     onRefresh: () -> Unit,
-    onExportCsv: () -> Unit,
     onSelectClassFilter: (String) -> Unit,
     onSelectMaterialFilter: (String) -> Unit,
     onSelectStatusFilter: (String) -> Unit,
@@ -99,160 +88,150 @@ fun TeacherReadingAnalyticsContent(
 ) {
     val focusManager = LocalFocusManager.current
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(bottom = 96.dp)
+    PullRefreshContainer(
+        isRefreshing = state.isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize()
     ) {
-        // ── 1. HERO HEADER ──────────────────────────────────────────────────
-        item {
-            ReadingAnalyticsHeroHeader(
-                isRefreshing = state.isRefreshing,
-                isDark = isDark,
-                onRefresh = onRefresh,
-                onExportCsv = onExportCsv,
-            )
-        }
-
-        // ── 2. 4 KPI METRIC SUMMARY CARDS ────────────────────────────────────
-        item {
-            Spacer(Modifier.height(14.dp))
-            ReadingMetricsGrid(
-                metrics = state.dynamicMetrics,
-                isDark = isDark
-            )
-        }
-
-        // ── 3. FILTER CONTROLS (ROMBEL, MATERI, SEARCH) ───────────────────────
-        item {
-            Spacer(Modifier.height(18.dp))
-            ReadingFilterSection(
-                classes = state.availableClasses,
-                selectedClass = state.selectedClassFilter,
-                onSelectClass = onSelectClassFilter,
-                materials = state.materials.map { it.materialId to it.title },
-                selectedMaterialId = state.selectedMaterialFilter,
-                onSelectMaterial = onSelectMaterialFilter,
-                searchQuery = state.searchQuery,
-                onSearchChange = onSearchQueryChange,
-                onClearSearch = { onSearchQueryChange(""); focusManager.clearFocus() },
-                isDark = isDark
-            )
-        }
-
-        // ── 4. STATUS FILTER TABS ────────────────────────────────────────────
-        item {
-            Spacer(Modifier.height(14.dp))
-            ReadingStatusFilterTabs(
-                selectedStatus = state.selectedStatusFilter,
-                statusCounts = state.statusCounts,
-                isDark = isDark,
-                onSelectStatus = onSelectStatusFilter
-            )
-        }
-
-        // ── 5. STUDENT LIST / EMPTY STATE ────────────────────────────────────
-        item {
-            Spacer(Modifier.height(16.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(
-                    text = "Daftar Peserta Didik (${state.filteredRows.size})",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (isDark) TextPrimary else Color(0xFF0F172A)
-                )
-                if (state.selectedClassFilter != "ALL" || state.selectedMaterialFilter != "ALL" || state.selectedStatusFilter != "ALL" || state.searchQuery.isNotBlank()) {
-                    Text(
-                        text = "Reset Filter",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = NeonBlue,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .clickable {
-                                onSelectClassFilter("ALL")
-                                onSelectMaterialFilter("ALL")
-                                onSelectStatusFilter("ALL")
-                                onSearchQueryChange("")
-                            }
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
-                }
-            }
-            Spacer(Modifier.height(8.dp))
-        }
-
-        if (state.isLoading && state.allReadingRows.isEmpty()) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 96.dp)
+        ) {
+            // ── 1. MINIMALIST HERO HEADER (NO GRADIENT, NO BUTTONS) ──────────
             item {
-                Box(
+                ReadingAnalyticsHeroHeader(
+                    isDark = isDark,
+                )
+            }
+
+            // ── 2. 4 KPI METRIC SUMMARY CARDS ────────────────────────────────
+            item {
+                Spacer(Modifier.height(14.dp))
+                ReadingMetricsGrid(
+                    metrics = state.dynamicMetrics,
+                    isDark = isDark
+                )
+            }
+
+            // ── 3. FILTER CONTROLS (ROMBEL, MATERI, SEARCH) ───────────────────
+            item {
+                Spacer(Modifier.height(16.dp))
+                ReadingFilterSection(
+                    classes = state.availableClasses,
+                    selectedClass = state.selectedClassFilter,
+                    onSelectClass = onSelectClassFilter,
+                    materials = state.materials.map { it.materialId to it.title },
+                    selectedMaterialId = state.selectedMaterialFilter,
+                    onSelectMaterial = onSelectMaterialFilter,
+                    searchQuery = state.searchQuery,
+                    onSearchChange = onSearchQueryChange,
+                    onClearSearch = { onSearchQueryChange(""); focusManager.clearFocus() },
+                    isDark = isDark
+                )
+            }
+
+            // ── 4. STATUS FILTER TABS ────────────────────────────────────────
+            item {
+                Spacer(Modifier.height(14.dp))
+                ReadingStatusFilterTabs(
+                    selectedStatus = state.selectedStatusFilter,
+                    statusCounts = state.statusCounts,
+                    isDark = isDark,
+                    onSelectStatus = onSelectStatusFilter
+                )
+            }
+
+            // ── 5. SECTION TITLE & STUDENT LIST ──────────────────────────────
+            item {
+                Spacer(Modifier.height(16.dp))
+                Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 48.dp),
-                    contentAlignment = Alignment.Center
+                        .padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(36.dp),
-                        color = NeonBlue,
-                        strokeWidth = 3.dp
+                    Text(
+                        text = "Daftar Peserta Didik (${state.filteredRows.size})",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isDark) TextPrimary else Color(0xFF0F172A)
                     )
-                }
-            }
-        } else if (state.filteredRows.isEmpty()) {
-            item {
-                EmptyReadingState(isDark = isDark)
-            }
-        } else {
-            items(
-                items = state.filteredRows,
-                key = { "${it.studentId}_${it.materialId}" }
-            ) { row ->
-                StudentReadingProgressCard(
-                    row = row,
-                    isDark = isDark,
-                    onClickDetail = {
-                        onNavigateToStudentDetail?.invoke(row.studentId, row.studentName, row.nisn, row.className)
+                    if (state.selectedClassFilter != "ALL" || state.selectedMaterialFilter != "ALL" || state.selectedStatusFilter != "ALL" || state.searchQuery.isNotBlank()) {
+                        Text(
+                            text = "Reset Filter",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = NeonBlue,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable {
+                                    onSelectClassFilter("ALL")
+                                    onSelectMaterialFilter("ALL")
+                                    onSelectStatusFilter("ALL")
+                                    onSearchQueryChange("")
+                                }
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
                     }
-                )
-                Spacer(Modifier.height(10.dp))
+                }
+                Spacer(Modifier.height(8.dp))
+            }
+
+            if (state.isLoading && state.allReadingRows.isEmpty()) {
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 48.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(36.dp),
+                            color = NeonBlue,
+                            strokeWidth = 3.dp
+                        )
+                    }
+                }
+            } else if (state.filteredRows.isEmpty()) {
+                item {
+                    EmptyReadingState(isDark = isDark)
+                }
+            } else {
+                items(
+                    items = state.filteredRows,
+                    key = { "${it.studentId}_${it.materialId}" }
+                ) { row ->
+                    StudentReadingProgressCard(
+                        row = row,
+                        isDark = isDark,
+                        onClickDetail = {
+                            onNavigateToStudentDetail?.invoke(row.studentId, row.studentName, row.nisn, row.className)
+                        }
+                    )
+                    Spacer(Modifier.height(10.dp))
+                }
             }
         }
     }
 }
 
-// ── SUBCOMPONENTS ────────────────────────────────────────────────────────────
+// ── SUBCOMPONENTS (MINIMALIST & ZERO GRADIENT) ────────────────────────────────
 
 @Composable
 private fun ReadingAnalyticsHeroHeader(
-    isRefreshing: Boolean,
     isDark: Boolean,
-    onRefresh: () -> Unit,
-    onExportCsv: () -> Unit,
 ) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = if (isDark) listOf(
-                        Color(0xFF1E1B4B).copy(alpha = 0.85f),
-                        CosmicNavy,
-                    ) else listOf(
-                        Color(0xFFEDE9FE),
-                        Color(0xFFF1F5F9),
-                    )
-                )
-            )
+            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(if (isDark) CosmicNavy else Color.White)
             .border(
-                1.dp,
-                if (isDark) Color(0xFF6366F1).copy(alpha = 0.35f) else Color(0xFFC7D2FE),
-                RoundedCornerShape(16.dp)
+                0.8.dp,
+                if (isDark) GlassBorder else Color(0xFFE2E8F0),
+                RoundedCornerShape(14.dp)
             )
             .padding(16.dp)
     ) {
@@ -262,19 +241,19 @@ private fun ReadingAnalyticsHeroHeader(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Badge
+                // Badge Workstation
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (isDark) Color(0x336366F1) else Color(0x224F46E5))
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isDark) Color(0x266366F1) else Color(0x184F46E5))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(7.dp)
+                            .size(6.dp)
                             .clip(CircleShape)
-                            .background(NeonSuccess)
+                            .background(Color(0xFF6366F1))
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
@@ -289,7 +268,7 @@ private fun ReadingAnalyticsHeroHeader(
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .background(if (isDark) Color(0x2210B981) else Color(0x1810B981))
                         .padding(horizontal = 8.dp, vertical = 3.dp)
                 ) {
@@ -299,10 +278,10 @@ private fun ReadingAnalyticsHeroHeader(
                             .clip(CircleShape)
                             .background(NeonSuccess)
                     )
-                    Spacer(Modifier.width(5.dp))
+                    Spacer(Modifier.width(6.dp))
                     Text(
-                        text = "Live Sync (5s)",
-                        fontSize = 10.sp,
+                        text = "Live Sync",
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = NeonSuccess
                     )
@@ -313,96 +292,19 @@ private fun ReadingAnalyticsHeroHeader(
 
             Text(
                 text = "Teacher Analytics & Reading Progress",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
                 color = if (isDark) TextPrimary else Color(0xFF0F172A)
             )
 
             Spacer(Modifier.height(4.dp))
 
             Text(
-                text = "Monitoring keterbacaan materi, halaman yang dibaca siswa, dan capaian literasi digital per rombel secara real-time.",
+                text = "Monitoring keterbacaan materi & capaian literasi digital siswa secara real-time.",
                 fontSize = 12.sp,
                 lineHeight = 16.sp,
-                color = if (isDark) TextSecondary else Color(0xFF475569)
+                color = if (isDark) TextSecondary else Color(0xFF64748B)
             )
-
-            Spacer(Modifier.height(14.dp))
-
-            // Action Buttons Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Export CSV Button
-                Surface(
-                    onClick = onExportCsv,
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isDark) CosmicDark else Color.White,
-                    border = androidx.compose.foundation.BorderStroke(
-                        0.8.dp,
-                        if (isDark) GlassBorder else Color(0xFFCBD5E1)
-                    ),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Share,
-                            contentDescription = "Export CSV",
-                            tint = if (isDark) TextPrimary else Color(0xFF0F172A),
-                            modifier = Modifier.size(15.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Export CSV",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDark) TextPrimary else Color(0xFF0F172A)
-                        )
-                    }
-                }
-
-                // Segarkan Button
-                Surface(
-                    onClick = onRefresh,
-                    enabled = !isRefreshing,
-                    shape = RoundedCornerShape(10.dp),
-                    color = Color(0xFF4F46E5),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        if (isRefreshing) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(14.dp),
-                                color = Color.White,
-                                strokeWidth = 2.dp
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Refresh,
-                                contentDescription = "Segarkan",
-                                tint = Color.White,
-                                modifier = Modifier.size(15.dp)
-                            )
-                        }
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = if (isRefreshing) "Sinkron..." else "Segarkan",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
-            }
         }
     }
 }
@@ -427,7 +329,7 @@ private fun ReadingMetricsGrid(
                 title = "Materi & Modul Terbit",
                 value = metrics.totalMaterials.toString(),
                 caption = "Total modul kurikulum digital",
-                icon = Icons.Default.MenuBook,
+                icon = Icons.AutoMirrored.Filled.MenuBook,
                 accentColor = Color(0xFFA855F7),
                 bgColor = if (isDark) Color(0x22A855F7) else Color(0x18A855F7),
                 isDark = isDark,
@@ -589,11 +491,11 @@ private fun ReadingFilterSection(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f, fill = false)) {
                             Text(
                                 text = "Rombel",
                                 fontSize = 9.sp,
@@ -609,7 +511,12 @@ private fun ReadingFilterSection(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
-                        Text(text = "▼", fontSize = 9.sp, color = if (isDark) TextTertiary else Color(0xFF94A3B8))
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Pilih",
+                            tint = if (isDark) TextTertiary else Color(0xFF94A3B8),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
 
@@ -652,7 +559,7 @@ private fun ReadingFilterSection(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -673,7 +580,12 @@ private fun ReadingFilterSection(
                             )
                         }
                         Spacer(Modifier.width(4.dp))
-                        Text(text = "▼", fontSize = 9.sp, color = if (isDark) TextTertiary else Color(0xFF94A3B8))
+                        Icon(
+                            imageVector = Icons.Default.ArrowDropDown,
+                            contentDescription = "Pilih",
+                            tint = if (isDark) TextTertiary else Color(0xFF94A3B8),
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
 
@@ -1068,4 +980,3 @@ private fun EmptyReadingState(isDark: Boolean) {
         }
     }
 }
-

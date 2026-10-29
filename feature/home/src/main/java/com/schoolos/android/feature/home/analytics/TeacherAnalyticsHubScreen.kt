@@ -4,7 +4,6 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,8 +15,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -35,7 +37,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -47,14 +49,9 @@ import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.ExecutiveTopBar
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
-import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonError
-import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
-import com.schoolos.android.feature.grades.GradebookListScreen
-import com.schoolos.android.feature.grades.GradebookListViewModel
 import com.schoolos.android.feature.home.AtRiskMonitoringScreen
 import com.schoolos.android.feature.home.AtRiskMonitoringViewModel
 
@@ -63,16 +60,14 @@ fun TeacherAnalyticsHubScreen(
     initialTab: Int = 0,
     onBack: (() -> Unit)? = null,
     onNavigateToStudentDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)? = null,
-    onNavigateToGradeDetail: ((subjectId: String, subjectName: String) -> Unit)? = null,
     readingViewModel: TeacherReadingAnalyticsViewModel = hiltViewModel(),
     atRiskViewModel: AtRiskMonitoringViewModel = hiltViewModel(),
-    gradebookViewModel: GradebookListViewModel = hiltViewModel(),
 ) {
     val isDark = LocalIsDarkTheme.current
-    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
-    var selectedTab by rememberSaveable { mutableIntStateOf(initialTab) }
+    // Strictly 2 tabs: 0 for Literasi, 1 for Early Warning
+    var selectedTab by rememberSaveable { mutableIntStateOf(initialTab.coerceIn(0, 1)) }
 
     val readingState by readingViewModel.state.collectAsState()
     val atRiskState by atRiskViewModel.state.collectAsState()
@@ -97,7 +92,7 @@ fun TeacherAnalyticsHubScreen(
         topBar = {
             ExecutiveTopBar(
                 title = "Teacher Analytics & Supervisi",
-                subtitle = "Monitoring Literasi, Early Warning & Nilai",
+                subtitle = "Monitoring Literasi & Early Warning Siswa",
                 onBack = onBack,
             )
         }
@@ -107,13 +102,15 @@ fun TeacherAnalyticsHubScreen(
                 .fillMaxSize()
                 .padding(padding)
         ) {
-            // ── TOP SEGMENTED SWITCHER BAR ──────────────────────────────────
+            // ── TOP SEGMENTED SWITCHER BAR (MINIMALIST, ZERO EMOJI, ZERO GRADIENT) ──
             SegmentedHubTabs(
                 selectedTab = selectedTab,
                 atRiskCount = atRiskState.stats.total,
                 isDark = isDark,
                 onSelectTab = { selectedTab = it }
             )
+
+            Spacer(Modifier.height(4.dp))
 
             // ── TAB CONTENT CROSSFADE ────────────────────────────────────────
             Crossfade(
@@ -126,7 +123,6 @@ fun TeacherAnalyticsHubScreen(
                             state = readingState,
                             isDark = isDark,
                             onRefresh = readingViewModel::refresh,
-                            onExportCsv = { readingViewModel.exportCsv(context) },
                             onSelectClassFilter = readingViewModel::onSelectClassFilter,
                             onSelectMaterialFilter = readingViewModel::onSelectMaterialFilter,
                             onSelectStatusFilter = readingViewModel::onSelectStatusFilter,
@@ -140,14 +136,6 @@ fun TeacherAnalyticsHubScreen(
                             onBack = onBack,
                             onNavigateToStudentDetail = onNavigateToStudentDetail,
                             viewModel = atRiskViewModel,
-                        )
-                    }
-                    2 -> {
-                        GradebookListScreen(
-                            showHeader = false,
-                            onBack = onBack,
-                            onSubjectClick = onNavigateToGradeDetail ?: { _, _ -> },
-                            viewModel = gradebookViewModel,
                         )
                     }
                 }
@@ -169,42 +157,32 @@ private fun SegmentedHubTabs(
             .padding(horizontal = 16.dp, vertical = 6.dp)
             .clip(RoundedCornerShape(12.dp))
             .background(if (isDark) CosmicDark else Color(0xFFF1F5F9))
-            .border(0.6.dp, if (isDark) GlassBorder else Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
+            .border(0.8.dp, if (isDark) GlassBorder else Color(0xFFE2E8F0), RoundedCornerShape(12.dp))
             .padding(3.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
-            // Tab 0: Literasi
+            // Tab 0: Literasi & Bacaan (Zero Emoji)
             HubTabItem(
-                title = "📊 Literasi & Baca",
+                title = "Literasi & Bacaan",
+                icon = Icons.AutoMirrored.Filled.MenuBook,
                 isSelected = selectedTab == 0,
-                activeColor = Color(0xFFA855F7),
                 isDark = isDark,
                 onClick = { onSelectTab(0) },
                 modifier = Modifier.weight(1f)
             )
 
-            // Tab 1: Early Warning
+            // Tab 1: Early Warning (Zero Emoji)
             HubTabItem(
-                title = "⚠️ Early Warning",
+                title = "Early Warning",
+                icon = Icons.Default.Warning,
                 badgeCount = atRiskCount,
                 isSelected = selectedTab == 1,
-                activeColor = NeonError,
                 isDark = isDark,
                 onClick = { onSelectTab(1) },
-                modifier = Modifier.weight(1.1f)
-            )
-
-            // Tab 2: Buku Nilai
-            HubTabItem(
-                title = "📖 Buku Nilai",
-                isSelected = selectedTab == 2,
-                activeColor = NeonBlue,
-                isDark = isDark,
-                onClick = { onSelectTab(2) },
-                modifier = Modifier.weight(0.9f)
+                modifier = Modifier.weight(1f)
             )
         }
     }
@@ -213,9 +191,9 @@ private fun SegmentedHubTabs(
 @Composable
 private fun HubTabItem(
     title: String,
+    icon: ImageVector,
     badgeCount: Int? = null,
     isSelected: Boolean,
-    activeColor: Color,
     isDark: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -232,18 +210,37 @@ private fun HubTabItem(
         shape = RoundedCornerShape(9.dp),
         color = bgColor,
         shadowElevation = if (isSelected) 2.dp else 0.dp,
+        border = if (isSelected) {
+            androidx.compose.foundation.BorderStroke(
+                0.8.dp,
+                if (isDark) GlassBorder else Color(0xFFE2E8F0)
+            )
+        } else null,
         modifier = modifier
     ) {
         Row(
             modifier = Modifier
-                .padding(vertical = 8.dp, horizontal = 6.dp),
+                .padding(vertical = 9.dp, horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) {
+                    if (isDark) TextPrimary else Color(0xFF0F172A)
+                } else {
+                    if (isDark) TextSecondary else Color(0xFF64748B)
+                },
+                modifier = Modifier.size(15.dp)
+            )
+
+            Spacer(Modifier.width(6.dp))
+
             Text(
                 text = title,
-                fontSize = 11.sp,
-                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                fontSize = 12.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                 color = if (isSelected) {
                     if (isDark) TextPrimary else Color(0xFF0F172A)
                 } else {
@@ -254,16 +251,16 @@ private fun HubTabItem(
             )
 
             if (badgeCount != null && badgeCount > 0) {
-                Spacer(Modifier.width(4.dp))
+                Spacer(Modifier.width(6.dp))
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(10.dp))
                         .background(NeonError)
-                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                        .padding(horizontal = 6.dp, vertical = 1.dp)
                 ) {
                     Text(
                         text = badgeCount.toString(),
-                        fontSize = 9.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
@@ -272,4 +269,3 @@ private fun HubTabItem(
         }
     }
 }
-
