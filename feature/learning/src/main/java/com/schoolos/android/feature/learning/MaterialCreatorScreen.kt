@@ -17,6 +17,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -411,7 +412,7 @@ fun MaterialCreatorScreen(
                         border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.5f))
                     ) {
                         Icon(
-                            if (showPreview) Icons.Default.Edit else Icons.Default.Visibility,
+                            if (showPreview) Icons.Default.Close else Icons.Default.Visibility,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
@@ -476,7 +477,7 @@ fun MaterialCreatorScreen(
                         if (state.isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                         } else {
-                            Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(17.dp))
                             Spacer(Modifier.width(6.dp))
                             Text("Pratinjau & Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
@@ -1371,9 +1372,10 @@ private fun ModernDropdown(
     options: List<String>,
     onSelect: (String) -> Unit
 ) {
+    val isLocked = label.contains("Terkunci")
     ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { if (!expanded) onExpand() else onDismiss() }
+        expanded = if (isLocked && options.size <= 1) false else expanded,
+        onExpandedChange = { if (!isLocked || options.size > 1) { if (!expanded) onExpand() else onDismiss() } }
     ) {
         OutlinedTextField(
             value = value,
@@ -1381,18 +1383,20 @@ private fun ModernDropdown(
             readOnly = true,
             label = { Text(label) },
             leadingIcon = {
-                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = null, tint = if (isLocked) TextTertiary else accentColor, modifier = Modifier.size(20.dp))
             },
             trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                if (!isLocked || options.size > 1) {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
             },
             modifier = Modifier.fillMaxWidth().menuAnchor(),
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = accentColor,
+                focusedBorderColor = if (isLocked) GlassBorder2 else accentColor,
                 unfocusedBorderColor = GlassBorder,
-                focusedLabelColor = accentColor,
-                focusedLeadingIconColor = accentColor,
+                focusedLabelColor = if (isLocked) TextTertiary else accentColor,
+                focusedLeadingIconColor = if (isLocked) TextTertiary else accentColor,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary,
                 unfocusedLabelColor = TextTertiary
@@ -2201,10 +2205,10 @@ private fun YoutubeSearchSection(
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         SectionHeader(
-            number = null,
+            number = 3,
             title = "Integrasi Video YouTube",
             subtitle = "Cari video materi langsung dari YouTube tanpa perlu copy-paste link manual",
-            accentColor = NeonBlue
+            accentColor = EmeraldGlow
         )
 
         if (isVideoReady) {
@@ -2282,7 +2286,15 @@ private fun YoutubeSearchSection(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.weight(1f),
-                    placeholder = { Text("Cari materi di YouTube (Mis: $defaultSubject)", color = TextTertiary, fontSize = 12.sp) },
+                    placeholder = {
+                        Text(
+                            "Cari video materi di YouTube...",
+                            color = TextTertiary,
+                            fontSize = 12.sp,
+                            maxLines = 1,
+                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                        )
+                    },
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = NeonBlue,
@@ -2302,7 +2314,7 @@ private fun YoutubeSearchSection(
                 }
             }
 
-            // Quick suggestion chips
+            // Quick suggestion chips (Horizontally Scrollable)
             val quickChips = remember(defaultSubject) {
                 listOfNotNull(
                     defaultSubject.takeIf { it.isNotBlank() },
@@ -2312,8 +2324,10 @@ private fun YoutubeSearchSection(
                 )
             }
             Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 quickChips.forEach { chip ->
                     Box(
@@ -2325,9 +2339,15 @@ private fun YoutubeSearchSection(
                                 searchQuery = chip
                                 viewModel.searchYoutube(chip)
                             }
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                            .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
-                        Text(chip, color = TextSecondary, fontSize = 10.sp)
+                        Text(
+                            text = chip,
+                            color = TextSecondary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1
+                        )
                     }
                 }
             }

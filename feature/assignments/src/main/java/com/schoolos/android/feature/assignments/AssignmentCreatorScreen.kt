@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -226,7 +227,7 @@ fun AssignmentCreatorScreen(
                         border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.6f))
                     ) {
                         Icon(
-                            if (showPreview) Icons.Default.Edit else Icons.Default.Visibility,
+                            if (showPreview) Icons.Default.Close else Icons.Default.Visibility,
                             contentDescription = null,
                             modifier = Modifier.size(17.dp)
                         )
@@ -257,9 +258,9 @@ fun AssignmentCreatorScreen(
                         if (state.isLoading) {
                             CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
                         } else {
-                            Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(Icons.Default.Send, contentDescription = null, modifier = Modifier.size(17.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Pratinjau & Terbitkan", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            Text("Pratinjau & Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -374,7 +375,13 @@ fun AssignmentCreatorScreen(
                             text = description.ifBlank { "Deskripsi dan panduan ringkas pengerjaan tugas oleh guru..." },
                             color = TextSecondary, fontSize = 12.sp, lineHeight = 17.sp
                         )
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             AssignmentChip(selectedSubject.ifBlank { "Mata Pelajaran" }, NeonBlue)
                             AssignmentChip(selectedClass.ifBlank { "Rombel" }, TeacherNeon)
                             if (state.assignmentFormat != "HOMEWORK_PR") {
@@ -450,7 +457,7 @@ fun AssignmentCreatorScreen(
                         number = 2,
                         title = "Format / Metode Pengisian Tugas",
                         subtitle = "Pilih cara siswa mengumpulkan jawaban tugas",
-                        numberColor = NeonBlue
+                        numberColor = TeacherNeon
                     )
 
                     Row(
@@ -471,11 +478,11 @@ fun AssignmentCreatorScreen(
                                     .fillMaxHeight()
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(
-                                        if (isSelected) MaterialTheme.colorScheme.primaryContainer else CosmicSurface2
+                                        if (isSelected) TeacherContainer else CosmicSurface2
                                     )
                                     .border(
                                         width = if (isSelected) 1.5.dp else 0.5.dp,
-                                        color = if (isSelected) MaterialTheme.colorScheme.primary else GlassBorder,
+                                        color = if (isSelected) TeacherNeon else GlassBorder,
                                         shape = RoundedCornerShape(12.dp)
                                     )
                                     .clickable { viewModel.setAssignmentFormat(formatKey) }
@@ -488,7 +495,7 @@ fun AssignmentCreatorScreen(
                                 ) {
                                     Text(
                                         label,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else TextPrimary,
+                                        color = if (isSelected) TeacherBrandText else TextPrimary,
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         textAlign = TextAlign.Center,
@@ -497,7 +504,7 @@ fun AssignmentCreatorScreen(
                                     Spacer(Modifier.height(3.dp))
                                     Text(
                                         sublabel,
-                                        color = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f) else TextTertiary,
+                                        color = if (isSelected) TeacherBrandText.copy(alpha = 0.85f) else TextTertiary,
                                         fontSize = 9.sp,
                                         textAlign = TextAlign.Center,
                                         lineHeight = 11.sp,
@@ -1035,12 +1042,18 @@ private fun QuestionBuilderCard(
 private fun AssignmentChip(text: String, color: Color) {
     Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(color.copy(alpha = 0.14f))
-            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
-            .padding(horizontal = 8.dp, vertical = 3.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .background(color.copy(alpha = 0.12f))
+            .border(0.5.dp, color.copy(alpha = 0.25f), RoundedCornerShape(8.dp))
+            .padding(horizontal = 9.dp, vertical = 4.dp)
     ) {
-        Text(text, color = color, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Text(
+            text = text,
+            color = color,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1
+        )
     }
 }
 
@@ -1049,16 +1062,15 @@ private fun AssignmentSectionHeader(number: Int, title: String, subtitle: String
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(
             modifier = Modifier
-                .size(32.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(numberColor.copy(alpha = 0.12f))
-                .border(1.dp, numberColor.copy(alpha = 0.25f), RoundedCornerShape(10.dp)),
+                .size(30.dp)
+                .clip(CircleShape)
+                .background(numberColor),
             contentAlignment = Alignment.Center
         ) {
-            Text(number.toString(), color = numberColor, fontSize = 13.sp, fontWeight = FontWeight.Black)
+            Text(number.toString(), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black)
         }
         Column {
-            Text(title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            Text(title, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
             Text(subtitle, color = TextTertiary, fontSize = 11.sp)
         }
     }
@@ -1077,9 +1089,10 @@ private fun AssignmentDropdown(
     options: List<String>,
     onSelect: (String) -> Unit
 ) {
+    val isLocked = label.contains("Terkunci")
     ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { if (!expanded) onExpand() else onDismiss() }
+        expanded = if (isLocked && options.size <= 1) false else expanded,
+        onExpandedChange = { if (!isLocked || options.size > 1) { if (!expanded) onExpand() else onDismiss() } }
     ) {
         OutlinedTextField(
             value = value,
@@ -1087,18 +1100,20 @@ private fun AssignmentDropdown(
             readOnly = true,
             label = { Text(label) },
             leadingIcon = {
-                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
+                Icon(icon, contentDescription = null, tint = if (isLocked) TextTertiary else accentColor, modifier = Modifier.size(20.dp))
             },
             trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                if (!isLocked || options.size > 1) {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                }
             },
             modifier = Modifier.fillMaxWidth().menuAnchor(),
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = accentColor,
+                focusedBorderColor = if (isLocked) GlassBorder2 else accentColor,
                 unfocusedBorderColor = GlassBorder,
-                focusedLabelColor = accentColor,
-                focusedLeadingIconColor = accentColor,
+                focusedLabelColor = if (isLocked) TextTertiary else accentColor,
+                focusedLeadingIconColor = if (isLocked) TextTertiary else accentColor,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary,
                 unfocusedLabelColor = TextTertiary
