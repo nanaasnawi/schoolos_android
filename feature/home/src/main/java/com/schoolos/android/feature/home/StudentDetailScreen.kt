@@ -407,49 +407,57 @@ private fun MetricBentoCard(
     Surface(
         onClick = { onClick?.invoke() },
         enabled = onClick != null,
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.8.dp, accentColor.copy(alpha = 0.25f)),
+        shape = RoundedCornerShape(16.dp),
+        color = CosmicSurface,
+        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) accentColor.copy(alpha = 0.28f) else GlassBorder),
+        shadowElevation = 2.dp,
         modifier = modifier
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(accentColor.copy(alpha = 0.035f))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            accentColor.copy(alpha = 0.08f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .padding(horizontal = 6.dp, vertical = 12.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(4.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(accentColor.copy(alpha = 0.12f))
-                        .border(0.5.dp, accentColor.copy(alpha = 0.24f), RoundedCornerShape(9.dp)),
+                        .size(36.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(accentColor.copy(alpha = 0.14f))
+                        .border(1.dp, accentColor.copy(alpha = 0.26f), RoundedCornerShape(10.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 Text(
                     text = value,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontWeight = FontWeight.Black,
                     color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = accentColor.copy(alpha = 0.09f)
+                    shape = RoundedCornerShape(5.dp),
+                    color = accentColor.copy(alpha = 0.10f),
+                    border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.20f))
                 ) {
                     Text(
                         text = label,
@@ -458,13 +466,15 @@ private fun MetricBentoCard(
                         color = accentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                     )
                 }
             }
         }
     }
 }
+
+
 
 // ─── TAB ROW ─────────────────────────────────────────────────────────────────
 @Composable
@@ -1295,7 +1305,7 @@ private fun DapodikSectionCard(
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(16.dp),
         color = CosmicNavy,
         border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
     ) {

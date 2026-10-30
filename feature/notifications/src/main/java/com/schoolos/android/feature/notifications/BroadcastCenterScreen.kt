@@ -3,6 +3,7 @@ package com.schoolos.android.feature.notifications
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -265,12 +266,34 @@ fun BroadcastCenterScreen(
             }
 
             AnimatedVisibility(visible = state.error != null, enter = fadeIn(), exit = fadeOut()) {
-                Text(
-                    state.error ?: "",
-                    color = NeonError,
-                    fontSize = 12.sp,
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = NeonError.copy(alpha = 0.08f),
+                    border = BorderStroke(1.dp, NeonError.copy(alpha = 0.25f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 6.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ErrorOutline,
+                            contentDescription = null,
+                            tint = NeonError,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = state.error ?: "",
+                            color = NeonError,
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.height(8.dp))

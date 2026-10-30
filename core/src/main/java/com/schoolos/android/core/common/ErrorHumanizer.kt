@@ -152,7 +152,7 @@ object ErrorHumanizer {
 
     private fun humanizeHttpCode(code: Int): String = when (code) {
         400 -> "Permintaan tidak dapat diproses. Silakan periksa kembali kelengkapan data."
-        401 -> "Nama pengguna atau kata sandi tidak cocok. Silakan periksa kembali akun Anda."
+        401 -> "Sesi masuk akun Anda telah berakhir atau perlu diperbarui. Silakan keluar dan masuk kembali."
         403 -> "Akses tidak diizinkan. Akun Anda tidak memiliki izin untuk fitur ini."
         404 -> "Data atau layanan yang diminta tidak ditemukan di server sekolah."
         408 -> "Waktu permintaan ke server habis. Silakan coba beberapa saat lagi."
