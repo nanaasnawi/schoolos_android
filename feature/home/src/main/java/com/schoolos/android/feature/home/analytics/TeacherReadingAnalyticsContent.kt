@@ -12,6 +12,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
 import androidx.compose.material.icons.automirrored.filled.MenuBook
@@ -22,8 +23,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -502,28 +505,61 @@ private fun ReadingFilterSection(
             }
         }
 
-        // Compact Search Field
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchChange,
-            placeholder = {
-                Text(
-                    text = "Cari siswa, NISN, atau judul modul...",
-                    fontSize = 12.sp,
-                    color = TextTertiary
-                )
-            },
-            leadingIcon = {
+        // Compact Search Field (Custom Surface with BasicTextField - Zero Clipping!)
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(42.dp),
+            shape = RoundedCornerShape(10.dp),
+            color = CosmicNavy,
+            border = BorderStroke(
+                0.5.dp,
+                if (searchQuery.isNotBlank()) NeonBlue else GlassBorder
+            )
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = TextTertiary,
+                    tint = if (searchQuery.isNotBlank()) NeonBlue else TextTertiary,
                     modifier = Modifier.size(16.dp)
                 )
-            },
-            trailingIcon = {
+                BasicTextField(
+                    value = searchQuery,
+                    onValueChange = onSearchChange,
+                    singleLine = true,
+                    textStyle = TextStyle(
+                        fontSize = 13.sp,
+                        color = TextPrimary
+                    ),
+                    cursorBrush = SolidColor(NeonBlue),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { innerTextField ->
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    text = "Cari siswa, NISN, atau judul modul...",
+                                    fontSize = 13.sp,
+                                    color = TextTertiary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            innerTextField()
+                        }
+                    }
+                )
                 if (searchQuery.isNotBlank()) {
-                    IconButton(onClick = onClearSearch) {
+                    IconButton(
+                        onClick = onClearSearch,
+                        modifier = Modifier.size(24.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Clear",
@@ -532,21 +568,8 @@ private fun ReadingFilterSection(
                         )
                     }
                 }
-            },
-            singleLine = true,
-            shape = RoundedCornerShape(10.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = CosmicNavy,
-                unfocusedContainerColor = CosmicNavy,
-                focusedBorderColor = NeonBlue,
-                unfocusedBorderColor = GlassBorder,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(46.dp)
-        )
+            }
+        }
     }
 }
 

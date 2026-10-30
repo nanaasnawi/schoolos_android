@@ -86,7 +86,8 @@ fun TeacherAnalyticsHubScreen(
             // ── TAB CONTENT CROSSFADE ────────────────────────────────────────
             Crossfade(
                 targetState = selectedTab,
-                label = "HubTabTransition"
+                label = "HubTabTransition",
+                modifier = Modifier.fillMaxSize()
             ) { tab ->
                 when (tab) {
                     0 -> {

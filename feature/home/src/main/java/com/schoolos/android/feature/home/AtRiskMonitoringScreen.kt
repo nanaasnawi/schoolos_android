@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusManager
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -53,11 +54,11 @@ fun AtRiskMonitoringScreen(
         }
     }
 
-    Scaffold(
-        containerColor = CosmicBlack,
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            if (showHeader) {
+    if (showHeader) {
+        Scaffold(
+            containerColor = CosmicBlack,
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            topBar = {
                 AtRiskTopHeader(
                     onBack = onBack,
                     isDark = isDark,
@@ -65,15 +66,44 @@ fun AtRiskMonitoringScreen(
                     onRefresh = { viewModel.refresh() }
                 )
             }
+        ) { padding ->
+            AtRiskMonitoringContent(
+                state = state,
+                isDark = isDark,
+                focusManager = focusManager,
+                viewModel = viewModel,
+                onNavigateToStudentDetail = onNavigateToStudentDetail,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(padding)
+            )
         }
-    ) { padding ->
-        PullRefreshContainer(
-            isRefreshing = state.isRefreshing,
-            onRefresh = { viewModel.refresh() },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-        ) {
+    } else {
+        AtRiskMonitoringContent(
+            state = state,
+            isDark = isDark,
+            focusManager = focusManager,
+            viewModel = viewModel,
+            onNavigateToStudentDetail = onNavigateToStudentDetail,
+            modifier = Modifier.fillMaxSize()
+        )
+    }
+}
+
+@Composable
+private fun AtRiskMonitoringContent(
+    state: AtRiskUiState,
+    isDark: Boolean,
+    focusManager: FocusManager,
+    viewModel: AtRiskMonitoringViewModel,
+    onNavigateToStudentDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)?,
+    modifier: Modifier = Modifier,
+) {
+    PullRefreshContainer(
+        isRefreshing = state.isRefreshing,
+        onRefresh = { viewModel.refresh() },
+        modifier = modifier
+    ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(bottom = 96.dp)
@@ -255,7 +285,6 @@ fun AtRiskMonitoringScreen(
             }
         }
     }
-}
 
 // ─── Header Components ─────────────────────────────────────────────────────────
 
@@ -544,22 +573,25 @@ private fun AtRiskFilterToolbar(
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(38.dp),
-            shape = RoundedCornerShape(8.dp),
+                .height(42.dp),
+            shape = RoundedCornerShape(10.dp),
             color = CosmicNavy,
-            border = BorderStroke(0.5.dp, GlassBorder)
+            border = BorderStroke(
+                0.5.dp,
+                if (searchQuery.isNotBlank()) NeonError else GlassBorder
+            )
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(horizontal = 10.dp),
+                    .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = TextTertiary,
+                    tint = if (searchQuery.isNotBlank()) NeonError else TextTertiary,
                     modifier = Modifier.size(16.dp)
                 )
                 BasicTextField(
@@ -567,31 +599,38 @@ private fun AtRiskFilterToolbar(
                     onValueChange = onSearchChange,
                     singleLine = true,
                     textStyle = TextStyle(
-                        fontSize = 12.sp,
+                        fontSize = 13.sp,
                         color = TextPrimary
                     ),
                     cursorBrush = SolidColor(NeonError),
                     modifier = Modifier.weight(1f),
                     decorationBox = { innerTextField ->
-                        if (searchQuery.isEmpty()) {
-                            Text(
-                                text = "Cari siswa, NISN, atau kendala belajar...",
-                                fontSize = 12.sp,
-                                color = TextTertiary
-                            )
+                        Box(contentAlignment = Alignment.CenterStart) {
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    text = "Cari siswa, NISN, atau kendala belajar...",
+                                    fontSize = 13.sp,
+                                    color = TextTertiary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            innerTextField()
                         }
-                        innerTextField()
                     }
                 )
                 if (searchQuery.isNotBlank()) {
-                    Icon(
-                        imageVector = Icons.Default.Clear,
-                        contentDescription = "Clear",
-                        tint = TextSecondary,
-                        modifier = Modifier
-                            .size(16.dp)
-                            .clickable(onClick = onClearSearch)
-                    )
+                    IconButton(
+                        onClick = onClearSearch,
+                        modifier = Modifier.size(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = "Clear",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
         }

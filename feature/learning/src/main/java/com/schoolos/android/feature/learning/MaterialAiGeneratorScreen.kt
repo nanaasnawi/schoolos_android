@@ -20,6 +20,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import coil.compose.SubcomposeAsyncImage
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -651,12 +654,71 @@ fun MaterialAiGeneratorScreen(
                                             )
                                         }
 
-                                        Text(
-                                            text = block.content,
-                                            fontSize = 12.sp,
-                                            lineHeight = 18.sp,
-                                            color = colorScheme.onSurface
-                                        )
+                                        if (isImg) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(180.dp)
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                SubcomposeAsyncImage(
+                                                    model = block.content.trim(),
+                                                    contentDescription = "Visual Blok #${idx + 1}",
+                                                    contentScale = ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxSize(),
+                                                    loading = {
+                                                        Box(
+                                                            modifier = Modifier.fillMaxSize(),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            CircularProgressIndicator(
+                                                                modifier = Modifier.size(24.dp),
+                                                                strokeWidth = 2.dp,
+                                                                color = CyanPrimary
+                                                            )
+                                                        }
+                                                    },
+                                                    error = {
+                                                        Column(
+                                                            modifier = Modifier
+                                                                .fillMaxSize()
+                                                                .padding(12.dp),
+                                                            horizontalAlignment = Alignment.CenterHorizontally,
+                                                            verticalArrangement = Arrangement.Center
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.BrokenImage,
+                                                                contentDescription = null,
+                                                                tint = colorScheme.onSurfaceVariant,
+                                                                modifier = Modifier.size(28.dp)
+                                                            )
+                                                            Spacer(Modifier.height(4.dp))
+                                                            Text(
+                                                                text = "Gambar tidak dapat dimuat langsung",
+                                                                fontSize = 11.sp,
+                                                                color = colorScheme.onSurfaceVariant
+                                                            )
+                                                        }
+                                                    }
+                                                )
+                                            }
+                                            Text(
+                                                text = block.content,
+                                                fontSize = 10.sp,
+                                                color = colorScheme.onSurfaceVariant,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        } else {
+                                            Text(
+                                                text = block.content,
+                                                fontSize = 12.sp,
+                                                lineHeight = 18.sp,
+                                                color = colorScheme.onSurface
+                                            )
+                                        }
                                     }
                                 }
                             }
