@@ -230,14 +230,37 @@ fun TeacherSessionDetailContent(
         }
 
         // ── 2. RESOURCE MANAGEMENT ACTIONS ──
-        Text(
-            text = "KELOLA SUMBER DAYA KELAS",
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextTertiary,
-            letterSpacing = 0.6.sp,
-            modifier = Modifier.padding(start = 4.dp, top = 2.dp)
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(CircleShape)
+                        .background(NeonBlue)
+                )
+                Text(
+                    text = "Pintasan Pembelajaran",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+            }
+            Text(
+                text = "Aksi Pengajar",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextTertiary
+            )
+        }
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -553,42 +576,62 @@ private fun ResourceActionCard(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier.clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
         color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
+        border = BorderStroke(0.8.dp, accentColor.copy(alpha = 0.25f)),
+        modifier = modifier
     ) {
-        Column(
-            modifier = Modifier.padding(vertical = 12.dp, horizontal = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(accentColor.copy(alpha = 0.035f))
         ) {
-            Box(
+            Column(
                 modifier = Modifier
-                    .size(36.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 6.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(5.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(18.dp)
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(accentColor.copy(alpha = 0.12f))
+                        .border(0.5.dp, accentColor.copy(alpha = 0.22f), RoundedCornerShape(9.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(17.dp)
+                    )
+                }
+                Text(
+                    text = label,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
                 )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = accentColor.copy(alpha = 0.09f)
+                ) {
+                    Text(
+                        text = hint,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
             }
-            Text(
-                text = label,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary
-            )
-            Text(
-                text = hint,
-                fontSize = 9.sp,
-                color = TextTertiary
-            )
         }
     }
 }

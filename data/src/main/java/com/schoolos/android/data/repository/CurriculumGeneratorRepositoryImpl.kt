@@ -17,6 +17,7 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
+import java.net.URLEncoder
 import java.util.UUID
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
@@ -434,11 +435,22 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                 for (i in 0 until blocksArr.length()) {
                     val bObj = blocksArr.getJSONObject(i)
                     val bType = bObj.optString("block_type", bObj.optString("type", "TEXT"))
+                    var content = bObj.optString("content", "")
+
+                    if (bType.equals("IMAGE", ignoreCase = true) &&
+                        (content.isBlank() || content.contains("photo-1544716278-ca5e3f4abd8c") || content.contains("photo-1497633762265-9d179a990aa6"))
+                    ) {
+                        val wikiImage = fetchWikipediaImage(topic.trim(), aiHttpClient)
+                        if (!wikiImage.isNullOrBlank()) {
+                            content = wikiImage
+                        }
+                    }
+
                     blocksList.add(
                         GeneratedMaterialBlock(
                             id = bObj.optString("id", UUID.randomUUID().toString()),
                             type = bType,
-                            content = bObj.optString("content", "")
+                            content = content
                         )
                     )
                 }
@@ -482,5 +494,44 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
             Timber.e(e, "Generate material exception")
             Result.failure(e)
         }
+    }
+
+    private fun fetchWikipediaImage(query: String, client: OkHttpClient): String? {
+        if (query.isBlank()) return null
+        val langs = listOf("id", "en")
+        for (lang in langs) {
+            try {
+                val encodedQuery = URLEncoder.encode(query, "UTF-8")
+                val searchUrl = "https://$lang.wikipedia.org/w/api.php?action=query&list=search&srsearch=$encodedQuery&format=json&utf8=1&srlimit=1"
+                val searchReq = Request.Builder()
+                    .url(searchUrl)
+                    .header("User-Agent", "SchoolOS-Android/1.0 (contact@akselerasi.edu; educational)")
+                    .build()
+                val searchResp = client.newCall(searchReq).execute()
+                if (!searchResp.isSuccessful) continue
+                val searchJson = JSONObject(searchResp.body?.string() ?: "")
+                val searchArr = searchJson.optJSONObject("query")?.optJSONArray("search") ?: continue
+                if (searchArr.length() == 0) continue
+                val title = searchArr.getJSONObject(0).optString("title")
+                if (title.isBlank()) continue
+
+                val summaryUrl = "https://$lang.wikipedia.org/api/rest_v1/page/summary/${URLEncoder.encode(title, "UTF-8")}"
+                val sumReq = Request.Builder()
+                    .url(summaryUrl)
+                    .header("User-Agent", "SchoolOS-Android/1.0 (contact@akselerasi.edu; educational)")
+                    .build()
+                val sumResp = client.newCall(sumReq).execute()
+                if (!sumResp.isSuccessful) continue
+                val sumJson = JSONObject(sumResp.body?.string() ?: "")
+                val imgUrl = sumJson.optJSONObject("thumbnail")?.optString("source")
+                    ?: sumJson.optJSONObject("originalimage")?.optString("source")
+                if (!imgUrl.isNullOrBlank() && imgUrl.startsWith("http")) {
+                    return imgUrl
+                }
+            } catch (_: Exception) {
+                // Graceful fallback
+            }
+        }
+        return null
     }
 }

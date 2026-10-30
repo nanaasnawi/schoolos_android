@@ -5,6 +5,7 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -129,6 +130,7 @@ fun StudentDetailScreen(
                     assignDone = assignDone,
                     attendance = attendance,
                     isLoading = isLoading,
+                    onSelectTab = viewModel::selectTab,
                 )
             }
 
@@ -349,6 +351,7 @@ private fun MetricsRow(
     assignDone: String,
     attendance: String,
     isLoading: Boolean,
+    onSelectTab: ((Int) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
@@ -362,6 +365,7 @@ private fun MetricsRow(
             value = if (isLoading) "…" else avgGrade,
             icon = Icons.Default.Grade,
             accentColor = StudentNeon,
+            onClick = onSelectTab?.let { { it(2) } },
             modifier = Modifier.weight(1f)
         )
         MetricBentoCard(
@@ -369,6 +373,7 @@ private fun MetricsRow(
             value = if (isLoading) "…" else quizDone,
             icon = Icons.Default.Quiz,
             accentColor = NeonBlue,
+            onClick = onSelectTab?.let { { it(1) } },
             modifier = Modifier.weight(1f)
         )
         MetricBentoCard(
@@ -376,6 +381,7 @@ private fun MetricsRow(
             value = if (isLoading) "…" else assignDone,
             icon = Icons.Default.AssignmentTurnedIn,
             accentColor = NeonSuccess,
+            onClick = onSelectTab?.let { { it(1) } },
             modifier = Modifier.weight(1f)
         )
         MetricBentoCard(
@@ -383,6 +389,7 @@ private fun MetricsRow(
             value = if (isLoading) "…" else attendance,
             icon = Icons.Default.EventAvailable,
             accentColor = NeonWarning,
+            onClick = onSelectTab?.let { { it(1) } },
             modifier = Modifier.weight(1f)
         )
     }
@@ -395,51 +402,65 @@ private fun MetricBentoCard(
     icon: ImageVector,
     accentColor: Color,
     modifier: Modifier = Modifier,
+    onClick: (() -> Unit)? = null,
 ) {
-    Box(
+    Surface(
+        onClick = { onClick?.invoke() },
+        enabled = onClick != null,
+        shape = RoundedCornerShape(14.dp),
+        color = CosmicNavy,
+        border = BorderStroke(0.8.dp, accentColor.copy(alpha = 0.25f)),
         modifier = modifier
-            .height(96.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
-            .padding(horizontal = 10.dp, vertical = 10.dp),
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(accentColor.copy(alpha = 0.035f))
         ) {
-            Box(
+            Column(
                 modifier = Modifier
-                    .size(28.dp)
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(accentColor.copy(alpha = 0.14f))
-                    .border(0.5.dp, accentColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp, vertical = 10.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(15.dp)
-                )
-            }
-            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(accentColor.copy(alpha = 0.12f))
+                        .border(0.5.dp, accentColor.copy(alpha = 0.24f), RoundedCornerShape(9.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
                 Text(
                     text = value,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.Black,
+                    fontWeight = FontWeight.ExtraBold,
                     color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    text = label,
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Surface(
+                    shape = RoundedCornerShape(4.dp),
+                    color = accentColor.copy(alpha = 0.09f)
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accentColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
+                    )
+                }
             }
         }
     }
