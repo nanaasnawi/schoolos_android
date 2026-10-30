@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -248,14 +249,14 @@ fun TeacherSessionDetailContent(
                         .background(NeonBlue)
                 )
                 Text(
-                    text = "Pintasan Pembelajaran",
+                    text = "Kelola Sumber Daya Kelas",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
             }
             Text(
-                text = "Aksi Pengajar",
+                text = "Pintasan Aksi",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
                 color = TextTertiary
@@ -577,58 +578,66 @@ private fun ResourceActionCard(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.8.dp, accentColor.copy(alpha = 0.25f)),
+        shape = RoundedCornerShape(16.dp),
+        color = CosmicSurface,
+        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) accentColor.copy(alpha = 0.28f) else GlassBorder),
+        shadowElevation = 2.dp,
         modifier = modifier
     ) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(accentColor.copy(alpha = 0.035f))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(
+                            accentColor.copy(alpha = 0.08f),
+                            Color.Transparent
+                        )
+                    )
+                )
+                .padding(horizontal = 8.dp, vertical = 14.dp)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp, vertical = 10.dp),
+                modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(5.dp)
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(accentColor.copy(alpha = 0.12f))
-                        .border(0.5.dp, accentColor.copy(alpha = 0.22f), RoundedCornerShape(9.dp)),
+                        .size(44.dp)
+                        .clip(RoundedCornerShape(13.dp))
+                        .background(accentColor.copy(alpha = 0.14f))
+                        .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(13.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(17.dp)
+                        modifier = Modifier.size(22.dp)
                     )
                 }
                 Text(
                     text = label,
-                    fontSize = 12.sp,
+                    fontSize = 12.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
                 Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = accentColor.copy(alpha = 0.09f)
+                    shape = RoundedCornerShape(6.dp),
+                    color = accentColor.copy(alpha = 0.10f),
+                    border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.20f))
                 ) {
                     Text(
                         text = hint,
-                        fontSize = 9.5.sp,
+                        fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = accentColor,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
                     )
                 }
             }

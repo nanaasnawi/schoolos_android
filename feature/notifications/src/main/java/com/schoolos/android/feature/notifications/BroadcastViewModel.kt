@@ -48,9 +48,14 @@ class BroadcastViewModel @Inject constructor(
             ).onSuccess {
                 _state.value = _state.value.copy(isLoading = false, success = true)
             }.onFailure { e ->
+                val errorMsg = if (e.message?.contains("401") == true || e.toString().contains("401")) {
+                    "Sesi masuk Anda telah berakhir atau perlu diperbarui. Silakan keluar dan masuk kembali ke akun Kepala Sekolah untuk melanjutkan siaran."
+                } else {
+                    e.toHumanReadableError("Gagal mengirimkan pengumuman siaran. Periksa koneksi internet Anda.")
+                }
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = e.toHumanReadableError("Gagal mengirimkan pengumuman siaran. Periksa koneksi internet Anda.")
+                    error = errorMsg
                 )
             }
         }
