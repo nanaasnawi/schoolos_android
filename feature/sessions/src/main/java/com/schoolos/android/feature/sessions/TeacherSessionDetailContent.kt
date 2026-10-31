@@ -19,6 +19,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -267,25 +268,22 @@ fun TeacherSessionDetailContent(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            ResourceActionCard(
+            ResourceActionButton(
                 label = "Beri Tugas",
-                hint = "Tugas & PR",
                 icon = Icons.AutoMirrored.Filled.Assignment,
                 accentColor = StudentNeon,
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
             )
-            ResourceActionCard(
+            ResourceActionButton(
                 label = "Buat Kuis",
-                hint = "Evaluasi CBT",
                 icon = Icons.Default.Quiz,
                 accentColor = NeonSuccess,
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenQuizzes(session.subjectName?.trim().orEmpty()) }
             )
-            ResourceActionCard(
+            ResourceActionButton(
                 label = "Unggah Materi",
-                hint = "Bahan Ajar",
                 icon = Icons.AutoMirrored.Filled.MenuBook,
                 accentColor = NeonBlue,
                 modifier = Modifier.weight(1f),
@@ -568,80 +566,45 @@ private fun AttendanceMetricBox(
 }
 
 @Composable
-private fun ResourceActionCard(
+private fun ResourceActionButton(
     label: String,
-    hint: String,
     icon: ImageVector,
     accentColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    Surface(
-        onClick = onClick,
-        shape = RoundedCornerShape(16.dp),
-        color = CosmicSurface,
-        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) accentColor.copy(alpha = 0.28f) else GlassBorder),
-        shadowElevation = 2.dp,
+    Column(
         modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp, horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            accentColor.copy(alpha = 0.08f),
-                            Color.Transparent
-                        )
-                    )
-                )
-                .padding(horizontal = 8.dp, vertical = 14.dp)
+                .size(46.dp)
+                .clip(RoundedCornerShape(13.dp))
+                .background(accentColor.copy(alpha = 0.14f))
+                .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(13.dp)),
+            contentAlignment = Alignment.Center
         ) {
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(RoundedCornerShape(13.dp))
-                        .background(accentColor.copy(alpha = 0.14f))
-                        .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(13.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = accentColor,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-                Text(
-                    text = label,
-                    fontSize = 12.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = accentColor.copy(alpha = 0.10f),
-                    border = BorderStroke(0.5.dp, accentColor.copy(alpha = 0.20f))
-                ) {
-                    Text(
-                        text = hint,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = accentColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.5.dp)
-                    )
-                }
-            }
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = accentColor,
+                modifier = Modifier.size(22.dp)
+            )
         }
+        Text(
+            text = label,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
     }
 }
 
