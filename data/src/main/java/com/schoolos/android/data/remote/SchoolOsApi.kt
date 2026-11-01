@@ -474,6 +474,7 @@ data class CreateQuizRequestDto(
     @kotlinx.serialization.SerialName("passing_score") val passingScore: Int = 70,
     @kotlinx.serialization.SerialName("max_attempts") val maxAttempts: Int = 1,
     @kotlinx.serialization.SerialName("class_id") val classId: String? = null,
+    @kotlinx.serialization.SerialName("subject_id") val subjectId: String? = null,
 )
 
 @kotlinx.serialization.Serializable
@@ -487,6 +488,7 @@ data class CreateMaterialRequestDto(
     @kotlinx.serialization.SerialName("order_index") val orderIndex: Int = 0,
     val visibility: String = "published",
     @kotlinx.serialization.SerialName("class_id") val classId: String? = null,
+    @kotlinx.serialization.SerialName("subject_id") val subjectId: String? = null,
 )
 
 @kotlinx.serialization.Serializable
