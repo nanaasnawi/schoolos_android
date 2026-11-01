@@ -388,6 +388,7 @@ class MaterialCreatorViewModel @Inject constructor(
         mediaUrl: String?,
         subject: String,
         classId: String?,
+        subjectId: String? = null,
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -411,6 +412,7 @@ class MaterialCreatorViewModel @Inject constructor(
                 mediaUrl = mediaUrl,
                 subject = subject,
                 classId = classId,
+                subjectId = subjectId,
             ).onSuccess {
                 _state.value = _state.value.copy(isLoading = false, success = true)
             }.onFailure { err ->

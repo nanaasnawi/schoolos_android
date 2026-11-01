@@ -525,6 +525,7 @@ fun LearningMaterialDetailScreen(
                                         when (material.materialType) {
                                             MaterialType.DOCUMENT -> "PDF"
                                             MaterialType.VIDEO -> "Video"
+                                            MaterialType.INFOGRAPHIC -> "Infografis"
                                             MaterialType.ARTICLE -> "Artikel"
                                             else -> "Gambar"
                                         },
@@ -625,7 +626,7 @@ fun LearningMaterialDetailScreen(
                     ?: if (descPartsForQ.size >= 3 && descPartsForQ[2].isNotBlank() && !descPartsForQ[2].equals("Guru Pengampu", ignoreCase = true)) descPartsForQ[2] else "Guru Mata Pelajaran"
 
                 // ── RICH BLOCK CONTENT RENDERER (INFOGRAFIS / MULTI-BLOCK) ────────
-                if (material.materialType == MaterialType.IMAGE) {
+                if (material.materialType == MaterialType.IMAGE || material.materialType == MaterialType.INFOGRAPHIC) {
                     val effectiveBlocks = if (richBlocks != null && richBlocks.isNotEmpty()) {
                         richBlocks
                     } else if (!material.mediaUrl.isNullOrBlank()) {

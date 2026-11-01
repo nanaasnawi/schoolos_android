@@ -12,7 +12,8 @@ interface LearningMaterialRepository {
         contentBody: String? = null,
         mediaUrl: String? = null,
         subject: String,
-        classId: String? = null
+        classId: String? = null,
+        subjectId: String? = null
     ): Result<LearningMaterial>
     suspend fun uploadMaterialFile(
         bytes: ByteArray,
