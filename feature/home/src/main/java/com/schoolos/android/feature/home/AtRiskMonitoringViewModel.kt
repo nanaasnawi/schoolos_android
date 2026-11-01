@@ -38,11 +38,13 @@ data class AtRiskUiState(
             var unread = 0
             var overdue = 0
             var lowScore = 0
+            var quizAlert = 0
             for (s in scoped) {
                 when (s.category) {
                     "UNREAD_MATERIAL" -> unread++
                     "OVERDUE_ASSIGNMENT" -> overdue++
                     "LOW_SCORE" -> lowScore++
+                    "QUIZ_ALERT" -> quizAlert++
                 }
             }
             return AtRiskStats(
@@ -50,6 +52,7 @@ data class AtRiskUiState(
                 unreadMaterials = unread,
                 overdueAssignments = overdue,
                 lowScores = lowScore,
+                quizAlerts = quizAlert,
             )
         }
 
@@ -173,7 +176,10 @@ class AtRiskMonitoringViewModel @Inject constructor(
                 onSuccess = {
                     // Update state to marked as reminded
                     val updated = _state.value.allStudents.map {
-                        if (it.studentId == student.studentId && it.materialId == student.materialId) {
+                        if (it.studentId == student.studentId &&
+                            it.materialId == student.materialId &&
+                            it.assignmentId == student.assignmentId &&
+                            it.quizId == student.quizId) {
                             it.copy(isReminded = true, remindedAt = "Baru saja")
                         } else it
                     }

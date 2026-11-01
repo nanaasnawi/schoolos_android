@@ -398,6 +398,11 @@ interface SchoolOsApi {
         @Query("class_id") classId: String? = null,
     ): ApiResponse<List<MaterialCompletionDto>>
 
+    @GET("teacher/at-risk-students")
+    suspend fun getAtRiskStudents(
+        @Query("class_id") classId: String? = null,
+    ): ApiResponse<List<AtRiskStudentDto>>
+
     @GET("teacher/remind")
     suspend fun getReminders(): ApiResponse<Map<String, ReminderItemDto>>
 
@@ -552,6 +557,7 @@ data class SendReminderRequestDto(
     val category: String? = null,
     @kotlinx.serialization.SerialName("material_id") val materialId: String? = null,
     @kotlinx.serialization.SerialName("assignment_id") val assignmentId: String? = null,
+    @kotlinx.serialization.SerialName("quiz_id") val quizId: String? = null,
     @kotlinx.serialization.SerialName("teacher_name") val teacherName: String? = null,
 )
 

@@ -245,7 +245,7 @@ private fun AtRiskMonitoringContent(
                     // 6. Student Roster Cards
                     itemsIndexed(
                         items = state.filteredStudents,
-                        key = { _, item -> "${item.studentId}_${item.materialId ?: item.category}" }
+                        key = { _, item -> "${item.studentId}_${item.materialId ?: item.assignmentId ?: item.quizId ?: item.category}" }
                     ) { index, student ->
                         AtRiskStudentItemCard(
                             student = student,
@@ -477,6 +477,14 @@ private fun AtRiskInteractiveStatBar(
             onClick = { onSelectCategory("OVERDUE_ASSIGNMENT") }
         )
         StatFilterTile(
+            count = stats.quizAlerts,
+            label = "Kuis & CBT",
+            icon = Icons.Default.Quiz,
+            isSelected = selectedCategory == "QUIZ_ALERT",
+            accentColor = Color(0xFFA855F7),
+            onClick = { onSelectCategory("QUIZ_ALERT") }
+        )
+        StatFilterTile(
             count = stats.lowScores,
             label = "Di Bawah KKM",
             icon = Icons.AutoMirrored.Filled.TrendingDown,
@@ -696,6 +704,7 @@ private fun AtRiskStudentItemCard(
         "UNREAD_MATERIAL" -> "Materi Tertinggal" to AccentNeonAmber
         "OVERDUE_ASSIGNMENT" -> "Tugas Tertunda" to NeonWarning
         "LOW_SCORE" -> "Di Bawah KKM" to NeonError
+        "QUIZ_ALERT" -> "Kuis & CBT" to Color(0xFFA855F7)
         else -> "Perlu Perhatian" to NeonError
     }
 
