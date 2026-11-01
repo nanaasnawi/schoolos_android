@@ -27,9 +27,13 @@ import com.schoolos.android.domain.model.Assignment
 fun LazyListScope.teacherAssignmentListContent(
     activeItems: List<Assignment>,
     dueSoonItems: List<Assignment>,
+    scheduledItems: List<Assignment> = emptyList(),
     selectedTab: String,
     onAssignmentClick: (String) -> Unit
 ) {
+    if (selectedTab == "Semua" || selectedTab == "Terjadwal") {
+        renderTeacherSection("Draf Terjadwal", scheduledItems, onAssignmentClick)
+    }
     if (selectedTab == "Semua" || selectedTab == "Perlu Dinilai") {
         renderTeacherSection("Perlu Dinilai", dueSoonItems, onAssignmentClick)
     }
@@ -138,7 +142,9 @@ private fun TeacherAssignmentCard(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    if (assignment.createdAt.isNotBlank()) {
+                    val isScheduled = assignment.isScheduled || assignment.status == "draft"
+                    val targetDate = if (isScheduled) assignment.releaseAt ?: assignment.createdAt else assignment.createdAt
+                    if (targetDate.isNotBlank()) {
                         Spacer(Modifier.height(3.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -147,13 +153,17 @@ private fun TeacherAssignmentCard(
                             Icon(
                                 imageVector = Icons.Default.Schedule,
                                 contentDescription = null,
-                                tint = TextTertiary,
+                                tint = if (isScheduled) NeonWarning else TextTertiary,
                                 modifier = Modifier.size(11.dp)
                             )
                             Text(
-                                text = "Diterbitkan: ${formatPublishTimestamp(assignment.createdAt)}",
+                                text = if (isScheduled) {
+                                    "Tayang: ${formatPublishTimestamp(targetDate)}"
+                                } else {
+                                    "Diterbitkan: ${formatPublishTimestamp(targetDate)}"
+                                },
                                 fontSize = 10.sp,
-                                color = TextTertiary,
+                                color = if (isScheduled) NeonWarning else TextTertiary,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
@@ -203,20 +213,40 @@ private fun TeacherAssignmentCard(
 
                 Spacer(Modifier.width(8.dp))
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (assignment.isActive) NeonSuccess.copy(alpha = 0.12f) else com.schoolos.android.core.designsystem.CosmicSurface3)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        "Maks. ${assignment.maxScore} Poin",
-                        fontSize = 10.sp,
-                        color = if (assignment.isActive) NeonSuccess else TextTertiary,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                val isScheduledCard = assignment.isScheduled || assignment.status == "draft"
+                if (isScheduledCard) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(NeonWarning.copy(alpha = 0.15f))
+                            .border(0.5.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            "Terjadwal (Draft)",
+                            fontSize = 10.sp,
+                            color = NeonWarning,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(if (assignment.isActive) NeonSuccess.copy(alpha = 0.12f) else com.schoolos.android.core.designsystem.CosmicSurface3)
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    ) {
+                        Text(
+                            "Maks. ${assignment.maxScore} Poin",
+                            fontSize = 10.sp,
+                            color = if (assignment.isActive) NeonSuccess else TextTertiary,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }

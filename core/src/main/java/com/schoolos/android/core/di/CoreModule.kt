@@ -28,7 +28,7 @@ object CoreModule {
             context,
             AppDatabase::class.java,
             "schoolos.db",
-        ).fallbackToDestructiveMigrationOnDowngrade().build()
+        ).fallbackToDestructiveMigration().build()
     }
 
     @Provides

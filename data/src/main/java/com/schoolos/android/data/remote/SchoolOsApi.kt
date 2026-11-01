@@ -463,6 +463,8 @@ data class CreateAssignmentRequestDto(
     @kotlinx.serialization.SerialName("class_id") val classId: String? = null,
     @kotlinx.serialization.SerialName("subject_id") val subjectId: String? = null,
     val questions: List<com.schoolos.android.data.remote.dto.AssignmentQuestionDto>? = null,
+    @kotlinx.serialization.SerialName("release_at") val releaseAt: String? = null,
+    val status: String? = "published",
 )
 
 @kotlinx.serialization.Serializable
@@ -475,6 +477,8 @@ data class CreateQuizRequestDto(
     @kotlinx.serialization.SerialName("max_attempts") val maxAttempts: Int = 1,
     @kotlinx.serialization.SerialName("class_id") val classId: String? = null,
     @kotlinx.serialization.SerialName("subject_id") val subjectId: String? = null,
+    @kotlinx.serialization.SerialName("release_at") val releaseAt: String? = null,
+    val status: String? = "published",
 )
 
 @kotlinx.serialization.Serializable
@@ -489,6 +493,7 @@ data class CreateMaterialRequestDto(
     val visibility: String = "published",
     @kotlinx.serialization.SerialName("class_id") val classId: String? = null,
     @kotlinx.serialization.SerialName("subject_id") val subjectId: String? = null,
+    @kotlinx.serialization.SerialName("release_at") val releaseAt: String? = null,
 )
 
 @kotlinx.serialization.Serializable
@@ -500,6 +505,7 @@ data class UpdateMaterialRequestDto(
     val visibility: String? = null,
     @kotlinx.serialization.SerialName("start_page") val startPage: Int? = null,
     @kotlinx.serialization.SerialName("end_page") val endPage: Int? = null,
+    @kotlinx.serialization.SerialName("release_at") val releaseAt: String? = null,
 )
 
 @kotlinx.serialization.Serializable

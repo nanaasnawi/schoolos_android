@@ -863,7 +863,7 @@ fun LearningMaterialDetailScreen(
             EditMaterialDialog(
                 material = material,
                 onDismiss = { showEditDialog = false },
-                onSave = { updatedTitle, updatedDesc, updatedUrl, updatedStart, updatedEnd ->
+                onSave = { updatedTitle, updatedDesc, updatedUrl, updatedStart, updatedEnd, updatedVisibility, updatedReleaseAt ->
                     viewModel.updateMaterial(
                         id = material.id,
                         title = updatedTitle,
@@ -871,6 +871,8 @@ fun LearningMaterialDetailScreen(
                         mediaUrl = updatedUrl,
                         startPage = updatedStart,
                         endPage = updatedEnd,
+                        visibility = updatedVisibility,
+                        releaseAt = updatedReleaseAt,
                     ) { success, err ->
                         if (success) {
                             showEditDialog = false
@@ -1096,7 +1098,7 @@ fun LearningMaterialDetailScreen(
 private fun EditMaterialDialog(
     material: LearningMaterial,
     onDismiss: () -> Unit,
-    onSave: (title: String, description: String, mediaUrl: String?, startPage: Int?, endPage: Int?) -> Unit,
+    onSave: (title: String, description: String, mediaUrl: String?, startPage: Int?, endPage: Int?, visibility: String, releaseAt: String) -> Unit,
 ) {
     var title by remember { mutableStateOf(material.title) }
     var description by remember {
@@ -1106,6 +1108,19 @@ private fun EditMaterialDialog(
     var mediaUrl by remember { mutableStateOf(material.mediaUrl ?: "") }
     var startPageStr by remember { mutableStateOf(material.startPage?.toString() ?: "") }
     var endPageStr by remember { mutableStateOf(material.endPage?.toString() ?: "") }
+    var isScheduled by remember { mutableStateOf(material.isScheduled) }
+    var scheduledDate by remember {
+        val initDate = material.releaseAt?.let {
+            try { java.time.Instant.parse(it).atZone(java.time.ZoneId.of("Asia/Jakarta")).toLocalDate() } catch (_: Exception) { null }
+        } ?: java.time.LocalDate.now().plusDays(1)
+        mutableStateOf(initDate)
+    }
+    var scheduledTime by remember {
+        val initTime = material.releaseAt?.let {
+            try { java.time.Instant.parse(it).atZone(java.time.ZoneId.of("Asia/Jakarta")).toLocalTime() } catch (_: Exception) { null }
+        } ?: java.time.LocalTime.of(7, 0)
+        mutableStateOf(initTime)
+    }
     var showPdfReaderPreview by remember { mutableStateOf(false) }
     var isSaving by remember { mutableStateOf(false) }
 
@@ -1193,70 +1208,89 @@ private fun EditMaterialDialog(
                     )
                 )
 
-                // Editable Book / PDF Page Range
-                Surface(
-                    color = CosmicSurface2,
-                    shape = RoundedCornerShape(12.dp),
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Rentang Halaman Buku / Modul:", color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                            if (mediaUrl.isNotBlank()) {
-                                OutlinedButton(
-                                    onClick = { showPdfReaderPreview = true },
-                                    shape = RoundedCornerShape(8.dp),
-                                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                    modifier = Modifier.height(28.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
-                                    border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.5f))
-                                ) {
-                                    Icon(Icons.Default.Visibility, null, modifier = Modifier.size(12.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Buka Isi Buku", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                // Jadwal Tayang & Status Rilis Selector
+                PublishingScheduleSelector(
+                    isScheduled = isScheduled,
+                    onScheduleModeChange = { isScheduled = it },
+                    scheduledDate = scheduledDate,
+                    onDateChange = { scheduledDate = it },
+                    scheduledTime = scheduledTime,
+                    onTimeChange = { scheduledTime = it }
+                )
+
+                // Editable Book / PDF Page Range (Hanya tampil jika dokumen PDF / Buku SIBI)
+                val isBookOrPdf = (material.materialType == MaterialType.DOCUMENT ||
+                    mediaUrl.contains(".pdf", ignoreCase = true) ||
+                    ((material.startPage ?: 0) > 0)) &&
+                    material.materialType != MaterialType.INFOGRAPHIC &&
+                    material.materialType != MaterialType.ARTICLE &&
+                    material.materialType != MaterialType.VIDEO
+
+                if (isBookOrPdf) {
+                    Surface(
+                        color = CosmicSurface2,
+                        shape = RoundedCornerShape(12.dp),
+                        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("Rentang Halaman Buku / Modul:", color = TeacherNeon, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                if (mediaUrl.isNotBlank() && mediaUrl.contains(".pdf", ignoreCase = true)) {
+                                    OutlinedButton(
+                                        onClick = { showPdfReaderPreview = true },
+                                        shape = RoundedCornerShape(8.dp),
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                        modifier = Modifier.height(28.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TeacherNeon),
+                                        border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.5f))
+                                    ) {
+                                        Icon(Icons.Default.Visibility, null, modifier = Modifier.size(12.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Buka Isi Buku", fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
                                 }
                             }
-                        }
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedTextField(
-                                value = startPageStr,
-                                onValueChange = { startPageStr = it.filter { ch -> ch.isDigit() } },
-                                label = { Text("Hal. Mulai", fontSize = 10.sp) },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = TeacherNeon,
-                                    unfocusedBorderColor = GlassBorder,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                OutlinedTextField(
+                                    value = startPageStr,
+                                    onValueChange = { startPageStr = it.filter { ch -> ch.isDigit() } },
+                                    label = { Text("Hal. Mulai", fontSize = 10.sp) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = TeacherNeon,
+                                        unfocusedBorderColor = GlassBorder,
+                                        focusedTextColor = TextPrimary,
+                                        unfocusedTextColor = TextPrimary
+                                    )
                                 )
-                            )
-                            OutlinedTextField(
-                                value = endPageStr,
-                                onValueChange = { endPageStr = it.filter { ch -> ch.isDigit() } },
-                                label = { Text("Hal. Selesai", fontSize = 10.sp) },
-                                modifier = Modifier.weight(1f),
-                                singleLine = true,
-                                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
-                                shape = RoundedCornerShape(8.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = TeacherNeon,
-                                    unfocusedBorderColor = GlassBorder,
-                                    focusedTextColor = TextPrimary,
-                                    unfocusedTextColor = TextPrimary
+                                OutlinedTextField(
+                                    value = endPageStr,
+                                    onValueChange = { endPageStr = it.filter { ch -> ch.isDigit() } },
+                                    label = { Text("Hal. Selesai", fontSize = 10.sp) },
+                                    modifier = Modifier.weight(1f),
+                                    singleLine = true,
+                                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+                                    shape = RoundedCornerShape(8.dp),
+                                    colors = OutlinedTextFieldDefaults.colors(
+                                        focusedBorderColor = TeacherNeon,
+                                        unfocusedBorderColor = GlassBorder,
+                                        focusedTextColor = TextPrimary,
+                                        unfocusedTextColor = TextPrimary
+                                    )
                                 )
-                            )
+                            }
                         }
                     }
                 }
@@ -1267,12 +1301,20 @@ private fun EditMaterialDialog(
                 onClick = {
                     if (title.isNotBlank()) {
                         isSaving = true
+                        val finalVisibility = if (isScheduled) "draft" else "published"
+                        val finalReleaseAt = if (isScheduled) {
+                            com.schoolos.android.core.designsystem.buildScheduledUtcIso(scheduledDate, scheduledTime)
+                        } else {
+                            java.time.Instant.now().toString()
+                        }
                         onSave(
                             title.trim(),
                             description.trim(),
                             mediaUrl.trim().ifBlank { null },
                             startPageStr.toIntOrNull(),
-                            endPageStr.toIntOrNull()
+                            endPageStr.toIntOrNull(),
+                            finalVisibility,
+                            finalReleaseAt
                         )
                     }
                 },

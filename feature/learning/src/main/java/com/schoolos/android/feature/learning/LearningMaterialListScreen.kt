@@ -169,6 +169,7 @@ fun LearningMaterialListScreen(
                     articleCount = state.articleCount,
                     pendingCount = state.pendingCount,
                     completedCount = state.totalCompleted,
+                    scheduledCount = state.scheduledCount,
                     isTeacher = isTeacher
                 )
             }
@@ -432,6 +433,7 @@ private fun MaterialCategoryTabs(
     articleCount: Int = 0,
     pendingCount: Int = 0,
     completedCount: Int = 0,
+    scheduledCount: Int = 0,
     isTeacher: Boolean,
 ) {
     data class TabDef(val id: String, val label: String, val count: Int)
@@ -439,6 +441,7 @@ private fun MaterialCategoryTabs(
     val tabs = if (isTeacher) {
         listOf(
             TabDef("Semua", "Semua", totalCount),
+            TabDef("Terjadwal", "Terjadwal (Draft)", scheduledCount),
             TabDef("Buku & PDF", "Buku & PDF", bookPdfCount),
             TabDef("Video", "Video", videoCount),
             TabDef("Infografis", "Infografis", infographicCount),
@@ -557,13 +560,48 @@ private fun ModernMaterialCard(
 
                 // Status Badge
                 if (isTeacher) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Text("${item.completedCount} selesai", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        if (item.isScheduled) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(NeonWarning.copy(alpha = 0.15f))
+                                    .border(0.5.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "Terjadwal (Draft)",
+                                    color = NeonWarning,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(NeonSuccess.copy(alpha = 0.12f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "Aktif",
+                                    color = NeonSuccess,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text("${item.completedCount} selesai", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        }
                     }
                 } else if (item.isCompleted) {
                     Box(
@@ -675,7 +713,8 @@ private fun ModernMaterialCard(
                         }
                     }
 
-                    if (!item.createdAt.isNullOrBlank()) {
+                    val targetDate = if (item.isScheduled) item.releaseAt ?: item.createdAt else item.createdAt
+                    if (!targetDate.isNullOrBlank()) {
                         Spacer(Modifier.height(3.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -684,12 +723,16 @@ private fun ModernMaterialCard(
                             Icon(
                                 imageVector = Icons.Default.Schedule,
                                 contentDescription = null,
-                                tint = TextTertiary,
+                                tint = if (item.isScheduled) NeonWarning else TextTertiary,
                                 modifier = Modifier.size(11.dp)
                             )
                             Text(
-                                text = "Diterbitkan: ${formatPublishTimestamp(item.createdAt)}",
-                                color = TextTertiary,
+                                text = if (item.isScheduled) {
+                                    "Tayang: ${formatPublishTimestamp(targetDate)}"
+                                } else {
+                                    "Diterbitkan: ${formatPublishTimestamp(targetDate)}"
+                                },
+                                color = if (item.isScheduled) NeonWarning else TextTertiary,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,

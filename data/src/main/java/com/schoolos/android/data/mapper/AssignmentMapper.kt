@@ -57,6 +57,7 @@ fun AssignmentDto.toDomain() = Assignment(
     subjectName = subjectName,
     teacherName = teacherName,
     questions = questions.map { it.toDomain() },
+    releaseAt = releaseAt,
 )
 
 fun SubmissionDto.toDomain() = AssignmentSubmission(

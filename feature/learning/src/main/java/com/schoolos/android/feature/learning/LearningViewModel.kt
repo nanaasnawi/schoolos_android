@@ -34,6 +34,9 @@ data class MaterialItem(
     val mediaUrl: String? = null,
     val thumbnailUrl: String? = null,
     val createdAt: String? = null,
+    val isScheduled: Boolean = false,
+    val releaseAt: String? = null,
+    val visibility: String? = null,
 )
 
 data class LearningUiState(
@@ -53,6 +56,7 @@ data class LearningUiState(
     val infographicCount: Int = 0,
     val articleCount: Int = 0,
     val pendingCount: Int = 0,
+    val scheduledCount: Int = 0,
 )
 
 @HiltViewModel
@@ -182,6 +186,9 @@ class LearningViewModel @Inject constructor(
                 mediaUrl = m.mediaUrl,
                 thumbnailUrl = m.thumbnailUrl,
                 createdAt = m.createdAt,
+                isScheduled = m.isScheduled,
+                releaseAt = m.releaseAt,
+                visibility = m.visibility,
             )
         }
     }
@@ -344,6 +351,7 @@ class LearningViewModel @Inject constructor(
             "Video" -> filtered = filtered.filter { it.type == "VIDEO" }
             "Infografis" -> filtered = filtered.filter { it.type == "INFOGRAPHIC" || it.type == "IMAGE" }
             "Artikel" -> filtered = filtered.filter { it.type == "ARTICLE" }
+            "Terjadwal" -> filtered = filtered.filter { it.isScheduled }
             "Semua" -> {}
             else -> {
                 filtered = filtered.filter {
@@ -368,6 +376,7 @@ class LearningViewModel @Inject constructor(
         val videoCount = scopedBase.count { it.type == "VIDEO" }
         val infographicCount = scopedBase.count { it.type == "INFOGRAPHIC" || it.type == "IMAGE" }
         val articleCount = scopedBase.count { it.type == "ARTICLE" }
+        val scheduledCount = scopedBase.count { it.isScheduled }
 
         _state.value = _state.value.copy(
             isLoading = false,
@@ -379,6 +388,7 @@ class LearningViewModel @Inject constructor(
             videoCount = videoCount,
             infographicCount = infographicCount,
             articleCount = articleCount,
+            scheduledCount = scheduledCount,
             subjectFilter = subjectFilter,
             classFilter = classFilter,
         )
@@ -407,6 +417,8 @@ class LearningViewModel @Inject constructor(
         mediaUrl: String? = null,
         startPage: Int? = null,
         endPage: Int? = null,
+        visibility: String? = null,
+        releaseAt: String? = null,
         onResult: (Boolean, String?) -> Unit = { _, _ -> }
     ) {
         viewModelScope.launch {
@@ -417,7 +429,9 @@ class LearningViewModel @Inject constructor(
                 description = description,
                 mediaUrl = mediaUrl,
                 startPage = startPage,
-                endPage = endPage
+                endPage = endPage,
+                visibility = visibility,
+                releaseAt = releaseAt,
             )
                 .onSuccess { updated ->
                     selectedMaterial.value = updated

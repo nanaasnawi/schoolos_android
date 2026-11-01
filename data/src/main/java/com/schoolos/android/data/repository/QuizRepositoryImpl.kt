@@ -80,7 +80,9 @@ class QuizRepositoryImpl @Inject constructor(
         classId: String,
         timeLimitMinutes: Int?,
         passingScore: Int,
-        maxScore: Int
+        maxScore: Int,
+        releaseAt: String?,
+        status: String?,
     ): Result<Quiz> = runCatching {
         val targetClassId = classId.ifBlank { null }
         val request = com.schoolos.android.data.remote.CreateQuizRequestDto(
@@ -90,7 +92,9 @@ class QuizRepositoryImpl @Inject constructor(
             durationMinutes = timeLimitMinutes ?: 30,
             passingScore = passingScore,
             maxAttempts = 1,
-            classId = targetClassId
+            classId = targetClassId,
+            releaseAt = releaseAt?.ifBlank { null },
+            status = status ?: "published",
         )
         val response = api.createQuiz(request)
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal membuat kuis.")

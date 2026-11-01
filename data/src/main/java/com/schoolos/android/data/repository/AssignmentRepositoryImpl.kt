@@ -92,6 +92,8 @@ class AssignmentRepositoryImpl @Inject constructor(
         classId: String,
         assignmentType: String,
         questions: List<com.schoolos.android.domain.model.AssignmentQuestion>,
+        releaseAt: String?,
+        status: String?,
     ): Result<Assignment> = runCatching {
         val targetClassId = classId.ifBlank { null }
         val questionDtos = if (questions.isNotEmpty()) {
@@ -124,6 +126,8 @@ class AssignmentRepositoryImpl @Inject constructor(
             assignmentType = assignmentType,
             classId = targetClassId,
             questions = questionDtos,
+            releaseAt = releaseAt?.ifBlank { null },
+            status = status ?: "published",
         )
         val response = api.createAssignment(request)
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal membuat tugas.")

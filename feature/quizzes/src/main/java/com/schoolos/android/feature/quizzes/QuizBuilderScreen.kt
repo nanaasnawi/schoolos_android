@@ -237,6 +237,9 @@ private fun QuizInfoForm(
     var title by remember { mutableStateOf("") }
     var desc by remember { mutableStateOf("") }
     var selectedDuration by remember { mutableStateOf(30) }
+    var isScheduled by remember { mutableStateOf(false) }
+    var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().plusDays(1)) }
+    var scheduledTime by remember { mutableStateOf(java.time.LocalTime.of(7, 0)) }
 
     Column(
         modifier = Modifier
@@ -443,6 +446,17 @@ private fun QuizInfoForm(
             }
         }
 
+        // ── JADWAL TAYANG / SCHEDULING SELECTOR ─────────────────────
+        PublishingScheduleSelector(
+            isScheduled = isScheduled,
+            onScheduleModeChange = { isScheduled = it },
+            scheduledDate = scheduledDate,
+            onDateChange = { scheduledDate = it },
+            scheduledTime = scheduledTime,
+            onTimeChange = { scheduledTime = it },
+            modifier = Modifier.fillMaxWidth()
+        )
+
         if (!state.error.isNullOrBlank()) {
             Box(
                 modifier = Modifier
@@ -471,6 +485,9 @@ private fun QuizInfoForm(
                 val targetClassId = unifiedClasses.findClass(selectedClass)?.primaryId
                     ?: state.availableClasses.find { it.name == selectedClass }?.id
                     ?: selectedClass
+                val releaseAtIso = if (isScheduled) {
+                    buildScheduledUtcIso(scheduledDate, scheduledTime)
+                } else null
                 viewModel.createQuiz(
                     title = fullTitle.trim(),
                     description = fullDesc.trim(),
@@ -479,7 +496,9 @@ private fun QuizInfoForm(
                     maxScore = 100,
                     classId = targetClassId,
                     className = selectedClass,
-                    subjectName = selectedSubject
+                    subjectName = selectedSubject,
+                    status = if (isScheduled) "draft" else "published",
+                    releaseAt = releaseAtIso,
                 )
             },
             enabled = title.isNotBlank() && !state.isLoading,

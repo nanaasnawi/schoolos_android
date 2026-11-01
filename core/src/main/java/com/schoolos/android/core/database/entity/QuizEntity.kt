@@ -16,4 +16,5 @@ data class QuizEntity(
     val isActive: Boolean,
     val createdAt: String,
     val updatedAt: String,
+    val releaseAt: String? = null,
 )

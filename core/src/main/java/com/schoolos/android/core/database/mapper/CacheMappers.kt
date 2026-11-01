@@ -23,6 +23,7 @@ fun Assignment.toEntity() = AssignmentEntity(
     className = className,
     subjectName = subjectName,
     teacherName = teacherName,
+    releaseAt = releaseAt,
 )
 
 fun AssignmentEntity.toDomain() = Assignment(
@@ -41,6 +42,7 @@ fun AssignmentEntity.toDomain() = Assignment(
     className = className,
     subjectName = subjectName,
     teacherName = teacherName,
+    releaseAt = releaseAt,
 )
 
 fun Quiz.toEntity() = QuizEntity(
@@ -55,6 +57,7 @@ fun Quiz.toEntity() = QuizEntity(
     isActive = isActive,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    releaseAt = releaseAt,
 )
 
 fun QuizEntity.toDomain() = Quiz(
@@ -69,6 +72,7 @@ fun QuizEntity.toDomain() = Quiz(
     isActive = isActive,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    releaseAt = releaseAt,
 )
 
 fun Notification.toEntity(userId: String) = NotificationEntity(
