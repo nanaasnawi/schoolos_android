@@ -68,7 +68,7 @@ fun AutoGenerateAssignmentDialog(
     var selectedDifficulty by remember { mutableStateOf("Sedang") } // "Mudah" | "Sedang" | "HOTS"
     var numMcq by remember { mutableIntStateOf(4) }
     var numEssay by remember { mutableIntStateOf(2) }
-    var includeImages by remember { mutableStateOf(true) }
+    var includeImages by remember { mutableStateOf(false) }
 
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
