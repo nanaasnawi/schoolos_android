@@ -97,14 +97,6 @@
             </intent-filter>
         </service>
 
-        <!-- Fallback polling saat Doze menahan FCM / setelah reboot -->
-        <receiver
-            android:name=".notification.NotificationPollReceiver"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="com.schoolos.android.ACTION_POLL_NOTIFICATIONS" />
-            </intent-filter>
-        </receiver>
         <receiver
             android:name="com.schoolos.android.core.notification.TeacherScheduleAlarmReceiver"
             android:exported="false">

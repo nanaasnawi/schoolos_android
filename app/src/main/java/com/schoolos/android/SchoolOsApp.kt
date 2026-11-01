@@ -9,6 +9,13 @@ import timber.log.Timber
 
 @HiltAndroidApp
 class SchoolOsApp : Application() {
+
+    @dagger.hilt.EntryPoint
+    @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
+    interface AuthEntryPoint {
+        fun authManager(): com.schoolos.android.core.auth.AuthManager
+    }
+
     override fun onCreate() {
         super.onCreate()
         try {
@@ -44,7 +51,7 @@ class SchoolOsApp : Application() {
         try {
             val entry = dagger.hilt.android.EntryPointAccessors.fromApplication(
                 this,
-                com.schoolos.android.notification.NotificationPollWorker.PollEntryPoint::class.java
+                AuthEntryPoint::class.java
             )
             val authManager = entry.authManager()
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
@@ -68,11 +75,6 @@ class SchoolOsApp : Application() {
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
                 nm?.deleteNotificationChannel("school_os_service_channel")
             }
-        } catch (_: Throwable) {}
-
-        // Schedule silent background alarm polling (no sticky notification bar icon!)
-        try {
-            com.schoolos.android.notification.NotificationPollReceiver.schedule(this)
         } catch (_: Throwable) {}
     }
 }

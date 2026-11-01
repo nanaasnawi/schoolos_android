@@ -32,7 +32,6 @@ class NotificationSyncManager @Inject constructor(
     private val prefs = context.getSharedPreferences("schoolos_notif_sync", Context.MODE_PRIVATE)
     private var isStarted = false
     private var sseJob: kotlinx.coroutines.Job? = null
-    private var pollingJob: kotlinx.coroutines.Job? = null
 
     private val sseClient: OkHttpClient by lazy {
         apiClient.httpClient.newBuilder()
@@ -56,21 +55,16 @@ class NotificationSyncManager @Inject constructor(
         if (isStarted) return
         isStarted = true
 
-        // 1. Real-time SSE Stream Listener (Instant < 1s alert)
+        // 1. Real-time SSE Stream Listener (Instant < 1s event-driven alert when app is open)
         listenSseStream()
 
-        // 2. Periodic Polling & Maintenance Check (every 15 seconds)
-        pollingJob?.cancel()
-        pollingJob = scope.launch {
-            while (isActive) {
-                try {
-                    val isMaint = maintenanceManager.checkServerStatus()
-                    if (!isMaint && authManager.isLoggedIn) {
-                        syncNotifications()
-                    }
-                } catch (_: Exception) {}
-                delay(15_000)
-            }
+        // 2. One-time initial sync on startup (no periodic polling loop - 100% push-first)
+        scope.launch {
+            try {
+                if (authManager.isLoggedIn) {
+                    syncNotifications()
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -79,8 +73,6 @@ class NotificationSyncManager @Inject constructor(
         isStarted = false
         sseJob?.cancel()
         sseJob = null
-        pollingJob?.cancel()
-        pollingJob = null
         try {
             prefs.edit().clear().apply()
         } catch (_: Exception) {}

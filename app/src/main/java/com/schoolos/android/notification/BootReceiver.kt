@@ -32,7 +32,7 @@ class BootReceiver : BroadcastReceiver() {
         try {
             val entry = dagger.hilt.android.EntryPointAccessors.fromApplication(
                 context.applicationContext,
-                NotificationPollWorker.PollEntryPoint::class.java
+                com.schoolos.android.SchoolOsApp.AuthEntryPoint::class.java
             )
             val authManager = entry.authManager()
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
@@ -49,11 +49,6 @@ class BootReceiver : BroadcastReceiver() {
             }
         } catch (e: Exception) {
             Timber.w(e, "BootReceiver syncUserTopics failed")
-        }
-        try {
-            NotificationPollReceiver.schedule(context.applicationContext)
-        } catch (e: Exception) {
-            Timber.w(e, "BootReceiver schedule failed")
         }
     }
 }
