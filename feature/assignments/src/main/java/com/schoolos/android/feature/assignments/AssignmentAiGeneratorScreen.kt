@@ -88,7 +88,7 @@ fun AssignmentAiGeneratorScreen(
     var numEssay by remember { mutableIntStateOf(2) }
     var customMcqInput by remember { mutableStateOf("4") }
     var customEssayInput by remember { mutableStateOf("2") }
-    var includeImages by remember { mutableStateOf(true) }
+    var includeImages by remember { mutableStateOf(false) }
 
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }

@@ -98,7 +98,7 @@ fun QuizAiGeneratorScreen(
     var numEssay by remember { mutableIntStateOf(5) }
     var customMcqInput by remember { mutableStateOf("10") }
     var customEssayInput by remember { mutableStateOf("5") }
-    var includeImages by remember { mutableStateOf(true) }
+    var includeImages by remember { mutableStateOf(false) }
 
     var selectedSubject by remember(currentSubjectName, availableSubjects) {
         val matched = availableSubjects.find { it.name.equals(currentSubjectName, ignoreCase = true) }
