@@ -429,19 +429,13 @@ fun InfographicMagazineReaderView(
                             .fillMaxWidth()
                             .background(CosmicDark)
                             .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
                             text = magazineData.heroCaption,
                             color = TextSecondary,
                             fontSize = 11.5.sp,
                             fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = "Ketuk untuk Pinch-to-Zoom",
-                            color = TextTertiary,
-                            fontSize = 10.sp
                         )
                     }
                 }

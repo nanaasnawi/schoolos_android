@@ -26,4 +26,10 @@ data class Quiz(
     val studentHasCompleted: Boolean = false,
     val studentLastScore: Int? = null,
     val studentLastAttemptId: String? = null,
-)
+    val releaseAt: String? = null,
+) {
+    val isScheduled: Boolean
+        get() = status.equals("draft", ignoreCase = true) || (!releaseAt.isNullOrBlank() && try {
+            java.time.Instant.parse(releaseAt).isAfter(java.time.Instant.now())
+        } catch (_: Exception) { false })
+}

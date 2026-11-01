@@ -171,27 +171,9 @@ private fun AtRiskMonitoringContent(
 
                 // 5. Loading / Error / Empty States
                 if (state.isLoading) {
-                    item {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(200.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                CircularProgressIndicator(
-                                    color = NeonError,
-                                    strokeWidth = 2.5.dp,
-                                    modifier = Modifier.size(32.dp)
-                                )
-                                Spacer(Modifier.height(12.dp))
-                                Text(
-                                    text = "Memeriksa progres belajar & kelulusan siswa...",
-                                    fontSize = 12.sp,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
+                    items(4) {
+                        AtRiskStudentCardSkeleton()
+                        Spacer(Modifier.height(10.dp))
                     }
                 } else if (state.error != null && state.allStudents.isEmpty()) {
                     item {
@@ -924,6 +906,98 @@ private fun AtRiskStudentItemCard(
                         modifier = Modifier.size(11.dp)
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AtRiskStudentCardSkeleton(
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = CosmicNavy,
+        border = BorderStroke(0.5.dp, GlassBorder)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp)
+        ) {
+            // Top Row: Avatar + Name + Class + Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    ShimmerBox(
+                        modifier = Modifier.size(38.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    )
+                    Spacer(Modifier.width(10.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        ShimmerBox(
+                            modifier = Modifier
+                                .fillMaxWidth(0.65f)
+                                .height(14.dp),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        Spacer(Modifier.height(5.dp))
+                        ShimmerBox(
+                            modifier = Modifier
+                                .fillMaxWidth(0.4f)
+                                .height(11.dp),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                    }
+                }
+                Spacer(Modifier.width(8.dp))
+                ShimmerBox(
+                    modifier = Modifier
+                        .width(90.dp)
+                        .height(20.dp),
+                    shape = RoundedCornerShape(6.dp)
+                )
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Reason / Description skeleton
+            ShimmerBox(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(30.dp),
+                shape = RoundedCornerShape(8.dp)
+            )
+
+            Spacer(Modifier.height(12.dp))
+
+            // Action button skeleton
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ShimmerBox(
+                    modifier = Modifier
+                        .width(120.dp)
+                        .height(12.dp),
+                    shape = RoundedCornerShape(4.dp)
+                )
+                ShimmerBox(
+                    modifier = Modifier
+                        .width(80.dp)
+                        .height(24.dp),
+                    shape = RoundedCornerShape(6.dp)
+                )
             }
         }
     }

@@ -13,7 +13,9 @@ interface LearningMaterialRepository {
         mediaUrl: String? = null,
         subject: String,
         classId: String? = null,
-        subjectId: String? = null
+        subjectId: String? = null,
+        releaseAt: String? = null,
+        visibility: String? = "published",
     ): Result<LearningMaterial>
     suspend fun uploadMaterialFile(
         bytes: ByteArray,
@@ -43,7 +45,9 @@ interface LearningMaterialRepository {
         mediaUrl: String? = null,
         storageKey: String? = null,
         startPage: Int? = null,
-        endPage: Int? = null
+        endPage: Int? = null,
+        visibility: String? = null,
+        releaseAt: String? = null,
     ): Result<LearningMaterial>
     suspend fun deleteMaterial(id: String): Result<Unit>
     suspend fun getReadingSummary(): Result<com.schoolos.android.domain.model.TeacherReadingSummary>

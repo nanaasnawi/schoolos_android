@@ -31,6 +31,7 @@ data class QuizDto(
     @SerialName("student_has_completed") val studentHasCompleted: Boolean? = null,
     @SerialName("student_last_score") val studentLastScore: Int? = null,
     @SerialName("student_last_attempt_id") val studentLastAttemptId: String? = null,
+    @SerialName("release_at") val releaseAt: String? = null,
 )
 
 @Serializable

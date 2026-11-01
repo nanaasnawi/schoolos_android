@@ -15,6 +15,8 @@ interface AssignmentRepository {
         classId: String,
         assignmentType: String,
         questions: List<com.schoolos.android.domain.model.AssignmentQuestion> = emptyList(),
+        releaseAt: String? = null,
+        status: String? = "published",
     ): Result<Assignment>
     // answers: list of Pair(questionId, chosenChoiceId or textAnswer)
     suspend fun submitAssignment(

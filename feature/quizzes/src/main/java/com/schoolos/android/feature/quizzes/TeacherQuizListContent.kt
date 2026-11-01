@@ -30,8 +30,22 @@ import com.schoolos.android.domain.model.Quiz
 fun LazyListScope.teacherQuizListContent(
     activeQuizzes: List<Quiz>,
     doneQuizzes: List<Quiz>,
+    scheduledQuizzes: List<Quiz> = emptyList(),
     onQuizClick: (String) -> Unit
 ) {
+    if (scheduledQuizzes.isNotEmpty()) {
+        item {
+            TeacherQuizSectionHeader(
+                title = "Draf Terjadwal",
+                count = scheduledQuizzes.size,
+                accentColor = NeonWarning
+            )
+        }
+        items(scheduledQuizzes, key = { it.id }) { quiz ->
+            TeacherQuizCard(quiz = quiz, onClick = { onQuizClick(quiz.id) }, isArchived = false)
+        }
+    }
+
     if (activeQuizzes.isNotEmpty()) {
         item {
             TeacherQuizSectionHeader(
@@ -106,6 +120,7 @@ private fun TeacherQuizCard(
 ) {
     val icon = subjectIcon(quiz.title)
     val accentColor = if (isArchived) TextTertiary else TeacherNeon
+    val isScheduled = quiz.isScheduled || quiz.status.lowercase() == "draft"
 
     Box(
         modifier = Modifier
@@ -158,8 +173,6 @@ private fun TeacherQuizCard(
                 Spacer(Modifier.width(8.dp))
 
                 // Status chip
-                val statusLower = quiz.status.lowercase()
-                val isDraft = statusLower == "draft"
                 if (isArchived) {
                     Box(
                         modifier = Modifier
@@ -170,7 +183,7 @@ private fun TeacherQuizCard(
                     ) {
                         Text("ARSIP", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
                     }
-                } else if (isDraft) {
+                } else if (isScheduled) {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
@@ -178,7 +191,7 @@ private fun TeacherQuizCard(
                             .border(0.5.dp, NeonWarning.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
                             .padding(horizontal = 7.dp, vertical = 3.dp)
                     ) {
-                        Text("DRAF", color = NeonWarning, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
+                        Text("TERJADWAL (DRAFT)", color = NeonWarning, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 0.5.sp)
                     }
                 } else {
                     Box(
@@ -233,7 +246,8 @@ private fun TeacherQuizCard(
                         )
                     }
 
-                    if (quiz.createdAt.isNotBlank()) {
+                    val targetDate = if (isScheduled) quiz.releaseAt ?: quiz.createdAt else quiz.createdAt
+                    if (targetDate.isNotBlank()) {
                         Spacer(Modifier.height(3.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -242,13 +256,17 @@ private fun TeacherQuizCard(
                             Icon(
                                 imageVector = Icons.Default.Schedule,
                                 contentDescription = null,
-                                tint = TextTertiary,
+                                tint = if (isScheduled) NeonWarning else TextTertiary,
                                 modifier = Modifier.size(11.dp)
                             )
                             Text(
-                                text = "Diterbitkan: ${formatPublishTimestamp(quiz.createdAt)}",
+                                text = if (isScheduled) {
+                                    "Tayang: ${formatPublishTimestamp(targetDate)}"
+                                } else {
+                                    "Diterbitkan: ${formatPublishTimestamp(targetDate)}"
+                                },
                                 fontSize = 10.sp,
-                                color = TextTertiary,
+                                color = if (isScheduled) NeonWarning else TextTertiary,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis

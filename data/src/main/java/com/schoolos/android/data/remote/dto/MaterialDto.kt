@@ -30,6 +30,7 @@ data class MaterialDto(
     @SerialName("class_id") val classId: String? = null,
     @SerialName("start_page") val startPage: Int? = null,
     @SerialName("end_page") val endPage: Int? = null,
+    @SerialName("release_at") val releaseAt: String? = null,
 )
 
 @Serializable

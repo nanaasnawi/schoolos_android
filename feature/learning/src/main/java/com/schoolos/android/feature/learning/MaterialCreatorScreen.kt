@@ -292,7 +292,7 @@ fun MaterialCreatorScreen(
             endPage = endP.toString(),
             isLoading = state.isLoading,
             onBackToEdit = { showPrePublishDialog = false },
-            onConfirmPublish = {
+            onConfirmPublish = { isScheduled, releaseAtIso ->
                 if (selectedType == MaterialType.DOCUMENT && pdfSourceMode == "SIBI" && selectedBook != null) {
                     viewModel.assignReadingBook(
                         book = selectedBook!!,
@@ -311,7 +311,9 @@ fun MaterialCreatorScreen(
                         mediaUrl = mediaUrl.trim().ifBlank { null },
                         subject = selectedSubject,
                         classId = targetClassId,
-                        subjectId = targetSubjectId
+                        subjectId = targetSubjectId,
+                        visibility = if (isScheduled) "draft" else "published",
+                        releaseAt = releaseAtIso,
                     )
                 }
             }
@@ -1923,13 +1925,17 @@ private fun MaterialReviewAndPublishScreen(
     endPage: String,
     isLoading: Boolean,
     onBackToEdit: () -> Unit,
-    onConfirmPublish: () -> Unit,
+    onConfirmPublish: (isScheduled: Boolean, releaseAtIso: String?) -> Unit,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBackToEdit)
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) CosmicNavy else MaterialTheme.colorScheme.surface
     val cardBorder = if (isDark) GlassBorder else MaterialTheme.colorScheme.outlineVariant
     val itemBg = if (isDark) CosmicSurface2 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+
+    var isScheduled by remember { mutableStateOf(false) }
+    var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().plusDays(1)) }
+    var scheduledTime by remember { mutableStateOf(java.time.LocalTime.of(7, 0)) }
 
     Scaffold(
         containerColor = if (isDark) CosmicBlack else MaterialTheme.colorScheme.background,
@@ -1970,18 +1976,33 @@ private fun MaterialReviewAndPublishScreen(
                     }
 
                     Button(
-                        onClick = onConfirmPublish,
+                        onClick = {
+                            val releaseAtIso = if (isScheduled) {
+                                buildScheduledUtcIso(scheduledDate, scheduledTime)
+                            } else null
+                            onConfirmPublish(isScheduled, releaseAtIso)
+                        },
                         enabled = !isLoading,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1.3f).height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow)
+                        colors = ButtonDefaults.buttonColors(containerColor = if (isScheduled) NeonWarning else EmeraldGlow)
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
                         } else {
-                            Icon(Icons.Default.CloudUpload, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Icon(
+                                if (isScheduled) Icons.Default.Schedule else Icons.Default.CloudUpload,
+                                contentDescription = null,
+                                tint = if (isScheduled) CosmicBlack else Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(Modifier.width(6.dp))
-                            Text("Terbitkan Sekarang", fontWeight = FontWeight.Black, fontSize = 12.sp)
+                            Text(
+                                if (isScheduled) "Jadwalkan Materi" else "Terbitkan Sekarang",
+                                fontWeight = FontWeight.Black,
+                                fontSize = 12.sp,
+                                color = if (isScheduled) CosmicBlack else Color.White
+                            )
                         }
                     }
                 }
@@ -2022,6 +2043,17 @@ private fun MaterialReviewAndPublishScreen(
                     }
                 }
             }
+
+            // ── JADWAL TAYANG / SCHEDULING SELECTOR ─────────────────────
+            PublishingScheduleSelector(
+                isScheduled = isScheduled,
+                onScheduleModeChange = { isScheduled = it },
+                scheduledDate = scheduledDate,
+                onDateChange = { scheduledDate = it },
+                scheduledTime = scheduledTime,
+                onTimeChange = { scheduledTime = it },
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // Student Material Card Simulator
             Surface(

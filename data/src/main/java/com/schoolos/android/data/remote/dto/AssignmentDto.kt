@@ -21,4 +21,5 @@ data class AssignmentDto(
     @SerialName("subject_name") val subjectName: String? = null,
     @SerialName("teacher_name") val teacherName: String? = null,
     val questions: List<AssignmentQuestionDto> = emptyList(),
+    @SerialName("release_at") val releaseAt: String? = null,
 )

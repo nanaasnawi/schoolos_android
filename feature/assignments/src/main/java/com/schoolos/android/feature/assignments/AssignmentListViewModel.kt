@@ -23,6 +23,7 @@ data class AssignmentListUiState(
     val active: List<Assignment> = emptyList(),
     val dueSoon: List<Assignment> = emptyList(),
     val completed: List<Assignment> = emptyList(),
+    val scheduled: List<Assignment> = emptyList(),
     val subjectFilter: String? = null,
     val classFilter: String? = null,
 )
@@ -95,6 +96,7 @@ class AssignmentListViewModel @Inject constructor(
                         active = grouped.active,
                         dueSoon = grouped.dueSoon,
                         completed = grouped.completed,
+                        scheduled = grouped.scheduled,
                         subjectFilter = subjectFilter,
                         classFilter = classFilter,
                     )
@@ -121,8 +123,13 @@ class AssignmentListViewModel @Inject constructor(
         val active = mutableListOf<Assignment>()
         val dueSoon = mutableListOf<Assignment>()
         val completed = mutableListOf<Assignment>()
+        val scheduled = mutableListOf<Assignment>()
 
         for (a in assignments) {
+            if (a.isScheduled || a.status == "draft") {
+                scheduled.add(a)
+                continue
+            }
             when (a.status) {
                 "submitted", "graded" -> completed.add(a)
                 else -> {
@@ -146,6 +153,7 @@ class AssignmentListViewModel @Inject constructor(
             active = active.sortedByDescending { it.createdAt },
             dueSoon = dueSoon.sortedByDescending { it.createdAt },
             completed = completed.sortedByDescending { it.updatedAt },
+            scheduled = scheduled.sortedByDescending { it.releaseAt ?: it.createdAt },
         )
     }
 
@@ -153,5 +161,6 @@ class AssignmentListViewModel @Inject constructor(
         val active: List<Assignment>,
         val dueSoon: List<Assignment>,
         val completed: List<Assignment>,
+        val scheduled: List<Assignment>,
     )
 }

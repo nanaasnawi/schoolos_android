@@ -327,6 +327,8 @@ class QuizBuilderViewModel @Inject constructor(
         classId: String?,
         className: String = "",
         subjectName: String = "",
+        status: String? = null,
+        releaseAt: String? = null,
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -336,7 +338,9 @@ class QuizBuilderViewModel @Inject constructor(
                 classId = classId ?: "",
                 timeLimitMinutes = timeLimit,
                 passingScore = passingScore,
-                maxScore = maxScore
+                maxScore = maxScore,
+                status = status,
+                releaseAt = releaseAt,
             ).onSuccess { quiz ->
                 _state.value = _state.value.copy(
                     isLoading = false,

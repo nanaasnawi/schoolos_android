@@ -53,13 +53,19 @@ fun QuizListScreen(
         }
     }
 
+    val scheduledQuizzes = if (isTeacher) {
+        state.quizzes.filter { it.isScheduled || it.status.lowercase() == "draft" }
+    } else emptyList()
+
     val doneQuizzes = state.quizzes.filter {
-        it.studentHasCompleted ||
-        it.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded") ||
-        it.status.lowercase() in listOf("closed", "archived", "graded", "submitted", "completed")
+        it !in scheduledQuizzes && (
+            it.studentHasCompleted ||
+            it.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded") ||
+            it.status.lowercase() in listOf("closed", "archived", "graded", "submitted", "completed")
+        )
     }
     val activeQuizzes = state.quizzes.filter {
-        it !in doneQuizzes && (isTeacher || it.status.lowercase() in listOf("active", "open", "published"))
+        it !in scheduledQuizzes && it !in doneQuizzes && (isTeacher || it.status.lowercase() in listOf("active", "open", "published"))
     }
 
     Scaffold(
@@ -193,6 +199,7 @@ fun QuizListScreen(
                         teacherQuizListContent(
                             activeQuizzes = activeQuizzes,
                             doneQuizzes = doneQuizzes,
+                            scheduledQuizzes = scheduledQuizzes,
                             onQuizClick = onQuizClick
                         )
                     } else {

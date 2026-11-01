@@ -18,4 +18,10 @@ data class Assignment(
     val subjectName: String? = null,
     val teacherName: String? = null,
     val questions: List<AssignmentQuestion> = emptyList(),
-)
+    val releaseAt: String? = null,
+) {
+    val isScheduled: Boolean
+        get() = status.equals("draft", ignoreCase = true) || (!releaseAt.isNullOrBlank() && try {
+            java.time.Instant.parse(releaseAt).isAfter(java.time.Instant.now())
+        } catch (_: Exception) { false })
+}

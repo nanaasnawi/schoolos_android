@@ -102,7 +102,8 @@ fun AssignmentListScreen(
     // Tab counts mapping
     val tabCounts = if (isTeacher) {
         mapOf(
-            "Semua" to (state.active.size + state.dueSoon.size),
+            "Semua" to (state.active.size + state.dueSoon.size + state.scheduled.size),
+            "Terjadwal" to state.scheduled.size,
             "Aktif" to state.active.size,
             "Perlu Dinilai" to state.dueSoon.size
         )
@@ -222,6 +223,7 @@ fun AssignmentListScreen(
                             teacherAssignmentListContent(
                                 activeItems = state.active,
                                 dueSoonItems = state.dueSoon,
+                                scheduledItems = state.scheduled,
                                 selectedTab = selectedTab,
                                 onAssignmentClick = onAssignmentClick
                             )
@@ -779,7 +781,7 @@ private fun AssignmentTabFilter(
     onTabSelected: (String) -> Unit,
     counts: Map<String, Int> = emptyMap(),
 ) {
-    val tabs = if (isTeacher) listOf("Semua", "Aktif", "Perlu Dinilai")
+    val tabs = if (isTeacher) listOf("Semua", "Terjadwal", "Aktif", "Perlu Dinilai")
                else listOf("Semua", "Segera", "Aktif", "Selesai")
 
     LazyRow(

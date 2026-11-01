@@ -60,6 +60,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     startPage = dto.startPage,
                     endPage = dto.endPage,
                     createdAt = dto.publishedAt ?: dto.createdAt,
+                    visibility = dto.visibility,
+                    releaseAt = dto.releaseAt,
                 )
             } ?: emptyList()
 
@@ -85,6 +87,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                         startPage = m.startPage,
                         endPage = m.endPage,
                         createdAt = m.createdAt,
+                        visibility = m.visibility,
+                        releaseAt = m.releaseAt,
                         cachedAt = now - (idx * 1000L),
                     )
                 }
@@ -118,6 +122,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 startPage = entity.startPage,
                 endPage = entity.endPage,
                 createdAt = entity.createdAt,
+                visibility = entity.visibility,
+                releaseAt = entity.releaseAt,
             )
         }
     }
@@ -163,6 +169,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 startPage = dto.startPage,
                 endPage = dto.endPage,
                 createdAt = dto.publishedAt ?: dto.createdAt,
+                visibility = dto.visibility,
+                releaseAt = dto.releaseAt,
             )
 
             materialDao.insert(
@@ -185,6 +193,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     startPage = domain.startPage,
                     endPage = domain.endPage,
                     createdAt = domain.createdAt,
+                    visibility = domain.visibility,
+                    releaseAt = domain.releaseAt,
                 )
             )
 
@@ -226,7 +236,9 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         mediaUrl: String?,
         subject: String,
         classId: String?,
-        subjectId: String?
+        subjectId: String?,
+        releaseAt: String?,
+        visibility: String?,
     ): Result<LearningMaterial> = runCatching {
         val typeStr = when (materialType) {
             MaterialType.VIDEO -> "video"
@@ -249,9 +261,10 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             storageKey = null,
             externalUrl = mediaUrl,
             orderIndex = 0,
-            visibility = "published",
+            visibility = visibility ?: "published",
             classId = classId?.ifBlank { null },
-            subjectId = subjectId?.ifBlank { null }
+            subjectId = subjectId?.ifBlank { null },
+            releaseAt = releaseAt?.ifBlank { null },
         )
         val response = api.createMaterial(request)
         val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal membuat materi ajar.")
@@ -266,6 +279,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             subject = subject,
             size = dto.storageKey ?: "Modul Digital",
             createdAt = dto.publishedAt ?: dto.createdAt ?: java.time.Instant.now().toString(),
+            visibility = dto.visibility ?: visibility,
+            releaseAt = dto.releaseAt ?: releaseAt,
         )
     }
 
@@ -361,7 +376,9 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         mediaUrl: String?,
         storageKey: String?,
         startPage: Int?,
-        endPage: Int?
+        endPage: Int?,
+        visibility: String?,
+        releaseAt: String?,
     ): Result<LearningMaterial> = runCatching {
         val request = com.schoolos.android.data.remote.UpdateMaterialRequestDto(
             title = title,
@@ -370,12 +387,15 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             storageKey = storageKey,
             startPage = startPage,
             endPage = endPage,
+            visibility = visibility,
+            releaseAt = releaseAt,
         )
         val response = api.updateMaterial(id, request)
         val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal memperbarui materi.")
         val matType = when (dto.materialType?.lowercase()) {
             "video" -> MaterialType.VIDEO
             "document" -> MaterialType.DOCUMENT
+            "infographic" -> MaterialType.INFOGRAPHIC
             "image" -> MaterialType.IMAGE
             else -> MaterialType.ARTICLE
         }
@@ -392,6 +412,8 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             startPage = dto.startPage ?: startPage,
             endPage = dto.endPage ?: endPage,
             createdAt = dto.createdAt,
+            visibility = dto.visibility ?: visibility,
+            releaseAt = dto.releaseAt ?: releaseAt,
         )
     }
 

@@ -137,33 +137,6 @@ fun InAppImageViewer(
                 .fillMaxSize()
                 .clickable { showFullscreenLightbox = true }
         )
-
-        // Overlay hint button
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(10.dp)
-                .clip(RoundedCornerShape(8.dp))
-                .background(Color.Black.copy(alpha = 0.72f))
-                .clickable { showFullscreenLightbox = true }
-                .padding(horizontal = 9.dp, vertical = 5.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.ZoomIn,
-                    contentDescription = null,
-                    tint = Color.White,
-                    modifier = Modifier.size(15.dp)
-                )
-                Spacer(Modifier.width(4.dp))
-                Text(
-                    text = "Perbesar (Pinch-to-Zoom)",
-                    color = Color.White,
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Bold
-                )
-            }
-        }
     }
 
     if (showFullscreenLightbox) {

@@ -312,6 +312,8 @@ class AssignmentCreatorViewModel @Inject constructor(
         customMaxScore: Int,
         dueAt: String,
         classId: String?,
+        status: String? = null,
+        releaseAt: String? = null,
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -355,6 +357,8 @@ class AssignmentCreatorViewModel @Inject constructor(
                 classId = classId ?: "",
                 assignmentType = assignmentType,
                 questions = validQuestions,
+                status = status,
+                releaseAt = releaseAt,
             ).onSuccess {
                 _state.value = _state.value.copy(isLoading = false, success = true)
             }.onFailure { e ->

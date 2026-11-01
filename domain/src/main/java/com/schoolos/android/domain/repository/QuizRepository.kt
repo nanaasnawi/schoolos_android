@@ -13,7 +13,9 @@ interface QuizRepository {
         classId: String,
         timeLimitMinutes: Int?,
         passingScore: Int,
-        maxScore: Int
+        maxScore: Int,
+        releaseAt: String? = null,
+        status: String? = "published",
     ): Result<Quiz>
     suspend fun getQuestions(quizId: String): Result<List<QuizQuestion>>
     suspend fun addQuestion(

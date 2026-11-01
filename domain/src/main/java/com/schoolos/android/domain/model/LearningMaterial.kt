@@ -19,7 +19,14 @@ data class LearningMaterial(
     val startPage: Int? = null,
     val endPage: Int? = null,
     val createdAt: String? = null,
-)
+    val visibility: String? = null,
+    val releaseAt: String? = null,
+) {
+    val isScheduled: Boolean
+        get() = visibility?.equals("draft", ignoreCase = true) == true || (!releaseAt.isNullOrBlank() && try {
+            java.time.Instant.parse(releaseAt).isAfter(java.time.Instant.now())
+        } catch (_: Exception) { false })
+}
 
 enum class MaterialType {
     VIDEO, DOCUMENT, ARTICLE, INFOGRAPHIC, IMAGE
