@@ -540,6 +540,7 @@ private fun ModernMaterialCard(
             ) {
                 Box(
                     modifier = Modifier
+                        .weight(1f, fill = false)
                         .clip(RoundedCornerShape(4.dp))
                         .background(com.schoolos.android.core.designsystem.CosmicSurface2)
                         .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
@@ -560,47 +561,38 @@ private fun ModernMaterialCard(
 
                 // Status Badge
                 if (isTeacher) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        if (item.isScheduled) {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(NeonWarning.copy(alpha = 0.15f))
-                                    .border(0.5.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "Terjadwal (Draft)",
-                                    color = NeonWarning,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(NeonSuccess.copy(alpha = 0.12f))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "Aktif",
-                                    color = NeonSuccess,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
+                    if (item.isScheduled) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                                .background(NeonWarning.copy(alpha = 0.15f))
+                                .border(0.5.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
-                            Text("${item.completedCount} selesai", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                            Text(
+                                text = "Terjadwal (Draft)",
+                                color = NeonWarning,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(4.dp))
+                                .background(NeonSuccess.copy(alpha = 0.12f))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = "Aktif",
+                                color = NeonSuccess,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                softWrap = false
+                            )
                         }
                     }
                 } else if (item.isCompleted) {
@@ -610,7 +602,7 @@ private fun ModernMaterialCard(
                             .background(NeonSuccess.copy(alpha = 0.12f))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text("Selesai", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        Text("Selesai", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
                     }
                 } else {
                     Box(
@@ -619,7 +611,7 @@ private fun ModernMaterialCard(
                             .background(com.schoolos.android.core.designsystem.CosmicSurface2)
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
-                        Text("Belum Selesai", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+                        Text("Belum Selesai", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
                     }
                 }
             }
@@ -804,6 +796,22 @@ private fun ModernMaterialCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
+
+                    if (isTeacher && item.completedCount >= 0) {
+                        Text(
+                            text = "•",
+                            color = TextTertiary,
+                            fontSize = 10.sp,
+                        )
+                        Text(
+                            text = "${item.completedCount} selesai",
+                            color = TeacherNeon,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
 
                 Icon(

@@ -10,7 +10,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
@@ -62,6 +65,7 @@ fun PublishingScheduleSelector(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(
+                    modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -75,36 +79,46 @@ fun PublishingScheduleSelector(
                         text = "Jadwal Tayang & Status Rilis",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = TextPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
+
+                Spacer(Modifier.width(8.dp))
 
                 if (isScheduled) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(RoundedCornerShape(6.dp))
                             .background(AccentNeonAmber.copy(alpha = 0.15f))
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                            .border(0.5.dp, AccentNeonAmber.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "🕒 Terjadwal (Draft)",
+                            text = "Terjadwal (Draft)",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = AccentNeonAmber
+                            color = AccentNeonAmber,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 } else {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
+                            .clip(RoundedCornerShape(6.dp))
                             .background(NeonSuccess.copy(alpha = 0.15f))
-                            .padding(horizontal = 7.dp, vertical = 2.dp)
+                            .border(0.5.dp, NeonSuccess.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
                     ) {
                         Text(
-                            text = "🟢 Tayang Langsung (Aktif)",
+                            text = "Tayang Langsung",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = NeonSuccess
+                            color = NeonSuccess,
+                            maxLines = 1,
+                            softWrap = false
                         )
                     }
                 }
@@ -119,46 +133,72 @@ fun PublishingScheduleSelector(
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (!isScheduled) NeonSuccess.copy(alpha = 0.12f) else CosmicNavy)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (!isScheduled) NeonSuccess.copy(alpha = 0.14f) else CosmicNavy)
                         .border(
                             width = if (!isScheduled) 1.dp else 0.5.dp,
                             color = if (!isScheduled) NeonSuccess else GlassBorder,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(10.dp)
                         )
                         .clickable { onScheduleModeChange(false) }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 10.dp, horizontal = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "⚡ Tayang Hari Ini (Aktif)",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (!isScheduled) NeonSuccess else TextSecondary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            tint = if (!isScheduled) NeonSuccess else TextTertiary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "Tayang Hari Ini",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (!isScheduled) NeonSuccess else TextSecondary,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
 
                 // Button 2: Jadwalkan Tayang
                 Box(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isScheduled) AccentNeonAmber.copy(alpha = 0.12f) else CosmicNavy)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isScheduled) AccentNeonAmber.copy(alpha = 0.14f) else CosmicNavy)
                         .border(
                             width = if (isScheduled) 1.dp else 0.5.dp,
                             color = if (isScheduled) AccentNeonAmber else GlassBorder,
-                            shape = RoundedCornerShape(8.dp)
+                            shape = RoundedCornerShape(10.dp)
                         )
                         .clickable { onScheduleModeChange(true) }
-                        .padding(vertical = 8.dp),
+                        .padding(vertical = 10.dp, horizontal = 8.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "🕒 Jadwalkan Tayang",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (isScheduled) AccentNeonAmber else TextSecondary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Schedule,
+                            contentDescription = null,
+                            tint = if (isScheduled) AccentNeonAmber else TextTertiary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Text(
+                            text = "Jadwalkan Tayang",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isScheduled) AccentNeonAmber else TextSecondary,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
                 }
             }
 
@@ -272,12 +312,24 @@ fun PublishingScheduleSelector(
                         }
                     }
 
-                    Text(
-                        text = "ℹ️ Siswa baru dapat mengakses materi/tugas secara otomatis pada ${scheduledDate.format(dateFormatter)} pukul ${scheduledTime.format(timeFormatter)}.",
-                        fontSize = 10.5.sp,
-                        color = TextTertiary,
-                        lineHeight = 14.sp
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.Top,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = null,
+                            tint = TextTertiary,
+                            modifier = Modifier.size(13.dp).padding(top = 1.dp)
+                        )
+                        Text(
+                            text = "Siswa baru dapat mengakses materi/tugas secara otomatis pada ${scheduledDate.format(dateFormatter)} pukul ${scheduledTime.format(timeFormatter)}.",
+                            fontSize = 10.5.sp,
+                            color = TextTertiary,
+                            lineHeight = 14.sp
+                        )
+                    }
                 }
             }
         }

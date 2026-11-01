@@ -10,7 +10,7 @@ interface NotificationRepository {
     suspend fun markRead(id: String)
     suspend fun markAllRead()
     suspend fun broadcastNotification(
-        classId: String,
+        classId: String = "",
         title: String,
         body: String,
         targetRoles: List<String>

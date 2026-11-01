@@ -41,7 +41,7 @@ class BroadcastViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             repository.broadcastNotification(
-                classId = "class_7a",
+                classId = "",
                 title = title,
                 body = message,
                 targetRoles = roles

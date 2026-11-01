@@ -1392,22 +1392,19 @@ private fun AssignmentReviewAndPublishScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Icon(Icons.Default.School, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(22.dp))
-                        Column {
-                            Text("Sasaran Tugas:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
-                            Text(
-                                text = "Kelas $selectedClass • $selectedSubject",
-                                color = TeacherNeon,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    Icon(Icons.Default.School, contentDescription = null, tint = TeacherNeon, modifier = Modifier.size(22.dp))
+                    Column {
+                        Text("Akan Diterbitkan Untuk:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "Kelas $selectedClass • $selectedSubject",
+                            color = TeacherNeon,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
-                    AssignmentChip("Tenggat: $dueDays Hari", NeonWarning)
                 }
             }
 
@@ -1450,7 +1447,21 @@ private fun AssignmentReviewAndPublishScreen(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
-                        Text("Nilai Maks: $maxScore Poin", color = NeonSuccess, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isScheduled) "Status: Terjadwal (Draft)" else "Status: Siap Terbit",
+                            color = if (isScheduled) AccentNeonAmber else NeonSuccess,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AssignmentChip("Tenggat: $dueDays Hari", NeonWarning)
+                        AssignmentChip("Maks: $maxScore Poin", NeonSuccess)
                     }
 
                     Text(

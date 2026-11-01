@@ -2090,7 +2090,12 @@ private fun MaterialReviewAndPublishScreen(
                             )
                         }
 
-                        Text("Status: Siap Terbit", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = if (isScheduled) "Status: Terjadwal (Draft)" else "Status: Siap Terbit",
+                            color = if (isScheduled) AccentNeonAmber else NeonSuccess,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     // Title & Description
@@ -2121,35 +2126,9 @@ private fun MaterialReviewAndPublishScreen(
                         }
                     }
 
-                    HorizontalDivider(color = cardBorder)
-
-                    // Media preview
-                    if (selectedBook != null) {
-                        Surface(
-                            color = itemBg,
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.4f)),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(14.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(12.dp)
-                            ) {
-                                Icon(Icons.Default.MenuBook, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(26.dp))
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(selectedBook.title, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Spacer(Modifier.height(2.dp))
-                                    Text(
-                                        "Siswa diarahkan membaca Hal. $startPage s/d $endPage",
-                                        color = EmeraldGlow,
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 11.sp
-                                    )
-                                }
-                            }
-                        }
-                    } else if (selectedType == MaterialType.VIDEO && mediaUrl.isNotBlank()) {
+                    // Media preview (hanya jika ada video atau infografis eksternal)
+                    if (selectedType == MaterialType.VIDEO && mediaUrl.isNotBlank()) {
+                        HorizontalDivider(color = cardBorder)
                         Surface(
                             color = itemBg,
                             shape = RoundedCornerShape(12.dp),
