@@ -171,8 +171,8 @@ fun AssignmentListScreen(
                             if (isTeacher) {
                                 TeacherAssignmentHeroHeader(
                                     activeCount = state.active.size,
+                                    scheduledCount = state.scheduled.size,
                                     pendingGradeCount = state.dueSoon.size,
-                                    quizActiveCount = 0 // TODO: wire from ViewModel when quiz count available
                                 )
                             } else {
                                 StudentAssignmentHeroHeader(
@@ -196,18 +196,17 @@ fun AssignmentListScreen(
                             }
                         }
 
-                        // Empty state for teachers — 2 action cards
-                        if (isTeacher && state.active.isEmpty() && state.dueSoon.isEmpty() && state.completed.isEmpty()) {
+                        val hasTeacherAssignments = state.active.isNotEmpty() || state.dueSoon.isNotEmpty() || state.completed.isNotEmpty() || state.scheduled.isNotEmpty()
+
+                        // Empty state for teachers — only shown when truly NO assignments exist (including drafts)
+                        if (isTeacher && !hasTeacherAssignments) {
                             item {
-                                TeacherEmptyState(
-                                    onCreateAssignment = onCreateAssignment,
-                                    onCreateQuiz = onCreateQuiz
-                                )
+                                TeacherEmptyState()
                             }
                         }
 
                         // ── PREMIUM TAB FILTER CHIPS ─────────────────────────
-                        if (!isTeacher || (state.active.isNotEmpty() || state.dueSoon.isNotEmpty() || state.completed.isNotEmpty())) {
+                        if (!isTeacher || hasTeacherAssignments) {
                             item {
                                 AssignmentTabFilter(
                                     isTeacher = isTeacher,
@@ -509,8 +508,8 @@ private fun StudentAssignmentHeroHeader(
 @Composable
 private fun TeacherAssignmentHeroHeader(
     activeCount: Int,
-    pendingGradeCount: Int,
-    quizActiveCount: Int = 0,
+    scheduledCount: Int = 0,
+    pendingGradeCount: Int = 0,
 ) {
     Box(
         modifier = Modifier
@@ -521,6 +520,14 @@ private fun TeacherAssignmentHeroHeader(
             .padding(16.dp),
     ) {
         Column {
+            val tagText = when {
+                activeCount > 0 && scheduledCount > 0 -> "$activeCount Berjalan • $scheduledCount Draf"
+                scheduledCount > 0 -> "$scheduledCount Draf Terjadwal"
+                activeCount > 0 -> "$activeCount Berjalan"
+                pendingGradeCount > 0 -> "$pendingGradeCount Perlu Nilai"
+                else -> "0 Berjalan"
+            }
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -537,8 +544,8 @@ private fun TeacherAssignmentHeroHeader(
                 )
 
                 Text(
-                    text = "${activeCount + pendingGradeCount} Berjalan",
-                    color = TeacherNeon,
+                    text = tagText,
+                    color = if (activeCount > 0 || scheduledCount > 0) TeacherNeon else TextTertiary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
@@ -567,7 +574,7 @@ private fun TeacherAssignmentHeroHeader(
 
             Spacer(Modifier.height(12.dp))
 
-            // 3 Metric Cards (Fixed Height 60.dp, perfectly aligned)
+            // 3 Metric Cards (Aktual: Aktif, Terjadwal / Draf, Perlu Nilai)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -576,7 +583,14 @@ private fun TeacherAssignmentHeroHeader(
                     label = "TUGAS AKTIF",
                     value = "$activeCount",
                     subtitle = "Berjalan",
-                    accent = TextPrimary,
+                    accent = if (activeCount > 0) TeacherNeon else TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                HeroMetricCard(
+                    label = "DRAF TERJADWAL",
+                    value = "$scheduledCount",
+                    subtitle = "Terjadwal",
+                    accent = if (scheduledCount > 0) AccentNeonAmber else TextPrimary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
@@ -584,13 +598,6 @@ private fun TeacherAssignmentHeroHeader(
                     value = "$pendingGradeCount",
                     subtitle = "Menunggu",
                     accent = if (pendingGradeCount > 0) NeonWarning else TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                HeroMetricCard(
-                    label = "KUIS AKTIF",
-                    value = "$quizActiveCount",
-                    subtitle = "Formatif",
-                    accent = NeonBlue,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -641,136 +648,51 @@ private fun HeroMetricCard(
 // ── TEACHER EMPTY STATE (Clean Obsidian) ──────────────────────────────────────
 
 @Composable
-private fun TeacherEmptyState(
-    onCreateAssignment: () -> Unit,
-    onCreateQuiz: () -> Unit,
-) {
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                .padding(20.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Assignment,
-                        contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(20.dp)
-                    )
-                }
-                Spacer(Modifier.height(10.dp))
-                Text(
-                    text = "Belum Ada Penugasan",
-                    color = TextPrimary,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    text = "Mulai dengan membuat tugas atau kuis baru untuk kelas Anda",
-                    color = TextTertiary,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center
-                )
-            }
-        }
-
-        // 2 action cards side by side (Fixed Height 104.dp)
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            TeacherActionCard(
-                icon = Icons.Default.Edit,
-                title = "Buat Tugas",
-                subtitle = "Tugaskan PR & proyek",
-                accentColor = TeacherNeon,
-                onClick = onCreateAssignment,
-                modifier = Modifier.weight(1f)
-            )
-            TeacherActionCard(
-                icon = Icons.Default.Quiz,
-                title = "Buat Kuis",
-                subtitle = "Ujian & evaluasi",
-                accentColor = NeonBlue,
-                onClick = onCreateQuiz,
-                modifier = Modifier.weight(1f)
-            )
-        }
-    }
-}
-
-@Composable
-private fun TeacherActionCard(
-    icon: ImageVector,
-    title: String,
-    subtitle: String,
-    accentColor: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+private fun TeacherEmptyState() {
     Box(
-        modifier = modifier
-            .height(104.dp)
+        modifier = Modifier
+            .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .background(CosmicNavy)
             .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(12.dp)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            verticalArrangement = Arrangement.SpaceBetween,
-        ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Box(
                 modifier = Modifier
-                    .size(34.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(10.dp))
                     .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = icon,
+                    imageVector = Icons.AutoMirrored.Filled.Assignment,
                     contentDescription = null,
-                    tint = TextPrimary,
-                    modifier = Modifier.size(17.dp)
+                    tint = TextSecondary,
+                    modifier = Modifier.size(22.dp)
                 )
             }
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = title,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Spacer(Modifier.height(2.dp))
-                Text(
-                    text = subtitle,
-                    fontSize = 11.sp,
-                    color = TextTertiary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "Belum Ada Penugasan",
+                color = TextPrimary,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Gunakan tombol '+ Buat Tugas' di pojok bawah untuk merancang tugas atau latihan bagi siswa Anda.",
+                color = TextTertiary,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }
+
+
 
 // ── ASSIGNMENT TAB FILTER (Apple Segmented Style) ─────────────────────────────
 
