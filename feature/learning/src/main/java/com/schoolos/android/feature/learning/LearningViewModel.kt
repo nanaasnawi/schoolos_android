@@ -50,6 +50,8 @@ data class LearningUiState(
     val classFilter: String? = null,
     val bookPdfCount: Int = 0,
     val videoCount: Int = 0,
+    val infographicCount: Int = 0,
+    val articleCount: Int = 0,
     val pendingCount: Int = 0,
 )
 
@@ -161,6 +163,7 @@ class LearningViewModel @Inject constructor(
                 MaterialType.VIDEO -> "VIDEO"
                 MaterialType.DOCUMENT -> "PDF"
                 MaterialType.IMAGE -> "IMAGE"
+                MaterialType.INFOGRAPHIC -> "INFOGRAPHIC"
                 MaterialType.ARTICLE -> "ARTICLE"
             }
             MaterialItem(
@@ -339,6 +342,8 @@ class LearningViewModel @Inject constructor(
             "Belum Selesai" -> filtered = filtered.filter { !it.isCompleted }
             "Buku & PDF" -> filtered = filtered.filter { it.type == "PDF" || it.startPage != null }
             "Video" -> filtered = filtered.filter { it.type == "VIDEO" }
+            "Infografis" -> filtered = filtered.filter { it.type == "INFOGRAPHIC" || it.type == "IMAGE" }
+            "Artikel" -> filtered = filtered.filter { it.type == "ARTICLE" }
             "Semua" -> {}
             else -> {
                 filtered = filtered.filter {
@@ -361,6 +366,8 @@ class LearningViewModel @Inject constructor(
         val pendingCount = scopedBase.size - completedCount
         val bookPdfCount = scopedBase.count { it.type == "PDF" || it.startPage != null }
         val videoCount = scopedBase.count { it.type == "VIDEO" }
+        val infographicCount = scopedBase.count { it.type == "INFOGRAPHIC" || it.type == "IMAGE" }
+        val articleCount = scopedBase.count { it.type == "ARTICLE" }
 
         _state.value = _state.value.copy(
             isLoading = false,
@@ -370,6 +377,8 @@ class LearningViewModel @Inject constructor(
             pendingCount = pendingCount,
             bookPdfCount = bookPdfCount,
             videoCount = videoCount,
+            infographicCount = infographicCount,
+            articleCount = articleCount,
             subjectFilter = subjectFilter,
             classFilter = classFilter,
         )

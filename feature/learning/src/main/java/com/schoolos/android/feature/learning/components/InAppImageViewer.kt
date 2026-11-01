@@ -30,17 +30,9 @@ import coil.request.ImageRequest
 import com.schoolos.android.core.designsystem.*
 import kotlin.math.absoluteValue
 
-val EDUCATIONAL_FALLBACK_IMAGES = listOf(
-    "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?w=800&q=80",
-    "https://images.unsplash.com/photo-1509228468518-180dd4864904?w=800&q=80",
-    "https://images.unsplash.com/photo-1532094349884-543bc11b234d?w=800&q=80",
-    "https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=800&q=80",
-    "https://images.unsplash.com/photo-1497633762265-9d179a990aa6?w=800&q=80"
-)
-
 /**
  * In-App High Resolution Image & Infographic Viewer with Pinch-to-Zoom, Lightbox,
- * and automatic educational fallback so images never show broken icons.
+ * and clean native educational placeholder (zero inaccurate stock photos).
  */
 @Composable
 fun InAppImageViewer(
@@ -51,24 +43,45 @@ fun InAppImageViewer(
 ) {
     val context = LocalContext.current
     var showFullscreenLightbox by remember { mutableStateOf(false) }
-    var useFallback by remember(imageUrl) { mutableStateOf(false) }
 
-    val fallbackUrl = remember(title, fallbackIndex) {
-        val idx = (title.hashCode().absoluteValue + fallbackIndex) % EDUCATIONAL_FALLBACK_IMAGES.size
-        EDUCATIONAL_FALLBACK_IMAGES[idx]
-    }
-
-    val activeUrl = remember(imageUrl, useFallback) {
-        if (useFallback || imageUrl.isBlank()) {
-            fallbackUrl
-        } else {
-            imageUrl
+    if (imageUrl.isBlank()) {
+        Box(
+            modifier = modifier
+                .background(CosmicNavy),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier.padding(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AutoAwesome,
+                    contentDescription = null,
+                    tint = NeonBlue,
+                    modifier = Modifier.size(36.dp)
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = "Ilustrasi Materi Digital",
+                    color = TextPrimary,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = title,
+                    color = TextTertiary,
+                    fontSize = 10.sp,
+                    maxLines = 1
+                )
+            }
         }
+        return
     }
 
-    val imageRequest = remember(activeUrl) {
+    val imageRequest = remember(imageUrl) {
         ImageRequest.Builder(context)
-            .data(activeUrl)
+            .data(imageUrl)
             .addHeader(
                 "User-Agent",
                 "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
@@ -86,11 +99,7 @@ fun InAppImageViewer(
                 ShimmerBox(modifier = Modifier.fillMaxSize())
             },
             error = {
-                if (!useFallback && imageUrl.isNotBlank()) {
-                    LaunchedEffect(imageUrl) {
-                        useFallback = true
-                    }
-                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
@@ -166,9 +175,9 @@ fun InAppImageViewer(
             var offsetX by remember { mutableStateOf(0f) }
             var offsetY by remember { mutableStateOf(0f) }
 
-            val lightboxRequest = remember(activeUrl) {
+            val lightboxRequest = remember(imageUrl) {
                 ImageRequest.Builder(context)
-                    .data(activeUrl)
+                    .data(imageUrl)
                     .addHeader(
                         "User-Agent",
                         "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
