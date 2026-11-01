@@ -23,11 +23,18 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         try {
             val response = api.getMaterials()
             val materials = response.data?.map { dto ->
-                val type = when (dto.materialType?.lowercase() ?: dto.contentType?.lowercase()) {
-                    "video" -> MaterialType.VIDEO
-                    "pdf", "document" -> MaterialType.DOCUMENT
-                    "image" -> MaterialType.IMAGE
-                    else -> MaterialType.ARTICLE
+                val formatStr = (dto.format ?: dto.contentType ?: dto.materialType ?: "").uppercase()
+                val type = when (formatStr) {
+                    "VIDEO" -> MaterialType.VIDEO
+                    "PDF", "DOCUMENT" -> MaterialType.DOCUMENT
+                    "INFOGRAPHIC" -> MaterialType.INFOGRAPHIC
+                    "IMAGE" -> MaterialType.IMAGE
+                    "ARTICLE", "TEXT" -> MaterialType.ARTICLE
+                    else -> {
+                        if (dto.externalUrl?.contains("youtube") == true) MaterialType.VIDEO
+                        else if (dto.externalUrl?.endsWith(".pdf") == true && !dto.externalUrl.contains("article")) MaterialType.DOCUMENT
+                        else MaterialType.ARTICLE
+                    }
                 }
                 val parts = (dto.description ?: "").split(" • ")
                 val subject = dto.subjectName?.takeIf { it.isNotBlank() }
@@ -119,11 +126,18 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         try {
             val response = api.getMaterial(id)
             val dto = response.data ?: throw Exception(response.error?.message ?: "Materi tidak ditemukan.")
-            val type = when (dto.materialType?.lowercase() ?: dto.contentType?.lowercase()) {
-                "video" -> MaterialType.VIDEO
-                "pdf", "document" -> MaterialType.DOCUMENT
-                "image" -> MaterialType.IMAGE
-                else -> MaterialType.ARTICLE
+            val formatStr = (dto.format ?: dto.contentType ?: dto.materialType ?: "").uppercase()
+            val type = when (formatStr) {
+                "VIDEO" -> MaterialType.VIDEO
+                "PDF", "DOCUMENT" -> MaterialType.DOCUMENT
+                "INFOGRAPHIC" -> MaterialType.INFOGRAPHIC
+                "IMAGE" -> MaterialType.IMAGE
+                "ARTICLE", "TEXT" -> MaterialType.ARTICLE
+                else -> {
+                    if (dto.externalUrl?.contains("youtube") == true) MaterialType.VIDEO
+                    else if (dto.externalUrl?.endsWith(".pdf") == true && !dto.externalUrl.contains("article")) MaterialType.DOCUMENT
+                    else MaterialType.ARTICLE
+                }
             }
             val parts = (dto.description ?: "").split(" • ")
             val subject = dto.subjectName?.takeIf { it.isNotBlank() }
@@ -211,11 +225,13 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         contentBody: String?,
         mediaUrl: String?,
         subject: String,
-        classId: String?
+        classId: String?,
+        subjectId: String?
     ): Result<LearningMaterial> = runCatching {
         val typeStr = when (materialType) {
             MaterialType.VIDEO -> "video"
             MaterialType.DOCUMENT -> "document"
+            MaterialType.INFOGRAPHIC -> "image"
             MaterialType.IMAGE -> "image"
             MaterialType.ARTICLE -> "article"
         }
@@ -230,11 +246,12 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             materialType = typeStr,
             title = title,
             description = fullDesc,
-            storageKey = "Modul Digital",
+            storageKey = null,
             externalUrl = mediaUrl,
             orderIndex = 0,
             visibility = "published",
-            classId = classId?.ifBlank { null }
+            classId = classId?.ifBlank { null },
+            subjectId = subjectId?.ifBlank { null }
         )
         val response = api.createMaterial(request)
         val dto = response.data ?: throw Exception(response.error?.message ?: "Gagal membuat materi ajar.")

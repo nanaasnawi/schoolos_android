@@ -461,6 +461,7 @@ data class CreateAssignmentRequestDto(
     @kotlinx.serialization.SerialName("due_at") val dueAt: String? = null,
     @kotlinx.serialization.SerialName("assignment_type") val assignmentType: String = "individual",
     @kotlinx.serialization.SerialName("class_id") val classId: String? = null,
+    @kotlinx.serialization.SerialName("subject_id") val subjectId: String? = null,
     val questions: List<com.schoolos.android.data.remote.dto.AssignmentQuestionDto>? = null,
 )
 

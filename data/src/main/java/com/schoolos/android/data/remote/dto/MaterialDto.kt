@@ -19,6 +19,7 @@ data class MaterialDto(
     @SerialName("teacher_name") val teacherName: String? = null,
     @SerialName("chapter_title") val chapterTitle: String? = null,
     @SerialName("content_type") val contentType: String? = null,
+    val format: String? = null,
     @SerialName("youtube_url") val youtubeUrl: String? = null,
     @SerialName("pdf_file_name") val pdfFileName: String? = null,
     @SerialName("image_preview_url") val imagePreviewUrl: String? = null,

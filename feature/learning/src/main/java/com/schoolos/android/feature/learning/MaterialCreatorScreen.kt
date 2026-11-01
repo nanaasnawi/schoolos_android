@@ -310,7 +310,8 @@ fun MaterialCreatorScreen(
                         materialType = selectedType,
                         mediaUrl = mediaUrl.trim().ifBlank { null },
                         subject = selectedSubject,
-                        classId = targetClassId
+                        classId = targetClassId,
+                        subjectId = targetSubjectId
                     )
                 }
             }

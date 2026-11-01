@@ -22,5 +22,5 @@ data class LearningMaterial(
 )
 
 enum class MaterialType {
-    VIDEO, DOCUMENT, ARTICLE, IMAGE
+    VIDEO, DOCUMENT, ARTICLE, INFOGRAPHIC, IMAGE
 }
