@@ -117,12 +117,6 @@ class MainActivity : ComponentActivity() {
             timber.log.Timber.e(e, "Firebase initialization error")
         }
 
-        // Fallback polling (AlarmManager allow-while-idle) untuk Doze / HP idle lama.
-        try {
-            com.schoolos.android.notification.NotificationPollReceiver.schedule(this)
-        } catch (_: Exception) {}
-
-
         // Initial check for system maintenance mode
         lifecycleScope.launch {
             maintenanceManager.checkServerStatus()
