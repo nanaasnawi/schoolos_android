@@ -1184,7 +1184,7 @@ fun MaterialCreatorScreen(
                     }
                 }
 
-                MaterialType.IMAGE -> {
+                MaterialType.IMAGE, MaterialType.INFOGRAPHIC -> {
                     // ── 3. INFOGRAFIS (KATALOG BUKU TIDAK DITAMPILKAN!) ──
                     Box(
                         modifier = Modifier
@@ -2048,7 +2048,7 @@ private fun MaterialReviewAndPublishScreen(
                                 text = when (selectedType) {
                                     MaterialType.VIDEO -> "VIDEO PEMBELAJARAN"
                                     MaterialType.DOCUMENT -> if (selectedBook != null) "BUKU SIBI KEMENDIKDASMEN" else "MODUL PDF"
-                                    MaterialType.IMAGE -> "INFOGRAFIS / GAMBAR"
+                                    MaterialType.IMAGE, MaterialType.INFOGRAPHIC -> "INFOGRAFIS / GAMBAR"
                                     MaterialType.ARTICLE -> "ARTIKEL BACAAN"
                                 },
                                 color = EmeraldGlow,

@@ -165,6 +165,8 @@ fun LearningMaterialListScreen(
                     totalCount = state.totalMaterials,
                     bookPdfCount = state.bookPdfCount,
                     videoCount = state.videoCount,
+                    infographicCount = state.infographicCount,
+                    articleCount = state.articleCount,
                     pendingCount = state.pendingCount,
                     completedCount = state.totalCompleted,
                     isTeacher = isTeacher
@@ -426,8 +428,10 @@ private fun MaterialCategoryTabs(
     totalCount: Int,
     bookPdfCount: Int,
     videoCount: Int,
-    pendingCount: Int,
-    completedCount: Int,
+    infographicCount: Int = 0,
+    articleCount: Int = 0,
+    pendingCount: Int = 0,
+    completedCount: Int = 0,
     isTeacher: Boolean,
 ) {
     data class TabDef(val id: String, val label: String, val count: Int)
@@ -437,12 +441,16 @@ private fun MaterialCategoryTabs(
             TabDef("Semua", "Semua", totalCount),
             TabDef("Buku & PDF", "Buku & PDF", bookPdfCount),
             TabDef("Video", "Video", videoCount),
+            TabDef("Infografis", "Infografis", infographicCount),
+            TabDef("Artikel", "Artikel", articleCount),
         )
     } else {
         listOf(
             TabDef("Semua", "Semua", totalCount),
             TabDef("Buku & PDF", "Buku & PDF", bookPdfCount),
             TabDef("Video", "Video", videoCount),
+            TabDef("Infografis", "Infografis", infographicCount),
+            TabDef("Artikel", "Artikel", articleCount),
             TabDef("Belum Selesai", "Belum", pendingCount),
             TabDef("Selesai", "Selesai", completedCount),
         )
@@ -727,8 +735,10 @@ private fun ModernMaterialCard(
                     Text(
                         text = when {
                             item.type == "VIDEO" -> "Video Pelajaran"
-                            isLibraryBook -> "Buku Siswa"
-                            else -> "Modul PDF"
+                            item.type == "ARTICLE" -> "Artikel Naskah"
+                            item.type == "INFOGRAPHIC" || item.type == "IMAGE" -> "Infografis Digital"
+                            isLibraryBook -> "Buku SIBI (Hal. ${item.startPage ?: 1} — ${item.endPage ?: ""})"
+                            else -> "Buku / PDF"
                         },
                         color = TextSecondary,
                         fontSize = 10.sp,

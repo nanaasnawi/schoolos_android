@@ -394,7 +394,7 @@ class MaterialCreatorViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true, error = null)
             
             // Serialize content blocks if type is Article or Image(Infografis)
-            val finalContentBody = if (materialType == MaterialType.ARTICLE || materialType == MaterialType.IMAGE) {
+            val finalContentBody = if (materialType == MaterialType.ARTICLE || materialType == MaterialType.IMAGE || materialType == MaterialType.INFOGRAPHIC) {
                 try {
                     Json.encodeToString(contentBlocks.value)
                 } catch (_: Exception) {

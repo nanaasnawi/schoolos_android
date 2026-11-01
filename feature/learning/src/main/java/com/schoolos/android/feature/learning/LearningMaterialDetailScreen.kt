@@ -422,7 +422,7 @@ fun LearningMaterialDetailScreen(
 
             // ── PARSED RICH CONTENT (INFOGRAFIS / ARTIKEL) ───────────────────
             var richBlocks: List<ContentBlock>? = null
-            if (material.materialType == MaterialType.IMAGE || material.materialType == MaterialType.ARTICLE) {
+            if (material.materialType == MaterialType.IMAGE || material.materialType == MaterialType.ARTICLE || material.materialType == MaterialType.INFOGRAPHIC) {
                 val candidateBody = material.contentBody ?: material.description
                 if (!candidateBody.isNullOrBlank()) {
                     try {
@@ -471,13 +471,16 @@ fun LearningMaterialDetailScreen(
                         }
                     }
                 }
-            } else if (material.materialType == MaterialType.IMAGE && (richBlocks == null || richBlocks.isEmpty())) {
-                Box(modifier = Modifier.fillMaxWidth().background(CosmicNavy)) {
-                    InAppImageViewer(
-                        imageUrl = mediaUrl ?: material.thumbnailUrl ?: "",
-                        title = material.title,
-                        modifier = Modifier.fillMaxWidth().height(260.dp)
-                    )
+            } else if ((material.materialType == MaterialType.IMAGE || material.materialType == MaterialType.INFOGRAPHIC) && (richBlocks == null || richBlocks.isEmpty())) {
+                val candidateImg = mediaUrl ?: material.thumbnailUrl
+                if (!candidateImg.isNullOrBlank()) {
+                    Box(modifier = Modifier.fillMaxWidth().background(CosmicNavy)) {
+                        InAppImageViewer(
+                            imageUrl = candidateImg,
+                            title = material.title,
+                            modifier = Modifier.fillMaxWidth().height(260.dp)
+                        )
+                    }
                 }
             }
 
@@ -1322,7 +1325,7 @@ fun calculateEstimatedReadingMinutes(material: LearningMaterial): Int {
             }
         }
         MaterialType.VIDEO -> 4
-        MaterialType.IMAGE -> 2
+        MaterialType.IMAGE, MaterialType.INFOGRAPHIC -> 2
     }
 }
 
