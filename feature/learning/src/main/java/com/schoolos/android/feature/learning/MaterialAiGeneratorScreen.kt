@@ -6,6 +6,8 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -350,14 +352,16 @@ fun MaterialAiGeneratorScreen(
                                 }
                             }
 
-                            // Quick subject chips
+                            // Quick subject chips with smooth horizontal scroll and non-wrapping typography
                             if (!isSubjectLocked && availableSubjects.isNotEmpty()) {
                                 Spacer(Modifier.height(8.dp))
                                 Row(
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                    modifier = Modifier.fillMaxWidth()
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .horizontalScroll(rememberScrollState())
                                 ) {
-                                    availableSubjects.take(3).forEach { sub ->
+                                    availableSubjects.forEach { sub ->
                                         val isSel = selectedSubject?.id == sub.id
                                         Surface(
                                             modifier = Modifier.clickable { selectedSubject = sub },
@@ -366,11 +370,13 @@ fun MaterialAiGeneratorScreen(
                                             border = BorderStroke(1.dp, if (isSel) EmeraldPrimary else colorScheme.outlineVariant)
                                         ) {
                                             Text(
-                                                sub.name,
+                                                text = sub.name,
                                                 fontSize = 11.sp,
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
+                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
                                                 color = if (isSel) Color.White else colorScheme.onSurface,
-                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                maxLines = 1,
+                                                softWrap = false,
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                                             )
                                         }
                                     }
