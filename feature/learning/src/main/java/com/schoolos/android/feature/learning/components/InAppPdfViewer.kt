@@ -127,6 +127,7 @@ fun InAppPdfViewer(
     description: String = "",
     startPage: Int? = null,
     endPage: Int? = null,
+    isTeacher: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -252,10 +253,13 @@ fun InAppPdfViewer(
     }
 
     val activeCtrl = controller
-    val pageNumbers = remember(totalDocPages, startPage, endPage, showFullDocument) {
+    val isPageRestricted = (startPage != null || endPage != null)
+    val pageNumbers = remember(totalDocPages, startPage, endPage, showFullDocument, isTeacher) {
         if (totalDocPages <= 0) {
             emptyList()
-        } else if (showFullDocument || (startPage == null && endPage == null)) {
+        } else if (isTeacher && showFullDocument) {
+            (1..totalDocPages).toList()
+        } else if (!isPageRestricted) {
             (1..totalDocPages).toList()
         } else {
             val s = (startPage ?: 1).coerceIn(1, totalDocPages)
@@ -319,7 +323,15 @@ fun InAppPdfViewer(
                         Icon(Icons.AutoMirrored.Filled.MenuBook, null, tint = NeonBlue, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
-                            "Hal. $sPage — $ePage (${pageNumbers.size} dari $totalDocPages Hal.)",
+                            if (isPageRestricted) {
+                                if (isTeacher && showFullDocument) {
+                                    "Seluruh Dokumen ($totalDocPages Hal.)"
+                                } else {
+                                    "Hal. $sPage — $ePage (${pageNumbers.size} Halaman Ditugaskan)"
+                                }
+                            } else {
+                                "Dokumen Buku ($totalDocPages Hal.)"
+                            },
                             color = TextPrimary,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold
@@ -327,7 +339,9 @@ fun InAppPdfViewer(
                     }
 
                     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if ((startPage != null || endPage != null) && totalDocPages > pageNumbers.size) {
+                        // Strict Student Privacy & Pedagogical Focus:
+                        // Only teachers can toggle full document; students can NEVER view unassigned pages!
+                        if (isTeacher && isPageRestricted && totalDocPages > pageNumbers.size) {
                             OutlinedButton(
                                 onClick = { showFullDocument = !showFullDocument },
                                 shape = RoundedCornerShape(8.dp),
@@ -342,7 +356,9 @@ fun InAppPdfViewer(
                             }
                         }
 
-                        if (pdfUrl.isNotBlank()) {
+                        // External opening is restricted to teachers or when the whole document is assigned
+                        // to prevent students from bypassing the page restriction outside the app.
+                        if (pdfUrl.isNotBlank() && (isTeacher || !isPageRestricted)) {
                             Button(
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_VIEW).apply {
@@ -445,7 +461,11 @@ fun InAppPdfViewer(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        text = "Buku Resmi • Halaman $pageNum${if (totalDocPages > 0) " dari $totalDocPages" else ""}",
+                                        text = if (isPageRestricted) {
+                                            "Buku Resmi • Halaman $pageNum (Tugas Baca)"
+                                        } else {
+                                            "Buku Resmi • Halaman $pageNum${if (totalDocPages > 0) " dari $totalDocPages" else ""}"
+                                        },
                                         color = Color.White.copy(alpha = 0.9f),
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.SemiBold
@@ -490,7 +510,7 @@ fun InAppPdfViewer(
                             Text("Coba Lagi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
 
-                        if (pdfUrl.isNotBlank()) {
+                        if (pdfUrl.isNotBlank() && (isTeacher || !isPageRestricted)) {
                             OutlinedButton(
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
