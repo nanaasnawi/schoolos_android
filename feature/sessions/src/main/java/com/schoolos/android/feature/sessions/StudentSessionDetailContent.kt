@@ -7,15 +7,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.Book
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.EditNote
-import androidx.compose.material.icons.filled.EventAvailable
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Quiz
-import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.automirrored.filled.*
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -47,6 +40,8 @@ fun StudentSessionDetailContent(
     onOpenAssignments: (String) -> Unit,
     onOpenQuizzes: (String) -> Unit,
     onOpenMaterials: (String) -> Unit,
+    todayMaterials: List<com.schoolos.android.domain.model.LearningMaterial> = emptyList(),
+    todayAssignments: List<com.schoolos.android.domain.model.Assignment> = emptyList(),
     accentColor: Color,
     onSubmitExcuse: ((status: String, notes: String) -> Unit)? = null,
 ) {
@@ -221,6 +216,150 @@ fun StudentSessionDetailContent(
                     color = NeonBlue,
                     modifier = Modifier.weight(1f)
                 ) { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
+            }
+        }
+
+        // ── REAL-TIME TODAY'S SESSION MATERIALS & ASSIGNMENTS ──
+        if (todayMaterials.isNotEmpty() || todayAssignments.isNotEmpty()) {
+            GlassCard(cornerRadius = 16.dp) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Bahan Ajar & Tugas Sesi Ini",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                        androidx.compose.material3.Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = NeonSuccess.copy(alpha = 0.15f),
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, NeonSuccess.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = "Real-Time Hari Ini",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = NeonSuccess,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    todayMaterials.forEach { mat ->
+                        androidx.compose.material3.Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = CosmicSurface2,
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Book,
+                                        contentDescription = null,
+                                        tint = NeonBlue,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = mat.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "Tayang: Hari Ini • ${mat.materialType}",
+                                            fontSize = 10.sp,
+                                            color = NeonWarning
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    todayAssignments.forEach { assign ->
+                        androidx.compose.material3.Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = CosmicSurface2,
+                            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                                        contentDescription = null,
+                                        tint = StudentNeon,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = assign.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "Tugas Sesi Hari Ini • Maks ${assign.maxScore} Poin",
+                                            fontSize = 10.sp,
+                                            color = StudentNeon
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
 

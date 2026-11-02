@@ -16,9 +16,11 @@ import com.schoolos.android.core.designsystem.*
 @Composable
 fun SessionDetailScreen(
     onBack: UnitCallback = {},
-    onOpenAssignments: (String, String?) -> Unit = { _, _ -> },
-    onOpenQuizzes: (String, String?) -> Unit = { _, _ -> },
-    onOpenMaterials: (String, String?) -> Unit = { _, _ -> },
+    onOpenAssignments: (String, String?, String?) -> Unit = { _, _, _ -> },
+    onOpenQuizzes: (String, String?, String?) -> Unit = { _, _, _ -> },
+    onOpenMaterials: (String, String?, String?) -> Unit = { _, _, _ -> },
+    onOpenMaterialDetail: (String) -> Unit = {},
+    onOpenAssignmentDetail: (String) -> Unit = {},
     viewModel: SessionDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -71,11 +73,34 @@ fun SessionDetailScreen(
                     val isTeacher = isTeacherRole(state.userRole) || isPrincipal
                     val accentColor = if (isTeacher) TeacherNeon else StudentNeon
 
-                    // Wrap callbacks to pass both the subject name and class name for strict scoping
+                    val sessionDateStr = remember(session) {
+                        session?.let { s ->
+                            val fromSessionDate = s.sessionDate?.trim()?.substringBefore(" ")?.substringBefore("T")
+                            val validDate = if (!fromSessionDate.isNullOrBlank() && try { java.time.LocalDate.parse(fromSessionDate); true } catch (_: Exception) { false }) {
+                                fromSessionDate
+                            } else {
+                                (s.scheduledAt ?: s.startedAt)?.let { iso ->
+                                    val zone = java.time.ZoneId.of("Asia/Jakarta")
+                                    try {
+                                        java.time.Instant.parse(iso.trim()).atZone(zone).toLocalDate().toString()
+                                    } catch (_: Exception) {
+                                        try {
+                                            java.time.ZonedDateTime.parse(iso.trim()).withZoneSameInstant(zone).toLocalDate().toString()
+                                        } catch (_: Exception) {
+                                            iso.trim().substringBefore(" ").substringBefore("T")
+                                        }
+                                    }
+                                }
+                            }
+                            validDate ?: java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")).toString()
+                        } ?: java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")).toString()
+                    }
+
+                    // Wrap callbacks to pass subject name, class name, and session date for real-time scoping
                     val sessionClassName = session.className?.trim()?.takeIf { it.isNotBlank() }
-                    val openAssignments: (String) -> Unit = { onOpenAssignments(subject, sessionClassName) }
-                    val openQuizzes: (String) -> Unit = { onOpenQuizzes(subject, sessionClassName) }
-                    val openMaterials: (String) -> Unit = { onOpenMaterials(subject, sessionClassName) }
+                    val openAssignments: (String) -> Unit = { onOpenAssignments(subject, sessionClassName, sessionDateStr) }
+                    val openQuizzes: (String) -> Unit = { onOpenQuizzes(subject, sessionClassName, sessionDateStr) }
+                    val openMaterials: (String) -> Unit = { onOpenMaterials(subject, sessionClassName, sessionDateStr) }
 
                     Column(
                         modifier = Modifier
@@ -97,6 +122,8 @@ fun SessionDetailScreen(
                                 onOpenAssignments = openAssignments,
                                 onOpenQuizzes = openQuizzes,
                                 onOpenMaterials = openMaterials,
+                                todayMaterials = state.todayMaterials,
+                                todayAssignments = state.todayAssignments,
                                 accentColor = accentColor,
                             )
                         } else {
@@ -107,6 +134,8 @@ fun SessionDetailScreen(
                                 onOpenAssignments = openAssignments,
                                 onOpenQuizzes = openQuizzes,
                                 onOpenMaterials = openMaterials,
+                                todayMaterials = state.todayMaterials,
+                                todayAssignments = state.todayAssignments,
                                 accentColor = accentColor,
                                 onSubmitExcuse = viewModel::submitExcuse,
                             )

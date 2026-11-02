@@ -51,6 +51,7 @@ data class LearningUiState(
     val userRole: String = "student",
     val subjectFilter: String? = null,
     val classFilter: String? = null,
+    val dateFilter: String? = null,
     val bookPdfCount: Int = 0,
     val videoCount: Int = 0,
     val infographicCount: Int = 0,
@@ -79,6 +80,9 @@ class LearningViewModel @Inject constructor(
 
     /** Optional class/rombel filter passed via navigation (e.g. "PAKET B 8A"). */
     private var classFilter: String? = savedStateHandle.get<String>("className")?.takeIf { it.isNotBlank() }
+
+    /** Optional date filter passed via navigation (e.g. "2026-11-02" or "today"). */
+    private var dateFilter: String? = savedStateHandle.get<String>("date")?.takeIf { it.isNotBlank() }
 
     val selectedMaterial = MutableStateFlow<com.schoolos.android.domain.model.LearningMaterial?>(null)
     val materialCompletions = MutableStateFlow<List<com.schoolos.android.domain.model.MaterialStudentCompletion>>(emptyList())
@@ -319,15 +323,59 @@ class LearningViewModel @Inject constructor(
         filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
     }
 
+    fun clearDateFilter() {
+        dateFilter = null
+        _state.value = _state.value.copy(dateFilter = null)
+        filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
+    }
+
     fun clearFilters() {
         subjectFilter = null
         classFilter = null
-        _state.value = _state.value.copy(subjectFilter = null, classFilter = null)
+        dateFilter = null
+        _state.value = _state.value.copy(subjectFilter = null, classFilter = null, dateFilter = null)
         filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
+    }
+
+    private fun extractMaterialDate(item: MaterialItem): java.time.LocalDate? {
+        val targetIso = item.releaseAt?.takeIf { it.isNotBlank() }
+            ?: item.createdAt?.takeIf { it.isNotBlank() }
+            ?: return null
+        return parseDate(targetIso)
+    }
+
+    private fun parseDate(iso: String): java.time.LocalDate? {
+        val clean = iso.trim()
+        val zone = java.time.ZoneId.of("Asia/Jakarta")
+        return try {
+            java.time.Instant.parse(clean).atZone(zone).toLocalDate()
+        } catch (_: Exception) {
+            try {
+                java.time.ZonedDateTime.parse(clean).withZoneSameInstant(zone).toLocalDate()
+            } catch (_: Exception) {
+                try {
+                    val datePart = clean.substringBefore(" ").substringBefore("T")
+                    java.time.LocalDate.parse(datePart)
+                } catch (_: Exception) { null }
+            }
+        }
     }
 
     private fun filterMaterials(query: String, category: String) {
         var filtered = allMaterials
+
+        dateFilter?.let { dFilter ->
+            val targetDate = if (dFilter.equals("today", ignoreCase = true)) {
+                java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta"))
+            } else {
+                try { java.time.LocalDate.parse(dFilter.trim().substringBefore(" ").substringBefore("T")) }
+                catch (_: Exception) { java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")) }
+            }
+            filtered = filtered.filter { item ->
+                val mDate = extractMaterialDate(item)
+                mDate != null && mDate == targetDate
+            }
+        }
 
         subjectFilter?.let { filter ->
             filtered = filtered.filter { com.schoolos.android.core.designsystem.matchesSubjectFilter(it.subject, filter) }
@@ -360,11 +408,21 @@ class LearningViewModel @Inject constructor(
             }
         }
 
-        // Base scoped pool for count statistics (scoped by active subject/class filters)
-        val scopedBase = if (subjectFilter != null || classFilter != null) {
+        // Base scoped pool for count statistics (scoped by active subject/class/date filters)
+        val scopedBase = if (subjectFilter != null || classFilter != null || dateFilter != null) {
             allMaterials.filter { item ->
                 (subjectFilter == null || com.schoolos.android.core.designsystem.matchesSubjectFilter(item.subject, subjectFilter)) &&
-                (classFilter == null || com.schoolos.android.core.designsystem.matchesClassFilter(item.className, classFilter))
+                (classFilter == null || com.schoolos.android.core.designsystem.matchesClassFilter(item.className, classFilter)) &&
+                (dateFilter == null || run {
+                    val targetDate = if (dateFilter!!.equals("today", ignoreCase = true)) {
+                        java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta"))
+                    } else {
+                        try { java.time.LocalDate.parse(dateFilter!!.trim().substringBefore(" ").substringBefore("T")) }
+                        catch (_: Exception) { java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")) }
+                    }
+                    val mDate = extractMaterialDate(item)
+                    mDate != null && mDate == targetDate
+                })
             }
         } else {
             allMaterials
@@ -391,6 +449,7 @@ class LearningViewModel @Inject constructor(
             scheduledCount = scheduledCount,
             subjectFilter = subjectFilter,
             classFilter = classFilter,
+            dateFilter = dateFilter,
         )
     }
 

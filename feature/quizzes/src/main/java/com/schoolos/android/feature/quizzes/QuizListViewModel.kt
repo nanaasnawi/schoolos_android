@@ -20,6 +20,7 @@ data class QuizListUiState(
     val quizzes: List<Quiz> = emptyList(),
     val subjectFilter: String? = null,
     val classFilter: String? = null,
+    val dateFilter: String? = null,
 )
 
 @HiltViewModel
@@ -40,6 +41,9 @@ class QuizListViewModel @Inject constructor(
 
     /** Optional class/rombel filter passed via navigation (e.g. from a session detail). */
     private var classFilter: String? = savedStateHandle.get<String>("className")?.takeIf { it.isNotBlank() }
+
+    /** Optional date filter passed via navigation (e.g. "2026-11-02" or "today"). */
+    private var dateFilter: String? = savedStateHandle.get<String>("date")?.takeIf { it.isNotBlank() }
 
     init {
         viewModelScope.launch {
@@ -109,12 +113,25 @@ class QuizListViewModel @Inject constructor(
                             (q.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(q.title, filter))
                         }
                     }
+                    dateFilter?.let { dFilter ->
+                        val targetDate = if (dFilter.equals("today", ignoreCase = true)) {
+                            java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta"))
+                        } else {
+                            try { java.time.LocalDate.parse(dFilter.trim().substringBefore(" ").substringBefore("T")) }
+                            catch (_: Exception) { java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")) }
+                        }
+                        filtered = filtered.filter { q ->
+                            val qDate = extractQuizDate(q)
+                            qDate != null && qDate == targetDate
+                        }
+                    }
                     _state.value = _state.value.copy(
                         isLoading = false,
                         isRefreshing = false,
                         quizzes = filtered.sortedByDescending { it.createdAt },
                         subjectFilter = subjectFilter,
                         classFilter = classFilter,
+                        dateFilter = dateFilter,
                     )
                 }
                 .onFailure { e ->
@@ -128,9 +145,39 @@ class QuizListViewModel @Inject constructor(
         }
     }
 
+    fun clearDateFilter() {
+        dateFilter = null
+        _state.value = _state.value.copy(dateFilter = null)
+        load()
+    }
+
     fun clearSubjectFilter() {
         subjectFilter = null
         _state.value = _state.value.copy(subjectFilter = null)
         refresh()
+    }
+
+    private fun extractQuizDate(quiz: Quiz): java.time.LocalDate? {
+        val targetIso = quiz.releaseAt?.takeIf { it.isNotBlank() }
+            ?: quiz.createdAt?.takeIf { it.isNotBlank() }
+            ?: return null
+        return parseDate(targetIso)
+    }
+
+    private fun parseDate(iso: String): java.time.LocalDate? {
+        val clean = iso.trim()
+        val zone = java.time.ZoneId.of("Asia/Jakarta")
+        return try {
+            java.time.Instant.parse(clean).atZone(zone).toLocalDate()
+        } catch (_: Exception) {
+            try {
+                java.time.ZonedDateTime.parse(clean).withZoneSameInstant(zone).toLocalDate()
+            } catch (_: Exception) {
+                try {
+                    val datePart = clean.substringBefore(" ").substringBefore("T")
+                    java.time.LocalDate.parse(datePart)
+                } catch (_: Exception) { null }
+            }
+        }
     }
 }
