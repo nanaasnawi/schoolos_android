@@ -835,6 +835,7 @@ fun LearningMaterialDetailScreen(
                                 description = material.description ?: "",
                                 startPage = material.startPage,
                                 endPage = material.endPage,
+                                isTeacher = isTeacher,
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
