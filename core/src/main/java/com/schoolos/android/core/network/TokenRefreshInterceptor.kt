@@ -53,11 +53,13 @@ class TokenRefreshInterceptor @Inject constructor(
 
         // Prevent infinite retry loops when authorization is denied
         if (responseCount(response) >= 2) {
+            authManager.clearSessionSync()
             return null
         }
 
         // Prevent infinite retry loops if the failing request is the refresh endpoint itself
         if (response.request.url.encodedPath.contains("/auth/refresh")) {
+            authManager.clearSessionSync()
             return null
         }
 
@@ -76,6 +78,7 @@ class TokenRefreshInterceptor @Inject constructor(
 
             val refreshToken = authManager.getRefreshTokenSync()
             if (refreshToken.isNullOrBlank()) {
+                authManager.clearSessionSync()
                 return null
             }
 
@@ -97,13 +100,14 @@ class TokenRefreshInterceptor @Inject constructor(
 
                 refreshClient.newCall(refreshRequest).execute().use { refreshResponse ->
                     if (!refreshResponse.isSuccessful) {
-                        if (refreshResponse.code == 401) {
-                            authManager.clearSessionSync()
-                        }
+                        authManager.clearSessionSync()
                         return null
                     }
 
-                    val responseBody = refreshResponse.body?.string() ?: return null
+                    val responseBody = refreshResponse.body?.string() ?: run {
+                        authManager.clearSessionSync()
+                        return null
+                    }
                     val tokenResponse = json.decodeFromString<RefreshResult>(responseBody)
 
                     authManager.updateTokensSync(
@@ -116,6 +120,7 @@ class TokenRefreshInterceptor @Inject constructor(
                         .build()
                 }
             } catch (_: Exception) {
+                authManager.clearSessionSync()
                 null
             }
         }
