@@ -297,6 +297,11 @@ fun NavGraph(
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
+                    },
+                    navArgument("date") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
                     }
                 ),
             ) { backStackEntry ->
@@ -351,16 +356,16 @@ fun NavGraph(
             ) {
                 SessionDetailScreen(
                     onBack = { navController.popBackStack() },
-                    onOpenAssignments = { subject, className ->
-                        if (subject.isNotBlank()) navController.navigate(Screen.AssignmentsBySubject.createRoute(subject, className))
+                    onOpenAssignments = { subject, className, date ->
+                        if (subject.isNotBlank()) navController.navigate(Screen.AssignmentsBySubject.createRoute(subject, className, date))
                         else navController.navigate(Screen.Assignments.route)
                     },
-                    onOpenQuizzes = { subject, className ->
-                        if (subject.isNotBlank()) navController.navigate(Screen.QuizzesBySubject.createRoute(subject, className))
+                    onOpenQuizzes = { subject, className, date ->
+                        if (subject.isNotBlank()) navController.navigate(Screen.QuizzesBySubject.createRoute(subject, className, date))
                         else navController.navigate(Screen.Quizzes.route)
                     },
-                    onOpenMaterials = { subject, className ->
-                        if (subject.isNotBlank()) navController.navigate(Screen.LearningBySubject.createRoute(subject, className))
+                    onOpenMaterials = { subject, className, date ->
+                        if (subject.isNotBlank()) navController.navigate(Screen.LearningBySubject.createRoute(subject, className, date))
                         else navController.navigate(Screen.Learning.route)
                     }
                 )
@@ -388,6 +393,11 @@ fun NavGraph(
                 arguments = listOf(
                     navArgument("subjectId") { type = NavType.StringType },
                     navArgument("className") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument("date") {
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null
@@ -444,6 +454,11 @@ fun NavGraph(
                 arguments = listOf(
                     navArgument("subjectId") { type = NavType.StringType },
                     navArgument("className") {
+                        type = NavType.StringType
+                        nullable = true
+                        defaultValue = null
+                    },
+                    navArgument("date") {
                         type = NavType.StringType
                         nullable = true
                         defaultValue = null

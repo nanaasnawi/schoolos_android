@@ -36,6 +36,8 @@ data class SessionDetailUiState(
     val updatingStudentId: String? = null,
     val isBulkSaving: Boolean = false,
     val snackbarMessage: String? = null,
+    val todayMaterials: List<com.schoolos.android.domain.model.LearningMaterial> = emptyList(),
+    val todayAssignments: List<com.schoolos.android.domain.model.Assignment> = emptyList(),
 )
 
 @HiltViewModel
@@ -44,6 +46,8 @@ class SessionDetailViewModel @Inject constructor(
     private val repository: SessionRepository,
     private val academicRepository: AcademicRepository,
     private val authManager: AuthManager,
+    private val materialRepository: com.schoolos.android.domain.repository.LearningMaterialRepository,
+    private val assignmentRepository: com.schoolos.android.domain.repository.AssignmentRepository,
 ) : ViewModel() {
 
     private val sessionId: String = savedStateHandle["id"] ?: ""
@@ -67,6 +71,7 @@ class SessionDetailViewModel @Inject constructor(
                 .onSuccess { session ->
                     _state.value = _state.value.copy(isLoading = false, session = session)
                     loadAttendanceAndStudents(session)
+                    loadSessionResources(session)
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
@@ -245,5 +250,68 @@ class SessionDetailViewModel @Inject constructor(
     fun clearSnackbar() {
         _state.value = _state.value.copy(snackbarMessage = null)
     }
+
+    private suspend fun loadSessionResources(session: LearningSession) {
+        val targetDate = extractSessionLocalDate(session) ?: java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta"))
+        val targetSubject = session.subjectName?.trim().orEmpty()
+        val targetClass = session.className?.trim().orEmpty()
+
+        val materials = materialRepository.getMaterials().getOrDefault(emptyList())
+        val scopedMaterials = materials.filter { m ->
+            (targetSubject.isBlank() || com.schoolos.android.core.designsystem.matchesSubjectFilter(m.subject, targetSubject)) &&
+            (targetClass.isBlank() || com.schoolos.android.core.designsystem.matchesClassFilter(m.className, targetClass)) &&
+            isMaterialMatchingDate(m, targetDate)
+        }
+
+        val assignments = assignmentRepository.getAssignments(session.classId).getOrDefault(emptyList())
+        val scopedAssignments = assignments.filter { a ->
+            (targetSubject.isBlank() || com.schoolos.android.core.designsystem.matchesSubjectFilter(a.subjectName, targetSubject)) &&
+            (targetClass.isBlank() || com.schoolos.android.core.designsystem.matchesClassFilter(a.className, targetClass)) &&
+            isAssignmentMatchingDate(a, targetDate)
+        }
+
+        _state.value = _state.value.copy(
+            todayMaterials = scopedMaterials,
+            todayAssignments = scopedAssignments,
+        )
+    }
+
+    private fun isMaterialMatchingDate(m: com.schoolos.android.domain.model.LearningMaterial, targetDate: java.time.LocalDate): Boolean {
+        val iso = m.releaseAt?.takeIf { it.isNotBlank() } ?: m.createdAt?.takeIf { it.isNotBlank() } ?: return false
+        val d = parseDate(iso)
+        return d != null && d == targetDate
+    }
+
+    private fun isAssignmentMatchingDate(a: com.schoolos.android.domain.model.Assignment, targetDate: java.time.LocalDate): Boolean {
+        val iso = a.releaseAt?.takeIf { it.isNotBlank() } ?: a.createdAt.takeIf { it.isNotBlank() } ?: return false
+        val d = parseDate(iso)
+        return d != null && d == targetDate
+    }
+
+    private fun extractSessionLocalDate(s: LearningSession): java.time.LocalDate? {
+        val fromSessionDate = s.sessionDate?.let { dateStr ->
+            val clean = dateStr.trim().substringBefore(" ").substringBefore("T")
+            try { java.time.LocalDate.parse(clean) } catch (_: Exception) { null }
+        }
+        return fromSessionDate ?: s.scheduledAt?.let { parseDate(it) } ?: s.startedAt?.let { parseDate(it) }
+    }
+
+    private fun parseDate(iso: String): java.time.LocalDate? {
+        val clean = iso.trim()
+        val zone = java.time.ZoneId.of("Asia/Jakarta")
+        return try {
+            java.time.Instant.parse(clean).atZone(zone).toLocalDate()
+        } catch (_: Exception) {
+            try {
+                java.time.ZonedDateTime.parse(clean).withZoneSameInstant(zone).toLocalDate()
+            } catch (_: Exception) {
+                try {
+                    val datePart = clean.substringBefore(" ").substringBefore("T")
+                    java.time.LocalDate.parse(datePart)
+                } catch (_: Exception) { null }
+            }
+        }
+    }
+
 }
 

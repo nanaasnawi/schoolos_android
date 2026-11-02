@@ -89,14 +89,24 @@ fun LearningMaterialListScreen(
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
 
-            // ── ACTIVE SUBJECT / CLASS FILTER (passed from schedule/session) ─────────
-            if (state.subjectFilter != null || state.classFilter != null) {
+            // ── ACTIVE SUBJECT / CLASS / DATE FILTER (passed from schedule/session) ─────────
+            if (state.subjectFilter != null || state.classFilter != null || state.dateFilter != null) {
                 item {
-                    SubjectFilterChip(
-                        subject = state.subjectFilter.orEmpty(),
-                        className = state.classFilter,
-                        canClear = false,
-                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (state.subjectFilter != null || state.classFilter != null) {
+                            SubjectFilterChip(
+                                subject = state.subjectFilter.orEmpty(),
+                                className = state.classFilter,
+                                canClear = false,
+                            )
+                        }
+                        if (state.dateFilter != null) {
+                            SessionDateFilterBadge(
+                                dateStr = state.dateFilter!!,
+                                onShowAllArchive = { viewModel.clearDateFilter() }
+                            )
+                        }
+                    }
                 }
             }
 

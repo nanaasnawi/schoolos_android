@@ -6,11 +6,14 @@ sealed class Screen(val route: String) {
     data object Auth : Screen("auth")
     data object Home : Screen("home")
     data object Learning : Screen("learning")
-    data object LearningBySubject : Screen("learning/subject/{subjectId}?className={className}") {
-        fun createRoute(subjectId: String, className: String? = null): String {
+    data object LearningBySubject : Screen("learning/subject/{subjectId}?className={className}&date={date}") {
+        fun createRoute(subjectId: String, className: String? = null, date: String? = null): String {
             val encodedSubject = Uri.encode(subjectId)
-            return if (!className.isNullOrBlank()) {
-                "learning/subject/$encodedSubject?className=${Uri.encode(className)}"
+            val params = mutableListOf<String>()
+            if (!className.isNullOrBlank()) params.add("className=${Uri.encode(className)}")
+            if (!date.isNullOrBlank()) params.add("date=${Uri.encode(date)}")
+            return if (params.isNotEmpty()) {
+                "learning/subject/$encodedSubject?${params.joinToString("&")}"
             } else {
                 "learning/subject/$encodedSubject"
             }
@@ -20,11 +23,14 @@ sealed class Screen(val route: String) {
         fun createRoute(id: String) = "learning/$id"
     }
     data object Assignments : Screen("assignments")
-    data object AssignmentsBySubject : Screen("assignments/subject/{subjectId}?className={className}") {
-        fun createRoute(subjectId: String, className: String? = null): String {
+    data object AssignmentsBySubject : Screen("assignments/subject/{subjectId}?className={className}&date={date}") {
+        fun createRoute(subjectId: String, className: String? = null, date: String? = null): String {
             val encodedSubject = Uri.encode(subjectId)
-            return if (!className.isNullOrBlank()) {
-                "assignments/subject/$encodedSubject?className=${Uri.encode(className)}"
+            val params = mutableListOf<String>()
+            if (!className.isNullOrBlank()) params.add("className=${Uri.encode(className)}")
+            if (!date.isNullOrBlank()) params.add("date=${Uri.encode(date)}")
+            return if (params.isNotEmpty()) {
+                "assignments/subject/$encodedSubject?${params.joinToString("&")}"
             } else {
                 "assignments/subject/$encodedSubject"
             }
@@ -34,11 +40,14 @@ sealed class Screen(val route: String) {
         fun createRoute(id: String) = "assignments/$id"
     }
     data object Quizzes : Screen("quizzes")
-    data object QuizzesBySubject : Screen("quizzes/subject/{subjectId}?className={className}") {
-        fun createRoute(subjectId: String, className: String? = null): String {
+    data object QuizzesBySubject : Screen("quizzes/subject/{subjectId}?className={className}&date={date}") {
+        fun createRoute(subjectId: String, className: String? = null, date: String? = null): String {
             val encodedSubject = Uri.encode(subjectId)
-            return if (!className.isNullOrBlank()) {
-                "quizzes/subject/$encodedSubject?className=${Uri.encode(className)}"
+            val params = mutableListOf<String>()
+            if (!className.isNullOrBlank()) params.add("className=${Uri.encode(className)}")
+            if (!date.isNullOrBlank()) params.add("date=${Uri.encode(date)}")
+            return if (params.isNotEmpty()) {
+                "quizzes/subject/$encodedSubject?${params.joinToString("&")}"
             } else {
                 "quizzes/subject/$encodedSubject"
             }

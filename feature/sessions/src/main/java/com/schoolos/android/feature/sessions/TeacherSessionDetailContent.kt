@@ -40,6 +40,8 @@ fun TeacherSessionDetailContent(
     onOpenAssignments: (String) -> Unit,
     onOpenQuizzes: (String) -> Unit,
     onOpenMaterials: (String) -> Unit,
+    todayMaterials: List<com.schoolos.android.domain.model.LearningMaterial> = emptyList(),
+    todayAssignments: List<com.schoolos.android.domain.model.Assignment> = emptyList(),
     accentColor: Color,
 ) {
     val effectiveStudents = if (students.isNotEmpty()) {
@@ -289,6 +291,166 @@ fun TeacherSessionDetailContent(
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
             )
+        }
+
+        // ── 2.5 REAL-TIME TODAY'S SESSION MATERIALS & ASSIGNMENTS ──
+        if (todayMaterials.isNotEmpty() || todayAssignments.isNotEmpty()) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(16.dp),
+                color = CosmicNavy,
+                border = BorderStroke(0.5.dp, GlassBorder)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonSuccess)
+                            )
+                            Text(
+                                text = "Bahan Ajar & Tugas Sesi Ini",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = NeonSuccess.copy(alpha = 0.15f),
+                            border = BorderStroke(0.5.dp, NeonSuccess.copy(alpha = 0.3f))
+                        ) {
+                            Text(
+                                text = "Real-Time Hari Ini",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = NeonSuccess,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
+                    todayMaterials.forEach { mat ->
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = CosmicSurface2,
+                            border = BorderStroke(0.5.dp, GlassBorder),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                        contentDescription = null,
+                                        tint = NeonBlue,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = mat.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "Tayang: Hari Ini • ${mat.materialType}",
+                                            fontSize = 10.sp,
+                                            color = NeonWarning
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+
+                    todayAssignments.forEach { assign ->
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = CosmicSurface2,
+                            border = BorderStroke(0.5.dp, GlassBorder),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                                        contentDescription = null,
+                                        tint = StudentNeon,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Column {
+                                        Text(
+                                            text = assign.title,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = TextPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "Tugas Sesi Hari Ini • Maks ${assign.maxScore} Poin",
+                                            fontSize = 10.sp,
+                                            color = StudentNeon
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = TextTertiary,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // ── 3. ATTENDANCE ROSTER HEADER & ACTIONS ──

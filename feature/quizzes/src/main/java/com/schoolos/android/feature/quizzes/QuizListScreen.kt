@@ -129,13 +129,23 @@ fun QuizListScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     // Active Subject / Class Filter (from session/schedule)
-                    if (state.subjectFilter != null || state.classFilter != null) {
+                    if (state.subjectFilter != null || state.classFilter != null || state.dateFilter != null) {
                         item {
-                            SubjectFilterChip(
-                                subject = state.subjectFilter.orEmpty(),
-                                className = state.classFilter,
-                                canClear = false,
-                            )
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                if (state.subjectFilter != null || state.classFilter != null) {
+                                    SubjectFilterChip(
+                                        subject = state.subjectFilter.orEmpty(),
+                                        className = state.classFilter,
+                                        canClear = false,
+                                    )
+                                }
+                                if (state.dateFilter != null) {
+                                    SessionDateFilterBadge(
+                                        dateStr = state.dateFilter!!,
+                                        onShowAllArchive = { viewModel.clearDateFilter() }
+                                    )
+                                }
+                            }
                         }
                     }
 
