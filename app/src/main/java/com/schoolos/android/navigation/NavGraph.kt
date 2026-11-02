@@ -25,6 +25,7 @@ import com.schoolos.android.feature.auth.LoginScreen
 import com.schoolos.android.feature.grades.GradeDetailScreen
 import com.schoolos.android.feature.grades.GradebookListScreen
 import com.schoolos.android.feature.home.AtRiskMonitoringScreen
+import com.schoolos.android.feature.home.AtRiskStudentDetailScreen
 import com.schoolos.android.feature.home.analytics.TeacherAnalyticsHubScreen
 import com.schoolos.android.feature.home.HomeScreen
 import com.schoolos.android.feature.home.RombelStudentsScreen
@@ -543,6 +544,16 @@ fun NavGraph(
                                 email = "",
                             )
                         )
+                    },
+                    onNavigateToAtRiskDetail = { studentId, name, nisn, className ->
+                        navController.navigate(
+                            Screen.AtRiskStudentDetail.createRoute(
+                                studentId = studentId,
+                                studentName = name,
+                                nisn = nisn,
+                                className = className,
+                            )
+                        )
                     }
                 )
             }
@@ -814,6 +825,16 @@ fun NavGraph(
                                     email = "",
                                 )
                             )
+                        },
+                        onNavigateToAtRiskDetail = { studentId, name, nisn, className ->
+                            navController.navigate(
+                                Screen.AtRiskStudentDetail.createRoute(
+                                    studentId = studentId,
+                                    studentName = name,
+                                    nisn = nisn,
+                                    className = className,
+                                )
+                            )
                         }
                     )
                 } else {
@@ -821,19 +842,53 @@ fun NavGraph(
                         onBack = if (isPrincipal) null else { { navController.popBackStack() } },
                         onNavigateToStudentDetail = { studentId, name, nisn, className ->
                             navController.navigate(
-                                Screen.StudentDetail.createRoute(
+                                Screen.AtRiskStudentDetail.createRoute(
                                     studentId = studentId,
                                     studentName = name,
                                     nisn = nisn,
-                                    gender = "",
                                     className = className,
-                                    phone = "",
-                                    email = "",
                                 )
                             )
                         }
                     )
                 }
+            }
+
+            // Early Warning Student Detail Breakdown (Kenapa Siswa Perlu Perhatian)
+            composable(
+                route = Screen.AtRiskStudentDetail.route,
+                arguments = listOf(
+                    navArgument("studentId") { type = NavType.StringType },
+                    navArgument("studentName") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("nisn") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("className") { type = NavType.StringType; defaultValue = "" },
+                )
+            ) {
+                AtRiskStudentDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToFullProfile = { studentId, studentName, nisn, className ->
+                        navController.navigate(
+                            Screen.StudentDetail.createRoute(
+                                studentId = studentId,
+                                studentName = studentName,
+                                nisn = nisn,
+                                gender = "",
+                                className = className,
+                                phone = "",
+                                email = "",
+                            )
+                        )
+                    },
+                    onOpenMaterial = { materialId ->
+                        navController.navigate(Screen.LearningDetail.createRoute(materialId))
+                    },
+                    onOpenAssignment = { assignmentId ->
+                        navController.navigate(Screen.AssignmentDetail.createRoute(assignmentId))
+                    },
+                    onOpenQuiz = { quizId ->
+                        navController.navigate(Screen.QuizDetail.createRoute(quizId))
+                    }
+                )
             }
 
             // Rombel Students List (Homeroom Teacher View)
