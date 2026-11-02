@@ -102,6 +102,19 @@ sealed class Screen(val route: String) {
     data object Profile : Screen("profile")
     data object Supervision : Screen("supervision")
     data object AtRisk : Screen("at-risk")
+    data object AtRiskStudentDetail : Screen("at-risk/student/{studentId}?studentName={studentName}&nisn={nisn}&className={className}") {
+        fun createRoute(
+            studentId: String,
+            studentName: String,
+            nisn: String = "",
+            className: String = "",
+        ): String {
+            val safeName = Uri.encode(studentName)
+            val safeNisn = Uri.encode(nisn)
+            val safeClass = Uri.encode(className)
+            return "at-risk/student/${Uri.encode(studentId)}?studentName=$safeName&nisn=$safeNisn&className=$safeClass"
+        }
+    }
     data object TeacherAnalytics : Screen("teacher-analytics")
     data object RombelStudents : Screen("rombel/{className}/students") {
         fun createRoute(className: String) = "rombel/${Uri.encode(className)}/students"

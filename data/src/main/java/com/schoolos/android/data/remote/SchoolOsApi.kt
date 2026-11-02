@@ -401,6 +401,7 @@ interface SchoolOsApi {
     @GET("teacher/at-risk-students")
     suspend fun getAtRiskStudents(
         @Query("class_id") classId: String? = null,
+        @Query("student_id") studentId: String? = null,
     ): ApiResponse<List<AtRiskStudentDto>>
 
     @GET("teacher/remind")

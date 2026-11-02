@@ -33,6 +33,7 @@ fun TeacherAnalyticsHubScreen(
     initialTab: Int = 0,
     onBack: (() -> Unit)? = null,
     onNavigateToStudentDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)? = null,
+    onNavigateToAtRiskDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)? = onNavigateToStudentDetail,
     readingViewModel: TeacherReadingAnalyticsViewModel = hiltViewModel(),
     atRiskViewModel: AtRiskMonitoringViewModel = hiltViewModel(),
 ) {
@@ -106,7 +107,7 @@ fun TeacherAnalyticsHubScreen(
                         AtRiskMonitoringScreen(
                             showHeader = false,
                             onBack = onBack,
-                            onNavigateToStudentDetail = onNavigateToStudentDetail,
+                            onNavigateToStudentDetail = onNavigateToAtRiskDetail ?: onNavigateToStudentDetail,
                             viewModel = atRiskViewModel,
                         )
                     }

@@ -33,7 +33,6 @@ class AtRiskRepositoryImpl @Inject constructor(
         val classIdToName = classes.associate { it.id to it.name }
         val atRiskList = mutableListOf<AtRiskStudent>()
         val seenKeys = mutableSetOf<String>()
-
         // 1. Check Unread Materials (Materi Tertinggal)
         for (mat in materials.take(6)) {
             try {
@@ -166,5 +165,18 @@ class AtRiskRepositoryImpl @Inject constructor(
         )
         val res = api.sendReminder(req)
         res.data?.sentCount ?: studentIds.size
+    }
+
+    override suspend fun getAtRiskStudentDetail(studentId: String): Result<List<AtRiskStudent>> = runCatching {
+        try {
+            val response = api.getAtRiskStudents(studentId = studentId)
+            if (response.success && response.data != null && response.data.isNotEmpty()) {
+                return@runCatching response.data.map { it.toDomain() }
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "getAtRiskStudentDetail with student_id failed, falling back to full list filter")
+        }
+
+        getAtRiskStudents().getOrDefault(emptyList()).filter { it.studentId == studentId }
     }
 }
