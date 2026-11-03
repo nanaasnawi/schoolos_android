@@ -311,15 +311,17 @@ class SessionDetailViewModel @Inject constructor(
     }
 
     private fun isMaterialMatchingDate(m: com.schoolos.android.domain.model.LearningMaterial, targetDate: java.time.LocalDate): Boolean {
-        val iso = m.releaseAt?.takeIf { it.isNotBlank() } ?: m.createdAt?.takeIf { it.isNotBlank() } ?: return false
+        val iso = m.releaseAt?.takeIf { it.isNotBlank() } ?: m.createdAt?.takeIf { it.isNotBlank() } ?: return true
         val d = parseDate(iso)
-        return d != null && d == targetDate
+        // Allow released materials up to and including today's session date (do not hide active materials)
+        return d == null || !d.isAfter(targetDate)
     }
 
     private fun isAssignmentMatchingDate(a: com.schoolos.android.domain.model.Assignment, targetDate: java.time.LocalDate): Boolean {
-        val iso = a.releaseAt?.takeIf { it.isNotBlank() } ?: a.createdAt.takeIf { it.isNotBlank() } ?: return false
+        val iso = a.releaseAt?.takeIf { it.isNotBlank() } ?: a.createdAt.takeIf { it.isNotBlank() } ?: return true
         val d = parseDate(iso)
-        return d != null && d == targetDate
+        // Allow released assignments up to and including today's session date
+        return d == null || !d.isAfter(targetDate)
     }
 
     private fun extractSessionLocalDate(s: LearningSession): java.time.LocalDate? {
