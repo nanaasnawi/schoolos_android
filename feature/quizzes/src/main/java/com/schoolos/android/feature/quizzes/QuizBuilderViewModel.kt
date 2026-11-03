@@ -292,7 +292,14 @@ class QuizBuilderViewModel @Inject constructor(
                     .filter { it.isNotEmpty() }
                 val matched = rawSubjects.filter { s ->
                     val sName = s.name.lowercase()
-                    tokens.any { t -> sName == t || sName.contains(t) || t.contains(sName) }
+                    tokens.any { t -> 
+                        sName == t || 
+                        sName.contains(t) || 
+                        t.contains(sName) ||
+                        (t.contains("ips") && (sName.contains("ips") || sName.contains("sosial"))) ||
+                        (t.contains("ipa") && (sName.contains("ipa") || sName.contains("alam"))) ||
+                        (t.contains("geo") && sName.contains("geografi"))
+                    }
                 }
                 if (matched.isNotEmpty()) {
                     matched

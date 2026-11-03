@@ -287,16 +287,17 @@ fun QuizAiGeneratorScreen(
                                 }
                             }
                             Spacer(Modifier.height(6.dp))
+                            val effectiveSubjectLocked = isSubjectLocked && availableSubjects.size <= 1
                             ExposedDropdownMenuBox(
-                                expanded = if (isSubjectLocked) false else isSubjectDropdownOpen,
-                                onExpandedChange = { if (!isSubjectLocked) isSubjectDropdownOpen = it }
+                                expanded = if (effectiveSubjectLocked) false else isSubjectDropdownOpen,
+                                onExpandedChange = { if (!effectiveSubjectLocked) isSubjectDropdownOpen = it }
                             ) {
                                 OutlinedTextField(
                                     value = selectedSubject?.name ?: "Pilih Mapel",
                                     onValueChange = {},
                                     readOnly = true,
                                     trailingIcon = {
-                                        if (isSubjectLocked) {
+                                        if (effectiveSubjectLocked) {
                                             Icon(Icons.Default.Lock, contentDescription = null, tint = CyanPrimary)
                                         } else {
                                             ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownOpen)
@@ -306,7 +307,7 @@ fun QuizAiGeneratorScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanPrimary)
                                 )
-                                if (!isSubjectLocked) {
+                                if (!effectiveSubjectLocked) {
                                     ExposedDropdownMenu(
                                         expanded = isSubjectDropdownOpen,
                                         onDismissRequest = { isSubjectDropdownOpen = false }

@@ -89,10 +89,30 @@ fun AssignmentCreatorScreen(
 
     LaunchedEffect(subjectOptions, state.isSubjectLocked, state.teacherSubject) {
         if (state.isSubjectLocked && !state.teacherSubject.isNullOrBlank()) {
-            val matched = subjectOptions.firstOrNull { it.contains(state.teacherSubject!!, ignoreCase = true) || state.teacherSubject!!.contains(it, ignoreCase = true) }
-            selectedSubject = matched ?: state.teacherSubject!!
+            if (selectedSubject.isEmpty() || !subjectOptions.contains(selectedSubject)) {
+                val matched = subjectOptions.firstOrNull { it.contains(state.teacherSubject!!, ignoreCase = true) || state.teacherSubject!!.contains(it, ignoreCase = true) }
+                selectedSubject = matched ?: subjectOptions.firstOrNull() ?: state.teacherSubject!!
+            }
         } else if (selectedSubject.isEmpty() && subjectOptions.isNotEmpty()) {
             selectedSubject = subjectOptions.first()
+        }
+    }
+
+    LaunchedEffect(selectedClass) {
+        if (subjectOptions.size > 1 && selectedClass.isNotBlank()) {
+            val upper = selectedClass.uppercase()
+            val matched = when {
+                upper.contains("PAKET C") || upper.contains(" 10") || upper.contains(" 11") || upper.contains(" 12") -> {
+                    subjectOptions.firstOrNull { it.contains("Geografi", ignoreCase = true) || it.contains("Ekonomi", ignoreCase = true) || it.contains("Sosiologi", ignoreCase = true) || it.contains("Sejarah", ignoreCase = true) || it.contains("Kimia", ignoreCase = true) }
+                }
+                upper.contains("PAKET B") || upper.contains(" 7") || upper.contains(" 8") || upper.contains(" 9") -> {
+                    subjectOptions.firstOrNull { it.contains("IPS", ignoreCase = true) || it.contains("IPA", ignoreCase = true) || it.contains("Cirebon", ignoreCase = true) }
+                }
+                else -> null
+            }
+            if (matched != null) {
+                selectedSubject = matched
+            }
         }
     }
 
@@ -451,8 +471,8 @@ fun AssignmentCreatorScreen(
 
                     AssignmentDropdown(
                         value = selectedSubject,
-                        label = if (state.isSubjectLocked) "Mata Pelajaran * (Terkunci)" else "Mata Pelajaran *",
-                        icon = if (state.isSubjectLocked) Icons.Default.Lock else Icons.Default.School,
+                        label = if (state.isSubjectLocked && subjectOptions.size <= 1) "Mata Pelajaran * (Terkunci)" else "Mata Pelajaran *",
+                        icon = if (state.isSubjectLocked && subjectOptions.size <= 1) Icons.Default.Lock else Icons.Default.School,
                         expanded = if (state.isSubjectLocked && subjectOptions.size <= 1) false else isSubjectMenuExpanded,
                         accentColor = TeacherNeon,
                         onExpand = {
@@ -1132,7 +1152,7 @@ private fun AssignmentDropdown(
     options: List<String>,
     onSelect: (String) -> Unit
 ) {
-    val isLocked = label.contains("Terkunci")
+    val isLocked = label.contains("Terkunci") && options.size <= 1
     if (isLocked) {
         Surface(
             modifier = Modifier.fillMaxWidth(),
