@@ -1,4 +1,30 @@
-# 🚀 Catatan Rilis — Akselerasi-Edu Platform (v1.2.8 / Build 29)
+# 🚀 Catatan Rilis — Akselerasi-Edu Platform (v1.3.1 / Build 31)
+
+**Tanggal Rilis:** 3 November 2026  
+**Status Build:** Production Release Verified  
+**Target Distribusi:** Google Play Console (AAB) & Instalasi Langsung (APK)  
+
+---
+
+## 📦 Paket Rilis yang Tersedia (Build 31)
+* **Android App Bundle (AAB):** [`android/app/build/outputs/bundle/release/app-release.aab`](file:///c:/Users/USER/Documents/Akselerasi-Edu/android/app/build/outputs/bundle/release/app-release.aab) *(22.6 MB, Signed with `schoolos-upload.jks`)*
+* **Android APK Release:** [`android/app/build/outputs/apk/release/app-release.apk`](file:///c:/Users/USER/Documents/Akselerasi-Edu/android/app/build/outputs/apk/release/app-release.apk) *(27.7 MB, Signed with `schoolos-upload.jks`)*
+
+---
+
+## 🌟 Sorotan Pembaruan (Build 31 / v1.3.1)
+
+### 1. 🛡️ Fail-Fast Session Expiration & 401 Force Logout
+* **Intersepsi 401 Cepat:** `OkHttpClient` interceptor menangkap token/sesi yang kedaluwarsa secara langsung.
+* **Pembersihan Datastore Instan:** Otomatis menghapus cache sesi mati dan me-redirect pengguna ke `Screen.Auth` untuk mencegah loop request zombie yang memicu spike p99 latency di backend Axum.
+
+### 2. 📖 Strict Student Page Confinement (SIBI PDF Reader)
+* Siswa hanya dapat membaca halaman yang secara eksplisit ditugaskan oleh guru (`startPage..endPage`).
+* Tombol pembuka aplikasi eksternal dan toggle dokumen penuh diisolasi khusus untuk akun guru.
+
+---
+
+# 🚀 Arsip Rilis Sebelumnya (v1.2.8 / Build 29)
 
 **Tanggal Rilis:** 31 Oktober 2026  
 **Status Build:** Production Stable  
