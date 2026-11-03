@@ -373,7 +373,7 @@ class LearningViewModel @Inject constructor(
             }
             filtered = filtered.filter { item ->
                 val mDate = extractMaterialDate(item)
-                mDate != null && mDate == targetDate
+                mDate == null || !mDate.isAfter(targetDate)
             }
         }
 
@@ -421,7 +421,7 @@ class LearningViewModel @Inject constructor(
                         catch (_: Exception) { java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")) }
                     }
                     val mDate = extractMaterialDate(item)
-                    mDate != null && mDate == targetDate
+                    mDate == null || !mDate.isAfter(targetDate)
                 })
             }
         } else {
