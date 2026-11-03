@@ -50,7 +50,7 @@ fun TeacherSessionDetailContent(
         attendance.mapIndexed { idx, it ->
             StudentAttendanceUiItem(
                 studentId = it.studentId,
-                studentName = "Siswa (${it.studentId.take(8)})",
+                studentName = "Peserta Didik",
                 nisn = null,
                 status = it.status,
                 checkedInAt = it.checkedInAt,
