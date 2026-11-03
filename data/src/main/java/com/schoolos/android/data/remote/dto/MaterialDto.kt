@@ -58,4 +58,6 @@ data class AssignReadingMaterialRequestDto(
     @SerialName("subject_id") val subjectId: String? = null,
     @SerialName("start_page") val startPage: Int,
     @SerialName("end_page") val endPage: Int,
+    @SerialName("release_at") val releaseAt: String? = null,
+    val visibility: String? = null,
 )

@@ -354,7 +354,9 @@ class LearningMaterialRepositoryImpl @Inject constructor(
         classId: String,
         subjectId: String?,
         startPage: Int,
-        endPage: Int
+        endPage: Int,
+        releaseAt: String?,
+        visibility: String?,
     ): Result<String> = runCatching {
         val request = com.schoolos.android.data.remote.dto.AssignReadingMaterialRequestDto(
             bookId = bookId,
@@ -363,7 +365,9 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             classId = classId,
             subjectId = subjectId,
             startPage = startPage,
-            endPage = endPage
+            endPage = endPage,
+            releaseAt = releaseAt?.ifBlank { null },
+            visibility = visibility ?: "published",
         )
         val response = api.assignReadingMaterial(request)
         response.data ?: throw Exception(response.error?.message ?: "Gagal menugaskan materi bacaan perpustakaan.")

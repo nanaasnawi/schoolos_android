@@ -300,7 +300,9 @@ fun MaterialCreatorScreen(
                         endPage = endP,
                         instructions = description.trim().ifBlank { null },
                         classId = targetClassId,
-                        subjectId = targetSubjectId
+                        subjectId = targetSubjectId,
+                        releaseAt = releaseAtIso,
+                        visibility = if (isScheduled) "draft" else "published",
                     )
                 } else {
                     val fullDesc = "$selectedSubject • $selectedClass • $description"
