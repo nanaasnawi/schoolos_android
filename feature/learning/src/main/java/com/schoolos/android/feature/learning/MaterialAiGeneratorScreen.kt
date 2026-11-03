@@ -308,10 +308,11 @@ fun MaterialAiGeneratorScreen(
                             }
                             Spacer(Modifier.height(8.dp))
                             Box(modifier = Modifier.fillMaxWidth()) {
+                                val effectiveSubjectLocked = isSubjectLocked && availableSubjects.size <= 1
                                 OutlinedCard(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clickable(enabled = !isSubjectLocked) { isSubjectDropdownOpen = true },
+                                        .clickable(enabled = !effectiveSubjectLocked) { isSubjectDropdownOpen = true },
                                     shape = RoundedCornerShape(12.dp),
                                     colors = CardDefaults.outlinedCardColors(containerColor = colorScheme.surface)
                                 ) {
@@ -327,13 +328,13 @@ fun MaterialAiGeneratorScreen(
                                             color = if (selectedSubject != null || currentSubjectName.isNotBlank()) colorScheme.onSurface else colorScheme.onSurfaceVariant
                                         )
                                         Icon(
-                                            if (isSubjectLocked) Icons.Default.Lock else Icons.Default.ArrowDropDown,
+                                            if (effectiveSubjectLocked) Icons.Default.Lock else Icons.Default.ArrowDropDown,
                                             contentDescription = null,
                                             tint = colorScheme.onSurfaceVariant
                                         )
                                     }
                                 }
-                                if (!isSubjectLocked) {
+                                if (!effectiveSubjectLocked) {
                                     DropdownMenu(
                                         expanded = isSubjectDropdownOpen,
                                         onDismissRequest = { isSubjectDropdownOpen = false },
