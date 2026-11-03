@@ -86,13 +86,35 @@ class SessionDetailViewModel @Inject constructor(
         val attendanceList = repository.getAttendance(sessionId).getOrDefault(emptyList())
         val attendanceMap = attendanceList.associateBy { it.studentId }
 
-        val targetClass = session.classId.takeIf { it.isNotBlank() }
-            ?: session.className?.takeIf { it.isNotBlank() }
-            ?: ""
-        val classStudents = if (targetClass.isNotBlank()) {
-            academicRepository.getClassStudents(targetClass).getOrDefault(emptyList())
+        val targetClassId = session.classId.trim()
+        val targetClassName = session.className?.trim().orEmpty()
+        
+        var classStudents = if (targetClassId.isNotBlank()) {
+            academicRepository.getClassStudents(targetClassId).getOrDefault(emptyList())
         } else {
             emptyList()
+        }
+        if (classStudents.isEmpty() && targetClassName.isNotBlank()) {
+            classStudents = academicRepository.getClassStudents(targetClassName).getOrDefault(emptyList())
+        }
+
+        // Resilient fallback: If direct class query yielded empty, check tenant-wide student roster
+        if (classStudents.isEmpty()) {
+            val allStudents = academicRepository.getClassStudents("ALL").getOrDefault(emptyList())
+            val matched = if (targetClassId.isNotBlank()) {
+                allStudents.filter { it.classId == targetClassId }
+            } else if (targetClassName.isNotBlank()) {
+                allStudents.filter { com.schoolos.android.core.designsystem.matchesClassFilter(it.className, targetClassName) }
+            } else {
+                emptyList()
+            }
+            if (matched.isNotEmpty()) {
+                classStudents = matched
+            } else if (attendanceList.isNotEmpty()) {
+                // Resolve student names from allStudents by studentId
+                val studentById = allStudents.associateBy { it.id }
+                classStudents = attendanceList.mapNotNull { studentById[it.studentId] }
+            }
         }
 
         val items = if (classStudents.isNotEmpty()) {
@@ -110,10 +132,10 @@ class SessionDetailViewModel @Inject constructor(
                 )
             }
         } else {
-            attendanceList.mapIndexed { idx, att ->
+            attendanceList.map { att ->
                 StudentAttendanceUiItem(
                     studentId = att.studentId,
-                    studentName = "Siswa ${idx + 1}",
+                    studentName = "Peserta Didik",
                     nisn = null,
                     status = att.status,
                     checkedInAt = att.checkedInAt,
@@ -253,22 +275,34 @@ class SessionDetailViewModel @Inject constructor(
 
     private suspend fun loadSessionResources(session: LearningSession) {
         val targetDate = extractSessionLocalDate(session) ?: java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta"))
+        val targetClassId = session.classId.trim()
+        val targetClassName = session.className?.trim().orEmpty()
         val targetSubject = session.subjectName?.trim().orEmpty()
-        val targetClass = session.className?.trim().orEmpty()
 
         val materials = materialRepository.getMaterials().getOrDefault(emptyList())
         val scopedMaterials = materials.filter { m ->
-            (targetSubject.isBlank() || com.schoolos.android.core.designsystem.matchesSubjectFilter(m.subject, targetSubject)) &&
-            (targetClass.isBlank() || com.schoolos.android.core.designsystem.matchesClassFilter(m.className, targetClass)) &&
-            isMaterialMatchingDate(m, targetDate)
-        }
+            val classMatches = when {
+                targetClassId.isNotBlank() && !m.classId.isNullOrBlank() -> m.classId == targetClassId
+                targetClassName.isNotBlank() -> com.schoolos.android.core.designsystem.matchesClassFilter(m.className, targetClassName)
+                else -> true
+            }
+            val subjectMatches = targetSubject.isBlank() || com.schoolos.android.core.designsystem.matchesSubjectFilter(m.subject, targetSubject)
+            val dateMatches = isMaterialMatchingDate(m, targetDate)
+            classMatches && subjectMatches && dateMatches
+        }.distinctBy { it.id }
+         .distinctBy { "${it.title.trim()}_${it.materialType}_${it.classId}" }
 
-        val assignments = assignmentRepository.getAssignments(session.classId).getOrDefault(emptyList())
+        val assignments = assignmentRepository.getAssignments(targetClassId.ifBlank { session.classId }).getOrDefault(emptyList())
         val scopedAssignments = assignments.filter { a ->
-            (targetSubject.isBlank() || com.schoolos.android.core.designsystem.matchesSubjectFilter(a.subjectName, targetSubject)) &&
-            (targetClass.isBlank() || com.schoolos.android.core.designsystem.matchesClassFilter(a.className, targetClass)) &&
-            isAssignmentMatchingDate(a, targetDate)
-        }
+            val classMatches = when {
+                targetClassId.isNotBlank() && !a.classId.isNullOrBlank() -> a.classId == targetClassId
+                targetClassName.isNotBlank() -> com.schoolos.android.core.designsystem.matchesClassFilter(a.className, targetClassName)
+                else -> true
+            }
+            val subjectMatches = targetSubject.isBlank() || com.schoolos.android.core.designsystem.matchesSubjectFilter(a.subjectName, targetSubject)
+            val dateMatches = isAssignmentMatchingDate(a, targetDate)
+            classMatches && subjectMatches && dateMatches
+        }.distinctBy { it.id }
 
         _state.value = _state.value.copy(
             todayMaterials = scopedMaterials,

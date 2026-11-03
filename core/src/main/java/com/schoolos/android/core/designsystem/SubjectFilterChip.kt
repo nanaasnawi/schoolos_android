@@ -115,8 +115,17 @@ fun extractGradeNumber(name: String): Int? {
 }
 
 /**
+ * Extracts section/parallel class letter (e.g., A in '12A', B in 'PAKET B 8B') from class name.
+ */
+fun extractSectionLetter(name: String): Char? {
+    val match = Regex("""(?:\d+)\s*[-_]?\s*([A-Za-z])(?:\b|$)""").find(name)
+    return match?.groupValues?.get(1)?.uppercase()?.firstOrNull()
+}
+
+/**
  * Strict class/rombel matching to prevent cross-level material leaks (e.g., Paket A SD materials
- * or Paket C SMA materials leaking into a Paket B SMP class session).
+ * or Paket C SMA materials leaking into a Paket B SMP class session), and prevents cross-section
+ * leaks between parallel classes (e.g. 12A materials appearing in 12B sessions).
  */
 fun matchesClassFilter(itemClass: String?, filterClass: String?): Boolean {
     if (filterClass.isNullOrBlank()) return true
@@ -141,7 +150,15 @@ fun matchesClassFilter(itemClass: String?, filterClass: String?): Boolean {
     val itemGrade = extractGradeNumber(item)
 
     if (filterGrade != null && itemGrade != null) {
-        return filterGrade == itemGrade
+        if (filterGrade != itemGrade) return false
+
+        // Parallel section isolation: if both define a section (e.g. 12A vs 12B), they must match
+        val filterSection = extractSectionLetter(f)
+        val itemSection = extractSectionLetter(item)
+        if (filterSection != null && itemSection != null && filterSection != itemSection) {
+            return false
+        }
+        return true
     }
 
     // 4. If same package and item is package-wide (no grade number), allow it
