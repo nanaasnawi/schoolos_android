@@ -102,7 +102,7 @@ class AssignmentListViewModel @Inject constructor(
                         }
                         filtered = filtered.filter { a ->
                             val aDate = extractAssignmentDate(a)
-                            aDate != null && aDate == targetDate
+                            aDate == null || !aDate.isAfter(targetDate)
                         }
                     }
                     val grouped = groupAssignments(filtered)

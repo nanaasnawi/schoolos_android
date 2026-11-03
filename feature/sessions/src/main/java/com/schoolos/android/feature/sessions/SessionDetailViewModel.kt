@@ -290,7 +290,7 @@ class SessionDetailViewModel @Inject constructor(
             val dateMatches = isMaterialMatchingDate(m, targetDate)
             classMatches && subjectMatches && dateMatches
         }.distinctBy { it.id }
-         .distinctBy { "${it.title.trim()}_${it.materialType}_${it.classId}" }
+         .distinctBy { "${it.title.trim().lowercase()}_${it.materialType}" }
 
         val assignments = assignmentRepository.getAssignments(targetClassId.ifBlank { session.classId }).getOrDefault(emptyList())
         val scopedAssignments = assignments.filter { a ->
@@ -303,6 +303,7 @@ class SessionDetailViewModel @Inject constructor(
             val dateMatches = isAssignmentMatchingDate(a, targetDate)
             classMatches && subjectMatches && dateMatches
         }.distinctBy { it.id }
+         .distinctBy { a -> a.title.trim().lowercase() }
 
         _state.value = _state.value.copy(
             todayMaterials = scopedMaterials,
