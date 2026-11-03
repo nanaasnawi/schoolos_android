@@ -36,7 +36,9 @@ interface LearningMaterialRepository {
         classId: String,
         subjectId: String?,
         startPage: Int,
-        endPage: Int
+        endPage: Int,
+        releaseAt: String? = null,
+        visibility: String? = null,
     ): Result<String>
     suspend fun updateMaterial(
         id: String,

@@ -450,7 +450,9 @@ class MaterialCreatorViewModel @Inject constructor(
         endPage: Int,
         instructions: String?,
         classId: String,
-        subjectId: String?
+        subjectId: String?,
+        releaseAt: String? = null,
+        visibility: String? = null,
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -462,7 +464,9 @@ class MaterialCreatorViewModel @Inject constructor(
                 classId = classId,
                 subjectId = subjectId,
                 startPage = startPage,
-                endPage = endPage
+                endPage = endPage,
+                releaseAt = releaseAt,
+                visibility = visibility,
             ).onSuccess {
                 _state.value = _state.value.copy(isLoading = false, success = true)
             }.onFailure { err ->
