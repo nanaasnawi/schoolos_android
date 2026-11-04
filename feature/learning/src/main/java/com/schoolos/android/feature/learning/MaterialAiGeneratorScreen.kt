@@ -194,25 +194,31 @@ fun MaterialAiGeneratorScreen(
                             color = colorScheme.surface,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Button(
-                                onClick = { handleStartGeneration() },
+                            Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .navigationBarsPadding()
                                     .padding(horizontal = 16.dp, vertical = 12.dp)
-                                    .height(50.dp),
-                                shape = RoundedCornerShape(14.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = EmeraldPrimary,
-                                    contentColor = Color.White
-                                )
                             ) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    "Generate Materi Modul Sekarang",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                Button(
+                                    onClick = { handleStartGeneration() },
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(50.dp),
+                                    shape = RoundedCornerShape(14.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = EmeraldPrimary,
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "Generate Materi Modul Sekarang",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
@@ -518,6 +524,7 @@ fun MaterialAiGeneratorScreen(
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
+                                        .navigationBarsPadding()
                                         .padding(horizontal = 16.dp, vertical = 12.dp),
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
