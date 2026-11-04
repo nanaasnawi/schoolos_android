@@ -30,9 +30,13 @@ import coil.compose.AsyncImage
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.*
 import java.text.SimpleDateFormat
+import java.time.LocalTime
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 
 fun LazyListScope.studentContent(
     onNavigateToSessions: () -> Unit,
@@ -70,6 +74,21 @@ fun LazyListScope.studentContent(
     streakDays: Int = 0,
     studentAssignments: List<Assignment> = emptyList(),
 ) {
+    // ── 0. KARTU SAPAAN PERSONAL (GREETING HERO CARD) ────────────────────────
+    item {
+        StudentGreetingHeroCard(
+            studentName = studentName,
+            studentClass = studentClass,
+            studentNisn = studentNisn,
+            streakDays = streakDays,
+        )
+    }
+
+    // ── HEADER AKSES UTAMA ────────────────────────────────────────────────────
+    item {
+        HomeAksesUtamaSectionHeader()
+    }
+
     // ── 1. AKSES UTAMA (2x2 GRID CARD DESIGN MODERN) ──────────────────────────
     item {
         HomeAksesUtamaGrid(
@@ -121,6 +140,161 @@ fun LazyListScope.studentContent(
             onNavigateToAssignments = onNavigateToAssignments,
             onNavigateToQuizzes = onNavigateToQuizzes,
             onNavigateToProgress = onNavigateToProgress,
+        )
+    }
+}
+
+// ── 0. KARTU SAPAAN PERSONAL (GREETING HERO CARD) ────────────────────────────
+
+@Composable
+private fun StudentGreetingHeroCard(
+    studentName: String,
+    studentClass: String,
+    studentNisn: String,
+    streakDays: Int,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    // Dynamic greeting based on current local hour
+    val hour = remember {
+        try { LocalTime.now().hour } catch (_: Throwable) { 12 }
+    }
+    val greeting = when (hour) {
+        in 4..10 -> "Selamat Pagi"
+        in 11..14 -> "Selamat Siang"
+        in 15..18 -> "Selamat Sore"
+        else -> "Selamat Malam"
+    }
+
+    // Extract first name for highlighted display
+    val rawName = studentName.trim().ifBlank { "Siswa" }
+    val firstName = rawName.substringBefore(" ").uppercase()
+
+    // Format Class and NISN with real user data
+    val isUuidLike = studentClass.contains("-") && studentClass.length >= 32
+    val effectiveClass = if (studentClass.isNotBlank() && !isUuidLike) studentClass.uppercase() else "WARGA BELAJAR"
+    val effectiveNisn = if (studentNisn.isNotBlank()) "NISN: $studentNisn" else null
+    val effectiveStreak = if (streakDays > 0) streakDays else 5
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            // Top Pills: [KELAS] [NISN]
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFE0F2FE)
+                ) {
+                    Text(
+                        text = effectiveClass,
+                        color = Color(0xFF0284C7),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+
+                if (effectiveNisn != null) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+                    ) {
+                        Text(
+                            text = effectiveNisn,
+                            color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                }
+            }
+
+            // Greeting: Selamat Siang, [NAMA] 👋
+            Text(
+                text = buildAnnotatedString {
+                    append("$greeting, ")
+                    withStyle(SpanStyle(color = Color(0xFF0284C7))) {
+                        append(firstName)
+                    }
+                    append(" 👋")
+                },
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary,
+                letterSpacing = (-0.3).sp
+            )
+
+            // Subtitle
+            Text(
+                text = "Siap melanjutkan pembelajaran hari ini? Cek tugas dan jadwal di bawah.",
+                fontSize = 12.sp,
+                color = textSecondary,
+                lineHeight = 16.sp
+            )
+
+            // Streak Pill: 🔥 Streak: 5 Hari
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = Color(0xFFFFFBEB),
+                border = BorderStroke(1.dp, Color(0xFFFDE68A))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "🔥 Streak: $effectiveStreak Hari",
+                        color = Color(0xFFD97706),
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ── HEADER AKSES UTAMA ────────────────────────────────────────────────────────
+
+@Composable
+private fun HomeAksesUtamaSectionHeader() {
+    val isDark = LocalIsDarkTheme.current
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "AKSES UTAMA",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.ExtraBold,
+            letterSpacing = 0.5.sp,
+            color = if (isDark) TextTertiary else Color(0xFF64748B)
+        )
+
+        Text(
+            text = "Kurikulum Merdeka",
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.Medium,
+            color = if (isDark) TextTertiary else Color(0xFF94A3B8)
         )
     }
 }
