@@ -32,14 +32,14 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     "ARTICLE", "TEXT" -> MaterialType.ARTICLE
                     else -> {
                         if (dto.externalUrl?.contains("youtube") == true) MaterialType.VIDEO
-                        else if (dto.externalUrl?.endsWith(".pdf") == true && !dto.externalUrl.contains("article")) MaterialType.DOCUMENT
+                        else if ((dto.externalUrl?.contains(".pdf", ignoreCase = true) == true || dto.storageKey?.contains(".pdf", ignoreCase = true) == true) && !dto.externalUrl.orEmpty().contains("article")) MaterialType.DOCUMENT
                         else MaterialType.ARTICLE
                     }
                 }
                 val parts = (dto.description ?: "").split(" • ")
                 val subject = dto.subjectName?.takeIf { it.isNotBlank() }
                     ?: if (parts.size > 1 && parts[0].isNotBlank()) parts[0] else "Umum"
-                val rawUrl = dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey
+                val rawUrl = resolveMaterialMediaUrl(dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey)
 
                 LearningMaterial(
                     id = dto.id,
@@ -141,14 +141,14 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 "ARTICLE", "TEXT" -> MaterialType.ARTICLE
                 else -> {
                     if (dto.externalUrl?.contains("youtube") == true) MaterialType.VIDEO
-                    else if (dto.externalUrl?.endsWith(".pdf") == true && !dto.externalUrl.contains("article")) MaterialType.DOCUMENT
+                    else if ((dto.externalUrl?.contains(".pdf", ignoreCase = true) == true || dto.storageKey?.contains(".pdf", ignoreCase = true) == true) && !dto.externalUrl.orEmpty().contains("article")) MaterialType.DOCUMENT
                     else MaterialType.ARTICLE
                 }
             }
             val parts = (dto.description ?: "").split(" • ")
             val subject = dto.subjectName?.takeIf { it.isNotBlank() }
                 ?: if (parts.size > 1 && parts[0].isNotBlank()) parts[0] else "Umum"
-            val rawUrl = dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey
+            val rawUrl = resolveMaterialMediaUrl(dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey)
 
             val domain = LearningMaterial(
                 id = dto.id,
@@ -274,7 +274,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             description = dto.description,
             materialType = materialType,
             contentBody = contentBody ?: dto.description,
-            mediaUrl = dto.externalUrl ?: mediaUrl,
+            mediaUrl = resolveMaterialMediaUrl(dto.externalUrl ?: mediaUrl),
             thumbnailUrl = dto.imagePreviewUrl,
             subject = subject,
             size = dto.storageKey ?: "Modul Digital",
@@ -409,7 +409,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             description = dto.description,
             materialType = matType,
             contentBody = dto.description,
-            mediaUrl = dto.externalUrl,
+            mediaUrl = resolveMaterialMediaUrl(dto.externalUrl),
             thumbnailUrl = dto.imagePreviewUrl,
             subject = dto.subjectName ?: "Materi Pelajaran",
             size = dto.storageKey ?: "Modul Digital",
@@ -518,4 +518,24 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             )
         )
     }
+}
+
+/**
+ * Resolves relative file URLs (e.g. /uploads/uuid.pdf or uploads/uuid.pdf)
+ * into a fully qualified HTTPS URL so InAppPdfViewer and Android media loaders
+ * can directly download and display teacher-uploaded documents.
+ */
+fun resolveMaterialMediaUrl(raw: String?): String? {
+    if (raw.isNullOrBlank()) return null
+    val trimmed = raw.trim()
+    if (trimmed.startsWith("http://", ignoreCase = true) || trimmed.startsWith("https://", ignoreCase = true)) {
+        return trimmed
+    }
+    val path = when {
+        trimmed.startsWith("/uploads/") -> trimmed
+        trimmed.startsWith("uploads/") -> "/$trimmed"
+        trimmed.startsWith("/") -> trimmed
+        else -> "/uploads/$trimmed"
+    }
+    return "https://akselerasi-edu.id$path"
 }
