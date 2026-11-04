@@ -218,8 +218,18 @@ fun StudentDossierScreen(
         }
     }
 
+    val isDark = LocalIsDarkTheme.current
+    val screenBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = screenBg,
         topBar = {
             ExecutiveTopBar(
                 title = "Pemberkasan & E-Arsip",
@@ -230,8 +240,8 @@ fun StudentDossierScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                            .background(cardBg)
+                            .border(1.dp, cardBorder, RoundedCornerShape(12.dp))
                             .clickable { viewModel.loadStudentDossier() },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -320,8 +330,8 @@ fun StudentDossierScreen(
                     item {
                         Card(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp),
-                            colors = CardDefaults.cardColors(containerColor = CosmicNavy),
+                            shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
                             border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
                         ) {
                             Column(modifier = Modifier.padding(18.dp)) {
@@ -393,7 +403,7 @@ fun StudentDossierScreen(
                                         .height(8.dp)
                                         .clip(RoundedCornerShape(4.dp)),
                                     color = if (dossier.isComplete) Color(0xFF10B981) else Color(0xFFF59E0B),
-                                    trackColor = CosmicNavy
+                                    trackColor = innerCardBg
                                 )
 
                                 if (dossier.isComplete) {
@@ -599,10 +609,12 @@ fun DocumentCardItem(
     isUploadingThis: Boolean,
     onUploadClick: () -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = CosmicNavy),
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = cardBg),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
             if (doc.status == "REJECTED") Color(0xFFEF4444) else GlassBorder

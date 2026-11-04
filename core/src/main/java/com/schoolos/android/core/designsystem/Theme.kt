@@ -124,6 +124,24 @@ val CosmicDark: Color
 val CosmicNavy: Color
     @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color(0xFFFFFFFF)
 
+val ModernCardBg: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color(0xFFFFFFFF)
+
+val ModernCardBorder: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+
+val ModernInnerCardBg: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF161618) else Color(0xFFF8FAFC)
+
+val ModernInnerCardBorder: Color
+    @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+val cardBg: Color @Composable get() = ModernCardBg
+val cardBorder: Color @Composable get() = ModernCardBorder
+val innerCardBg: Color @Composable get() = ModernInnerCardBg
+val innerCardBorder: Color @Composable get() = ModernInnerCardBorder
+
+
 // Solid Surface Background
 val CosmicSurface: Color
     @Composable get() = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color(0xFFFFFFFF)

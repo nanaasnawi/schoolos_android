@@ -3,8 +3,8 @@ package com.schoolos.android.feature.profile.components
 import androidx.annotation.DrawableRes
 import androidx.compose.ui.res.painterResource
 import com.schoolos.android.core.R as CoreR
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,15 +18,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ExitToApp
-import androidx.compose.material.icons.automirrored.filled.HelpOutline
-import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.DarkMode
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LightMode
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -34,23 +30,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonError
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.NeonWarning
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.*
 
 @Composable
 fun ProfileSettingsGroup(
@@ -63,143 +47,139 @@ fun ProfileSettingsGroup(
     onLogoutClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+    val neonBlue = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val neonAmber = if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706)
+    val neonSuccess = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val neonError = if (isDark) Color(0xFFEF4444) else Color(0xFFDC2626)
+
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         Text(
             text = "PENGATURAN & INFORMASI",
             fontSize = 11.sp,
             fontWeight = FontWeight.Black,
-            color = TextTertiary,
+            color = textTertiary,
             letterSpacing = 1.2.sp,
             modifier = Modifier.padding(horizontal = 4.dp),
         )
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp)),
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Column {
                 ProfileSettingRow(
                     iconRes = CoreR.drawable.ic_modern_lock,
-                    color = NeonBlue,
+                    color = neonBlue,
                     title = "Keamanan & Kata Sandi",
                     sub = "Perbarui kata sandi akun Akselerasi-Edu",
                     onClick = onSecurityClick,
                 )
 
-                Box(Modifier.fillMaxWidth().height(1.dp).background(GlassBorder2))
+                HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.fillMaxWidth())
 
                 // Dark/Light Theme Row
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                        .clickable(onClick = onToggleTheme)
+                        .padding(horizontal = 18.dp, vertical = 14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                (if (isDarkTheme) NeonBlue else NeonWarning).copy(alpha = 0.10f),
-                            )
-                            .border(
-                                0.5.dp,
-                                (if (isDarkTheme) NeonBlue else NeonWarning).copy(alpha = 0.22f),
-                                RoundedCornerShape(10.dp),
-                            ),
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(neonAmber.copy(alpha = if (isDark) 0.15f else 0.10f)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = if (isDarkTheme) Icons.Default.DarkMode else Icons.Default.LightMode,
                             contentDescription = null,
-                            tint = if (isDarkTheme) NeonBlue else NeonWarning,
-                            modifier = Modifier.size(22.dp),
+                            tint = neonAmber,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
+
                     Spacer(Modifier.width(14.dp))
+
                     Column(modifier = Modifier.weight(1f)) {
-                        Text("Tema Tampilan", fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = TextPrimary)
                         Text(
-                            if (isDarkTheme) "Mode Gelap (Cosmic)" else "Mode Terang",
-                            fontSize = 11.sp,
-                            color = TextTertiary,
-                            fontWeight = FontWeight.Medium,
+                            text = if (isDarkTheme) "Mode Gelap (Aktif)" else "Mode Terang (Aktif)",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textPrimary,
+                        )
+                        Text(
+                            text = if (isDarkTheme) "Tampilan gelap nyaman untuk mata" else "Tampilan terang dengan kontras jernih",
+                            fontSize = 11.5.sp,
+                            color = textSecondary,
                         )
                     }
+
                     Switch(
                         checked = isDarkTheme,
                         onCheckedChange = { onToggleTheme() },
                         colors = SwitchDefaults.colors(
                             checkedThumbColor = Color.White,
-                            checkedTrackColor = NeonBlue,
-                            uncheckedThumbColor = Color.White,
-                            uncheckedTrackColor = NeonWarning.copy(alpha = 0.5f),
+                            checkedTrackColor = neonAmber,
+                            uncheckedThumbColor = textTertiary,
+                            uncheckedTrackColor = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0),
                         ),
                     )
                 }
 
-                Box(Modifier.fillMaxWidth().height(1.dp).background(GlassBorder2))
+                HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.fillMaxWidth())
 
                 ProfileSettingRow(
                     iconRes = CoreR.drawable.ic_modern_bell,
-                    color = NeonWarning,
-                    title = "Notifikasi Akademik",
-                    sub = "Pengingat jadwal, tugas & pengumuman",
+                    color = neonBlue,
+                    title = "Preferensi Notifikasi",
+                    sub = "Atur peringatan jadwal, tugas & materi",
                     onClick = onNotificationsClick,
                 )
 
-                Box(Modifier.fillMaxWidth().height(1.dp).background(GlassBorder2))
+                HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.fillMaxWidth())
 
                 ProfileSettingRow(
-                    icon = Icons.AutoMirrored.Filled.HelpOutline,
-                    color = NeonSuccess,
-                    title = "Bantuan & Kontak",
-                    sub = "Pusat bantuan akademik dan kontak sekolah",
+                    iconRes = CoreR.drawable.ic_modern_chat,
+                    color = neonSuccess,
+                    title = "Pusat Bantuan & Kontak",
+                    sub = "Kontak resmi admin & layanan sekolah",
                     onClick = onHelpClick,
                 )
 
-                Box(Modifier.fillMaxWidth().height(1.dp).background(GlassBorder2))
+                HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.fillMaxWidth())
 
                 ProfileSettingRow(
-                    icon = Icons.Default.Info,
-                    color = NeonBlue,
+                    iconRes = CoreR.drawable.ic_modern_book,
+                    color = neonBlue,
                     title = "Tentang Akselerasi-Edu",
-                    sub = "Informasi versi aplikasi dan lisensi",
+                    sub = "Versi aplikasi, lisensi & info sistem",
                     onClick = onAboutClick,
                 )
-            }
-        }
 
-        // Logout Button — minimal, consistent with other screens
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, NeonError.copy(alpha = 0.40f), RoundedCornerShape(12.dp))
-                .clickable(onClick = onLogoutClick)
-                .padding(vertical = 15.dp),
-            contentAlignment = Alignment.Center,
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(id = CoreR.drawable.ic_modern_logout),
-                    contentDescription = null,
-                    tint = NeonError,
-                    modifier = Modifier.size(18.dp),
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    "Keluar dari Akun",
-                    color = NeonError,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp,
+                HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.fillMaxWidth())
+
+                ProfileSettingRow(
+                    iconRes = CoreR.drawable.ic_modern_logout,
+                    color = neonError,
+                    title = "Keluar dari Akun",
+                    sub = "Akhiri sesi login perangkat ini",
+                    onClick = onLogoutClick,
+                    isDestructive = true,
                 )
             }
         }
@@ -208,48 +188,61 @@ fun ProfileSettingsGroup(
 
 @Composable
 private fun ProfileSettingRow(
-    icon: ImageVector? = null,
-    @DrawableRes iconRes: Int? = null,
+    @DrawableRes iconRes: Int,
     color: Color,
     title: String,
     sub: String,
     onClick: () -> Unit,
+    isDestructive: Boolean = false,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val neonError = if (isDark) Color(0xFFEF4444) else Color(0xFFDC2626)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 18.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(42.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(color.copy(alpha = 0.10f))
-                .border(0.5.dp, color.copy(alpha = 0.22f), RoundedCornerShape(10.dp)),
+                .size(38.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(color.copy(alpha = if (isDark) 0.15f else 0.10f)),
             contentAlignment = Alignment.Center,
         ) {
-            if (iconRes != null) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = null,
-                    tint = color,
-                    modifier = Modifier.size(20.dp),
-                )
-            } else if (icon != null) {
-                Icon(icon, null, tint = color, modifier = Modifier.size(20.dp))
-            }
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(20.dp),
+            )
         }
+
         Spacer(Modifier.width(14.dp))
+
         Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontWeight = FontWeight.ExtraBold, fontSize = 14.sp, color = TextPrimary)
-            Text(sub, fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Medium)
+            Text(
+                text = title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = if (isDestructive) neonError else textPrimary,
+            )
+            Text(
+                text = sub,
+                fontSize = 11.5.sp,
+                color = if (isDestructive) neonError.copy(alpha = 0.8f) else textSecondary,
+            )
         }
+
         Icon(
             painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
             contentDescription = null,
-            tint = TextTertiary.copy(alpha = 0.5f),
+            tint = if (isDestructive) neonError.copy(alpha = 0.7f) else textTertiary,
             modifier = Modifier.size(16.dp),
         )
     }

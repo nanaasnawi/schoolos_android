@@ -56,20 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.R as CoreR
-import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicDark
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.DynamicSchoolLogo
-import com.schoolos.android.core.designsystem.ExecutiveTopBar
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.NeonWarning
-import com.schoolos.android.core.designsystem.StudentNeon
-import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.*
 import java.util.Calendar
 
 @Composable
@@ -82,8 +69,18 @@ fun AboutAppScreen(
 
     var activeDialogDoc by remember { mutableStateOf<Pair<String, String>?>(null) }
 
+    val isDark = LocalIsDarkTheme.current
+    val screenBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = screenBg,
         topBar = {
             ExecutiveTopBar(
                 title = "Tentang Aplikasi",
@@ -104,9 +101,9 @@ fun AboutAppScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(cardBg)
+                    .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
                     .padding(18.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -200,9 +197,9 @@ fun AboutAppScreen(
                                 Box(
                                     modifier = Modifier
                                         .size(36.dp)
-                                        .clip(RoundedCornerShape(8.dp))
-                                        .background(CosmicDark)
-                                        .border(1.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                                        .clip(RoundedCornerShape(10.dp))
+                        .background(innerCardBg)
+                        .border(1.dp, innerCardBorder, RoundedCornerShape(10.dp)),
                                     contentAlignment = Alignment.Center,
                                 ) {
                                     DynamicSchoolLogo(
@@ -260,9 +257,9 @@ fun AboutAppScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(cardBg)
+                    .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
                     .padding(18.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -320,9 +317,9 @@ fun AboutAppScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(cardBg)
+                    .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
                     .padding(18.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -374,9 +371,9 @@ fun AboutAppScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(cardBg)
+                    .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
                     .padding(18.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -502,9 +499,9 @@ private fun TechSpecCard(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicDark)
-            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(14.dp))
+            .background(innerCardBg)
+            .border(1.dp, innerCardBorder, RoundedCornerShape(14.dp))
             .padding(12.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

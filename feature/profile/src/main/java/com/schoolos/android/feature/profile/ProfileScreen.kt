@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -208,8 +209,10 @@ fun ProfileScreen(
         else -> user?.email?.ifBlank { state.identifier.ifBlank { "Akun Terverifikasi" } } ?: "Akun Terverifikasi"
     }
 
+    val screenBg = if (isDarkTheme) Color(0xFF09090B) else Color(0xFFF8FAFC)
+
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = screenBg,
         topBar = {
             ExecutiveTopBar(
                 title = "Profil Saya",

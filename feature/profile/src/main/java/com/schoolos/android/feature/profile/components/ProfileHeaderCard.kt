@@ -1,5 +1,8 @@
 package com.schoolos.android.feature.profile.components
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,12 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.Face
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -40,16 +42,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface2
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.core.auth.isPkbmInstitution
 import com.schoolos.android.core.auth.resolveRoleDisplay
-import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.domain.model.User
 
 @Composable
@@ -67,22 +62,28 @@ fun ProfileHeaderCard(
     onAvatarClick: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val roleLabel = resolveRoleDisplay(user?.role, schoolName, isFormalUpper = true)
-    val avatarIcon = when {
-        isTeacher -> Icons.Default.Person
-        isParent -> Icons.Default.Face
-        else -> Icons.Default.School
+    val avatarDrawableRes = when {
+        isTeacher -> CoreR.drawable.ic_modern_profile
+        isParent -> CoreR.drawable.ic_modern_child
+        else -> CoreR.drawable.ic_modern_graduation
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(16.dp),
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = modifier.fillMaxWidth()
     ) {
-        Column {
+        Column(modifier = Modifier.padding(18.dp)) {
             // ── Top label row ──────────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -91,38 +92,36 @@ fun ProfileHeaderCard(
             ) {
                 Text(
                     text = "IDENTITAS PENGGUNA",
-                    color = TextTertiary,
+                    color = textTertiary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     letterSpacing = 0.5.sp,
                     maxLines = 1,
                 )
                 // Role pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(roleNeon.copy(alpha = 0.12f))
-                        .border(0.5.dp, roleNeon.copy(alpha = 0.30f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = roleNeon.copy(alpha = if (isDark) 0.15f else 0.10f),
+                    border = BorderStroke(0.5.dp, roleNeon.copy(alpha = if (isDark) 0.40f else 0.25f))
                 ) {
                     Text(
                         text = roleLabel,
                         color = roleNeon,
-                        fontSize = 10.sp,
+                        fontSize = 10.5.sp,
                         fontWeight = FontWeight.SemiBold,
                         letterSpacing = 0.3.sp,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
             // ── Avatar + Identity info row ─────────────────────────────────
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                // Avatar container with photo upload support & unclipped camera badge
                 val fullAvatarUrl = if (!user?.avatarUrl.isNullOrBlank()) {
                     val raw = user.avatarUrl!!
                     if (raw.startsWith("http://", ignoreCase = true) || raw.startsWith("https://", ignoreCase = true) || raw.startsWith("data:", ignoreCase = true)) {
@@ -146,8 +145,8 @@ fun ProfileHeaderCard(
                             .size(72.dp)
                             .align(Alignment.TopStart)
                             .clip(CircleShape)
-                            .background(roleNeon.copy(alpha = 0.12f))
-                            .border(2.dp, roleNeon.copy(alpha = 0.50f), CircleShape),
+                            .background(roleNeon.copy(alpha = if (isDark) 0.15f else 0.10f))
+                            .border(2.dp, roleNeon.copy(alpha = if (isDark) 0.55f else 0.40f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         if (!fullAvatarUrl.isNullOrBlank()) {
@@ -170,7 +169,7 @@ fun ProfileHeaderCard(
                             )
                         } else {
                             Icon(
-                                imageVector = avatarIcon,
+                                painter = painterResource(id = avatarDrawableRes),
                                 contentDescription = "Avatar",
                                 tint = roleNeon,
                                 modifier = Modifier.size(36.dp),
@@ -193,15 +192,16 @@ fun ProfileHeaderCard(
                         }
                     }
 
-                    // Badge kamera mengambang utuh (tidak terpotong clip circle)
+                    // Floating camera badge
                     if (!isUploading) {
+                        val cameraBadgeBg = if (isDark) Color(0xFF18181B) else Color.White
                         Box(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .size(26.dp)
-                                .shadow(4.dp, CircleShape)
+                                .shadow(3.dp, CircleShape)
                                 .clip(CircleShape)
-                                .background(Color(0xFF0F172A))
+                                .background(cameraBadgeBg)
                                 .border(1.5.dp, roleNeon, CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -223,10 +223,10 @@ fun ProfileHeaderCard(
                 ) {
                     Text(
                         text = user?.name?.ifBlank { "Pengguna Akselerasi-Edu" } ?: "Pengguna Akselerasi-Edu",
-                        fontSize = 16.sp,
-                        lineHeight = 20.sp,
+                        fontSize = 16.5.sp,
+                        lineHeight = 21.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         letterSpacing = (-0.2).sp,
@@ -235,8 +235,8 @@ fun ProfileHeaderCard(
                         Text(
                             text = displayContact,
                             fontSize = 12.sp,
-                            lineHeight = 15.sp,
-                            color = TextSecondary,
+                            lineHeight = 16.sp,
+                            color = textSecondary,
                             fontWeight = FontWeight.Normal,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
@@ -244,27 +244,26 @@ fun ProfileHeaderCard(
                     }
                     Text(
                         text = "Ketuk foto untuk lihat / ganti",
-                        fontSize = 10.sp,
-                        lineHeight = 13.sp,
+                        fontSize = 10.5.sp,
+                        lineHeight = 14.sp,
                         color = roleNeon.copy(alpha = 0.90f),
                         fontWeight = FontWeight.Medium,
                     )
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(16.dp))
 
             // ── Divider ───────────────────────────────────────────────────
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(0.5.dp)
-                    .background(GlassBorder2),
+            HorizontalDivider(
+                color = innerCardBorder,
+                thickness = 0.5.dp,
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(Modifier.height(14.dp))
 
-            // ── 3-pill info strip (real data only) ────────────────────────
+            // ── 3-pill info strip ─────────────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -311,31 +310,40 @@ private fun ProfileInfoPill(
     value: String,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    val isDark = LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = innerCardBg,
+        border = BorderStroke(0.5.dp, innerCardBorder),
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(CosmicSurface2)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-            .padding(vertical = 8.dp, horizontal = 6.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
     ) {
-        Text(
-            text = value,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = label,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Normal,
-            color = TextTertiary,
-            letterSpacing = 0.4.sp,
-            maxLines = 1,
-        )
+        Column(
+            modifier = Modifier.padding(vertical = 9.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                text = value,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = label,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.Normal,
+                color = textTertiary,
+                letterSpacing = 0.4.sp,
+                maxLines = 1,
+            )
+        }
     }
 }

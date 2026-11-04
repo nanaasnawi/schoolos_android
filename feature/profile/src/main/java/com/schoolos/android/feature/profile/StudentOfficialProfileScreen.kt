@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.profile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,8 +46,18 @@ fun StudentOfficialProfileScreen(
         }
     }
 
+    val isDark = LocalIsDarkTheme.current
+    val screenBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = screenBg,
         topBar = {
             ExecutiveTopBar(
                 title = "Biodata Pokok Warga Belajar",
@@ -57,8 +68,8 @@ fun StudentOfficialProfileScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                            .background(cardBg)
+                            .border(1.dp, cardBorder, RoundedCornerShape(12.dp))
                             .clickable { viewModel.loadOfficialBiodata() },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -342,9 +353,9 @@ fun StudentOfficialProfileScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(CosmicSurface2)
-                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
-                                    .padding(12.dp)
+                                    .background(innerCardBg)
+                                    .border(0.5.dp, innerCardBorder, RoundedCornerShape(14.dp))
+                                    .padding(14.dp)
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.Top,
@@ -376,69 +387,78 @@ private fun OfficialHeroCard(
     biodata: OfficialStudentBiodata,
     userAvatar: String?,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val studentNeon = if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
+    val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     val effectiveAvatar = userAvatar?.takeIf { it.isNotBlank() }
         ?: biodata.fotoProfile?.takeIf { it.isNotBlank() }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .padding(18.dp)
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             UserProfileAvatar(
                 avatarUrl = effectiveAvatar,
                 modifier = Modifier
                     .size(84.dp)
-                    .border(2.dp, StudentNeon, CircleShape),
+                    .border(2.dp, studentNeon, CircleShape),
                 contentDescription = biodata.fullName,
-                placeholderTint = StudentNeon
+                placeholderTint = studentNeon
             )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = biodata.fullName,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
                     text = "NISN: ${biodata.nisn} • ${biodata.className ?: "Kelas Belum Terdata"}",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    color = textSecondary,
                     textAlign = TextAlign.Center
                 )
             }
 
             // Dapodik Verified Badge
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(NeonSuccess.copy(alpha = 0.12f))
-                    .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = successColor.copy(alpha = if (isDark) 0.15f else 0.10f),
+                border = BorderStroke(0.5.dp, successColor.copy(alpha = if (isDark) 0.40f else 0.25f))
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Verified,
                         contentDescription = null,
-                        tint = NeonSuccess,
+                        tint = successColor,
                         modifier = Modifier.size(15.dp)
                     )
                     Text(
                         text = "Data Pokok Terverifikasi",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = NeonSuccess
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = successColor
                     )
                 }
             }
@@ -453,41 +473,47 @@ private fun OfficialSectionCard(
     accent: Color,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
-            .padding(16.dp)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.padding(bottom = 4.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                modifier = Modifier.padding(bottom = 2.dp)
             ) {
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(accent.copy(alpha = 0.12f)),
+                        .size(32.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(accent.copy(alpha = if (isDark) 0.15f else 0.10f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = accent,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary
                 )
             }
 

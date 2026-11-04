@@ -594,12 +594,15 @@ fun ProfileLogoutBottomSheet(
                 }
             }
 
+            val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+            val warnBg = if (isDark) Color(0xFF20080C) else Color(0xFFFEF2F2)
+
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(14.dp))
-                    .background(CosmicBlack)
-                    .border(1.dp, NeonError.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                    .background(warnBg)
+                    .border(1.dp, NeonError.copy(alpha = if (isDark) 0.35f else 0.25f), RoundedCornerShape(14.dp))
                     .padding(14.dp),
             ) {
                 Text(
@@ -632,14 +635,18 @@ fun ProfileLogoutBottomSheet(
                     )
                 }
 
-                Button(
+                val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+                val cancelBg = if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9)
+                val cancelBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+                androidx.compose.material3.OutlinedButton(
                     onClick = onDismissRequest,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(44.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CosmicBlack,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, cancelBorder),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = cancelBg,
                         contentColor = TextSecondary,
                     ),
                 ) {

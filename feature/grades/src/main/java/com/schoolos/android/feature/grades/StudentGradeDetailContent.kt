@@ -1,5 +1,8 @@
 package com.schoolos.android.feature.grades
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -15,50 +18,24 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.automirrored.filled.FactCheck
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.BarChart
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.HourglassEmpty
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.School
-import androidx.compose.material.icons.filled.Science
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface2
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.GlassOverlay
-import com.schoolos.android.core.designsystem.LocalIsDarkTheme
-import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonError
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.NeonWarning
-import com.schoolos.android.core.designsystem.StudentContainer
-import com.schoolos.android.core.designsystem.StudentNeon
-import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.SubjectGradeDetail
 import com.schoolos.android.domain.model.WeightComponent
 
@@ -67,6 +44,14 @@ fun StudentGradeDetailContent(
     detail: SubjectGradeDetail
 ) {
     val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val score = detail.summary.finalScore
     val letter = detail.summary.letterGrade
     val kktp = detail.summary.passingThreshold
@@ -75,17 +60,17 @@ fun StudentGradeDetailContent(
     val hasGrades = score > 0.0
 
     // Theme-adaptive status colors
-    val successColor = NeonSuccess
-    val successBg = NeonSuccess.copy(alpha = 0.12f)
-    val successBorder = NeonSuccess.copy(alpha = 0.35f)
+    val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val successBg = if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5)
+    val successBorder = if (isDark) Color(0xFF10B981).copy(alpha = 0.45f) else Color(0xFFA7F3D0)
 
-    val warningColor = NeonWarning
-    val warningBg = NeonWarning.copy(alpha = 0.12f)
-    val warningBorder = NeonWarning.copy(alpha = 0.35f)
+    val warningColor = if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706)
+    val warningBg = if (isDark) Color(0xFF451A03).copy(alpha = 0.35f) else Color(0xFFFFFBEB)
+    val warningBorder = if (isDark) Color(0xFFF59E0B).copy(alpha = 0.45f) else Color(0xFFFDE68A)
 
-    val neutralIndigoColor = StudentNeon
-    val neutralIndigoBg = StudentNeon.copy(alpha = 0.12f)
-    val neutralIndigoBorder = StudentNeon.copy(alpha = 0.35f)
+    val neutralIndigoColor = if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
+    val neutralIndigoBg = if (isDark) Color(0xFF1E1B4B).copy(alpha = 0.45f) else Color(0xFFEEF2FF)
+    val neutralIndigoBorder = if (isDark) Color(0xFF818CF8).copy(alpha = 0.45f) else Color(0xFFC7D2FE)
 
     val evaluationTitle = when {
         letter.isNotBlank() && letter != "-" -> "Predikat $letter"
@@ -102,33 +87,17 @@ fun StudentGradeDetailContent(
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         // ── 1. HERO ACADEMIC PERFORMANCE CARD ────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(4.dp, RoundedCornerShape(22.dp), spotColor = GlassOverlay)
-                .clip(RoundedCornerShape(22.dp))
-                .background(
-                    Brush.linearGradient(
-                        listOf(
-                            CosmicNavy,
-                            CosmicSurface2.copy(alpha = if (isDark) 0.65f else 0.45f)
-                        )
-                    )
-                )
-                .border(
-                    width = 1.dp,
-                    color = when {
-                        !hasGrades -> GlassBorder
-                        isPassing -> successBorder
-                        else -> warningBorder
-                    },
-                    shape = RoundedCornerShape(22.dp)
-                )
-                .padding(18.dp)
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            modifier = Modifier.fillMaxWidth()
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp)
             ) {
                 // Top Tag + KKTP Status Chip
                 Row(
@@ -153,46 +122,47 @@ fun StudentGradeDetailContent(
                             text = "STATUS AKADEMIK",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Black,
-                            color = TextTertiary,
+                            color = textTertiary,
                             letterSpacing = 1.2.sp
                         )
                     }
 
                     // KKTP Tag Chip (theme-aware colors)
-                    val (chipText, chipIcon, chipTextColor, chipBgColor, chipBorderColor) = when {
+                    val (chipText, chipIconRes, chipTextColor, chipBgColor, chipBorderColor) = when {
                         !hasGrades -> Tuple5(
                             "Menunggu Evaluasi",
-                            Icons.Default.HourglassEmpty,
+                            CoreR.drawable.ic_modern_clock,
                             neutralIndigoColor,
                             neutralIndigoBg,
                             neutralIndigoBorder
                         )
                         isPassing -> Tuple5(
                             "+${"%.1f".format(kktpDiff)} dari KKTP",
-                            Icons.Default.CheckCircle,
+                            CoreR.drawable.ic_modern_check_circle,
                             successColor,
                             successBg,
                             successBorder
                         )
                         else -> Tuple5(
                             "${"%.1f".format(kktpDiff)} dari KKTP",
-                            Icons.Default.Warning,
+                            CoreR.drawable.ic_modern_warning,
                             warningColor,
                             warningBg,
                             warningBorder
                         )
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(chipBgColor)
-                            .border(1.dp, chipBorderColor, RoundedCornerShape(10.dp))
-                            .padding(horizontal = 10.dp, vertical = 5.dp)
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = chipBgColor,
+                        border = BorderStroke(1.dp, chipBorderColor)
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) {
                             Icon(
-                                imageVector = chipIcon,
+                                painter = painterResource(id = chipIconRes),
                                 contentDescription = null,
                                 tint = chipTextColor,
                                 modifier = Modifier.size(13.dp)
@@ -216,7 +186,7 @@ fun StudentGradeDetailContent(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     val scoreDisplayColor = when {
-                        !hasGrades -> TextSecondary
+                        !hasGrades -> textSecondary
                         isPassing -> successColor
                         else -> warningColor
                     }
@@ -235,53 +205,54 @@ fun StudentGradeDetailContent(
                         // Dynamic Theme-Aware Predikat Badge
                         val (predBg, predBorder, predTextColor) = when {
                             !hasGrades || letter == "-" -> Triple(
-                                StudentNeon.copy(alpha = 0.15f),
-                                StudentNeon.copy(alpha = 0.4f),
-                                StudentNeon
+                                neutralIndigoBg,
+                                neutralIndigoBorder,
+                                neutralIndigoColor
                             )
                             isPassing -> Triple(
-                                NeonSuccess.copy(alpha = 0.15f),
-                                NeonSuccess.copy(alpha = 0.4f),
+                                successBg,
+                                successBorder,
                                 successColor
                             )
                             else -> Triple(
-                                NeonWarning.copy(alpha = 0.15f),
-                                NeonWarning.copy(alpha = 0.4f),
+                                warningBg,
+                                warningBorder,
                                 warningColor
                             )
                         }
 
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(predBg)
-                                .border(1.dp, predBorder, RoundedCornerShape(12.dp))
-                                .padding(horizontal = 14.dp, vertical = 7.dp)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = predBg,
+                            border = BorderStroke(1.dp, predBorder)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
                                 Icon(
                                     imageVector = Icons.Default.Star,
                                     contentDescription = null,
                                     tint = predTextColor,
-                                    modifier = Modifier.size(15.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                                 Spacer(Modifier.width(6.dp))
                                 Text(
                                     text = "Predikat $letter",
-                                    fontSize = 13.sp,
+                                    fontSize = 12.5.sp,
                                     fontWeight = FontWeight.Black,
                                     color = predTextColor
                                 )
                             }
                         }
 
-                        Spacer(Modifier.height(5.dp))
+                        Spacer(Modifier.height(6.dp))
 
                         Text(
                             text = "Target KKTP: ${kktp.toInt()}",
-                            fontSize = 11.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = TextTertiary
+                            color = textTertiary
                         )
                     }
                 }
@@ -289,30 +260,30 @@ fun StudentGradeDetailContent(
                 Spacer(Modifier.height(18.dp))
 
                 // Evaluation Capsule Box (Structured & Clear)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(CosmicSurface2.copy(alpha = if (isDark) 0.6f else 0.85f))
-                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                        .padding(horizontal = 14.dp, vertical = 12.dp)
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
                         Text(
                             text = evaluationTitle,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
+                            color = textPrimary,
                             textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(3.dp))
                         Text(
                             text = evaluationDesc,
-                            fontSize = 11.sp,
-                            color = TextSecondary,
+                            fontSize = 11.5.sp,
+                            color = textSecondary,
                             lineHeight = 16.sp,
                             textAlign = TextAlign.Center
                         )
@@ -320,7 +291,7 @@ fun StudentGradeDetailContent(
                 }
 
                 Spacer(Modifier.height(18.dp))
-                HorizontalDivider(color = GlassBorder, thickness = 1.dp)
+                HorizontalDivider(color = innerCardBorder, thickness = 1.dp)
                 Spacer(Modifier.height(16.dp))
 
                 // BENCHMARK PROGRESS BAR WITH KKTP MARKER
@@ -333,27 +304,27 @@ fun StudentGradeDetailContent(
                         Text(
                             text = "Skor Akhir Berbobot",
                             fontSize = 12.sp,
-                            color = TextSecondary,
+                            color = textSecondary,
                             fontWeight = FontWeight.Medium
                         )
                         Text(
                             text = "${"%.1f".format(score)} / 100",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Black,
-                            color = TextPrimary
+                            color = textPrimary
                         )
                     }
 
                     Spacer(Modifier.height(8.dp))
 
-                    // Progress bar track with HIGH CONTRAST (CosmicSurface2)
+                    // Progress bar track with high contrast
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(10.dp)
                             .clip(CircleShape)
-                            .background(CosmicSurface2)
-                            .border(1.dp, GlassBorder, CircleShape)
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, CircleShape)
                     ) {
                         val fillFrac = (score / 100.0).coerceIn(0.0, 1.0).toFloat()
                         if (fillFrac > 0f) {
@@ -365,7 +336,7 @@ fun StudentGradeDetailContent(
                                     .background(
                                         Brush.horizontalGradient(
                                             listOf(
-                                                StudentNeon,
+                                                neutralIndigoColor,
                                                 if (isPassing) successColor else warningColor
                                             )
                                         )
@@ -382,30 +353,32 @@ fun StudentGradeDetailContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text("0", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(warningBg)
-                                .border(0.5.dp, warningBorder, RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        Text("0", fontSize = 10.sp, color = textTertiary, fontWeight = FontWeight.Bold)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = warningBg,
+                            border = BorderStroke(0.5.dp, warningBorder)
                         ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(5.dp)
-                                    .clip(CircleShape)
-                                    .background(warningColor)
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Text(
-                                text = "Target KKTP: ${kktp.toInt()}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = warningColor
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(5.dp)
+                                        .clip(CircleShape)
+                                        .background(warningColor)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text(
+                                    text = "Target KKTP: ${kktp.toInt()}",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = warningColor
+                                )
+                            }
                         }
-                        Text("100", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                        Text("100", fontSize = 10.sp, color = textTertiary, fontWeight = FontWeight.Bold)
                     }
                 }
             }
@@ -425,53 +398,42 @@ fun StudentGradeDetailContent(
                     text = "Rincian Komponen Nilai",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Black,
-                    color = TextPrimary
+                    color = textPrimary
                 )
                 Text(
                     text = "Bobot kurikulum & kontribusi poin akhir",
-                    fontSize = 11.sp,
-                    color = TextTertiary
+                    fontSize = 11.5.sp,
+                    color = textTertiary
                 )
             }
 
-            // Theme-aware Total Bobot badge
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(neutralIndigoBg)
-                    .border(1.dp, neutralIndigoBorder, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 5.dp)
+            Surface(
+                shape = RoundedCornerShape(8.dp),
+                color = neutralIndigoBg,
+                border = BorderStroke(1.dp, neutralIndigoBorder)
             ) {
                 Text(
                     text = "Total Bobot: ${totalWeight.toInt()}%",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
-                    color = neutralIndigoColor
+                    color = neutralIndigoColor,
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                 )
             }
         }
 
         if (detail.weightBreakdown.isEmpty()) {
-            // Elevated, Informative & Beautiful Empty State Card
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        Brush.linearGradient(
-                            listOf(
-                                CosmicNavy,
-                                CosmicSurface2.copy(alpha = if (isDark) 0.6f else 0.4f)
-                            )
-                        )
-                    )
-                    .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
+            Surface(
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp)
                 ) {
                     Box(
                         modifier = Modifier
@@ -482,10 +444,10 @@ fun StudentGradeDetailContent(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.HourglassEmpty,
+                            painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
                             contentDescription = null,
                             tint = neutralIndigoColor,
-                            modifier = Modifier.size(26.dp)
+                            modifier = Modifier.size(24.dp)
                         )
                     }
 
@@ -495,7 +457,7 @@ fun StudentGradeDetailContent(
                         text = "Komponen Penilaian Sedang Berjalan",
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = textPrimary,
                         textAlign = TextAlign.Center
                     )
 
@@ -504,7 +466,7 @@ fun StudentGradeDetailContent(
                     Text(
                         text = "Guru mata pelajaran sedang mempersiapkan rubrik tugas, kuis, dan ujian untuk periode ini. Rincian nilai dan persentase bobot akan tampil otomatis di sini setelah dipublikasikan.",
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = textSecondary,
                         textAlign = TextAlign.Center,
                         lineHeight = 18.sp,
                         modifier = Modifier.padding(horizontal = 8.dp)
@@ -512,73 +474,59 @@ fun StudentGradeDetailContent(
 
                     Spacer(Modifier.height(16.dp))
 
-                    // Educational Guide Badges
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Center
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = innerCardBg,
+                        border = BorderStroke(1.dp, innerCardBorder)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(CosmicSurface2)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
-                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.FactCheck,
-                                    contentDescription = null,
-                                    tint = neutralIndigoColor,
-                                    modifier = Modifier.size(13.dp)
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = "Bobot Kurikulum Terstandar",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextSecondary
-                                )
-                            }
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_check_circle),
+                                contentDescription = null,
+                                tint = neutralIndigoColor,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = "Bobot Kurikulum Terstandar",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textSecondary
+                            )
                         }
                     }
                 }
             }
         } else {
             detail.weightBreakdown.forEach { component ->
-                GradeBreakdownCardItem(
-                    component = component
-                )
+                GradeBreakdownCardItem(component = component)
             }
         }
 
         // ── 3. ANALYTICAL DEEP-DIVE DASHBOARD ────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = GlassOverlay)
-                .clip(RoundedCornerShape(20.dp))
-                .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                .padding(16.dp)
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column {
+            Column(modifier = Modifier.padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
                             .size(38.dp)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(NeonBlue.copy(alpha = 0.15f))
-                            .border(
-                                1.dp,
-                                NeonBlue.copy(alpha = 0.35f),
-                                RoundedCornerShape(12.dp)
-                            ),
+                            .background(neutralIndigoBg)
+                            .border(1.dp, neutralIndigoBorder, RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.BarChart,
+                            painter = painterResource(id = CoreR.drawable.ic_modern_grades),
                             contentDescription = null,
-                            tint = NeonBlue,
+                            tint = neutralIndigoColor,
                             modifier = Modifier.size(20.dp)
                         )
                     }
@@ -588,13 +536,13 @@ fun StudentGradeDetailContent(
                             text = "ANALISIS PERFORMA BELAJAR",
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Black,
-                            color = TextPrimary,
+                            color = textPrimary,
                             letterSpacing = 0.6.sp
                         )
                         Text(
                             text = "Ringkasan evaluasi capaian semester aktif",
-                            fontSize = 10.sp,
-                            color = TextTertiary
+                            fontSize = 10.5.sp,
+                            color = textTertiary
                         )
                     }
                 }
@@ -623,7 +571,7 @@ fun StudentGradeDetailContent(
                     AnalyticsMiniTile(
                         label = "Komponen",
                         value = compText,
-                        color = NeonBlue,
+                        color = neutralIndigoColor,
                         modifier = Modifier.weight(1f)
                     )
                     AnalyticsMiniTile(
@@ -643,19 +591,20 @@ fun StudentGradeDetailContent(
                 Spacer(Modifier.height(16.dp))
 
                 // Recommendation Advice Banner
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(CosmicSurface2)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                        .padding(14.dp)
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    Row(verticalAlignment = Alignment.Top) {
+                    Row(
+                        verticalAlignment = Alignment.Top,
+                        modifier = Modifier.padding(14.dp)
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Info,
                             contentDescription = null,
-                            tint = NeonBlue,
+                            tint = neutralIndigoColor,
                             modifier = Modifier
                                 .size(18.dp)
                                 .padding(top = 1.dp)
@@ -666,7 +615,7 @@ fun StudentGradeDetailContent(
                                 text = "Rekomendasi Akademik",
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = textPrimary
                             )
                             Spacer(Modifier.height(3.dp))
                             val tipText = when {
@@ -677,7 +626,7 @@ fun StudentGradeDetailContent(
                             Text(
                                 text = tipText,
                                 fontSize = 11.sp,
-                                color = TextSecondary,
+                                color = textSecondary,
                                 lineHeight = 16.sp
                             )
                         }
@@ -687,20 +636,21 @@ fun StudentGradeDetailContent(
         }
 
         // ── 4. GRADE SCALE REFERENCE LEGEND ──────────────────────────────────
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-                .padding(16.dp)
+        Surface(
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            modifier = Modifier.fillMaxWidth()
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                modifier = Modifier.padding(18.dp)
+            ) {
                 Text(
                     text = "PEDOMAN SKALA PENILAIAN",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Black,
-                    color = TextTertiary,
+                    color = textTertiary,
                     letterSpacing = 0.8.sp
                 )
 
@@ -712,7 +662,7 @@ fun StudentGradeDetailContent(
                         letter = "A",
                         range = "85 - 100",
                         desc = "Sangat Baik",
-                        color = StudentNeon
+                        color = neutralIndigoColor
                     )
                     GradeScaleTierItem(
                         letter = "B",
@@ -730,7 +680,7 @@ fun StudentGradeDetailContent(
                         letter = "D",
                         range = "< 65",
                         desc = "Perlu Penguatan",
-                        color = NeonError
+                        color = if (isDark) Color(0xFFEF4444) else Color(0xFFDC2626)
                     )
                 }
             }
@@ -743,6 +693,13 @@ private fun GradeBreakdownCardItem(
     component: WeightComponent
 ) {
     val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val name = component.name
     val weight = component.weightPercentage
     val rawScore = component.score ?: 0.0
@@ -752,32 +709,30 @@ private fun GradeBreakdownCardItem(
 
     // Determine intuitive component icon & color
     val lower = name.lowercase()
-    val (icon: ImageVector, accentColor: Color) = when {
+    val (iconRes: Int, accentColor: Color) = when {
         lower.contains("kuis") || lower.contains("quiz") || lower.contains("ulangan") ->
-            Pair(Icons.Default.Bolt, NeonWarning)
+            Pair(CoreR.drawable.ic_modern_quiz, if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706))
         lower.contains("uts") || lower.contains("tengah") || lower.contains("mid") ->
-            Pair(Icons.Default.Assessment, TeacherNeon)
+            Pair(CoreR.drawable.ic_modern_grades, if (isDark) Color(0xFF10B981) else Color(0xFF059669))
         lower.contains("uas") || lower.contains("akhir") || lower.contains("pas") || lower.contains("pat") ->
-            Pair(Icons.Default.School, StudentNeon)
-        lower.contains("praktik") || lower.contains("proyek") || lower.contains("lab") ->
-            Pair(Icons.Default.Science, NeonSuccess)
+            Pair(CoreR.drawable.ic_modern_graduation, if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5))
         else ->
-            Pair(Icons.AutoMirrored.Filled.Assignment, NeonBlue)
+            Pair(CoreR.drawable.ic_modern_tasks, if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7))
     }
 
-    val successText = NeonSuccess
-    val successBg = NeonSuccess.copy(alpha = 0.12f)
+    val successText = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val successBg = if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(2.dp, RoundedCornerShape(18.dp), spotColor = GlassOverlay)
-            .clip(RoundedCornerShape(18.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
-            .padding(16.dp)
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(18.dp)
+        ) {
             // Header: Icon + Title + Weight Pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -790,13 +745,13 @@ private fun GradeBreakdownCardItem(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(accentColor.copy(alpha = if (isDark) 0.14f else 0.10f)),
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(accentColor.copy(alpha = if (isDark) 0.16f else 0.10f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = icon,
+                            painter = painterResource(id = iconRes),
                             contentDescription = null,
                             tint = accentColor,
                             modifier = Modifier.size(20.dp)
@@ -808,31 +763,31 @@ private fun GradeBreakdownCardItem(
                     Column {
                         Text(
                             text = name,
-                            fontSize = 14.sp,
+                            fontSize = 14.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = textPrimary
                         )
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = "Nilai Mentah: ${rawScore.toInt()} / ${maxRawScore.toInt()}",
-                            fontSize = 11.sp,
-                            color = TextTertiary
+                            fontSize = 11.5.sp,
+                            color = textTertiary
                         )
                     }
                 }
 
                 // Weight Chip
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(accentColor.copy(alpha = if (isDark) 0.12f else 0.08f))
-                        .border(1.dp, accentColor.copy(alpha = if (isDark) 0.35f else 0.25f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = accentColor.copy(alpha = if (isDark) 0.15f else 0.10f),
+                    border = BorderStroke(1.dp, accentColor.copy(alpha = if (isDark) 0.4f else 0.25f))
                 ) {
                     Text(
                         text = "Bobot: ${weight.toInt()}%",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = accentColor
+                        color = accentColor,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
                     )
                 }
             }
@@ -848,40 +803,39 @@ private fun GradeBreakdownCardItem(
                         text = "${(pct * 100).toInt()}%",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Black,
-                        color = TextPrimary
+                        color = textPrimary
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = "capaian",
-                        fontSize = 11.sp,
-                        color = TextTertiary
+                        fontSize = 11.5.sp,
+                        color = textTertiary
                     )
                 }
 
                 // Score Contribution Pill (Points added to total)
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(successBg)
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = successBg
                 ) {
                     Text(
                         text = "+${"%.1f".format(contribution)} Poin Akhir",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
-                        color = successText
+                        color = successText,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            // Progress Bar (Track uses CosmicSurface2 so it's always distinct from card background!)
+            // Progress Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(CircleShape)
-                    .background(CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, CircleShape)
+                    .background(innerCardBg)
+                    .border(0.5.dp, innerCardBorder, CircleShape)
             ) {
                 if (pct > 0f) {
                     Box(
@@ -908,19 +862,23 @@ private fun AnalyticsMiniTile(
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    Box(
+    val isDark = LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = innerCardBg,
+        border = BorderStroke(1.dp, innerCardBorder),
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicSurface2)
-            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(10.dp)
     ) {
-        Column {
-            Text(label, fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.SemiBold)
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(label, fontSize = 10.sp, color = textTertiary, fontWeight = FontWeight.SemiBold)
             Spacer(Modifier.height(4.dp))
             Text(
                 text = value,
-                fontSize = 12.sp,
+                fontSize = 12.5.sp,
                 fontWeight = FontWeight.Black,
                 color = color,
                 maxLines = 1
@@ -937,20 +895,23 @@ private fun GradeScaleTierItem(
     color: Color
 ) {
     val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
             modifier = Modifier
-                .size(30.dp)
+                .size(32.dp)
                 .clip(CircleShape)
                 .background(color.copy(alpha = if (isDark) 0.16f else 0.12f))
                 .border(1.dp, color.copy(alpha = if (isDark) 0.45f else 0.35f), CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            Text(letter, fontSize = 13.sp, fontWeight = FontWeight.Black, color = color)
+            Text(letter, fontSize = 13.5.sp, fontWeight = FontWeight.Black, color = color)
         }
-        Spacer(Modifier.height(4.dp))
-        Text(range, fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        Text(desc, fontSize = 8.sp, color = TextTertiary)
+        Spacer(Modifier.height(5.dp))
+        Text(range, fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = textPrimary)
+        Text(desc, fontSize = 8.5.sp, color = textTertiary)
     }
 }
 

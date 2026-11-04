@@ -11,6 +11,7 @@ import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
 import android.widget.Toast
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -58,21 +59,22 @@ fun ProfileQrCard(
 
     var showEnlargedDialog by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .shadow(
-                elevation = if (isDarkTheme) 0.dp else 1.5.dp,
-                shape = RoundedCornerShape(16.dp),
-                spotColor = Color(0x10000000)
-            )
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .padding(20.dp),
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = modifier.fillMaxWidth()
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier.padding(20.dp)
         ) {
             // Header Row: Title & Role Badge
             Row(
@@ -202,7 +204,7 @@ fun ProfileQrCard(
                     containerColor = buttonContainer,
                     contentColor = buttonContent,
                 ),
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.fillMaxWidth(),
                 contentPadding = PaddingValues(vertical = 12.dp),
             ) {
@@ -370,7 +372,7 @@ private fun EnlargedQrPreviewDialog(
                             containerColor = Color(0xFF0F172A),
                             contentColor = Color.White,
                         ),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(14.dp),
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(

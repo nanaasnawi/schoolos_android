@@ -1,5 +1,8 @@
 package com.schoolos.android.feature.grades
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -17,11 +20,10 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -29,7 +31,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
@@ -37,26 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.common.DapodikPeriod
-import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface
-import com.schoolos.android.core.designsystem.ErrorState
-import com.schoolos.android.core.designsystem.ExecutiveTopBar
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.LoadingState
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.StatusChip
-import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
-import com.schoolos.android.core.designsystem.subjectGradient
-import com.schoolos.android.core.designsystem.subjectIcon
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.core.auth.isPrincipalRole
 import com.schoolos.android.core.auth.isTeacherRole
-
-import com.schoolos.android.core.designsystem.CosmicSurface2
-import com.schoolos.android.core.designsystem.GlassOverlay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,8 +55,16 @@ fun GradeDetailScreen(
     val isTeacher = isTeacherRole(state.userRole) || isPrincipal
     val subjectName = detail?.summary?.subjectName ?: "Detail Akademik"
 
+    val isDark = LocalIsDarkTheme.current
+    val screenBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = screenBg,
         topBar = {
             ExecutiveTopBar(
                 title = subjectName,
@@ -81,25 +73,23 @@ fun GradeDetailScreen(
                     else "Detail Nilai • ${DapodikPeriod.getFullPeriodLabel()}",
                 onBack = onBack,
                 actions = {
-                    if (isPrincipal) {
+                    if (isPrincipal || isTeacher) {
+                        val badgeBg = if (isDark) TeacherNeon.copy(alpha = 0.15f) else Color(0xFFECFDF5)
+                        val badgeBorder = if (isDark) TeacherNeon.copy(alpha = 0.4f) else Color(0xFFA7F3D0)
+                        val badgeText = if (isDark) TeacherNeon else Color(0xFF047857)
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(TeacherNeon.copy(alpha = 0.12f))
-                                .border(0.5.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .background(badgeBg)
+                                .border(0.5.dp, badgeBorder, RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text(com.schoolos.android.core.auth.resolveRoleDisplay(state.userRole, isFormalUpper = true), color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                        }
-                    } else if (isTeacher) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(TeacherNeon.copy(alpha = 0.12f))
-                                .border(0.5.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(com.schoolos.android.core.auth.resolveRoleDisplay(state.userRole, isFormalUpper = true), color = TeacherNeon, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                com.schoolos.android.core.auth.resolveRoleDisplay(state.userRole, isFormalUpper = true),
+                                color = badgeText,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     } else {
                         StatusChip(label = "Aktif")
@@ -127,31 +117,25 @@ fun GradeDetailScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .verticalScroll(rememberScrollState())
-                            .padding(horizontal = 14.dp, vertical = 12.dp),
-                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
                         // ── 1. COMPACT EXECUTIVE SUBJECT HERO CARD ────────────
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .shadow(2.dp, RoundedCornerShape(18.dp), spotColor = GlassOverlay)
-                                .clip(RoundedCornerShape(18.dp))
-                                .background(
-                                    Brush.linearGradient(
-                                        listOf(CosmicNavy, CosmicSurface2.copy(alpha = 0.7f))
-                                    )
-                                )
-                                .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
-                                .padding(16.dp)
+                        Surface(
+                            shape = RoundedCornerShape(22.dp),
+                            color = cardBg,
+                            border = BorderStroke(1.dp, cardBorder),
+                            modifier = Modifier.fillMaxWidth()
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                                modifier = Modifier.padding(18.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(52.dp)
-                                        .clip(RoundedCornerShape(14.dp))
+                                        .size(54.dp)
+                                        .clip(RoundedCornerShape(16.dp))
                                         .background(Brush.linearGradient(gradient)),
                                     contentAlignment = Alignment.Center
                                 ) {
@@ -166,17 +150,17 @@ fun GradeDetailScreen(
                                 Column(modifier = Modifier.weight(1f)) {
                                     Text(
                                         text = if (isTeacher) "LAPORAN NILAI KELAS" else "DETAIL AKADEMIK MAPEL",
-                                        color = TextTertiary,
+                                        color = textTertiary,
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Bold,
                                         letterSpacing = 1.sp
                                     )
-                                    Spacer(Modifier.height(2.dp))
+                                    Spacer(Modifier.height(3.dp))
                                     Text(
                                         text = d.summary.subjectName,
                                         fontSize = 18.sp,
                                         fontWeight = FontWeight.ExtraBold,
-                                        color = TextPrimary
+                                        color = textPrimary
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Row(
@@ -184,15 +168,15 @@ fun GradeDetailScreen(
                                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                                     ) {
                                         Icon(
-                                            imageVector = Icons.Default.CalendarMonth,
+                                            painter = painterResource(id = CoreR.drawable.ic_modern_calendar),
                                             contentDescription = null,
-                                            tint = TextTertiary,
-                                            modifier = Modifier.size(12.dp)
+                                            tint = textTertiary,
+                                            modifier = Modifier.size(13.dp)
                                         )
                                         Text(
                                             text = DapodikPeriod.getFullPeriodLabel(),
-                                            fontSize = 11.sp,
-                                            color = TextSecondary,
+                                            fontSize = 11.5.sp,
+                                            color = textSecondary,
                                             fontWeight = FontWeight.Medium
                                         )
                                     }
