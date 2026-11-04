@@ -365,57 +365,93 @@ private fun AgendaHeroBanner(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(20.dp))
+            .background(Color(0xFF111113))
+            .border(1.dp, Color(0xFF1F1F23), RoundedCornerShape(20.dp))
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             // Top Tag Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = fullDateTitle,
-                    color = TextTertiary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Normal,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF161618))
+                            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(8.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarMonth,
+                            contentDescription = null,
+                            tint = accentColor,
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                    Text(
+                        text = fullDateTitle,
+                        color = TextSecondary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
 
                 // Live or Status Badge
                 if (hasLiveSession) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(NeonSuccess)
-                        )
-                        Spacer(Modifier.width(5.dp))
-                        Text(
-                            text = "SESI AKTIF",
-                            color = NeonSuccess,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(NeonSuccess.copy(alpha = 0.15f))
+                            .border(1.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonSuccess)
+                            )
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                text = "SESI AKTIF",
+                                color = NeonSuccess,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                            )
+                        }
                     }
                 } else if (className.isNotBlank()) {
-                    Text(
-                        text = "Kelas $className",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Normal,
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF161618))
+                            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = "Kelas $className",
+                            color = TextTertiary,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
+                    }
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
-            // Main Stats Row (Quiet Monochrome)
+            // Main Stats Row (Obsidian Cards)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatMiniCard(
                     title = "Total Sesi",
@@ -434,7 +470,7 @@ private fun AgendaHeroBanner(
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
             // Completion Progress Bar
             Column {
@@ -445,31 +481,31 @@ private fun AgendaHeroBanner(
                 ) {
                     Text(
                         text = "Progres Hari Ini",
-                        fontSize = 11.sp,
+                        fontSize = 12.sp,
                         color = TextTertiary,
                         fontWeight = FontWeight.Normal
                     )
                     Text(
                         text = if (totalCount > 0) "$completedCount/$totalCount (${(progress * 100).toInt()}%)" else "0 Sesi",
-                        fontSize = 11.sp,
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Medium
+                        fontSize = 12.sp,
+                        color = if (progress >= 1f && totalCount > 0) NeonSuccess else TextSecondary,
+                        fontWeight = FontWeight.SemiBold
                     )
                 }
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(4.dp)
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                        .height(5.dp)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color(0xFF27272A))
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(animatedProgress)
                             .fillMaxHeight()
-                            .clip(RoundedCornerShape(2.dp))
-                            .background(NeonBlue)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(if (progress >= 1f && totalCount > 0) NeonSuccess else NeonBlue)
                     )
                 }
             }
@@ -485,19 +521,19 @@ private fun StatMiniCard(
 ) {
     Column(
         modifier = modifier
-            .height(58.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-            .padding(vertical = 6.dp, horizontal = 6.dp),
+            .height(66.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFF161618))
+            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(14.dp))
+            .padding(vertical = 8.dp, horizontal = 8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = value,
-            color = TextPrimary,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -505,15 +541,15 @@ private fun StatMiniCard(
         Text(
             text = title,
             color = TextTertiary,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Normal,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
-// ── INTERACTIVE WEEKLY CALENDAR STRIP (Apple Calendar Minimalist) ────────────
+// ── INTERACTIVE WEEKLY CALENDAR STRIP (Obsidian Style) ────────────
 
 @Composable
 private fun WeeklyCalendarStrip(
@@ -523,8 +559,6 @@ private fun WeeklyCalendarStrip(
     accentColor: Color,
     onDaySelected: (LocalDate) -> Unit,
 ) {
-    val isDark = LocalIsDarkTheme.current
-
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -538,9 +572,9 @@ private fun WeeklyCalendarStrip(
             Box(
                 modifier = Modifier
                     .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
+                    .clip(RoundedCornerShape(14.dp))
                     .clickable { onDaySelected(day.localDate) }
-                    .padding(vertical = 4.dp),
+                    .padding(vertical = 2.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(
@@ -548,57 +582,50 @@ private fun WeeklyCalendarStrip(
                 ) {
                     Text(
                         text = day.dayName.uppercase(),
-                        fontSize = 10.sp,
+                        fontSize = 11.sp,
                         fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
                         letterSpacing = 0.5.sp,
                         color = when {
-                            isToday -> NeonBlueDark
-                            isSelected -> TextPrimary
+                            isSelected -> Color.White
+                            isToday -> Color(0xFF60A5FA)
                             else -> TextTertiary
                         },
                     )
 
                     Spacer(Modifier.height(6.dp))
 
-                    // Bungkus angka tanggalnya saja dengan padding kanan-kiri proporsional & kontras tinggi
+                    // Date number box (Obsidian style)
                     Box(
                         modifier = Modifier
-                            .defaultMinSize(minWidth = 36.dp)
-                            .clip(RoundedCornerShape(9.dp))
+                            .defaultMinSize(minWidth = 38.dp)
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
                             .background(
                                 when {
-                                    isToday && isSelected -> NeonBlueDark
-                                    isToday && !isSelected -> NeonBlueDark.copy(alpha = 0.14f)
-                                    isSelected -> if (isDark) Color(0xFF27272A) else Color(0xFF0F172A)
-                                    else -> if (isDark) CosmicNavy else Color.White
+                                    isSelected -> Color(0xFF2563EB)
+                                    isToday -> Color(0xFF2563EB).copy(alpha = 0.18f)
+                                    else -> Color(0xFF161618)
                                 }
                             )
                             .border(
-                                width = when {
-                                    isToday && isSelected -> 0.dp
-                                    isToday && !isSelected -> 1.5.dp
-                                    isSelected -> 0.dp
-                                    else -> 0.8.dp
-                                },
+                                width = 1.dp,
                                 color = when {
-                                    isToday && isSelected -> Color.Transparent
-                                    isToday && !isSelected -> NeonBlueDark
-                                    isSelected -> Color.Transparent
-                                    else -> GlassBorder
+                                    isSelected -> Color(0xFF3B82F6)
+                                    isToday -> Color(0xFF2563EB).copy(alpha = 0.6f)
+                                    else -> Color(0xFF27272A)
                                 },
-                                shape = RoundedCornerShape(9.dp)
+                                shape = RoundedCornerShape(12.dp)
                             )
-                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                            .padding(horizontal = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = day.dateNum,
-                            fontSize = 14.sp,
-                            fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 15.sp,
+                            fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.SemiBold,
                             color = when {
-                                isToday && isSelected -> Color.White
-                                isToday && !isSelected -> NeonBlueDark
                                 isSelected -> Color.White
+                                isToday -> Color(0xFF93C5FD)
                                 else -> TextSecondary
                             },
                         )
@@ -609,18 +636,18 @@ private fun WeeklyCalendarStrip(
                     if (classCount > 0) {
                         Box(
                             modifier = Modifier
-                                .size(4.dp)
+                                .size(5.dp)
                                 .clip(CircleShape)
                                 .background(
                                     when {
-                                        isToday -> NeonBlueDark
-                                        isSelected -> TextPrimary
-                                        else -> TextTertiary
+                                        isSelected -> Color(0xFF60A5FA)
+                                        isToday -> NeonSuccess
+                                        else -> Color(0xFF71717A)
                                     }
                                 )
                         )
                     } else {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(5.dp))
                     }
                 }
             }
@@ -628,7 +655,7 @@ private fun WeeklyCalendarStrip(
     }
 }
 
-// ── SMART STATUS FILTER CHIPS (Apple Segmented Style) ─────────────────────────
+// ── SMART STATUS FILTER CHIPS (Obsidian Segmented Style) ─────────────────────────
 
 @Composable
 private fun ScheduleFilterChips(
@@ -651,22 +678,22 @@ private fun ScheduleFilterChips(
 
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         itemsIndexed(tabs) { _, tab ->
             val isSelected = selectedFilter == tab.id
 
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) com.schoolos.android.core.designsystem.CosmicSurface2 else CosmicNavy)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isSelected) Color(0xFF27272A) else Color(0xFF161618))
                     .border(
-                        0.5.dp,
-                        if (isSelected) com.schoolos.android.core.designsystem.GlassBorder2 else GlassBorder,
-                        RoundedCornerShape(8.dp)
+                        1.dp,
+                        if (isSelected) Color(0xFF3F3F46) else Color(0xFF1F1F23),
+                        RoundedCornerShape(12.dp)
                     )
                     .clickable { onFilterSelected(tab.id) }
-                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -683,23 +710,23 @@ private fun ScheduleFilterChips(
                     }
                     Text(
                         text = tab.label,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) TextPrimary else TextTertiary,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = if (isSelected) Color.White else TextTertiary,
                     )
                     if (tab.count > 0) {
                         Spacer(Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (isSelected) com.schoolos.android.core.designsystem.CosmicSurface3 else com.schoolos.android.core.designsystem.CosmicSurface2)
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isSelected) Color(0xFF3F3F46) else Color(0xFF222226))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "${tab.count}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isSelected) TextPrimary else TextTertiary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (isSelected) Color.White else TextSecondary,
                             )
                         }
                     }

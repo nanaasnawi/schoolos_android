@@ -248,6 +248,15 @@ fun TeacherChatScreen(
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                 )
 
+                // ── 1.5. FEATURED TANYA GURU AI (NVIDIA NIM) ───────────────
+                TanyaAiBannerCard(
+                    onOpenAiChat = {
+                        val aiThread = chatManager.getOrCreateAiThread()
+                        onOpenThread(aiThread.id, "Guru AI (NVIDIA NIM)")
+                    },
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+
                 // ── 2. SEARCH BAR ───────────────────────────────────────────
                 Box(
                     modifier = Modifier
@@ -1043,4 +1052,134 @@ private fun formatTimeAgo(timestamp: Long): String {
     if (days == 1L) return "Kemarin"
     if (days < 30) return "$days hr lalu"
     return "${days / 30} bln lalu"
+}
+
+@Composable
+private fun TanyaAiBannerCard(
+    onOpenAiChat: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color(0xFF111113))
+            .border(1.dp, Color(0xFF1F1F23), RoundedCornerShape(18.dp))
+            .clickable(onClick = onOpenAiChat)
+            .padding(14.dp)
+    ) {
+        Column {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF1E1B4B))
+                            .border(1.dp, Color(0xFF4338CA), RoundedCornerShape(10.dp)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(text = "🤖", fontSize = 18.sp)
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Tanya Guru AI",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White,
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF047857).copy(alpha = 0.25f))
+                                    .border(0.5.dp, Color(0xFF10B981), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 5.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "NVIDIA AI",
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF34D399),
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = "Asisten belajar pintar 24 jam untuk konsultasi materi & rumus",
+                            fontSize = 11.sp,
+                            color = TextTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+
+                Spacer(Modifier.width(8.dp))
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF161618))
+                        .border(1.dp, Color(0xFF27272A), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 5.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Tanya",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF818CF8)
+                        )
+                        Spacer(Modifier.width(3.dp))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color(0xFF818CF8),
+                            modifier = Modifier.size(11.dp)
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(10.dp))
+
+            // Quick suggestion chips
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                val prompts = listOf(
+                    "💡 Konsep Materi",
+                    "📐 Rumus & Soal",
+                    "📝 Ringkas Catatan"
+                )
+                prompts.forEach { prompt ->
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFF161618))
+                            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(8.dp))
+                            .clickable(onClick = onOpenAiChat)
+                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = prompt,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = TextSecondary
+                        )
+                    }
+                }
+            }
+        }
+    }
 }

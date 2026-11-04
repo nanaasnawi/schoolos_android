@@ -22,6 +22,9 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
@@ -53,6 +56,8 @@ data class ChatMessage(
     val isFromTeacher: Boolean = false,
     val isRead: Boolean = false,
     val readAt: Long? = null,
+    val attachmentUrl: String? = null,
+    val attachmentType: String? = null,
 )
 
 data class ChatThread(
@@ -642,6 +647,8 @@ class ChatManager @Inject constructor(
         senderName: String,
         senderRole: String,
         content: String,
+        attachmentUrl: String? = null,
+        attachmentType: String? = null,
     ): ChatMessage {
         val auth = cachedAuth
         val isTeacher = if (auth?.isStudent == true) false else (senderRole.equals("TEACHER", ignoreCase = true) || auth?.isTeacher == true)
@@ -672,6 +679,8 @@ class ChatManager @Inject constructor(
             timestamp = now,
             isFromTeacher = isTeacher,
             isRead = false,
+            attachmentUrl = attachmentUrl,
+            attachmentType = attachmentType,
         )
 
         val currentThread = _threads.value.find { it.id == threadId }
@@ -696,12 +705,13 @@ class ChatManager @Inject constructor(
             if (thread.id == threadId) {
                 val alreadyHas = thread.messages.any { it.id == clientUuid }
                 val updatedMsgs = if (alreadyHas) thread.messages else thread.messages + localMsg
+                val effectiveSnippet = if (content.isNotBlank()) content.trim() else if (!attachmentUrl.isNullOrBlank()) "📷 [Foto Lampiran]" else ""
                 thread.copy(
                     messages = updatedMsgs,
                     status = if (isTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
                     lastUpdated = now,
                     teacherName = updatedTeacherName,
-                    lastMessageContent = content.trim(),
+                    lastMessageContent = effectiveSnippet,
                     lastSenderName = effectiveSenderName,
                     messageCount = updatedMsgs.size,
                     readStatusLabel = if (isTeacher) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong",
@@ -723,6 +733,8 @@ class ChatManager @Inject constructor(
                         senderName = effectiveSenderName,
                         senderRole = effectiveRole,
                         content = content.trim(),
+                        attachmentUrl = attachmentUrl,
+                        attachmentType = attachmentType,
                     )
                 )
             } catch (e: Exception) {
@@ -731,6 +743,140 @@ class ChatManager @Inject constructor(
         }
 
         return localMsg
+    }
+
+    suspend fun uploadAttachment(bytes: ByteArray, filename: String, mimeType: String): Result<String> {
+        return try {
+            val reqBody = bytes.toRequestBody(mimeType.toMediaTypeOrNull())
+            val part = MultipartBody.Part.createFormData("file", filename, reqBody)
+            val resp = api.uploadAttachment(part)
+            if (resp.success && resp.data != null) {
+                Result.success(resp.data.url)
+            } else {
+                Result.failure(Exception(resp.error?.message ?: "Gagal mengunggah foto lampiran"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "uploadAttachment failed")
+            Result.failure(e)
+        }
+    }
+
+    suspend fun askAi(
+        threadId: String,
+        question: String,
+        subjectName: String? = null,
+        gradeLevel: String? = null,
+        history: List<ChatMessage> = emptyList(),
+    ): Result<String> {
+        return try {
+            val historyDtos = history.takeLast(6).map {
+                TanyaAiHistoryDto(
+                    role = if (it.isFromTeacher) "assistant" else "user",
+                    content = it.content,
+                )
+            }
+            val resp = api.tanyaAi(
+                TanyaAiRequestDto(
+                    question = question,
+                    subjectName = subjectName,
+                    gradeLevel = gradeLevel,
+                    history = historyDtos,
+                )
+            )
+            if (resp.success && resp.data != null) {
+                val replyText = resp.data.reply
+                val now = System.currentTimeMillis()
+                val aiMsg = ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    threadId = threadId,
+                    senderId = "ai-tutor",
+                    senderName = "Guru AI",
+                    senderRole = "TEACHER",
+                    content = replyText,
+                    timestamp = now,
+                    isFromTeacher = true,
+                    isRead = true,
+                )
+                firebaseRtdbManager.pushMessage(
+                    threadId = threadId,
+                    message = aiMsg,
+                    teacherId = "ai-tutor",
+                    teacherName = "Guru AI",
+                )
+                _threads.value = _threads.value.map { thread ->
+                    if (thread.id == threadId) {
+                        val updated = thread.messages + aiMsg
+                        thread.copy(
+                            messages = updated,
+                            status = InquiryStatus.ANSWERED,
+                            lastUpdated = now,
+                            lastMessageContent = replyText,
+                            lastSenderName = "Guru AI",
+                            messageCount = updated.size,
+                            readStatusLabel = "Dijawab Guru AI",
+                        )
+                    } else {
+                        thread
+                    }
+                }
+                Result.success(replyText)
+            } else {
+                Result.failure(Exception(resp.error?.message ?: "Gagal mendapatkan respon AI"))
+            }
+        } catch (e: Exception) {
+            Timber.e(e, "askAi failed")
+            Result.failure(e)
+        }
+    }
+
+    fun getOrCreateAiThread(): ChatThread {
+        val auth = cachedAuth
+        val studentId = auth?.userId ?: "student-default"
+        val studentName = auth?.name ?: "Siswa"
+        val studentClass = auth?.className ?: "Kelas"
+        val aiThreadId = "ai-tutor-$studentId"
+
+        val existing = _threads.value.find { it.id == aiThreadId }
+        if (existing != null) return existing
+
+        val initialAiMessage = ChatMessage(
+            id = "ai-welcome-$studentId",
+            threadId = aiThreadId,
+            senderId = "ai-tutor",
+            senderName = "Guru AI",
+            senderRole = "TEACHER",
+            content = "Halo ${studentName.substringBefore(" ")}! 👋 Saya Guru AI (Asisten Belajar Pintar didukung NVIDIA AI).\n\nAda materi, rumus, konsep, atau tugas yang ingin kamu tanyakan hari ini? Ketik pertanyaanmu atau kirimkan foto soal/materi ya!",
+            timestamp = System.currentTimeMillis(),
+            isFromTeacher = true,
+            isRead = true,
+        )
+
+        val newAiThread = ChatThread(
+            id = aiThreadId,
+            studentId = studentId,
+            studentName = studentName,
+            studentClass = studentClass,
+            teacherId = "ai-tutor",
+            teacherName = "Guru AI (NVIDIA NIM)",
+            subjectName = "Tanya AI",
+            inquiryType = InquiryType.GENERAL,
+            referenceTitle = "Asisten Belajar Pintar 24 Jam",
+            referenceId = null,
+            messages = listOf(initialAiMessage),
+            status = InquiryStatus.ANSWERED,
+            lastUpdated = System.currentTimeMillis(),
+            lastMessageContent = initialAiMessage.content,
+            lastSenderName = "Guru AI",
+            messageCount = 1,
+            readStatusLabel = "Siap Menjawab 24 Jam",
+            teacherLastReadAt = System.currentTimeMillis(),
+        )
+
+        _threads.value = listOf(newAiThread) + _threads.value
+        saveToDisk(_threads.value, auth?.userId)
+        firebaseRtdbManager.syncThreadMetadata(newAiThread)
+        firebaseRtdbManager.pushMessage(aiThreadId, initialAiMessage)
+        return newAiThread
     }
 
     fun createInquiry(

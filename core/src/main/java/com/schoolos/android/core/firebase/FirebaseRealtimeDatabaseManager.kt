@@ -89,6 +89,8 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                 "isFromTeacher" to message.isFromTeacher,
                 "isRead" to message.isRead,
             )
+            message.attachmentUrl?.let { msgMap["attachmentUrl"] = it }
+            message.attachmentType?.let { msgMap["attachmentType"] = it }
 
             msgRef.setValue(msgMap)
 
@@ -317,6 +319,8 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                             ?: senderRole.equals("TEACHER", ignoreCase = true)
                         val isRead = child.child("isRead").getValue(Boolean::class.java) ?: false
                         val readAt = child.child("readAt").getValue(Long::class.java)
+                        val attachmentUrl = child.child("attachmentUrl").getValue(String::class.java)
+                        val attachmentType = child.child("attachmentType").getValue(String::class.java)
 
                         messagesList.add(
                             ChatMessage(
@@ -330,6 +334,8 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                                 isFromTeacher = isFromTeacher,
                                 isRead = isRead,
                                 readAt = readAt,
+                                attachmentUrl = attachmentUrl,
+                                attachmentType = attachmentType,
                             )
                         )
                     } catch (e: Exception) {
