@@ -6,6 +6,7 @@ import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.repository.AcademicRepository
+import com.schoolos.android.domain.repository.AuthRepository
 import com.schoolos.android.domain.repository.ChoiceInput
 import com.schoolos.android.domain.repository.QuizRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -54,6 +55,7 @@ class QuizBuilderViewModel @Inject constructor(
     private val academicRepository: AcademicRepository,
     private val generatorRepository: com.schoolos.android.domain.repository.CurriculumGeneratorRepository,
     private val authManager: AuthManager,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(QuizBuilderUiState())
@@ -277,7 +279,20 @@ class QuizBuilderViewModel @Inject constructor(
     fun loadAcademicData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingAcademicData = true)
-            val auth = authManager.authState.first()
+            var auth = authManager.authState.first()
+            if (auth.isSubjectLockedTeacher) {
+                try {
+                    val officialRes = authRepository.getTeacherOfficialBiodata()
+                    officialRes.getOrNull()?.let { official ->
+                        val officialSubject = official.subject?.trim()
+                        if (!officialSubject.isNullOrBlank()) {
+                            authManager.updateSubject(officialSubject)
+                            auth = authManager.authState.first()
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+
             val classesResult = academicRepository.getClasses()
             val subjectsResult = academicRepository.getSubjects()
             val rawSubjects = subjectsResult.getOrDefault(emptyList())
@@ -316,10 +331,12 @@ class QuizBuilderViewModel @Inject constructor(
                 availableSubjects = finalSubjects,
                 teacherSubject = if (isLocked) teacherSubj else null,
                 isSubjectLocked = isLocked,
-                subjectName = if (isLocked && teacherSubj != null && _state.value.subjectName.isBlank()) {
+                subjectName = if (isLocked && teacherSubj != null) {
                     finalSubjects.firstOrNull()?.name ?: teacherSubj
-                } else {
+                } else if (_state.value.subjectName.isNotBlank()) {
                     _state.value.subjectName
+                } else {
+                    finalSubjects.firstOrNull()?.name ?: ""
                 }
             )
         }

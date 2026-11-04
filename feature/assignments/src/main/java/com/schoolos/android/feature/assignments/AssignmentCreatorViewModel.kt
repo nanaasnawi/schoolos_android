@@ -9,6 +9,7 @@ import com.schoolos.android.domain.model.AssignmentChoice
 import com.schoolos.android.domain.model.AssignmentQuestion
 import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.AssignmentRepository
+import com.schoolos.android.domain.repository.AuthRepository
 import com.schoolos.android.domain.repository.CurriculumGeneratorRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -61,6 +62,7 @@ class AssignmentCreatorViewModel @Inject constructor(
     private val academicRepository: AcademicRepository,
     private val generatorRepository: CurriculumGeneratorRepository,
     private val authManager: AuthManager,
+    private val authRepository: AuthRepository,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(AssignmentCreatorUiState())
@@ -194,7 +196,20 @@ class AssignmentCreatorViewModel @Inject constructor(
     fun loadAcademicData() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoadingAcademicData = true)
-            val auth = authManager.authState.first()
+            var auth = authManager.authState.first()
+            if (auth.isSubjectLockedTeacher) {
+                try {
+                    val officialRes = authRepository.getTeacherOfficialBiodata()
+                    officialRes.getOrNull()?.let { official ->
+                        val officialSubject = official.subject?.trim()
+                        if (!officialSubject.isNullOrBlank()) {
+                            authManager.updateSubject(officialSubject)
+                            auth = authManager.authState.first()
+                        }
+                    }
+                } catch (_: Exception) {}
+            }
+
             val classesResult = academicRepository.getClasses()
             val subjectsResult = academicRepository.getSubjects()
             val rawSubjects = subjectsResult.getOrDefault(emptyList())
