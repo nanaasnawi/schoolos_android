@@ -279,7 +279,7 @@ private fun HomeAksesUtamaSectionHeader() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.Start,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -288,13 +288,6 @@ private fun HomeAksesUtamaSectionHeader() {
             fontWeight = FontWeight.ExtraBold,
             letterSpacing = 0.5.sp,
             color = if (isDark) TextTertiary else Color(0xFF64748B)
-        )
-
-        Text(
-            text = "Kurikulum Merdeka",
-            fontSize = 11.5.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (isDark) TextTertiary else Color(0xFF94A3B8)
         )
     }
 }
