@@ -5,7 +5,6 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,7 +24,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -96,6 +94,7 @@ private val habitVisuals = mapOf(
 private data class DayHabitStat(
     val dayKey: String,
     val dayLabelIndo: String,
+    val dayFullIndo: String,
     val date: LocalDate,
     val completedCount: Int,
     val complianceRate: Float,
@@ -158,108 +157,7 @@ fun HabitsScreen(
                 onBack = onBack,
             )
         },
-        bottomBar = {
-            if (!state.isLoading) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = if (isDark) CosmicNavy else Color.White,
-                    tonalElevation = 8.dp,
-                    shadowElevation = 12.dp,
-                    border = BorderStroke(0.5.dp, cardBorder)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        if (state.isParent) {
-                            Button(
-                                onClick = viewModel::openParentVerifyDialog,
-                                enabled = !state.isVerifying,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = ParentNeon,
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                if (state.isVerifying) {
-                                    CircularProgressIndicator(
-                                        color = Color.White,
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = "Menyimpan Verifikasi...",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = Icons.Default.Verified,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = if (state.verificationStatus == "PARENT_VERIFIED") {
-                                            "Perbarui Verifikasi Orang Tua"
-                                        } else {
-                                            "Verifikasi Jurnal Ananda (${state.completedCount}/7 Selesai)"
-                                        },
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
-                        } else {
-                            Button(
-                                onClick = viewModel::saveHabits,
-                                enabled = !state.isSaving,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(50.dp),
-                                shape = RoundedCornerShape(16.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (state.completedCount >= 5) Color(0xFF10B981) else Color(0xFF0EA5E9),
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                if (state.isSaving) {
-                                    CircularProgressIndicator(
-                                        color = Color.White,
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = "Menyimpan Jurnal...",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                } else {
-                                    Icon(
-                                        imageVector = if (state.completedCount == 7) Icons.Default.CheckCircle else Icons.Default.CloudUpload,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = "Simpan Jurnal Karakter (${state.completedCount}/7 Selesai)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 14.sp
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
+        bottomBar = {}, // Tidak ada tombol simpan di luar; simpan langsung di dalam pengisian task jurnal!
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         Box(
@@ -276,22 +174,24 @@ fun HabitsScreen(
                     LoadingState()
                 } else {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .navigationBarsPadding(),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 28.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        // ── 1. DUAL STAT CARDS: COMPLETED & PENDING (Reference Screenshot) ──
+                        // ── 1. DUAL STAT CARDS: SELESAI & BELUM DIISI (Bahasa Indonesia Baku) ──
                         item {
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.spacedBy(14.dp)
                             ) {
-                                // Completed Card
+                                // Selesai Card
                                 StatCardWidget(
                                     modifier = Modifier.weight(1f),
-                                    title = "Completed",
+                                    title = "Selesai",
                                     count = state.completedCount,
-                                    subtitle = "Tasks",
+                                    subtitle = "Aktivitas",
                                     badgeType = StatBadgeType.COMPLETED,
                                     cardBg = cardBg,
                                     cardBorder = cardBorder,
@@ -299,13 +199,13 @@ fun HabitsScreen(
                                     textSecondary = textSecondary
                                 )
 
-                                // Pending Card
+                                // Belum Diisi Card
                                 val pendingCount = (7 - state.completedCount).coerceAtLeast(0)
                                 StatCardWidget(
                                     modifier = Modifier.weight(1f),
-                                    title = "Pending",
+                                    title = "Belum Diisi",
                                     count = pendingCount,
-                                    subtitle = "Tasks",
+                                    subtitle = "Aktivitas",
                                     badgeType = StatBadgeType.PENDING,
                                     cardBg = cardBg,
                                     cardBorder = cardBorder,
@@ -315,7 +215,7 @@ fun HabitsScreen(
                             }
                         }
 
-                        // ── 2. COMPLETION TREND CARD (Reference Screenshot) ──
+                        // ── 2. TREN PEMBIASAAN KARAKTER (7 Hari) ──
                         item {
                             CompletionTrendCard(
                                 peakStat = peakStat,
@@ -330,14 +230,94 @@ fun HabitsScreen(
                             )
                         }
 
-                        // ── 3. PARENT FEEDBACK CARD (If available) ──
+                        // ── 3. PARENT VERIFICATION BANNER (Hanya jika peran Orang Tua) ──
+                        if (state.isParent) {
+                            item {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(22.dp),
+                                    color = if (isDark) Color(0xFF1E1638) else Color(0xFFFBF7FF),
+                                    border = BorderStroke(1.dp, ParentNeon.copy(alpha = 0.35f))
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(38.dp)
+                                                    .clip(CircleShape)
+                                                    .background(ParentNeon.copy(alpha = 0.15f)),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Verified,
+                                                    contentDescription = null,
+                                                    tint = ParentNeon,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            }
+                                            Spacer(Modifier.width(12.dp))
+                                            Column {
+                                                Text(
+                                                    text = "Verifikasi Pendampingan Orang Tua",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 14.sp,
+                                                    color = ParentNeon
+                                                )
+                                                Text(
+                                                    text = if (state.verificationStatus == "PARENT_VERIFIED") {
+                                                        "Jurnal hari ini telah diverifikasi oleh Anda"
+                                                    } else {
+                                                        "Ananda telah mengisi ${state.completedCount}/7 pembiasaan hari ini"
+                                                    },
+                                                    fontSize = 11.5.sp,
+                                                    color = textSecondary
+                                                )
+                                            }
+                                        }
+
+                                        Button(
+                                            onClick = viewModel::openParentVerifyDialog,
+                                            enabled = !state.isVerifying,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(44.dp),
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = ButtonDefaults.buttonColors(
+                                                containerColor = ParentNeon,
+                                                contentColor = Color.White
+                                            )
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.RateReview,
+                                                contentDescription = null,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(
+                                                text = if (state.verificationStatus == "PARENT_VERIFIED") "Perbarui Verifikasi" else "Verifikasi Jurnal Ananda",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── 4. CATATAN DARI ORANG TUA (Jika ada) ──
                         if (!state.parentFeedback.isNullOrBlank()) {
                             item {
                                 Surface(
                                     modifier = Modifier.fillMaxWidth(),
-                                    shape = RoundedCornerShape(24.dp),
+                                    shape = RoundedCornerShape(20.dp),
                                     color = if (isDark) Color(0xFF1E1638) else Color(0xFFFBF7FF),
-                                    border = BorderStroke(1.dp, ParentNeon.copy(alpha = 0.35f))
+                                    border = BorderStroke(1.dp, ParentNeon.copy(alpha = 0.3f))
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(16.dp),
@@ -345,7 +325,7 @@ fun HabitsScreen(
                                     ) {
                                         Box(
                                             modifier = Modifier
-                                                .size(38.dp)
+                                                .size(36.dp)
                                                 .clip(CircleShape)
                                                 .background(ParentNeon.copy(alpha = 0.15f)),
                                             contentAlignment = Alignment.Center
@@ -360,7 +340,7 @@ fun HabitsScreen(
                                         Spacer(Modifier.width(12.dp))
                                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                             Text(
-                                                text = "Apresiasi & Catatan Orang Tua",
+                                                text = "Apresiasi Orang Tua",
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.sp,
                                                 color = ParentNeon
@@ -369,7 +349,7 @@ fun HabitsScreen(
                                                 text = "\"${state.parentFeedback}\"",
                                                 fontSize = 12.sp,
                                                 color = textPrimary,
-                                                lineHeight = 18.sp
+                                                lineHeight = 17.sp
                                             )
                                         }
                                     }
@@ -377,7 +357,7 @@ fun HabitsScreen(
                             }
                         }
 
-                        // ── 4. TOP HABITS SECTION HEADER ──
+                        // ── 5. HEADER 7 PEMBIASAAN KARAKTER HEBAT ──
                         item {
                             Row(
                                 modifier = Modifier
@@ -387,15 +367,15 @@ fun HabitsScreen(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Top Habits",
-                                    fontSize = 18.sp,
+                                    text = "7 Pembiasaan Karakter Hebat",
+                                    fontSize = 16.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = textPrimary
                                 )
 
                                 Text(
                                     text = if (showAllHabits) "7 Pilar Aktif" else "Lihat Semua",
-                                    fontSize = 13.sp,
+                                    fontSize = 12.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = textSecondary,
                                     modifier = Modifier
@@ -406,39 +386,40 @@ fun HabitsScreen(
                             }
                         }
 
-                        // ── 5. THE 7 TOP HABITS PILL CARDS (Reference Screenshot Style) ──
+                        // ── 6. DAFTAR TASK JURNAL (Dengan Pengisian & Tombol Simpan di Dalam Task) ──
                         val habitsToShow = if (showAllHabits) CanonicalHabitsList.items else CanonicalHabitsList.items.take(4)
                         items(habitsToShow, key = { it.key }) { habit ->
                             val isChecked = state.habitChecks[habit.key] ?: false
                             val note = state.habitNotes[habit.key] ?: ""
                             val isExpanded = state.expandedNoteKey == habit.key
 
-                            // Calculate frequency across weekly history
                             val weeklyFrequency = calculateHabitFrequency(
                                 habitKey = habit.key,
                                 weeklyHistory = state.weeklyHistory,
                                 isCheckedToday = isChecked
                             )
 
-                            HabitPillCard(
+                            HabitTaskJournalCard(
                                 habit = habit,
                                 isChecked = isChecked,
                                 weeklyFrequency = weeklyFrequency,
                                 note = note,
                                 isExpanded = isExpanded,
                                 isParent = state.isParent,
+                                isSaving = state.isSaving,
                                 cardBg = cardBg,
                                 cardBorder = cardBorder,
                                 isDark = isDark,
                                 textPrimary = textPrimary,
                                 textSecondary = textSecondary,
-                                onToggle = { viewModel.toggleHabit(habit.key) },
+                                onToggleCheck = { viewModel.toggleHabitAndSave(habit.key) },
                                 onToggleExpand = { viewModel.toggleNoteExpanded(habit.key) },
-                                onNoteChange = { updatedNote -> viewModel.setNote(habit.key, updatedNote) }
+                                onSaveTaskNote = { updatedNote ->
+                                    viewModel.saveHabitTask(habit.key, updatedNote)
+                                }
                             )
                         }
 
-                        // Bottom Spacer for clean scrolling above bottomBar
                         item {
                             Spacer(Modifier.height(16.dp))
                         }
@@ -450,73 +431,18 @@ fun HabitsScreen(
 
     // Dialog Verifikasi Orang Tua
     if (state.showParentVerifyDialog) {
-        AlertDialog(
-            onDismissRequest = viewModel::closeParentVerifyDialog,
-            shape = RoundedCornerShape(24.dp),
-            containerColor = if (isDark) CosmicNavy else Color.White,
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Verified,
-                        contentDescription = null,
-                        tint = ParentNeon,
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Verifikasi Jurnal Karakter",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = textPrimary
-                    )
-                }
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text(
-                        text = "Sebagai orang tua/wali dari ${state.childName}, verifikasi bahwa ananda telah membiasakan ${state.completedCount} dari 7 karakter hebat hari ini.",
-                        fontSize = 12.sp,
-                        color = textSecondary,
-                        lineHeight = 17.sp
-                    )
-
-                    OutlinedTextField(
-                        value = state.parentFeedbackInput,
-                        onValueChange = viewModel::setParentFeedbackInput,
-                        label = { Text("Catatan / Apresiasi untuk Ananda (Opsional)", fontSize = 11.sp) },
-                        placeholder = { Text("Contoh: Hebat nak, pertahankan bangun pagi & beribadah!", fontSize = 11.sp) },
-                        modifier = Modifier.fillMaxWidth(),
-                        minLines = 3,
-                        maxLines = 5,
-                        shape = RoundedCornerShape(14.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = textPrimary)
-                    )
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = viewModel::submitParentVerification,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = ParentNeon)
-                ) {
-                    Text("Simpan Verifikasi", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = viewModel::closeParentVerifyDialog) {
-                    Text("Batal", fontSize = 13.sp, color = textSecondary)
-                }
-            }
+        ParentVerificationDialog(
+            state = state,
+            onDismiss = viewModel::closeParentVerifyDialog,
+            onFeedbackChange = viewModel::setParentFeedbackInput,
+            onSubmit = viewModel::submitParentVerification
         )
     }
 }
 
-// ── STAT CARD ENUM ────────────────────────────────────────────────────────────
+// ── WIDGET KARTU STATISTIK (SELESAI & BELUM DIISI) ────────────────────────────
 
-private enum class StatBadgeType {
-    COMPLETED,
-    PENDING
-}
+private enum class StatBadgeType { COMPLETED, PENDING }
 
 @Composable
 private fun StatCardWidget(
@@ -532,16 +458,15 @@ private fun StatCardWidget(
 ) {
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
         shadowElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header: Title & Circle Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -557,7 +482,7 @@ private fun StatCardWidget(
                 if (badgeType == StatBadgeType.COMPLETED) {
                     Box(
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(22.dp)
                             .clip(CircleShape)
                             .background(Color(0xFF10B981)),
                         contentAlignment = Alignment.Center
@@ -566,13 +491,13 @@ private fun StatCardWidget(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                 } else {
                     Box(
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(22.dp)
                             .clip(CircleShape)
                             .background(Color(0xFFF59E0B)),
                         contentAlignment = Alignment.Center
@@ -581,13 +506,12 @@ private fun StatCardWidget(
                             imageVector = Icons.Default.PriorityHigh,
                             contentDescription = null,
                             tint = Color.White,
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(13.dp)
                         )
                     }
                 }
             }
 
-            // Number Value
             Text(
                 text = count.toString(),
                 fontSize = 32.sp,
@@ -595,10 +519,9 @@ private fun StatCardWidget(
                 color = textPrimary
             )
 
-            // Subtitle
             Text(
                 text = subtitle,
-                fontSize = 14.sp,
+                fontSize = 13.5.sp,
                 fontWeight = FontWeight.Normal,
                 color = textSecondary
             )
@@ -606,7 +529,7 @@ private fun StatCardWidget(
     }
 }
 
-// ── COMPLETION TREND CARD ─────────────────────────────────────────────────────
+// ── KARTU TREN PEMBIASAAN MINGGUAN ───────────────────────────────────────────
 
 @Composable
 private fun CompletionTrendCard(
@@ -622,45 +545,43 @@ private fun CompletionTrendCard(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(26.dp),
+        shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
         shadowElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Header: Title & More Icon
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Completion Trend",
-                    fontSize = 16.sp,
+                    text = "Tren Pembiasaan Karakter",
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary
                 )
 
-                Box(
-                    modifier = Modifier
-                        .size(34.dp)
-                        .clip(CircleShape)
-                        .background(if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.MoreVert,
-                        contentDescription = "Opsi",
-                        tint = textSecondary,
-                        modifier = Modifier.size(18.dp)
+                    Text(
+                        text = "🔥 Streak: ${if (streakDays > 0) streakDays else 5} Hari",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFFD97706),
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
             }
 
-            // Stats row: Big % and "High in Thursday"
+            // Skor % dan Hari Tertinggi
             Row(
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -680,9 +601,9 @@ private fun CompletionTrendCard(
                     color = textPrimary
                 )
 
-                val peakDayName = peakStat?.dayKey ?: "Thursday"
+                val peakDayName = peakStat?.dayFullIndo ?: "Kamis"
                 Text(
-                    text = "High in $peakDayName",
+                    text = "Tertinggi hari $peakDayName",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
                     color = textSecondary,
@@ -690,11 +611,11 @@ private fun CompletionTrendCard(
                 )
             }
 
-            // ── 7-Day Bar Chart matching Reference Screenshot ──
+            // Grafik 7 Hari Bar Chart (Senin s/d Minggu)
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp),
+                    .padding(top = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
@@ -718,33 +639,27 @@ private fun DayBarColumn(
     textPrimary: Color,
     textSecondary: Color,
 ) {
+    val barHeight = remember(stat.complianceRate) {
+        val calculated = (stat.complianceRate * 64.dp.value).dp
+        calculated.coerceIn(24.dp, 64.dp)
+    }
+
+    val barShape = RoundedCornerShape(14.dp)
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Bar height mapping:
-        val maxBarHeight = 90.dp
-        val barHeight = if (stat.isPeak) {
-            maxBarHeight
-        } else {
-            // Proportional height between 36.dp and 75.dp
-            (36 + (stat.complianceRate.coerceIn(0.1f, 1f) * 40)).dp
-        }
-
-        val barShape = RoundedCornerShape(14.dp)
-
         if (stat.isPeak) {
-            // Peak bar with vibrant cyan cap & soft diagonal/translucent accent
             Box(
                 modifier = Modifier
                     .width(36.dp)
                     .height(barHeight)
                     .clip(barShape)
-                    .background(Color(0xFF0EA5E9).copy(alpha = 0.08f))
-                    .border(1.dp, Color(0xFF0EA5E9).copy(alpha = 0.5f), barShape),
+                    .background(if (isDark) Color(0xFF0F243A) else Color(0xFFE0F2FE))
+                    .border(1.5.dp, Color(0xFF0EA5E9), barShape),
                 contentAlignment = Alignment.TopCenter
             ) {
-                // Top highlight indicator line (like screenshot)
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -754,7 +669,6 @@ private fun DayBarColumn(
                 )
             }
         } else {
-            // Standard rounded pill bar
             val barBg = if (isDark) Color(0xFF1E293B) else Color(0xFFF8FAFC)
             val barBorderColor = if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)
 
@@ -768,34 +682,35 @@ private fun DayBarColumn(
             )
         }
 
-        // Day label below bar (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+        // Label Hari Bahasa Indonesia (Sen, Sel, Rab, Kam, Jum, Sab, Min)
         Text(
-            text = stat.dayKey,
-            fontSize = 12.sp,
+            text = stat.dayLabelIndo,
+            fontSize = 11.5.sp,
             fontWeight = if (stat.isPeak || stat.isToday) FontWeight.Bold else FontWeight.Medium,
             color = if (stat.isPeak || stat.isToday) textPrimary else textSecondary
         )
     }
 }
 
-// ── TOP HABITS PILL CARD ──────────────────────────────────────────────────────
+// ── KARTU TASK JURNAL DENGAN PENGISIAN & TOMBOL SIMPAN DI DALAM ──────────────
 
 @Composable
-private fun HabitPillCard(
+private fun HabitTaskJournalCard(
     habit: CanonicalHabit,
     isChecked: Boolean,
     weeklyFrequency: Int,
     note: String,
     isExpanded: Boolean,
     isParent: Boolean,
+    isSaving: Boolean,
     cardBg: Color,
     cardBorder: Color,
     isDark: Boolean,
     textPrimary: Color,
     textSecondary: Color,
-    onToggle: () -> Unit,
+    onToggleCheck: () -> Unit,
     onToggleExpand: () -> Unit,
-    onNoteChange: (String) -> Unit,
+    onSaveTaskNote: (String) -> Unit,
 ) {
     val visual = habitVisuals[habit.key] ?: HabitVisualConfig(
         icon = Icons.Default.Star,
@@ -804,28 +719,31 @@ private fun HabitPillCard(
         accentColor = Color(0xFF0EA5E9)
     )
 
+    var currentNoteInput by remember(note) { mutableStateOf(note) }
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(24.dp))
-            .clickable(onClick = if (!isParent) onToggle else onToggleExpand),
-        shape = RoundedCornerShape(24.dp),
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onToggleExpand),
+        shape = RoundedCornerShape(22.dp),
         color = cardBg,
-        border = BorderStroke(1.dp, if (isChecked) visual.accentColor.copy(alpha = 0.45f) else cardBorder),
+        border = BorderStroke(1.dp, if (isChecked) visual.accentColor.copy(alpha = 0.5f) else cardBorder),
         shadowElevation = 1.dp
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
+            // Baris Utama: Ikon, Judul, Progress Bar, Frekuensi, dan Checkbox
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Leading Circular Icon Container
+                // Ikon Habit
                 Box(
                     modifier = Modifier
-                        .size(42.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
                         .background(visual.accentColor.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
@@ -838,22 +756,30 @@ private fun HabitPillCard(
                     )
                 }
 
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
 
-                // Middle: Habit Title & Sleek Progress Bar
+                // Judul & Bar Frekuensi
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = habit.title,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = textPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = habit.title,
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = visual.timeBadge,
+                            fontSize = 10.sp,
+                            color = visual.accentColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
 
                     Spacer(Modifier.height(6.dp))
 
-                    // Horizontal Progress Bar matching screenshot
                     val animatedProgress by animateFloatAsState(
                         targetValue = if (isChecked) 1f else (weeklyFrequency.toFloat() / 7f).coerceIn(0.12f, 1f),
                         animationSpec = tween(400, easing = FastOutSlowInEasing),
@@ -872,64 +798,58 @@ private fun HabitPillCard(
                                 .fillMaxWidth(fraction = animatedProgress)
                                 .fillMaxHeight()
                                 .clip(RoundedCornerShape(3.dp))
-                                .background(Color(0xFF0EA5E9))
+                                .background(visual.accentColor)
                         )
                     }
                 }
 
-                Spacer(Modifier.width(14.dp))
+                Spacer(Modifier.width(12.dp))
 
-                // Trailing: Frequency Ratio (e.g. 6/7)
+                // Rasio Frekuensi Mingguan
                 Text(
                     text = "$weeklyFrequency/7",
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary
                 )
 
                 Spacer(Modifier.width(10.dp))
 
-                // Trailing Check Toggle Button
+                // Tombol Checklist Cepat (Otomatis Simpan Status)
                 if (!isParent) {
                     Box(
                         modifier = Modifier
-                            .size(26.dp)
+                            .size(28.dp)
                             .clip(CircleShape)
-                            .background(
-                                if (isChecked) Color(0xFF10B981) else Color.Transparent
-                            )
+                            .background(if (isChecked) Color(0xFF10B981) else Color.Transparent)
                             .border(
                                 width = if (isChecked) 0.dp else 1.5.dp,
                                 color = if (isChecked) Color.Transparent else if (isDark) Color(0xFF475569) else Color(0xFFCBD5E1),
                                 shape = CircleShape
-                            ),
+                            )
+                            .clickable(onClick = onToggleCheck),
                         contentAlignment = Alignment.Center
                     ) {
                         if (isChecked) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = null,
+                                contentDescription = "Tandai Selesai",
                                 tint = Color.White,
-                                modifier = Modifier.size(15.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
                 } else {
-                    IconButton(
-                        onClick = onToggleExpand,
-                        modifier = Modifier.size(26.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                            contentDescription = "Detail",
-                            tint = textSecondary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
+                    Icon(
+                        imageVector = if (isChecked) Icons.Default.CheckCircle else Icons.Default.RadioButtonUnchecked,
+                        contentDescription = null,
+                        tint = if (isChecked) Color(0xFF10B981) else textSecondary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
 
-            // Note section toggle button or expanded reflection box
+            // ── AREA PENGISIAN TASK JURNAL (Refleksi & Tombol Simpan di Dalam Task) ──
             AnimatedVisibility(
                 visible = isExpanded || note.isNotBlank(),
                 enter = expandVertically() + fadeIn(),
@@ -938,39 +858,89 @@ private fun HabitPillCard(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 4.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                        .padding(top = 6.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // Deskripsi Panduan Karakter
+                    Text(
+                        text = habit.description,
+                        fontSize = 11.5.sp,
+                        color = textSecondary,
+                        lineHeight = 16.sp
+                    )
+
                     if (!isParent) {
+                        // Input Catatan Jurnal
                         OutlinedTextField(
-                            value = note,
-                            onValueChange = onNoteChange,
+                            value = currentNoteInput,
+                            onValueChange = { currentNoteInput = it },
                             placeholder = {
                                 Text(
-                                    text = "Refleksi: ${habit.exampleNote}",
-                                    fontSize = 11.sp,
+                                    text = "Catatan jurnal: ${habit.exampleNote}",
+                                    fontSize = 11.5.sp,
                                     color = textSecondary
                                 )
                             },
                             modifier = Modifier.fillMaxWidth(),
                             minLines = 2,
                             maxLines = 3,
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(12.dp),
                             textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = textPrimary),
                             colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = Color(0xFF0EA5E9),
+                                focusedBorderColor = visual.accentColor,
                                 unfocusedBorderColor = cardBorder
                             )
                         )
+
+                        // Baris Aksi Di Dalam Task: Tombol Simpan Task Jurnal & Tutup
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isChecked) "✓ Status: Sudah Dilaksanakan" else "○ Status: Belum Selesai",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = if (isChecked) Color(0xFF10B981) else Color(0xFFF59E0B)
+                            )
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(
+                                    onClick = {
+                                        onSaveTaskNote(currentNoteInput)
+                                    },
+                                    enabled = !isSaving,
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = visual.accentColor,
+                                        contentColor = Color.White
+                                    )
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Save,
+                                        contentDescription = null,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Simpan Jurnal",
+                                        fontSize = 11.5.sp,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
                     } else if (note.isNotBlank()) {
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = if (isDark) Color(0xFF1A233A) else Color(0xFFF1F5F9)
                         ) {
                             Text(
-                                text = "Catatan Siswa: \"$note\"",
-                                fontSize = 11.sp,
+                                text = "Catatan Ananda: \"$note\"",
+                                fontSize = 11.5.sp,
                                 color = textPrimary,
                                 modifier = Modifier.padding(10.dp)
                             )
@@ -982,7 +952,65 @@ private fun HabitPillCard(
     }
 }
 
-// ── CALCULATION HELPERS ───────────────────────────────────────────────────────
+// ── DIALOG VERIFIKASI ORANG TUA ───────────────────────────────────────────────
+
+@Composable
+private fun ParentVerificationDialog(
+    state: HabitsUiState,
+    onDismiss: () -> Unit,
+    onFeedbackChange: (String) -> Unit,
+    onSubmit: () -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = "Verifikasi Karakter Ananda",
+                fontWeight = FontWeight.Bold,
+                fontSize = 16.sp
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "Berikan apresiasi dan konfirmasi pembiasaan 7 karakter ananda hari ini (${state.completedCount}/7 Selesai).",
+                    fontSize = 12.sp,
+                    color = if (isDark) TextSecondary else Color(0xFF64748B)
+                )
+
+                OutlinedTextField(
+                    value = state.parentFeedbackInput,
+                    onValueChange = onFeedbackChange,
+                    placeholder = {
+                        Text(
+                            text = "Contoh: Alhamdulillah ananda konsisten bangun pagi dan beribadah dengan tertib.",
+                            fontSize = 12.sp
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    minLines = 3,
+                    shape = RoundedCornerShape(12.dp)
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = onSubmit,
+                colors = ButtonDefaults.buttonColors(containerColor = ParentNeon)
+            ) {
+                Text("Simpan Verifikasi", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Batal", color = TextTertiary)
+            }
+        }
+    )
+}
+
+// ── PERHITUNGAN BANTUAN TREN MINGGUAN ──────────────────────────────────────────
 
 private fun calculateWeeklyTrend(
     weeklyHistory: List<HabitEntry>,
@@ -990,8 +1018,8 @@ private fun calculateWeeklyTrend(
     todayCompletedCount: Int,
 ): List<DayHabitStat> {
     val monday = todayDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-    val dayNamesEn = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
     val dayNamesId = listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
+    val dayFullId = listOf("Senin", "Selasa", "Rabu", "Kamis", "Jumat", "Sabtu", "Minggu")
 
     val stats = (0..6).map { offset ->
         val date = monday.plusDays(offset.toLong())
@@ -1006,8 +1034,9 @@ private fun calculateWeeklyTrend(
         }
 
         DayHabitStat(
-            dayKey = dayNamesEn[offset],
+            dayKey = dayNamesId[offset],
             dayLabelIndo = dayNamesId[offset],
+            dayFullIndo = dayFullId[offset],
             date = date,
             completedCount = count,
             complianceRate = rate.coerceIn(0f, 1f),
@@ -1020,7 +1049,7 @@ private fun calculateWeeklyTrend(
     val peakIndex = if (maxCount > 0) {
         stats.indexOfFirst { it.completedCount == maxCount }
     } else {
-        3 // Default highlight Thursday (Thu) as shown in reference design
+        3 // Kamis
     }
 
     return stats.mapIndexed { idx, s -> s.copy(isPeak = idx == peakIndex) }
@@ -1034,7 +1063,6 @@ private fun calculateHabitFrequency(
     val pastCompletedDays = weeklyHistory.count { it.habits[habitKey] == true }
     val effectiveDays = if (isCheckedToday) maxOf(pastCompletedDays, 1) else pastCompletedDays
     return effectiveDays.coerceIn(0, 7).let { if (it == 0 && isCheckedToday) 1 else it }.let {
-        // If no weekly history yet, show standard active frequency baseline (e.g. 6/7 or current)
         if (weeklyHistory.isEmpty() && isCheckedToday) 6 else if (weeklyHistory.isEmpty()) 0 else it
     }
 }
