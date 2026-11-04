@@ -181,7 +181,7 @@ fun HomeScreen(
                     top = 8.dp,
                     bottom = padding.calculateBottomPadding() + 16.dp,
                 ),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 // ── 1. QUIET INSTITUTIONAL TOP BAR ────────────────────────────────
                 item {
@@ -357,8 +357,8 @@ fun HomeScreen(
                     }
                 }
 
-                // ── 2. STREAMLINED LIVE SPOTLIGHT HERO (Hanya Guru & Siswa) ──────
-                if (!isPrincipal) {
+                // ── 2. STREAMLINED LIVE SPOTLIGHT HERO (Hanya Guru) ──────
+                if (isTeacher) {
                 item {
                     val hasLiveSession = state.nextSessionIsLive
                     val spotlightSubject = when {
@@ -627,6 +627,11 @@ fun HomeScreen(
                         xpCount                  = state.xpCount,
                         assignmentsCount         = state.assignmentsCount,
                         weeklyActivity           = state.weeklyActivity,
+                        studentName              = state.userName,
+                        studentClass             = state.homeroomClass,
+                        studentNisn              = state.userIdentifier,
+                        streakDays               = state.streakDays,
+                        studentAssignments       = state.studentAssignments,
                     )
                 }
             }
