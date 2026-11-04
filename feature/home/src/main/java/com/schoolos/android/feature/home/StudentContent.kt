@@ -154,8 +154,8 @@ private fun StudentGreetingHeroCard(
     streakDays: Int,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
-    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
@@ -304,13 +304,26 @@ private fun HomeAksesUtamaGrid(
     onNavigateToGrades: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
-    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
     val assBadge = if (assignmentsCount.isNotBlank() && assignmentsCount != "0") "$assignmentsCount Tugas" else "Aktif"
     val gradeBadge = if (gradeAverage.isNotBlank() && gradeAverage != "-") "Rata-rata $gradeAverage" else "Transkrip"
+
+    // Theme-adaptive badge and icon backgrounds (dark translucent in dark mode, gentle pastel in light mode)
+    val tugasBadgeBg = if (isDark) Color(0xFF0C243B) else Color(0xFFE0F2FE)
+    val tugasColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
+    val kuisBadgeBg = if (isDark) Color(0xFF0A2B1D) else Color(0xFFDCFCE7)
+    val kuisColor = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+
+    val materiBadgeBg = if (isDark) Color(0xFF261447) else Color(0xFFF3E8FF)
+    val materiColor = if (isDark) Color(0xFFA78BFA) else Color(0xFF9333EA)
+
+    val raporBadgeBg = if (isDark) Color(0xFF31220A) else Color(0xFFFEF3C7)
+    val raporColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Row 1: Tugas Sekolah & Kuis Ujian
@@ -323,11 +336,11 @@ private fun HomeAksesUtamaGrid(
                 title = "Tugas Sekolah",
                 subtitle = "Cek tenggat PR & lembar kerja mandiri",
                 badgeText = assBadge,
-                badgeBg = Color(0xFFE0F2FE),
-                badgeColor = Color(0xFF0284C7),
+                badgeBg = tugasBadgeBg,
+                badgeColor = tugasColor,
                 icon = Icons.AutoMirrored.Filled.Assignment,
-                iconCircleBg = Color(0xFFE0F2FE),
-                iconTint = Color(0xFF0284C7),
+                iconCircleBg = tugasBadgeBg,
+                iconTint = tugasColor,
                 actionText = "Buka Tugas",
                 cardBg = cardBg,
                 cardBorder = cardBorder,
@@ -341,11 +354,11 @@ private fun HomeAksesUtamaGrid(
                 title = "Kuis & Ujian",
                 subtitle = "Simulasi CBT online, token & latihan",
                 badgeText = "CBT Online",
-                badgeBg = Color(0xFFDCFCE7),
-                badgeColor = Color(0xFF16A34A),
+                badgeBg = kuisBadgeBg,
+                badgeColor = kuisColor,
                 icon = Icons.Default.AccessTime,
-                iconCircleBg = Color(0xFFDCFCE7),
-                iconTint = Color(0xFF16A34A),
+                iconCircleBg = kuisBadgeBg,
+                iconTint = kuisColor,
                 actionText = "Masuk Ujian",
                 cardBg = cardBg,
                 cardBorder = cardBorder,
@@ -365,11 +378,11 @@ private fun HomeAksesUtamaGrid(
                 title = "Materi Belajar",
                 subtitle = "Buku teks resmi SIBI, modul & video",
                 badgeText = "Modul SIBI",
-                badgeBg = Color(0xFFF3E8FF),
-                badgeColor = Color(0xFF9333EA),
+                badgeBg = materiBadgeBg,
+                badgeColor = materiColor,
                 icon = Icons.AutoMirrored.Filled.MenuBook,
-                iconCircleBg = Color(0xFFF3E8FF),
-                iconTint = Color(0xFF9333EA),
+                iconCircleBg = materiBadgeBg,
+                iconTint = materiColor,
                 actionText = "Baca Materi",
                 cardBg = cardBg,
                 cardBorder = cardBorder,
@@ -383,11 +396,11 @@ private fun HomeAksesUtamaGrid(
                 title = "Rapor & Nilai",
                 subtitle = "Transkrip capaian kompetensi TP & nilai",
                 badgeText = gradeBadge,
-                badgeBg = Color(0xFFFEF3C7),
-                badgeColor = Color(0xFFD97706),
+                badgeBg = raporBadgeBg,
+                badgeColor = raporColor,
                 icon = Icons.Default.EmojiEvents,
-                iconCircleBg = Color(0xFFFEF3C7),
-                iconTint = Color(0xFFD97706),
+                iconCircleBg = raporBadgeBg,
+                iconTint = raporColor,
                 actionText = "Lihat Rapor",
                 cardBg = cardBg,
                 cardBorder = cardBorder,
@@ -513,8 +526,8 @@ private fun HomeTodayScheduleCard(
     onNavigateToSessionDetail: (String) -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
-    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
@@ -688,8 +701,8 @@ private fun HomeAcademicPerformanceCard(
     onNavigateToGrades: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
-    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
@@ -866,8 +879,8 @@ private fun HomeSibiReadingCard(
     onNavigateToLearning: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
-    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
@@ -1063,8 +1076,8 @@ private fun HomeWeeklyActivityCard(
     onNavigateToProgress: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
-    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
