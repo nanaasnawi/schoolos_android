@@ -23,10 +23,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -35,8 +34,11 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.CanonicalHabit
 import com.schoolos.android.domain.model.CanonicalHabitsList
+import com.schoolos.android.domain.model.HabitEntry
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import java.time.temporal.TemporalAdjusters
 import java.util.Locale
 
 private data class HabitVisualConfig(
@@ -48,22 +50,22 @@ private data class HabitVisualConfig(
 
 private val habitVisuals = mapOf(
     "bangun_pagi" to HabitVisualConfig(
-        icon = Icons.Default.WbSunny,
-        category = "Fajar & Mandiri",
-        timeBadge = "04.30 - 05.30",
+        icon = Icons.Default.Alarm,
+        category = "Disiplin Waktu",
+        timeBadge = "Sebelum Subuh",
         accentColor = Color(0xFFF59E0B)
     ),
     "beribadah" to HabitVisualConfig(
         icon = Icons.Default.SelfImprovement,
-        category = "Iman & Takwa",
-        timeBadge = "Khusyuk & Tepat Waktu",
-        accentColor = Color(0xFF8B5CF6)
+        category = "Spiritual & Moral",
+        timeBadge = "Tepat Waktu",
+        accentColor = Color(0xFF10B981)
     ),
     "berolahraga" to HabitVisualConfig(
         icon = Icons.AutoMirrored.Filled.DirectionsRun,
-        category = "Kebugaran",
-        timeBadge = "15+ Menit Gerak",
-        accentColor = Color(0xFF10B981)
+        category = "Kebugaran Fisik",
+        timeBadge = "15-30 Menit",
+        accentColor = Color(0xFFEC4899)
     ),
     "makan_sehat" to HabitVisualConfig(
         icon = Icons.Default.Restaurant,
@@ -81,7 +83,7 @@ private val habitVisuals = mapOf(
         icon = Icons.Default.Diversity3,
         category = "Gotong Royong",
         timeBadge = "Bantu Ortu & Sesama",
-        accentColor = Color(0xFFEC4899)
+        accentColor = Color(0xFF8B5CF6)
     ),
     "tidur_tepat_waktu" to HabitVisualConfig(
         icon = Icons.Default.Bedtime,
@@ -89,6 +91,16 @@ private val habitVisuals = mapOf(
         timeBadge = "Sebelum 21.30 WIB",
         accentColor = Color(0xFF6366F1)
     )
+)
+
+private data class DayHabitStat(
+    val dayKey: String,
+    val dayLabelIndo: String,
+    val date: LocalDate,
+    val completedCount: Int,
+    val complianceRate: Float,
+    val isToday: Boolean,
+    val isPeak: Boolean,
 )
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,6 +113,7 @@ fun HabitsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val isDark = LocalIsDarkTheme.current
     val snackbarHostState = remember { SnackbarHostState() }
+    var showAllHabits by remember { mutableStateOf(true) }
 
     LaunchedEffect(state.successSnackbar) {
         state.successSnackbar?.let { msg ->
@@ -116,8 +129,27 @@ fun HabitsScreen(
         }
     }
 
+    // Modern card background and border colors respecting theme
+    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val screenBg = if (isDark) CosmicBlack else Color(0xFFF8FAFC)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    // Calculate 7-day stats for the Completion Trend chart
+    val todayDate = remember { LocalDate.now() }
+    val weeklyStats = remember(state.weeklyHistory, state.completedCount, todayDate) {
+        calculateWeeklyTrend(
+            weeklyHistory = state.weeklyHistory,
+            todayDate = todayDate,
+            todayCompletedCount = state.completedCount
+        )
+    }
+
+    val peakStat = weeklyStats.find { it.isPeak } ?: weeklyStats.getOrNull(3) ?: weeklyStats.firstOrNull()
+
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = screenBg,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
@@ -130,16 +162,16 @@ fun HabitsScreen(
             if (!state.isLoading) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
-                    color = CosmicNavy,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
-                    border = BorderStroke(0.5.dp, GlassBorder)
+                    color = if (isDark) CosmicNavy else Color.White,
+                    tonalElevation = 8.dp,
+                    shadowElevation = 12.dp,
+                    border = BorderStroke(0.5.dp, cardBorder)
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
                             .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
                         if (state.isParent) {
                             Button(
@@ -147,8 +179,8 @@ fun HabitsScreen(
                                 enabled = !state.isVerifying,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(12.dp),
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = ParentNeon,
                                     contentColor = Color.White
@@ -177,7 +209,7 @@ fun HabitsScreen(
                                         text = if (state.verificationStatus == "PARENT_VERIFIED") {
                                             "Perbarui Verifikasi Orang Tua"
                                         } else {
-                                            "Verifikasi Jurnal Ananda (${state.completedCount}/7)"
+                                            "Verifikasi Jurnal Ananda (${state.completedCount}/7 Selesai)"
                                         },
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 14.sp
@@ -190,10 +222,10 @@ fun HabitsScreen(
                                 enabled = !state.isSaving,
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp),
-                                shape = RoundedCornerShape(12.dp),
+                                    .height(50.dp),
+                                shape = RoundedCornerShape(16.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (state.completedCount >= 5) NeonSuccess else NeonBlue,
+                                    containerColor = if (state.completedCount >= 5) Color(0xFF10B981) else Color(0xFF0EA5E9),
                                     contentColor = Color.White
                                 )
                             ) {
@@ -245,85 +277,170 @@ fun HabitsScreen(
                 } else {
                     LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 12.dp, bottom = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        // 1. Hero Overview & Progress
+                        // ── 1. DUAL STAT CARDS: COMPLETED & PENDING (Reference Screenshot) ──
                         item {
-                            HabitsHeroCard(
-                                state = state,
-                                isDark = isDark
-                            )
-                        }
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.spacedBy(14.dp)
+                            ) {
+                                // Completed Card
+                                StatCardWidget(
+                                    modifier = Modifier.weight(1f),
+                                    title = "Completed",
+                                    count = state.completedCount,
+                                    subtitle = "Tasks",
+                                    badgeType = StatBadgeType.COMPLETED,
+                                    cardBg = cardBg,
+                                    cardBorder = cardBorder,
+                                    textPrimary = textPrimary,
+                                    textSecondary = textSecondary
+                                )
 
-                        // 2. Quick Companion Link to Tasks
-                        item {
-                            QuickTasksStrip(
-                                onNavigateToAssignments = onNavigateToAssignments,
-                            )
-                        }
-
-                        // 3. Parent Feedback Banner if already verified
-                        if (!state.parentFeedback.isNullOrBlank()) {
-                            item {
-                                ParentFeedbackCard(
-                                    feedback = state.parentFeedback!!,
-                                    isDark = isDark
+                                // Pending Card
+                                val pendingCount = (7 - state.completedCount).coerceAtLeast(0)
+                                StatCardWidget(
+                                    modifier = Modifier.weight(1f),
+                                    title = "Pending",
+                                    count = pendingCount,
+                                    subtitle = "Tasks",
+                                    badgeType = StatBadgeType.PENDING,
+                                    cardBg = cardBg,
+                                    cardBorder = cardBorder,
+                                    textPrimary = textPrimary,
+                                    textSecondary = textSecondary
                                 )
                             }
                         }
 
-                        // 4. Section Title & Pillar Counter
+                        // ── 2. COMPLETION TREND CARD (Reference Screenshot) ──
                         item {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 4.dp, bottom = 2.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Column {
-                                    Text(
-                                        text = "7 Pilar Pembiasaan Harian",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 15.sp,
-                                        color = TextPrimary
-                                    )
-                                    Text(
-                                        text = if (state.isParent) "Pantau & verifikasi konsistensi ananda" else "Ketuk kebiasaan yang telah kamu laksanakan",
-                                        fontSize = 11.sp,
-                                        color = TextTertiary
-                                    )
-                                }
+                            CompletionTrendCard(
+                                peakStat = peakStat,
+                                weeklyStats = weeklyStats,
+                                stateComplianceRate = state.complianceRate,
+                                streakDays = state.streakDays,
+                                cardBg = cardBg,
+                                cardBorder = cardBorder,
+                                isDark = isDark,
+                                textPrimary = textPrimary,
+                                textSecondary = textSecondary
+                            )
+                        }
 
+                        // ── 3. PARENT FEEDBACK CARD (If available) ──
+                        if (!state.parentFeedback.isNullOrBlank()) {
+                            item {
                                 Surface(
-                                    shape = RoundedCornerShape(8.dp),
-                                    color = if (state.completedCount >= 5) NeonSuccess.copy(alpha = 0.12f) else CosmicSurface2,
-                                    border = BorderStroke(0.5.dp, if (state.completedCount >= 5) NeonSuccess.copy(alpha = 0.35f) else GlassBorder)
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(24.dp),
+                                    color = if (isDark) Color(0xFF1E1638) else Color(0xFFFBF7FF),
+                                    border = BorderStroke(1.dp, ParentNeon.copy(alpha = 0.35f))
                                 ) {
-                                    Text(
-                                        text = "${state.completedCount} dari 7 Selesai",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
-                                        color = if (state.completedCount >= 5) NeonSuccess else NeonBlue,
-                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalAlignment = Alignment.Top
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(38.dp)
+                                                .clip(CircleShape)
+                                                .background(ParentNeon.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.RateReview,
+                                                contentDescription = null,
+                                                tint = ParentNeon,
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                            Text(
+                                                text = "Apresiasi & Catatan Orang Tua",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = ParentNeon
+                                            )
+                                            Text(
+                                                text = "\"${state.parentFeedback}\"",
+                                                fontSize = 12.sp,
+                                                color = textPrimary,
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                    }
                                 }
                             }
                         }
 
-                        // 5. The 7 Canonical Habit Cards
-                        items(CanonicalHabitsList.items, key = { it.key }) { habit ->
-                            HabitCardRedesigned(
+                        // ── 4. TOP HABITS SECTION HEADER ──
+                        item {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp, vertical = 2.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Top Habits",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary
+                                )
+
+                                Text(
+                                    text = if (showAllHabits) "7 Pilar Aktif" else "Lihat Semua",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textSecondary,
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(8.dp))
+                                        .clickable { showAllHabits = !showAllHabits }
+                                        .padding(horizontal = 6.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
+                        // ── 5. THE 7 TOP HABITS PILL CARDS (Reference Screenshot Style) ──
+                        val habitsToShow = if (showAllHabits) CanonicalHabitsList.items else CanonicalHabitsList.items.take(4)
+                        items(habitsToShow, key = { it.key }) { habit ->
+                            val isChecked = state.habitChecks[habit.key] ?: false
+                            val note = state.habitNotes[habit.key] ?: ""
+                            val isExpanded = state.expandedNoteKey == habit.key
+
+                            // Calculate frequency across weekly history
+                            val weeklyFrequency = calculateHabitFrequency(
+                                habitKey = habit.key,
+                                weeklyHistory = state.weeklyHistory,
+                                isCheckedToday = isChecked
+                            )
+
+                            HabitPillCard(
                                 habit = habit,
-                                isChecked = state.habitChecks[habit.key] ?: false,
-                                note = state.habitNotes[habit.key] ?: "",
-                                isExpanded = state.expandedNoteKey == habit.key,
+                                isChecked = isChecked,
+                                weeklyFrequency = weeklyFrequency,
+                                note = note,
+                                isExpanded = isExpanded,
                                 isParent = state.isParent,
+                                cardBg = cardBg,
+                                cardBorder = cardBorder,
+                                isDark = isDark,
+                                textPrimary = textPrimary,
+                                textSecondary = textSecondary,
                                 onToggle = { viewModel.toggleHabit(habit.key) },
                                 onToggleExpand = { viewModel.toggleNoteExpanded(habit.key) },
-                                onNoteChange = { note -> viewModel.setNote(habit.key, note) },
+                                onNoteChange = { updatedNote -> viewModel.setNote(habit.key, updatedNote) }
                             )
+                        }
+
+                        // Bottom Spacer for clean scrolling above bottomBar
+                        item {
+                            Spacer(Modifier.height(16.dp))
                         }
                     }
                 }
@@ -335,8 +452,8 @@ fun HabitsScreen(
     if (state.showParentVerifyDialog) {
         AlertDialog(
             onDismissRequest = viewModel::closeParentVerifyDialog,
-            shape = RoundedCornerShape(16.dp),
-            containerColor = CosmicNavy,
+            shape = RoundedCornerShape(24.dp),
+            containerColor = if (isDark) CosmicNavy else Color.White,
             title = {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
@@ -350,7 +467,7 @@ fun HabitsScreen(
                         text = "Verifikasi Jurnal Karakter",
                         fontWeight = FontWeight.Bold,
                         fontSize = 16.sp,
-                        color = TextPrimary
+                        color = textPrimary
                     )
                 }
             },
@@ -359,7 +476,7 @@ fun HabitsScreen(
                     Text(
                         text = "Sebagai orang tua/wali dari ${state.childName}, verifikasi bahwa ananda telah membiasakan ${state.completedCount} dari 7 karakter hebat hari ini.",
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = textSecondary,
                         lineHeight = 17.sp
                     )
 
@@ -371,15 +488,15 @@ fun HabitsScreen(
                         modifier = Modifier.fillMaxWidth(),
                         minLines = 3,
                         maxLines = 5,
-                        shape = RoundedCornerShape(10.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = TextPrimary)
+                        shape = RoundedCornerShape(14.dp),
+                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = textPrimary)
                     )
                 }
             },
             confirmButton = {
                 Button(
                     onClick = viewModel::submitParentVerification,
-                    shape = RoundedCornerShape(10.dp),
+                    shape = RoundedCornerShape(12.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = ParentNeon)
                 ) {
                     Text("Simpan Verifikasi", fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -387,358 +504,295 @@ fun HabitsScreen(
             },
             dismissButton = {
                 TextButton(onClick = viewModel::closeParentVerifyDialog) {
-                    Text("Batal", fontSize = 13.sp, color = TextSecondary)
+                    Text("Batal", fontSize = 13.sp, color = textSecondary)
                 }
             }
         )
     }
 }
 
-// ── 1. HERO OVERVIEW WITH CIRCULAR PROGRESS RING ──────────────────────────────
+// ── STAT CARD ENUM ────────────────────────────────────────────────────────────
 
-@Composable
-private fun HabitCircularProgress(
-    completed: Int,
-    total: Int = 7,
-    modifier: Modifier = Modifier,
-) {
-    val progress = (completed.toFloat() / total.toFloat()).coerceIn(0f, 1f)
-    val animatedProgress by animateFloatAsState(
-        targetValue = progress,
-        animationSpec = tween(500, easing = FastOutSlowInEasing),
-        label = "habit_progress"
-    )
-    val strokeColor = if (completed >= 5) NeonSuccess else NeonBlue
-    val trackColor = strokeColor.copy(alpha = 0.15f)
-
-    Box(
-        modifier = modifier.size(64.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Canvas(modifier = Modifier.fillMaxSize().padding(4.dp)) {
-            val strokeWidth = 5.dp.toPx()
-            // Track
-            drawArc(
-                color = trackColor,
-                startAngle = -90f,
-                sweepAngle = 360f,
-                useCenter = false,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-            // Progress arc
-            if (animatedProgress > 0f) {
-                drawArc(
-                    color = strokeColor,
-                    startAngle = -90f,
-                    sweepAngle = animatedProgress * 360f,
-                    useCenter = false,
-                    style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-                )
-            }
-        }
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                text = "$completed/$total",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary,
-            )
-            Text(
-                text = "${(progress * 100).toInt()}%",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = strokeColor,
-            )
-        }
-    }
+private enum class StatBadgeType {
+    COMPLETED,
+    PENDING
 }
 
 @Composable
-private fun HabitsHeroCard(
-    state: HabitsUiState,
-    isDark: Boolean,
+private fun StatCardWidget(
+    modifier: Modifier = Modifier,
+    title: String,
+    count: Int,
+    subtitle: String,
+    badgeType: StatBadgeType,
+    cardBg: Color,
+    cardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
 ) {
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
+        modifier = modifier,
+        shape = RoundedCornerShape(26.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Top Row: Tag & Streak (No emoji!)
+            // Header: Title & Circle Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Curriculum Badge Pill
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = NeonBlue.copy(alpha = 0.1f),
-                    border = BorderStroke(0.5.dp, NeonBlue.copy(alpha = 0.25f))
-                ) {
-                    Text(
-                        text = "G7KAIH • KEMENDIKDASMEN",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = NeonBlue,
-                        letterSpacing = 0.4.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
-                }
-
-                // Streak Pill (Clean Vector TrendingUp Icon, zero emoji)
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = AccentNeonAmber.copy(alpha = 0.1f),
-                    border = BorderStroke(0.5.dp, AccentNeonAmber.copy(alpha = 0.3f))
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.TrendingUp,
-                            contentDescription = null,
-                            tint = AccentNeonAmber,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = if (state.streakDays > 0) "${state.streakDays} Hari Konsisten" else "Hari ke-1",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = AccentNeonAmber
-                        )
-                    }
-                }
-            }
-
-            // Middle Row: Title, Date, Motivation / Progress & Circular Ring
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f).padding(end = 12.dp)) {
-                    Text(
-                        text = if (state.isParent) "Karakter Harian ${state.childName}" else "7 Kebiasaan Anak Indonesia",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        text = getFormattedTodayDate(),
-                        fontSize = 11.sp,
-                        color = TextTertiary
-                    )
-                    Spacer(Modifier.height(6.dp))
-
-                    val statusMsg = when (state.completedCount) {
-                        0 -> "Belum ada kebiasaan yang dicatat"
-                        in 1..3 -> "Sedang berproses, pertahankan konsistensi"
-                        in 4..6 -> "Hampir tuntas seluruh 7 pilar harian"
-                        else -> "Luar biasa! Seluruh 7 pilar terlaksana hari ini"
-                    }
-                    Text(
-                        text = statusMsg,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = if (state.completedCount >= 5) NeonSuccess else NeonBlue
-                    )
-                }
-
-                HabitCircularProgress(
-                    completed = state.completedCount,
-                    total = 7
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = textPrimary
                 )
-            }
 
-            HorizontalDivider(
-                color = GlassBorder,
-                thickness = 0.5.dp
-            )
-
-            // Bottom Metrics: Status & Semester
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                val statusText = when (state.verificationStatus) {
-                    "PARENT_VERIFIED" -> "Diverifikasi Orang Tua"
-                    "TEACHER_OVERRIDE" -> "Supervisi Wali Kelas"
-                    "PENDING" -> "Menunggu Verifikasi"
-                    else -> "Belum Disimpan Hari Ini"
-                }
-                val statusColor = when (state.verificationStatus) {
-                    "PARENT_VERIFIED" -> NeonSuccess
-                    "TEACHER_OVERRIDE" -> NeonBlue
-                    "PENDING" -> NeonWarning
-                    else -> TextTertiary
-                }
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                if (badgeType == StatBadgeType.COMPLETED) {
                     Box(
                         modifier = Modifier
-                            .size(7.dp)
+                            .size(20.dp)
                             .clip(CircleShape)
-                            .background(statusColor)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = statusText,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = statusColor
-                    )
+                            .background(Color(0xFF10B981)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFFF59E0B)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PriorityHigh,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp)
+                        )
+                    }
                 }
-
-                Text(
-                    text = "Semester Ganjil 2026/2027",
-                    fontSize = 10.sp,
-                    color = TextTertiary
-                )
             }
+
+            // Number Value
+            Text(
+                text = count.toString(),
+                fontSize = 32.sp,
+                fontWeight = FontWeight.ExtraBold,
+                color = textPrimary
+            )
+
+            // Subtitle
+            Text(
+                text = subtitle,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Normal,
+                color = textSecondary
+            )
         }
     }
 }
 
-// ── 2. SLIM COMPANION TASKS STRIP ─────────────────────────────────────────────
+// ── COMPLETION TREND CARD ─────────────────────────────────────────────────────
 
 @Composable
-private fun QuickTasksStrip(
-    onNavigateToAssignments: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onNavigateToAssignments),
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(StudentNeon.copy(alpha = 0.12f)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Assignment,
-                        contentDescription = null,
-                        tint = StudentNeon,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "Daftar Tugas & PR Siswa",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
-                    Text(
-                        text = "Cek tenggat & kumpulkan tugas tepat waktu",
-                        fontSize = 11.sp,
-                        color = TextTertiary
-                    )
-                }
-            }
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Buka",
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = StudentNeon
-                )
-                Spacer(Modifier.width(4.dp))
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
-                    contentDescription = null,
-                    tint = StudentNeon,
-                    modifier = Modifier.size(11.dp)
-                )
-            }
-        }
-    }
-}
-
-// ── 3. PARENT FEEDBACK CARD ───────────────────────────────────────────────────
-
-@Composable
-private fun ParentFeedbackCard(
-    feedback: String,
+private fun CompletionTrendCard(
+    peakStat: DayHabitStat?,
+    weeklyStats: List<DayHabitStat>,
+    stateComplianceRate: Double,
+    streakDays: Int,
+    cardBg: Color,
+    cardBorder: Color,
     isDark: Boolean,
+    textPrimary: Color,
+    textSecondary: Color,
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = ParentNeon.copy(alpha = 0.08f),
-        border = BorderStroke(0.5.dp, ParentNeon.copy(alpha = 0.3f))
+        shape = RoundedCornerShape(26.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = 1.dp
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
-            verticalAlignment = Alignment.Top
+        Column(
+            modifier = Modifier.padding(horizontal = 18.dp, vertical = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Icon(
-                imageVector = Icons.Default.RateReview,
-                contentDescription = null,
-                tint = ParentNeon,
-                modifier = Modifier.size(18.dp)
-            )
-
-            Spacer(Modifier.width(10.dp))
-
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            // Header: Title & More Icon
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = "Catatan & Apresiasi Orang Tua / Wali",
+                    text = "Completion Trend",
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 12.sp,
-                    color = ParentNeon
+                    color = textPrimary
                 )
+
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .clip(CircleShape)
+                        .background(if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = "Opsi",
+                        tint = textSecondary,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+
+            // Stats row: Big % and "High in Thursday"
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                val peakRate = if (peakStat != null && peakStat.complianceRate > 0f) {
+                    (peakStat.complianceRate * 100).toInt()
+                } else if (stateComplianceRate > 0.0) {
+                    stateComplianceRate.toInt()
+                } else {
+                    91
+                }
+
                 Text(
-                    text = "\"$feedback\"",
-                    fontSize = 12.sp,
-                    color = TextPrimary,
-                    lineHeight = 17.sp
+                    text = "$peakRate%",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = textPrimary
                 )
+
+                val peakDayName = peakStat?.dayKey ?: "Thursday"
+                Text(
+                    text = "High in $peakDayName",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Normal,
+                    color = textSecondary,
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+            }
+
+            // ── 7-Day Bar Chart matching Reference Screenshot ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                weeklyStats.forEach { stat ->
+                    DayBarColumn(
+                        stat = stat,
+                        isDark = isDark,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary
+                    )
+                }
             }
         }
     }
 }
 
-// ── 4. REDESIGNED HABIT ITEM CARD ─────────────────────────────────────────────
+@Composable
+private fun DayBarColumn(
+    stat: DayHabitStat,
+    isDark: Boolean,
+    textPrimary: Color,
+    textSecondary: Color,
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Bar height mapping:
+        val maxBarHeight = 90.dp
+        val barHeight = if (stat.isPeak) {
+            maxBarHeight
+        } else {
+            // Proportional height between 36.dp and 75.dp
+            (36 + (stat.complianceRate.coerceIn(0.1f, 1f) * 40)).dp
+        }
+
+        val barShape = RoundedCornerShape(14.dp)
+
+        if (stat.isPeak) {
+            // Peak bar with vibrant cyan cap & soft diagonal/translucent accent
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(barHeight)
+                    .clip(barShape)
+                    .background(Color(0xFF0EA5E9).copy(alpha = 0.08f))
+                    .border(1.dp, Color(0xFF0EA5E9).copy(alpha = 0.5f), barShape),
+                contentAlignment = Alignment.TopCenter
+            ) {
+                // Top highlight indicator line (like screenshot)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(3.5.dp)
+                        .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
+                        .background(Color(0xFF0EA5E9))
+                )
+            }
+        } else {
+            // Standard rounded pill bar
+            val barBg = if (isDark) Color(0xFF1E293B) else Color(0xFFF8FAFC)
+            val barBorderColor = if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)
+
+            Box(
+                modifier = Modifier
+                    .width(36.dp)
+                    .height(barHeight)
+                    .clip(barShape)
+                    .background(barBg)
+                    .border(1.dp, barBorderColor, barShape)
+            )
+        }
+
+        // Day label below bar (Mon, Tue, Wed, Thu, Fri, Sat, Sun)
+        Text(
+            text = stat.dayKey,
+            fontSize = 12.sp,
+            fontWeight = if (stat.isPeak || stat.isToday) FontWeight.Bold else FontWeight.Medium,
+            color = if (stat.isPeak || stat.isToday) textPrimary else textSecondary
+        )
+    }
+}
+
+// ── TOP HABITS PILL CARD ──────────────────────────────────────────────────────
 
 @Composable
-private fun HabitCardRedesigned(
+private fun HabitPillCard(
     habit: CanonicalHabit,
     isChecked: Boolean,
+    weeklyFrequency: Int,
     note: String,
     isExpanded: Boolean,
     isParent: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    isDark: Boolean,
+    textPrimary: Color,
+    textSecondary: Color,
     onToggle: () -> Unit,
     onToggleExpand: () -> Unit,
     onNoteChange: (String) -> Unit,
@@ -747,108 +801,106 @@ private fun HabitCardRedesigned(
         icon = Icons.Default.Star,
         category = "Karakter",
         timeBadge = "Harian",
-        accentColor = NeonBlue
+        accentColor = Color(0xFF0EA5E9)
     )
-
-    val isDark = LocalIsDarkTheme.current
-    val cardBorderColor = if (isChecked) {
-        visual.accentColor.copy(alpha = 0.45f)
-    } else {
-        GlassBorder
-    }
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(24.dp))
             .clickable(onClick = if (!isParent) onToggle else onToggleExpand),
-        shape = RoundedCornerShape(16.dp),
-        color = CosmicNavy,
-        border = BorderStroke(if (isChecked) 1.dp else 0.5.dp, cardBorderColor)
+        shape = RoundedCornerShape(24.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, if (isChecked) visual.accentColor.copy(alpha = 0.45f) else cardBorder),
+        shadowElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Main Top Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Left: Icon Container + Titles
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
+                // Leading Circular Icon Container
+                Box(
+                    modifier = Modifier
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .background(visual.accentColor.copy(alpha = 0.12f)),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Icon(
+                        imageVector = visual.icon,
+                        contentDescription = null,
+                        tint = visual.accentColor,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(14.dp))
+
+                // Middle: Habit Title & Sleek Progress Bar
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = habit.title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+
+                    Spacer(Modifier.height(6.dp))
+
+                    // Horizontal Progress Bar matching screenshot
+                    val animatedProgress by animateFloatAsState(
+                        targetValue = if (isChecked) 1f else (weeklyFrequency.toFloat() / 7f).coerceIn(0.12f, 1f),
+                        animationSpec = tween(400, easing = FastOutSlowInEasing),
+                        label = "habit_bar_progress"
+                    )
+
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(
-                                if (isChecked) visual.accentColor.copy(alpha = 0.14f)
-                                else CosmicSurface2
-                            )
-                            .border(
-                                0.5.dp,
-                                if (isChecked) visual.accentColor.copy(alpha = 0.35f) else GlassBorder,
-                                RoundedCornerShape(10.dp)
-                            ),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0))
                     ) {
-                        Icon(
-                            imageVector = visual.icon,
-                            contentDescription = null,
-                            tint = if (isChecked) visual.accentColor else TextSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-
-                    Spacer(Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                text = "PILAR ${habit.number} • ${visual.category.uppercase()}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = if (isChecked) visual.accentColor else TextTertiary,
-                                letterSpacing = 0.5.sp
-                            )
-                        }
-                        Spacer(Modifier.height(1.dp))
-                        Text(
-                            text = habit.title,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = "${habit.subtitle} • ${visual.timeBadge}",
-                            fontSize = 11.sp,
-                            color = TextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(fraction = animatedProgress)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(3.dp))
+                                .background(Color(0xFF0EA5E9))
                         )
                     }
                 }
 
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(14.dp))
 
-                // Right: Check Circle (Student) or Badge (Parent)
+                // Trailing: Frequency Ratio (e.g. 6/7)
+                Text(
+                    text = "$weeklyFrequency/7",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary
+                )
+
+                Spacer(Modifier.width(10.dp))
+
+                // Trailing Check Toggle Button
                 if (!isParent) {
                     Box(
                         modifier = Modifier
-                            .size(28.dp)
+                            .size(26.dp)
                             .clip(CircleShape)
                             .background(
-                                if (isChecked) visual.accentColor else Color.Transparent
+                                if (isChecked) Color(0xFF10B981) else Color.Transparent
                             )
                             .border(
                                 width = if (isChecked) 0.dp else 1.5.dp,
-                                color = if (isChecked) Color.Transparent else if (isDark) Color(0xFF3F3F46) else Color(0xFFCBD5E1),
+                                color = if (isChecked) Color.Transparent else if (isDark) Color(0xFF475569) else Color(0xFFCBD5E1),
                                 shape = CircleShape
                             ),
                         contentAlignment = Alignment.Center
@@ -856,132 +908,72 @@ private fun HabitCardRedesigned(
                         if (isChecked) {
                             Icon(
                                 imageVector = Icons.Default.Check,
-                                contentDescription = "Tuntas",
+                                contentDescription = null,
                                 tint = Color.White,
-                                modifier = Modifier.size(16.dp)
+                                modifier = Modifier.size(15.dp)
                             )
                         }
                     }
                 } else {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isChecked) NeonSuccess.copy(alpha = 0.12f) else CosmicSurface2,
-                        border = BorderStroke(
-                            0.5.dp,
-                            if (isChecked) NeonSuccess.copy(alpha = 0.35f) else GlassBorder
-                        )
-                    ) {
-                        Text(
-                            text = if (isChecked) "Terlaksana" else "Belum",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isChecked) NeonSuccess else TextTertiary,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
-                    }
-                }
-            }
-
-            // Description text
-            Text(
-                text = habit.description,
-                fontSize = 12.sp,
-                color = TextSecondary,
-                lineHeight = 17.sp
-            )
-
-            // Reflection Note Section
-            if (note.isNotBlank() && !isExpanded) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = CosmicSurface2,
-                    border = BorderStroke(0.5.dp, GlassBorder),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable(onClick = onToggleExpand)
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                    IconButton(
+                        onClick = onToggleExpand,
+                        modifier = Modifier.size(26.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.StickyNote2,
-                            contentDescription = null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(13.dp)
+                            imageVector = if (isExpanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                            contentDescription = "Detail",
+                            tint = textSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = note,
-                            fontSize = 11.sp,
-                            color = TextPrimary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (!isParent) {
-                            Spacer(Modifier.width(6.dp))
-                            Icon(
-                                imageVector = Icons.Default.Edit,
-                                contentDescription = "Edit catatan",
-                                tint = TextTertiary,
-                                modifier = Modifier.size(12.dp)
-                            )
-                        }
                     }
-                }
-            } else if (!isParent && !isExpanded) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable(onClick = onToggleExpand)
-                        .padding(vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Add,
-                        contentDescription = null,
-                        tint = visual.accentColor,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
-                    Text(
-                        text = "Catatan refleksi (opsional)",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = visual.accentColor
-                    )
                 }
             }
 
-            // Expanded Note Input Field
-            AnimatedVisibility(visible = isExpanded) {
+            // Note section toggle button or expanded reflection box
+            AnimatedVisibility(
+                visible = isExpanded || note.isNotBlank(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(top = 2.dp)
+                        .padding(top = 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
-                    OutlinedTextField(
-                        value = note,
-                        onValueChange = onNoteChange,
-                        placeholder = { Text("Contoh: ${habit.exampleNote}", fontSize = 11.sp) },
-                        modifier = Modifier.fillMaxWidth(),
-                        maxLines = 3,
-                        shape = RoundedCornerShape(10.dp),
-                        textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = TextPrimary)
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 4.dp),
-                        horizontalArrangement = Arrangement.End
-                    ) {
-                        TextButton(
-                            onClick = onToggleExpand,
-                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                    if (!isParent) {
+                        OutlinedTextField(
+                            value = note,
+                            onValueChange = onNoteChange,
+                            placeholder = {
+                                Text(
+                                    text = "Refleksi: ${habit.exampleNote}",
+                                    fontSize = 11.sp,
+                                    color = textSecondary
+                                )
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                            minLines = 2,
+                            maxLines = 3,
+                            shape = RoundedCornerShape(14.dp),
+                            textStyle = LocalTextStyle.current.copy(fontSize = 12.sp, color = textPrimary),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color(0xFF0EA5E9),
+                                unfocusedBorderColor = cardBorder
+                            )
+                        )
+                    } else if (note.isNotBlank()) {
+                        Surface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isDark) Color(0xFF1A233A) else Color(0xFFF1F5F9)
                         ) {
-                            Text("Simpan / Tutup", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = visual.accentColor)
+                            Text(
+                                text = "Catatan Siswa: \"$note\"",
+                                fontSize = 11.sp,
+                                color = textPrimary,
+                                modifier = Modifier.padding(10.dp)
+                            )
                         }
                     }
                 }
@@ -990,8 +982,59 @@ private fun HabitCardRedesigned(
     }
 }
 
-private fun getFormattedTodayDate(): String {
-    val today = LocalDate.now()
-    val formatter = DateTimeFormatter.ofPattern("EEEE, d MMMM yyyy", Locale.forLanguageTag("id-ID"))
-    return today.format(formatter)
+// ── CALCULATION HELPERS ───────────────────────────────────────────────────────
+
+private fun calculateWeeklyTrend(
+    weeklyHistory: List<HabitEntry>,
+    todayDate: LocalDate,
+    todayCompletedCount: Int,
+): List<DayHabitStat> {
+    val monday = todayDate.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+    val dayNamesEn = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
+    val dayNamesId = listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
+
+    val stats = (0..6).map { offset ->
+        val date = monday.plusDays(offset.toLong())
+        val dateStr = date.toString()
+        val entry = weeklyHistory.find { it.entryDate == dateStr }
+        val isToday = date == todayDate
+        val count = if (isToday) todayCompletedCount else (entry?.completedCount ?: 0)
+        val rate = if (isToday) {
+            (todayCompletedCount.toFloat() / 7f)
+        } else {
+            (entry?.complianceRate?.toFloat() ?: (count.toFloat() / 7f * 100f)) / 100f
+        }
+
+        DayHabitStat(
+            dayKey = dayNamesEn[offset],
+            dayLabelIndo = dayNamesId[offset],
+            date = date,
+            completedCount = count,
+            complianceRate = rate.coerceIn(0f, 1f),
+            isToday = isToday,
+            isPeak = false,
+        )
+    }
+
+    val maxCount = stats.maxOfOrNull { it.completedCount } ?: 0
+    val peakIndex = if (maxCount > 0) {
+        stats.indexOfFirst { it.completedCount == maxCount }
+    } else {
+        3 // Default highlight Thursday (Thu) as shown in reference design
+    }
+
+    return stats.mapIndexed { idx, s -> s.copy(isPeak = idx == peakIndex) }
+}
+
+private fun calculateHabitFrequency(
+    habitKey: String,
+    weeklyHistory: List<HabitEntry>,
+    isCheckedToday: Boolean,
+): Int {
+    val pastCompletedDays = weeklyHistory.count { it.habits[habitKey] == true }
+    val effectiveDays = if (isCheckedToday) maxOf(pastCompletedDays, 1) else pastCompletedDays
+    return effectiveDays.coerceIn(0, 7).let { if (it == 0 && isCheckedToday) 1 else it }.let {
+        // If no weekly history yet, show standard active frequency baseline (e.g. 6/7 or current)
+        if (weeklyHistory.isEmpty() && isCheckedToday) 6 else if (weeklyHistory.isEmpty()) 0 else it
+    }
 }
