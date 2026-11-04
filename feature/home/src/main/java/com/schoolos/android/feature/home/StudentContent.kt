@@ -1,19 +1,18 @@
 package com.schoolos.android.feature.home
 
-import androidx.compose.animation.core.*
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -22,18 +21,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.*
 import java.text.SimpleDateFormat
-import java.time.LocalTime
 import java.util.Date
 import java.util.Locale
 import java.util.TimeZone
@@ -71,27 +67,12 @@ fun LazyListScope.studentContent(
     studentName: String = "",
     studentClass: String = "",
     studentNisn: String = "",
-    streakDays: Int = 5,
+    streakDays: Int = 0,
     studentAssignments: List<Assignment> = emptyList(),
 ) {
-    // ── 1. GREETING HERO CARD (Reference Screenshot) ──────────────────────────
+    // ── 1. AKSES UTAMA (2x2 GRID CARD DESIGN MODERN) ──────────────────────────
     item {
-        StudentGreetingHeroCard(
-            studentName = studentName,
-            studentClass = studentClass,
-            studentNisn = studentNisn,
-            streakDays = streakDays,
-        )
-    }
-
-    // ── 2. AKSES UTAMA SECTION HEADER ─────────────────────────────────────────
-    item {
-        AksesUtamaSectionHeader()
-    }
-
-    // ── 3. 4 GRID MENU CARDS (2x2 Reference Screenshot) ───────────────────────
-    item {
-        AksesUtamaGrid(
+        HomeAksesUtamaGrid(
             assignmentsCount = assignmentsCount,
             gradeAverage = gradeAverage,
             onNavigateToAssignments = onNavigateToAssignments,
@@ -101,195 +82,53 @@ fun LazyListScope.studentContent(
         )
     }
 
-    // ── 4. JADWAL PELAJARAN HARI INI ──────────────────────────────────────────
+    // ── 2. JADWAL PELAJARAN HARI INI ──────────────────────────────────────────
     item {
-        TodayScheduleCard(
+        HomeTodayScheduleCard(
             todaySessions = todaySessions,
             onNavigateToSessions = onNavigateToSessions,
             onNavigateToSessionDetail = onNavigateToSessionDetail,
         )
     }
 
-    // ── 5. TUGAS PERLU DISELESAIKAN ───────────────────────────────────────────
+    // ── 3. PERFORMA AKADEMIK & NILAI ──────────────────────────────────────────
     item {
-        PendingAssignmentsCard(
-            studentAssignments = studentAssignments,
-            assignmentsCount = assignmentsCount,
+        HomeAcademicPerformanceCard(
+            gradeAverage = gradeAverage,
+            gradeStatus = gradeStatus,
+            gradeTrendPoints = gradeTrendPoints,
+            topGradeSubjects = topGradeSubjects,
+            onNavigateToGrades = onNavigateToGrades,
+        )
+    }
+
+    // ── 4. BUKU & MODUL SIBI KEMDIKDASMEN / LANJUTKAN MEMBACA ─────────────────
+    item {
+        HomeSibiReadingCard(
+            activeReadingHistory = activeReadingHistory,
+            recommendedSibiBook = recommendedSibiBook,
+            onOpenBookReading = onOpenBookReading,
+            onStartReadingSibi = onStartReadingSibi,
+            onNavigateToLearning = onNavigateToLearning,
+        )
+    }
+
+    // ── 5. AKTIVITAS BELAJAR MINGGU INI ───────────────────────────────────────
+    item {
+        HomeWeeklyActivityCard(
+            weeklyActivity = weeklyActivity,
+            onNavigateToMaterials = onNavigateToLearning,
             onNavigateToAssignments = onNavigateToAssignments,
-        )
-    }
-
-    // ── 6. LITERASI & BUKU SIBI KEMDIKDASMEN (Optional Compact Companion) ────
-    if (recommendedSibiBook != null || activeReadingHistory.isNotEmpty()) {
-        item {
-            SibiLiteracyCompanionCard(
-                recommendedSibiBook = recommendedSibiBook,
-                activeReadingHistory = activeReadingHistory,
-                onOpenBookReading = onOpenBookReading,
-                onStartReadingSibi = onStartReadingSibi,
-                onNavigateToLearning = onNavigateToLearning,
-            )
-        }
-    }
-}
-
-// ── 1. GREETING HERO CARD ─────────────────────────────────────────────────────
-
-@Composable
-private fun StudentGreetingHeroCard(
-    studentName: String,
-    studentClass: String,
-    studentNisn: String,
-    streakDays: Int,
-) {
-    val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
-    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
-    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
-    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
-
-    // Dynamic greeting based on current local hour
-    val hour = remember {
-        try { LocalTime.now().hour } catch (_: Throwable) { 12 }
-    }
-    val greeting = when (hour) {
-        in 4..10 -> "Selamat Pagi"
-        in 11..14 -> "Selamat Siang"
-        in 15..18 -> "Selamat Sore"
-        else -> "Selamat Malam"
-    }
-
-    // Extract first name for highlighted display (e.g. "KIRANA")
-    val rawName = studentName.trim().ifBlank { "KIRANA" }
-    val firstName = rawName.substringBefore(" ").uppercase()
-
-    // Format Class and NISN
-    val isUuidLike = studentClass.contains("-") && studentClass.length >= 32
-    val effectiveClass = if (studentClass.isNotBlank() && !isUuidLike) studentClass else "PAKET A 4"
-    val effectiveNisn = if (studentNisn.isNotBlank()) "NISN: $studentNisn" else "NISN: 3136458265"
-    val effectiveStreak = if (streakDays > 0) streakDays else 5
-
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = cardBg,
-        border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            // Top Pills: [PAKET A 4] [NISN: 3136458265]
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFE0F2FE)
-                ) {
-                    Text(
-                        text = effectiveClass,
-                        color = Color(0xFF0284C7),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
-                ) {
-                    Text(
-                        text = effectiveNisn,
-                        color = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
-                }
-            }
-
-            // Greeting: Selamat Siang, KIRANA 👋
-            Text(
-                text = buildAnnotatedString {
-                    append("$greeting, ")
-                    withStyle(SpanStyle(color = Color(0xFF0284C7))) {
-                        append(firstName)
-                    }
-                    append(" 👋")
-                },
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = textPrimary,
-                letterSpacing = (-0.3).sp
-            )
-
-            // Subtitle
-            Text(
-                text = "Siap melanjutkan pembelajaran hari ini? Cek tugas dan jadwal di bawah.",
-                fontSize = 12.sp,
-                color = textSecondary,
-                lineHeight = 16.sp
-            )
-
-            // Streak Pill: 🔥 Streak: 5 Hari
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFFFFBEB),
-                border = BorderStroke(1.dp, Color(0xFFFDE68A))
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = "🔥 Streak: $effectiveStreak Hari",
-                        color = Color(0xFFD97706),
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-    }
-}
-
-// ── 2. AKSES UTAMA SECTION HEADER ─────────────────────────────────────────────
-
-@Composable
-private fun AksesUtamaSectionHeader() {
-    val isDark = LocalIsDarkTheme.current
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 2.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "AKSES UTAMA",
-            fontSize = 12.sp,
-            fontWeight = FontWeight.ExtraBold,
-            letterSpacing = 0.5.sp,
-            color = if (isDark) TextTertiary else Color(0xFF64748B)
-        )
-
-        Text(
-            text = "Kurikulum Merdeka",
-            fontSize = 11.5.sp,
-            fontWeight = FontWeight.Medium,
-            color = if (isDark) TextTertiary else Color(0xFF94A3B8)
+            onNavigateToQuizzes = onNavigateToQuizzes,
+            onNavigateToProgress = onNavigateToProgress,
         )
     }
 }
 
-// ── 3. 4 GRID MENU CARDS (2x2) ────────────────────────────────────────────────
+// ── 1. AKSES UTAMA (2x2 GRID MODERN ROUNDED) ──────────────────────────────────
 
 @Composable
-private fun AksesUtamaGrid(
+private fun HomeAksesUtamaGrid(
     assignmentsCount: String,
     gradeAverage: String,
     onNavigateToAssignments: () -> Unit,
@@ -303,8 +142,8 @@ private fun AksesUtamaGrid(
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
-    val effectiveAssCount = if (assignmentsCount != "0" && assignmentsCount.isNotBlank()) "$assignmentsCount Tugas" else "3 Tugas"
-    val effectiveGradeAvg = if (gradeAverage != "-" && gradeAverage.isNotBlank()) "Rata-rata $gradeAverage" else "Rata-rata 88"
+    val assBadge = if (assignmentsCount.isNotBlank() && assignmentsCount != "0") "$assignmentsCount Tugas" else "Aktif"
+    val gradeBadge = if (gradeAverage.isNotBlank() && gradeAverage != "-") "Rata-rata $gradeAverage" else "Transkrip"
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Row 1: Tugas Sekolah & Kuis Ujian
@@ -312,18 +151,17 @@ private fun AksesUtamaGrid(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            AksesUtamaCard(
+            HomeMenuGridCard(
                 modifier = Modifier.weight(1f),
                 title = "Tugas Sekolah",
-                subtitle = "Lembar kerja mandiri, soal PG, essay & instruksi guru.",
-                badgeText = effectiveAssCount,
+                subtitle = "Cek tenggat PR & lembar kerja mandiri",
+                badgeText = assBadge,
                 badgeBg = Color(0xFFE0F2FE),
                 badgeColor = Color(0xFF0284C7),
                 icon = Icons.AutoMirrored.Filled.Assignment,
                 iconCircleBg = Color(0xFFE0F2FE),
                 iconTint = Color(0xFF0284C7),
                 actionText = "Buka Tugas",
-                actionColor = Color(0xFF0284C7),
                 cardBg = cardBg,
                 cardBorder = cardBorder,
                 textPrimary = textPrimary,
@@ -331,18 +169,17 @@ private fun AksesUtamaGrid(
                 onClick = onNavigateToAssignments,
             )
 
-            AksesUtamaCard(
+            HomeMenuGridCard(
                 modifier = Modifier.weight(1f),
                 title = "Kuis & Ujian",
-                subtitle = "Simulasi CBT online, token ujian, timer & penilaian...",
-                badgeText = "CBT",
+                subtitle = "Simulasi CBT online, token & latihan",
+                badgeText = "CBT Online",
                 badgeBg = Color(0xFFDCFCE7),
                 badgeColor = Color(0xFF16A34A),
                 icon = Icons.Default.AccessTime,
                 iconCircleBg = Color(0xFFDCFCE7),
                 iconTint = Color(0xFF16A34A),
                 actionText = "Masuk Ujian",
-                actionColor = Color(0xFF16A34A),
                 cardBg = cardBg,
                 cardBorder = cardBorder,
                 textPrimary = textPrimary,
@@ -356,18 +193,17 @@ private fun AksesUtamaGrid(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            AksesUtamaCard(
+            HomeMenuGridCard(
                 modifier = Modifier.weight(1f),
                 title = "Materi Belajar",
-                subtitle = "Buku teks resmi SIBI Kemdikbud, PDF, video &...",
-                badgeText = "SIBI",
+                subtitle = "Buku teks resmi SIBI, modul & video",
+                badgeText = "Modul SIBI",
                 badgeBg = Color(0xFFF3E8FF),
                 badgeColor = Color(0xFF9333EA),
                 icon = Icons.AutoMirrored.Filled.MenuBook,
                 iconCircleBg = Color(0xFFF3E8FF),
                 iconTint = Color(0xFF9333EA),
                 actionText = "Baca Materi",
-                actionColor = Color(0xFF9333EA),
                 cardBg = cardBg,
                 cardBorder = cardBorder,
                 textPrimary = textPrimary,
@@ -375,18 +211,17 @@ private fun AksesUtamaGrid(
                 onClick = onNavigateToLearning,
             )
 
-            AksesUtamaCard(
+            HomeMenuGridCard(
                 modifier = Modifier.weight(1f),
                 title = "Rapor & Nilai",
-                subtitle = "Transkrip capaian kompetensi TP, formatif & sumatif.",
-                badgeText = effectiveGradeAvg,
+                subtitle = "Transkrip capaian kompetensi TP & nilai",
+                badgeText = gradeBadge,
                 badgeBg = Color(0xFFFEF3C7),
                 badgeColor = Color(0xFFD97706),
                 icon = Icons.Default.EmojiEvents,
                 iconCircleBg = Color(0xFFFEF3C7),
                 iconTint = Color(0xFFD97706),
                 actionText = "Lihat Rapor",
-                actionColor = Color(0xFFD97706),
                 cardBg = cardBg,
                 cardBorder = cardBorder,
                 textPrimary = textPrimary,
@@ -398,7 +233,7 @@ private fun AksesUtamaGrid(
 }
 
 @Composable
-private fun AksesUtamaCard(
+private fun HomeMenuGridCard(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String,
@@ -409,7 +244,6 @@ private fun AksesUtamaCard(
     iconCircleBg: Color,
     iconTint: Color,
     actionText: String,
-    actionColor: Color,
     cardBg: Color,
     cardBorder: Color,
     textPrimary: Color,
@@ -418,9 +252,9 @@ private fun AksesUtamaCard(
 ) {
     Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(22.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
         shadowElevation = 1.dp
@@ -429,7 +263,6 @@ private fun AksesUtamaCard(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            // Top Row: Icon circle + Badge
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -464,7 +297,6 @@ private fun AksesUtamaCard(
                 }
             }
 
-            // Title
             Text(
                 text = title,
                 fontSize = 14.sp,
@@ -474,7 +306,6 @@ private fun AksesUtamaCard(
                 overflow = TextOverflow.Ellipsis
             )
 
-            // Subtitle
             Text(
                 text = subtitle,
                 fontSize = 11.sp,
@@ -487,21 +318,18 @@ private fun AksesUtamaCard(
 
             Spacer(Modifier.height(2.dp))
 
-            // Action link with chevron
-            Row(
-                verticalAlignment = Alignment.CenterVertically
-            ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = actionText,
                     fontSize = 11.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = actionColor
+                    color = iconTint
                 )
                 Spacer(Modifier.width(3.dp))
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                     contentDescription = null,
-                    tint = actionColor,
+                    tint = iconTint,
                     modifier = Modifier.size(11.dp)
                 )
             }
@@ -509,10 +337,10 @@ private fun AksesUtamaCard(
     }
 }
 
-// ── 4. JADWAL PELAJARAN HARI INI ──────────────────────────────────────────────
+// ── 2. JADWAL PELAJARAN HARI INI ──────────────────────────────────────────────
 
 @Composable
-private fun TodayScheduleCard(
+private fun HomeTodayScheduleCard(
     todaySessions: List<LearningSession>,
     onNavigateToSessions: () -> Unit,
     onNavigateToSessionDetail: (String) -> Unit,
@@ -525,39 +353,53 @@ private fun TodayScheduleCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
         shadowElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            // Header: Calendar Icon + Title + Selengkapnya
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarToday,
-                        contentDescription = null,
-                        tint = Color(0xFF0284C7),
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF0284C7).copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CalendarToday,
+                            contentDescription = null,
+                            tint = Color(0xFF0284C7),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Jadwal Pelajaran Hari Ini",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimary
-                    )
+                    Column {
+                        Text(
+                            text = "Jadwal Pelajaran Hari Ini",
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
+                        Text(
+                            text = "${todaySessions.size} Sesi terjadwal hari ini",
+                            fontSize = 11.sp,
+                            color = textSecondary
+                        )
+                    }
                 }
 
                 Text(
-                    text = "Selengkapnya ›",
+                    text = "Lihat Semua ›",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF0284C7),
@@ -572,7 +414,7 @@ private fun TodayScheduleCard(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 10.dp),
+                        .padding(vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Box(
@@ -581,9 +423,9 @@ private fun TodayScheduleCard(
                             .clip(CircleShape)
                             .background(Color(0xFF94A3B8))
                     )
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(10.dp))
                     Text(
-                        text = "Tidak ada jadwal tatap muka/online hari ini.",
+                        text = "Tidak ada jadwal tatap muka atau kelas online hari ini.",
                         fontSize = 12.sp,
                         color = textSecondary
                     )
@@ -594,21 +436,21 @@ private fun TodayScheduleCard(
                         val title = session.subjectName ?: session.notes?.substringBefore(" • ") ?: "Mata Pelajaran"
                         val time = formatSessionTime(session.scheduledAt ?: session.startedAt)
                         val teacher = session.notes?.substringAfter(" • ")?.substringBefore(" (")?.trim().orEmpty()
-                        val subText = if (teacher.isNotBlank()) "Kelas Online • $teacher" else "Kelas Online"
+                        val subText = if (teacher.isNotBlank()) "Kelas Online • $teacher" else "Kelas Pembelajaran"
 
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(14.dp))
                                 .clickable { onNavigateToSessionDetail(session.id) },
                             color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(0.5.dp, cardBorder)
+                            shape = RoundedCornerShape(14.dp),
+                            border = BorderStroke(1.dp, cardBorder)
                         ) {
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    .padding(horizontal = 14.dp, vertical = 10.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -625,14 +467,14 @@ private fun TodayScheduleCard(
                                         )
                                         Box(
                                             modifier = Modifier
-                                                .padding(top = 2.dp)
-                                                .size(5.dp)
+                                                .padding(top = 3.dp)
+                                                .size(6.dp)
                                                 .clip(CircleShape)
                                                 .background(if (session.status == "active") Color(0xFF10B981) else Color(0xFF94A3B8))
                                         )
                                     }
 
-                                    Spacer(Modifier.width(12.dp))
+                                    Spacer(Modifier.width(14.dp))
 
                                     Column {
                                         Text(
@@ -657,7 +499,7 @@ private fun TodayScheduleCard(
                                     imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                                     contentDescription = null,
                                     tint = textSecondary,
-                                    modifier = Modifier.size(13.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
                             }
                         }
@@ -668,13 +510,15 @@ private fun TodayScheduleCard(
     }
 }
 
-// ── 5. TUGAS PERLU DISELESAIKAN ───────────────────────────────────────────────
+// ── 3. PERFORMA AKADEMIK & NILAI ──────────────────────────────────────────────
 
 @Composable
-private fun PendingAssignmentsCard(
-    studentAssignments: List<Assignment>,
-    assignmentsCount: String,
-    onNavigateToAssignments: () -> Unit,
+private fun HomeAcademicPerformanceCard(
+    gradeAverage: String,
+    gradeStatus: String,
+    gradeTrendPoints: List<Float>,
+    topGradeSubjects: List<SubjectGradeSummary>,
+    onNavigateToGrades: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
@@ -682,20 +526,24 @@ private fun PendingAssignmentsCard(
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
-    val countDisplay = if (assignmentsCount != "0" && assignmentsCount.isNotBlank()) "Semua Tugas ($assignmentsCount) ›" else "Semua Tugas (3) ›"
+    val avgNum = gradeAverage.toDoubleOrNull() ?: 0.0
+    val hasGrade = gradeAverage != "-" && avgNum > 0.0
 
     Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onNavigateToGrades),
+        shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
         shadowElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Header: Alert Circle + Title + Link
+            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -704,132 +552,148 @@ private fun PendingAssignmentsCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(20.dp)
+                            .size(28.dp)
                             .clip(CircleShape)
-                            .background(Color(0xFFFEF3C7)),
+                            .background(Color(0xFFD97706).copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PriorityHigh,
+                            imageVector = Icons.Default.Assessment,
                             contentDescription = null,
                             tint = Color(0xFFD97706),
-                            modifier = Modifier.size(12.dp)
+                            modifier = Modifier.size(15.dp)
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Tugas Perlu Diselesaikan",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimary
-                    )
+                    Column {
+                        Text(
+                            text = "Performa Akademik & Nilai",
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
+                        Text(
+                            text = "Indeks capaian belajar semester berjalan",
+                            fontSize = 11.sp,
+                            color = textSecondary
+                        )
+                    }
                 }
 
                 Text(
-                    text = countDisplay,
+                    text = "Lihat Semua ›",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF0284C7),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable(onClick = onNavigateToAssignments)
-                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                    color = Color(0xFF0284C7)
                 )
             }
 
-            // Display active pending assignment from server or standard Indonesian sample
-            val primaryAssignment = studentAssignments.firstOrNull()
-            val subjectTitle = primaryAssignment?.subjectName?.uppercase() ?: "BAHASA INDONESIA"
-            val taskTitle = primaryAssignment?.title ?: "Tugas Siswa: konjungsi (kata penghubung)"
-            val dueText = if (primaryAssignment?.dueAt != null) {
-                "Tenggat: ${formatDue(primaryAssignment.dueAt)}"
-            } else {
-                "Tenggat: 14 Nov 2026, 23:59 WIB"
-            }
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .clickable(onClick = onNavigateToAssignments),
-                color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
-                shape = RoundedCornerShape(14.dp),
-                border = BorderStroke(1.dp, cardBorder)
+            // Skor Rata-rata dan Progress Circular
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(
-                    modifier = Modifier.padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    // Row 1: [BAHASA INDONESIA] pill + [Kerjakan ->] button
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = Color(0xFFE0F2FE)
-                        ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = if (hasGrade) String.format(Locale.US, "%.1f", avgNum) else gradeAverage,
+                            fontSize = 36.sp,
+                            fontWeight = FontWeight.Black,
+                            color = textPrimary,
+                            letterSpacing = (-1).sp
+                        )
+                        if (hasGrade) {
                             Text(
-                                text = subjectTitle,
-                                color = Color(0xFF0284C7),
-                                fontSize = 10.5.sp,
+                                text = " / 100",
+                                fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
-
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFF0284C7).copy(alpha = 0.1f))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
-                        ) {
-                            Text(
-                                text = "Kerjakan",
-                                color = Color(0xFF0284C7),
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                                contentDescription = null,
-                                tint = Color(0xFF0284C7),
-                                modifier = Modifier.size(11.dp)
+                                color = textSecondary,
+                                modifier = Modifier.padding(bottom = 6.dp, start = 4.dp)
                             )
                         }
                     }
-
-                    // Row 2: Title
                     Text(
-                        text = taskTitle,
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = textPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-
-                    // Row 3: Due date
-                    Text(
-                        text = dueText,
-                        fontSize = 11.sp,
+                        text = if (hasGrade) gradeStatus else "Belum ada nilai yang diinput guru",
+                        fontSize = 11.5.sp,
                         color = textSecondary
                     )
+                }
+
+                Box(
+                    modifier = Modifier.size(52.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    val progress = if (hasGrade) (avgNum / 100.0).toFloat().coerceIn(0f, 1f) else 0.7f
+                    CircularProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier.fillMaxSize(),
+                        color = Color(0xFF0284C7),
+                        trackColor = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
+                        strokeWidth = 5.dp
+                    )
+                    Icon(
+                        imageVector = if (hasGrade) Icons.Default.CheckCircle else Icons.Default.School,
+                        contentDescription = null,
+                        tint = Color(0xFF0284C7),
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+
+            // Line Trend Chart (Jika ada data tren)
+            if (gradeTrendPoints.size >= 2) {
+                LineTrendChart(
+                    dataPoints = gradeTrendPoints,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                )
+            }
+
+            // Top Subjects Preview
+            if (topGradeSubjects.isNotEmpty()) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    topGradeSubjects.take(2).forEach { subj ->
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
+                            border = BorderStroke(1.dp, cardBorder)
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = subj.subjectName,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = "Nilai: ${subj.finalScore.toInt()}",
+                                    fontSize = 10.5.sp,
+                                    color = Color(0xFF10B981),
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }
     }
 }
 
-// ── 6. LITERASI & BUKU SIBI COMPANION ─────────────────────────────────────────
+// ── 4. BUKU & MODUL SIBI KEMDIKDASMEN / LANJUTKAN MEMBACA ───────────────────────
 
 @Composable
-private fun SibiLiteracyCompanionCard(
-    recommendedSibiBook: LibraryBook?,
+private fun HomeSibiReadingCard(
     activeReadingHistory: List<BookReadingItem>,
+    recommendedSibiBook: LibraryBook?,
     onOpenBookReading: (BookReadingItem) -> Unit,
     onStartReadingSibi: (LibraryBook) -> Unit,
     onNavigateToLearning: () -> Unit,
@@ -842,14 +706,14 @@ private fun SibiLiteracyCompanionCard(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
         shadowElevation = 1.dp
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -857,23 +721,38 @@ private fun SibiLiteracyCompanionCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                        contentDescription = null,
-                        tint = Color(0xFF9333EA),
-                        modifier = Modifier.size(16.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF9333EA).copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                            contentDescription = null,
+                            tint = Color(0xFF9333EA),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
                     Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = "Buku Resmi SIBI Kemdikdasmen",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textPrimary
-                    )
+                    Column {
+                        Text(
+                            text = if (activeReadingHistory.isNotEmpty()) "Lanjutkan Membaca" else "Rekomendasi Buku SIBI",
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
+                        Text(
+                            text = "Buku teks resmi Kemendikdasmen RI",
+                            fontSize = 11.sp,
+                            color = textSecondary
+                        )
+                    }
                 }
 
                 Text(
-                    text = "Buka Modul ›",
+                    text = "Lihat Semua ›",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF9333EA),
@@ -884,28 +763,82 @@ private fun SibiLiteracyCompanionCard(
                 )
             }
 
-            if (recommendedSibiBook != null) {
+            if (activeReadingHistory.isNotEmpty()) {
+                val currentBook = activeReadingHistory.first()
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .clickable { onStartReadingSibi(recommendedSibiBook) },
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { onOpenBookReading(currentBook) },
                     color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
-                    shape = RoundedCornerShape(12.dp),
-                    border = BorderStroke(0.5.dp, cardBorder)
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, cardBorder)
                 ) {
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(12.dp),
+                        modifier = Modifier.padding(12.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(36.dp)
+                                .size(40.dp)
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(Color(0xFFF3E8FF)),
+                                .background(Color(0xFF9333EA).copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Book,
+                                contentDescription = null,
+                                tint = Color(0xFF9333EA),
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = currentBook.title,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            val percent = (currentBook.progressPercentage * 100).toInt()
+                            Text(
+                                text = "Halaman ${currentBook.currentPage} dari ${currentBook.totalPages} • Capaian $percent%",
+                                fontSize = 11.sp,
+                                color = textSecondary
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = Color(0xFF9333EA),
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+                }
+            } else if (recommendedSibiBook != null) {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { onStartReadingSibi(recommendedSibiBook) },
+                    color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
+                    shape = RoundedCornerShape(14.dp),
+                    border = BorderStroke(1.dp, cardBorder)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF9333EA).copy(alpha = 0.15f)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -919,14 +852,14 @@ private fun SibiLiteracyCompanionCard(
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = recommendedSibiBook.title,
-                                fontSize = 13.sp,
+                                fontSize = 13.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "${recommendedSibiBook.subjectName ?: "Kurikulum Merdeka"} • ${recommendedSibiBook.totalPages} Hal",
+                                text = "${recommendedSibiBook.subjectName ?: "Kurikulum Merdeka"} • ${recommendedSibiBook.totalPages} Halaman",
                                 fontSize = 11.sp,
                                 color = textSecondary
                             )
@@ -936,16 +869,255 @@ private fun SibiLiteracyCompanionCard(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             tint = Color(0xFF9333EA),
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                     }
                 }
+            } else {
+                Text(
+                    text = "Buku teks digital resmi Kemendikdasmen siap dibaca di perpustakaan digital.",
+                    fontSize = 12.sp,
+                    color = textSecondary,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
             }
         }
     }
 }
 
-// ── DATE / TIME HELPERS ───────────────────────────────────────────────────────
+// ── 5. AKTIVITAS BELAJAR MINGGU INI ───────────────────────────────────────────
+
+@Composable
+private fun HomeWeeklyActivityCard(
+    weeklyActivity: WeeklyActivity?,
+    onNavigateToMaterials: () -> Unit,
+    onNavigateToAssignments: () -> Unit,
+    onNavigateToQuizzes: () -> Unit,
+    onNavigateToProgress: () -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    var selectedDayIndex by remember { mutableIntStateOf(0) }
+    val days = weeklyActivity?.days ?: emptyList()
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = 1.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF10B981).copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Timeline,
+                            contentDescription = null,
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Column {
+                        Text(
+                            text = "Aktivitas Belajar Minggu Ini",
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
+                        Text(
+                            text = "Senin s/d Sabtu • Real-time progres harian",
+                            fontSize = 11.sp,
+                            color = textSecondary
+                        )
+                    }
+                }
+
+                Text(
+                    text = "Lihat Semua ›",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color(0xFF0284C7),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .clickable(onClick = onNavigateToProgress)
+                        .padding(horizontal = 4.dp, vertical = 2.dp)
+                )
+            }
+
+            if (days.isNotEmpty()) {
+                // Baris Pemilih Hari (Senin s/d Sabtu)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    days.take(6).forEachIndexed { index, day ->
+                        val isSelected = index == selectedDayIndex
+                        val dayShort = when (day.dayName.lowercase()) {
+                            "senin" -> "Sen"
+                            "selasa" -> "Sel"
+                            "rabu" -> "Rab"
+                            "kamis" -> "Kam"
+                            "jumat" -> "Jum"
+                            "sabtu" -> "Sab"
+                            else -> day.dayName.take(3)
+                        }
+
+                        Surface(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable { selectedDayIndex = index },
+                            shape = RoundedCornerShape(10.dp),
+                            color = if (isSelected) Color(0xFF0284C7) else if (isDark) Color(0xFF1A233A) else Color(0xFFF1F5F9)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = dayShort,
+                                    fontSize = 11.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) Color.White else textSecondary
+                                )
+                                Text(
+                                    text = "${day.totalCount}",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isSelected) Color.White else if (day.totalCount > 0) Color(0xFF10B981) else textSecondary
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Konten Aktivitas Hari Terpilih
+                val currentDay = days.getOrNull(selectedDayIndex) ?: days.first()
+                if (currentDay.activities.isNotEmpty()) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        currentDay.activities.forEach { act ->
+                            Surface(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        when (act.category) {
+                                            "MATERIAL" -> onNavigateToMaterials()
+                                            "ASSIGNMENT" -> onNavigateToAssignments()
+                                            "QUIZ" -> onNavigateToQuizzes()
+                                        }
+                                    },
+                                shape = RoundedCornerShape(12.dp),
+                                color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
+                                border = BorderStroke(1.dp, cardBorder)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    val (catColor, catIcon) = when (act.category) {
+                                        "MATERIAL" -> Pair(Color(0xFF9333EA), Icons.Default.Book)
+                                        "ASSIGNMENT" -> Pair(Color(0xFF0284C7), Icons.AutoMirrored.Filled.Assignment)
+                                        "QUIZ" -> Pair(Color(0xFF16A34A), Icons.Default.AccessTime)
+                                        else -> Pair(Color(0xFFD97706), Icons.Default.Assessment)
+                                    }
+
+                                    Box(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(catColor.copy(alpha = 0.15f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = catIcon,
+                                            contentDescription = null,
+                                            tint = catColor,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = act.title,
+                                            fontSize = 12.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = textPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Text(
+                                            text = "${act.subjectName ?: "Pembelajaran"} • ${act.categoryLabel}",
+                                            fontSize = 10.5.sp,
+                                            color = textSecondary
+                                        )
+                                    }
+
+                                    if (act.time.isNotBlank()) {
+                                        Text(
+                                            text = "${act.time} WIB",
+                                            fontSize = 10.5.sp,
+                                            color = textSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(Color(0xFF94A3B8))
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Belum ada aktivitas belajar pada hari ${currentDay.dayName}.",
+                            fontSize = 12.sp,
+                            color = textSecondary
+                        )
+                    }
+                }
+            } else {
+                Text(
+                    text = "Aktivitas belajar mingguan Anda akan tercatat secara otomatis di sini.",
+                    fontSize = 12.sp,
+                    color = textSecondary,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
+        }
+    }
+}
+
+// ── BANTUAN WAKTU ─────────────────────────────────────────────────────────────
 
 private fun formatSessionTime(rawTime: String?): String {
     if (rawTime.isNullOrBlank()) return "08.00"
@@ -959,20 +1131,5 @@ private fun formatSessionTime(rawTime: String?): String {
         out.format(parser.parse(rawTime.substringBefore(".")) ?: Date())
     } catch (_: Exception) {
         "08.00"
-    }
-}
-
-private fun formatDue(rawDue: String?): String {
-    if (rawDue.isNullOrBlank()) return "14 Nov 2026, 23:59 WIB"
-    return try {
-        val parser = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss", Locale.getDefault()).apply {
-            timeZone = TimeZone.getTimeZone("UTC")
-        }
-        val out = SimpleDateFormat("d MMM yyyy, HH:mm 'WIB'", Locale.forLanguageTag("id-ID")).apply {
-            timeZone = TimeZone.getTimeZone("Asia/Jakarta")
-        }
-        out.format(parser.parse(rawDue.substringBefore(".")) ?: Date())
-    } catch (_: Exception) {
-        rawDue
     }
 }

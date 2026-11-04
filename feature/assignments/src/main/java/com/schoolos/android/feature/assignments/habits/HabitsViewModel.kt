@@ -187,6 +187,18 @@ class HabitsViewModel @Inject constructor(
         }
     }
 
+    fun toggleHabitAndSave(key: String) {
+        if (_state.value.isParent) return
+        toggleHabit(key)
+        saveHabits(customMessage = "Status pembiasaan berhasil diperbarui!")
+    }
+
+    fun saveHabitTask(key: String, note: String) {
+        if (_state.value.isParent) return
+        setNote(key, note)
+        saveHabits(customMessage = "Jurnal pembiasaan berhasil disimpan!")
+    }
+
     fun setNote(key: String, note: String) {
         _state.update { current ->
             val updatedNotes = current.habitNotes.toMutableMap()
@@ -206,7 +218,7 @@ class HabitsViewModel @Inject constructor(
         }
     }
 
-    fun saveHabits() {
+    fun saveHabits(customMessage: String? = null) {
         val stateVal = _state.value
         val studentId = stateVal.effectiveStudentId
         val date = stateVal.selectedDate
@@ -225,7 +237,7 @@ class HabitsViewModel @Inject constructor(
                         isSaving = false,
                         currentEntry = savedEntry,
                         verificationStatus = savedEntry.verificationStatus,
-                        successSnackbar = "Jurnal 7 Kebiasaan Anak Indonesia Hebat berhasil dicatat! Menunggu verifikasi orang tua."
+                        successSnackbar = customMessage ?: "Jurnal 7 Kebiasaan Anak Indonesia Hebat berhasil dicatat!"
                     )
                 }
                 loadHabits(isRefresh = true)
