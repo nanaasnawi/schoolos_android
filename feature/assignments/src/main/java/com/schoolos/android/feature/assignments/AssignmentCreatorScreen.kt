@@ -199,7 +199,7 @@ fun AssignmentCreatorScreen(
     }
 
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = if (LocalIsDarkTheme.current) Color(0xFF09090B) else Color(0xFFF8FAFC),
         topBar = {
             ExecutiveTopBar(
                 title = "Studio Penugasan Guru",
@@ -209,10 +209,10 @@ fun AssignmentCreatorScreen(
         },
         bottomBar = {
             Surface(
-                color = CosmicNavy,
+                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
                 tonalElevation = 8.dp,
                 shadowElevation = 12.dp,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -232,7 +232,7 @@ fun AssignmentCreatorScreen(
                         ),
                         border = androidx.compose.foundation.BorderStroke(
                             1.dp,
-                            if (showPreview) NeonWarning.copy(alpha = 0.5f) else GlassBorder
+                            if (showPreview) NeonWarning.copy(alpha = 0.5f) else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1))
                         )
                     ) {
                         Icon(
@@ -290,9 +290,9 @@ fun AssignmentCreatorScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { showAiGenerateDialog = true },
-                shape = RoundedCornerShape(14.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(22.dp),
+                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
             ) {
                 Row(
                     modifier = Modifier
@@ -310,8 +310,8 @@ fun AssignmentCreatorScreen(
                             modifier = Modifier
                                 .size(38.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(CosmicSurface2)
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                                .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
+                                .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -366,8 +366,8 @@ fun AssignmentCreatorScreen(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(14.dp),
-                    color = CosmicNavy,
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.4f))
+                    color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.4f))
                 ) {
                     Column(
                         modifier = Modifier
@@ -425,9 +425,9 @@ fun AssignmentCreatorScreen(
             // ── SECTION 1: SASARAN & ROMBEL ──
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(22.dp),
+                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
             ) {
                 Column(
                     modifier = Modifier
@@ -476,9 +476,9 @@ fun AssignmentCreatorScreen(
             // ── SECTION 2: FORMAT / METODE PENGISIAN TUGAS ──
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(22.dp),
+                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
             ) {
                 Column(
                     modifier = Modifier
@@ -511,10 +511,10 @@ fun AssignmentCreatorScreen(
                                     .fillMaxHeight()
                                     .clickable { viewModel.setAssignmentFormat(formatKey) },
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) TeacherNeon.copy(alpha = 0.12f) else CosmicSurface2,
+                                color = if (isSelected) TeacherNeon.copy(alpha = 0.12f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)),
                                 border = androidx.compose.foundation.BorderStroke(
                                     width = if (isSelected) 1.dp else 0.5.dp,
-                                    color = if (isSelected) TeacherNeon else GlassBorder
+                                    color = if (isSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                                 )
                             ) {
                                 Column(
@@ -556,9 +556,9 @@ fun AssignmentCreatorScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White)
+                    .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0), RoundedCornerShape(22.dp))
                     .padding(16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -606,9 +606,9 @@ fun AssignmentCreatorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CosmicNavy)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                        .clip(RoundedCornerShape(22.dp))
+                        .background(if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White)
+                        .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0), RoundedCornerShape(22.dp))
                         .padding(16.dp)
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -667,9 +667,9 @@ fun AssignmentCreatorScreen(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White)
+                    .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0), RoundedCornerShape(22.dp))
                     .padding(16.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
@@ -704,11 +704,11 @@ fun AssignmentCreatorScreen(
                                         .weight(1f)
                                         .clip(RoundedCornerShape(10.dp))
                                         .background(
-                                            if (isSelected) TeacherNeon.copy(alpha = 0.15f) else CosmicSurface2
+                                            if (isSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC))
                                         )
                                         .border(
                                             width = if (isSelected) 1.5.dp else 0.5.dp,
-                                            color = if (isSelected) TeacherNeon else GlassBorder,
+                                            color = if (isSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                                             shape = RoundedCornerShape(10.dp)
                                         )
                                         .clickable { selectedDueDays = days }
@@ -771,11 +771,11 @@ fun AssignmentCreatorScreen(
                                             .clip(RoundedCornerShape(10.dp))
                                             .background(
                                                 if (isSelected) NeonSuccess.copy(alpha = 0.15f)
-                                                else CosmicSurface2
+                                                else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC))
                                             )
                                             .border(
                                                 1.5.dp,
-                                                if (isSelected) NeonSuccess else GlassBorder,
+                                                if (isSelected) NeonSuccess else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                                                 RoundedCornerShape(10.dp)
                                             )
                                             .clickable { customMaxScore = score }
@@ -802,7 +802,7 @@ fun AssignmentCreatorScreen(
                                     shape = RoundedCornerShape(12.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
                                         focusedBorderColor = NeonSuccess,
-                                        unfocusedBorderColor = GlassBorder,
+                                        unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                                         focusedLabelColor = NeonSuccess,
                                         focusedTextColor = TextPrimary,
                                         unfocusedTextColor = TextPrimary
@@ -869,8 +869,8 @@ private fun QuestionBuilderCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .background(CosmicSurface2)
-            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC))
+            .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
             .padding(12.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -916,8 +916,8 @@ private fun QuestionBuilderCard(
                             .width(54.dp)
                             .height(34.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(CosmicSurface)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                            .background(if (LocalIsDarkTheme.current) Color(0xFF232326) else Color.White)
+                            .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1), RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         androidx.compose.foundation.text.BasicTextField(
@@ -968,7 +968,7 @@ private fun QuestionBuilderCard(
                 shape = RoundedCornerShape(10.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = if (isMultipleChoice) IndigoAccent else CyanAccent,
-                    unfocusedBorderColor = GlassBorder,
+                    unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                     focusedLabelColor = if (isMultipleChoice) IndigoAccent else CyanAccent,
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
@@ -994,10 +994,10 @@ private fun QuestionBuilderCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isCorrect) NeonSuccess.copy(alpha = 0.08f) else CosmicBlack)
+                                .background(if (isCorrect) NeonSuccess.copy(alpha = 0.08f) else (if (LocalIsDarkTheme.current) Color(0xFF232326) else Color.White))
                                 .border(
                                     width = if (isCorrect) 1.2.dp else 0.8.dp,
-                                    color = if (isCorrect) NeonSuccess else GlassBorder,
+                                    color = if (isCorrect) NeonSuccess else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1)),
                                     shape = RoundedCornerShape(8.dp)
                                 )
                                 .padding(horizontal = 8.dp, vertical = 4.dp),
@@ -1105,8 +1105,8 @@ private fun AssignmentSectionHeader(
             modifier = Modifier
                 .size(28.dp)
                 .clip(RoundedCornerShape(8.dp))
-                .background(CosmicSurface2)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
+                .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center
         ) {
             Text(
@@ -1141,8 +1141,8 @@ private fun AssignmentDropdown(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(12.dp),
-            color = CosmicSurface2,
-            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+            color = if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC),
+            border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
         ) {
             Row(
                 modifier = Modifier
@@ -1180,8 +1180,8 @@ private fun AssignmentDropdown(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(CosmicNavy)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                        .background(if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFF1F5F9))
+                        .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1), RoundedCornerShape(6.dp))
                         .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
                     Text(
@@ -1213,7 +1213,7 @@ private fun AssignmentDropdown(
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = TeacherNeon,
-                    unfocusedBorderColor = GlassBorder,
+                    unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                     focusedLabelColor = TeacherNeon,
                     focusedLeadingIconColor = TeacherNeon,
                     focusedTextColor = TextPrimary,
@@ -1224,7 +1224,7 @@ private fun AssignmentDropdown(
             ExposedDropdownMenu(
                 expanded = expanded,
                 onDismissRequest = onDismiss,
-                modifier = Modifier.background(CosmicNavy)
+                modifier = Modifier.background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color.White)
             ) {
                 options.forEach { option ->
                     val isSelected = option == value
@@ -1269,7 +1269,7 @@ private fun AssignmentTextField(
         shape = RoundedCornerShape(14.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = accentColor,
-            unfocusedBorderColor = GlassBorder,
+            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
             focusedLabelColor = accentColor,
             focusedLeadingIconColor = accentColor,
             focusedTextColor = TextPrimary,
@@ -1296,16 +1296,16 @@ private fun AssignmentReviewAndPublishScreen(
 ) {
     androidx.activity.compose.BackHandler(onBack = onBackToEdit)
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) CosmicNavy else MaterialTheme.colorScheme.surface
-    val cardBorder = if (isDark) GlassBorder else MaterialTheme.colorScheme.outlineVariant
-    val itemBg = if (isDark) CosmicSurface2 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val itemBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
 
     var isScheduled by remember { mutableStateOf(false) }
     var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().plusDays(1)) }
     var scheduledTime by remember { mutableStateOf(java.time.LocalTime.of(7, 0)) }
 
     Scaffold(
-        containerColor = if (isDark) CosmicBlack else MaterialTheme.colorScheme.background,
+        containerColor = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC),
         topBar = {
             ExecutiveTopBar(
                 title = "Pratinjau Tugas Siswa",
@@ -1354,7 +1354,7 @@ private fun AssignmentReviewAndPublishScreen(
                         modifier = Modifier.weight(1.3f).height(48.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = if (isScheduled) NeonWarning else TeacherNeon,
-                            contentColor = if (isScheduled) CosmicBlack else Color.White
+                            contentColor = if (isScheduled) Color(0xFF0F172A) else Color.White
                         )
                     ) {
                         if (isLoading) {
@@ -1565,7 +1565,7 @@ private fun AssignmentReviewAndPublishScreen(
                                                             modifier = Modifier
                                                                 .size(20.dp)
                                                                 .clip(CircleShape)
-                                                                .background(if (isCorrect) NeonSuccess else CosmicSurface3),
+                                                                .background(if (isCorrect) NeonSuccess else (if (isDark) Color(0xFF27272A) else Color(0xFFCBD5E1))),
                                                             contentAlignment = Alignment.Center
                                                         ) {
                                                             Text(

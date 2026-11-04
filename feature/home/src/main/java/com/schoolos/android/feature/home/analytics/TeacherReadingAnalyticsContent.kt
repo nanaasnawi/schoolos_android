@@ -184,18 +184,24 @@ fun TeacherReadingAnalyticsContent(
 private fun ReadingAnalyticsHeroHeader(
     isDark: Boolean,
 ) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 2.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -205,17 +211,17 @@ private fun ReadingAnalyticsHeroHeader(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(NeonBlue.copy(alpha = 0.12f))
-                        .border(0.5.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(emeraldAccent.copy(alpha = 0.12f))
+                        .border(1.dp, emeraldAccent.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.MenuBook,
                         contentDescription = null,
-                        tint = NeonBlue,
-                        modifier = Modifier.size(17.dp)
+                        tint = emeraldAccent,
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 Column(verticalArrangement = Arrangement.Center) {
@@ -223,14 +229,14 @@ private fun ReadingAnalyticsHeroHeader(
                         text = "Teacher Analytics & Reading Progress",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = "Monitoring progres literasi & keterbacaan materi",
                         fontSize = 11.sp,
-                        color = TextSecondary,
+                        color = textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -238,12 +244,12 @@ private fun ReadingAnalyticsHeroHeader(
             }
 
             Surface(
-                shape = RoundedCornerShape(6.dp),
-                color = NeonSuccess.copy(alpha = 0.1f),
-                border = BorderStroke(0.5.dp, NeonSuccess.copy(alpha = 0.25f))
+                shape = RoundedCornerShape(8.dp),
+                color = emeraldAccent.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, emeraldAccent.copy(alpha = 0.3f))
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
@@ -251,13 +257,13 @@ private fun ReadingAnalyticsHeroHeader(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(NeonSuccess)
+                            .background(emeraldAccent)
                     )
                     Text(
                         text = "Live Sync",
                         fontSize = 10.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = NeonSuccess
+                        color = emeraldAccent
                     )
                 }
             }
@@ -270,6 +276,8 @@ private fun ReadingMetricsGrid(
     metrics: TeacherReadingMetrics,
     isDark: Boolean,
 ) {
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -281,25 +289,29 @@ private fun ReadingMetricsGrid(
             title = "Materi Terbit",
             value = metrics.totalMaterials.toString(),
             icon = Icons.AutoMirrored.Filled.MenuBook,
-            accentColor = NeonBlue
+            accentColor = emeraldAccent,
+            isDark = isDark
         )
         CompactMetricTile(
             title = "Siswa Pembaca",
             value = metrics.totalReaders.toString(),
             icon = Icons.Default.Group,
-            accentColor = StudentNeon
+            accentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
+            isDark = isDark
         )
         CompactMetricTile(
             title = "Ketercapaian",
             value = "${metrics.overallCompletionRate}%",
             icon = Icons.Default.CheckCircle,
-            accentColor = NeonSuccess
+            accentColor = emeraldAccent,
+            isDark = isDark
         )
         CompactMetricTile(
             title = "Total Halaman",
             value = String.format(Locale.US, "%,d", metrics.totalPagesRead),
             icon = Icons.Default.AutoStories,
-            accentColor = AccentNeonAmber
+            accentColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
+            isDark = isDark
         )
     }
 }
@@ -310,33 +322,39 @@ private fun CompactMetricTile(
     value: String,
     icon: ImageVector,
     accentColor: Color,
+    isDark: Boolean,
 ) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
+        shape = RoundedCornerShape(14.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
                 tint = accentColor,
-                modifier = Modifier.size(13.dp)
+                modifier = Modifier.size(14.dp)
             )
             Text(
                 text = value,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = textPrimary
             )
             Text(
                 text = title,
                 fontSize = 11.sp,
-                color = TextTertiary
+                color = textTertiary
             )
         }
     }
@@ -358,6 +376,14 @@ private fun ReadingFilterSection(
     var classDropdownOpen by remember { mutableStateOf(false) }
     var materialDropdownOpen by remember { mutableStateOf(false) }
 
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val menuBg = if (isDark) Color(0xFF1B1B1E) else Color.White
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -373,16 +399,16 @@ private fun ReadingFilterSection(
             Box(modifier = Modifier.weight(1f)) {
                 Surface(
                     onClick = { classDropdownOpen = true },
-                    shape = RoundedCornerShape(10.dp),
-                    color = CosmicNavy,
+                    shape = RoundedCornerShape(14.dp),
+                    color = cardBg,
                     border = BorderStroke(
-                        0.5.dp,
-                        if (selectedClass != "ALL") NeonBlue else GlassBorder
+                        1.dp,
+                        if (selectedClass != "ALL") emeraldAccent else cardBorder
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -391,13 +417,13 @@ private fun ReadingFilterSection(
                                 text = "Rombel",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextTertiary
+                                color = textTertiary
                             )
                             Text(
                                 text = if (selectedClass == "ALL") "Semua Rombel" else selectedClass,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (selectedClass != "ALL") NeonBlue else TextPrimary,
+                                color = if (selectedClass != "ALL") emeraldAccent else textPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -405,7 +431,7 @@ private fun ReadingFilterSection(
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = "Pilih",
-                            tint = TextTertiary,
+                            tint = textTertiary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -414,10 +440,10 @@ private fun ReadingFilterSection(
                 DropdownMenu(
                     expanded = classDropdownOpen,
                     onDismissRequest = { classDropdownOpen = false },
-                    modifier = Modifier.background(CosmicNavy)
+                    modifier = Modifier.background(menuBg)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Semua Rombel", fontWeight = if (selectedClass == "ALL") FontWeight.Bold else FontWeight.Normal) },
+                        text = { Text("Semua Rombel", color = textPrimary, fontWeight = if (selectedClass == "ALL") FontWeight.Bold else FontWeight.Normal) },
                         onClick = {
                             onSelectClass("ALL")
                             classDropdownOpen = false
@@ -425,7 +451,7 @@ private fun ReadingFilterSection(
                     )
                     classes.forEach { cls ->
                         DropdownMenuItem(
-                            text = { Text(cls, fontWeight = if (selectedClass == cls) FontWeight.Bold else FontWeight.Normal) },
+                            text = { Text(cls, color = textPrimary, fontWeight = if (selectedClass == cls) FontWeight.Bold else FontWeight.Normal) },
                             onClick = {
                                 onSelectClass(cls)
                                 classDropdownOpen = false
@@ -441,16 +467,16 @@ private fun ReadingFilterSection(
 
                 Surface(
                     onClick = { materialDropdownOpen = true },
-                    shape = RoundedCornerShape(10.dp),
-                    color = CosmicNavy,
+                    shape = RoundedCornerShape(14.dp),
+                    color = cardBg,
                     border = BorderStroke(
-                        0.5.dp,
-                        if (selectedMaterialId != "ALL") NeonBlue else GlassBorder
+                        1.dp,
+                        if (selectedMaterialId != "ALL") emeraldAccent else cardBorder
                     ),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -459,13 +485,13 @@ private fun ReadingFilterSection(
                                 text = "Materi / Modul",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextTertiary
+                                color = textTertiary
                             )
                             Text(
                                 text = selectedTitle,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (selectedMaterialId != "ALL") NeonBlue else TextPrimary,
+                                color = if (selectedMaterialId != "ALL") emeraldAccent else textPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -474,7 +500,7 @@ private fun ReadingFilterSection(
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
                             contentDescription = "Pilih",
-                            tint = TextTertiary,
+                            tint = textTertiary,
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -483,10 +509,10 @@ private fun ReadingFilterSection(
                 DropdownMenu(
                     expanded = materialDropdownOpen,
                     onDismissRequest = { materialDropdownOpen = false },
-                    modifier = Modifier.background(CosmicNavy)
+                    modifier = Modifier.background(menuBg)
                 ) {
                     DropdownMenuItem(
-                        text = { Text("Semua Materi / Modul", fontWeight = if (selectedMaterialId == "ALL") FontWeight.Bold else FontWeight.Normal) },
+                        text = { Text("Semua Materi / Modul", color = textPrimary, fontWeight = if (selectedMaterialId == "ALL") FontWeight.Bold else FontWeight.Normal) },
                         onClick = {
                             onSelectMaterial("ALL")
                             materialDropdownOpen = false
@@ -494,7 +520,7 @@ private fun ReadingFilterSection(
                     )
                     materials.forEach { (mId, mTitle) ->
                         DropdownMenuItem(
-                            text = { Text(mTitle, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = if (selectedMaterialId == mId) FontWeight.Bold else FontWeight.Normal) },
+                            text = { Text(mTitle, color = textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = if (selectedMaterialId == mId) FontWeight.Bold else FontWeight.Normal) },
                             onClick = {
                                 onSelectMaterial(mId)
                                 materialDropdownOpen = false
@@ -505,16 +531,16 @@ private fun ReadingFilterSection(
             }
         }
 
-        // Compact Search Field (Custom Surface with BasicTextField - Zero Clipping!)
+        // Compact Search Field
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(42.dp),
-            shape = RoundedCornerShape(10.dp),
-            color = CosmicNavy,
+                .height(44.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = cardBg,
             border = BorderStroke(
-                0.5.dp,
-                if (searchQuery.isNotBlank()) NeonBlue else GlassBorder
+                1.dp,
+                if (searchQuery.isNotBlank()) emeraldAccent else cardBorder
             )
         ) {
             Row(
@@ -527,8 +553,8 @@ private fun ReadingFilterSection(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = if (searchQuery.isNotBlank()) NeonBlue else TextTertiary,
-                    modifier = Modifier.size(16.dp)
+                    tint = if (searchQuery.isNotBlank()) emeraldAccent else textTertiary,
+                    modifier = Modifier.size(18.dp)
                 )
                 BasicTextField(
                     value = searchQuery,
@@ -536,9 +562,9 @@ private fun ReadingFilterSection(
                     singleLine = true,
                     textStyle = TextStyle(
                         fontSize = 13.sp,
-                        color = TextPrimary
+                        color = textPrimary
                     ),
-                    cursorBrush = SolidColor(NeonBlue),
+                    cursorBrush = SolidColor(emeraldAccent),
                     modifier = Modifier.weight(1f),
                     decorationBox = { innerTextField ->
                         Box(contentAlignment = Alignment.CenterStart) {
@@ -546,7 +572,7 @@ private fun ReadingFilterSection(
                                 Text(
                                     text = "Cari siswa, NISN, atau judul modul...",
                                     fontSize = 13.sp,
-                                    color = TextTertiary,
+                                    color = textTertiary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -563,7 +589,7 @@ private fun ReadingFilterSection(
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Clear",
-                            tint = TextSecondary,
+                            tint = textSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -581,6 +607,7 @@ private fun ReadingStatusFilterTabs(
     onSelectStatus: (String) -> Unit,
 ) {
     val scrollState = rememberScrollState()
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
 
     Row(
         modifier = Modifier
@@ -592,7 +619,7 @@ private fun ReadingStatusFilterTabs(
         StatusFilterPill(
             label = "Semua (${statusCounts.all})",
             selected = selectedStatus == "ALL",
-            accentColor = NeonBlue,
+            accentColor = emeraldAccent,
             isDark = isDark,
             onClick = { onSelectStatus("ALL") }
         )
@@ -600,7 +627,7 @@ private fun ReadingStatusFilterTabs(
         StatusFilterPill(
             label = "Selesai (${statusCounts.completed})",
             selected = selectedStatus == "COMPLETED",
-            accentColor = NeonSuccess,
+            accentColor = emeraldAccent,
             isDark = isDark,
             onClick = { onSelectStatus("COMPLETED") }
         )
@@ -608,7 +635,7 @@ private fun ReadingStatusFilterTabs(
         StatusFilterPill(
             label = "Sedang Baca (${statusCounts.inProgress})",
             selected = selectedStatus == "IN_PROGRESS",
-            accentColor = NeonBlue,
+            accentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
             isDark = isDark,
             onClick = { onSelectStatus("IN_PROGRESS") }
         )
@@ -616,7 +643,7 @@ private fun ReadingStatusFilterTabs(
         StatusFilterPill(
             label = "Belum Mulai (${statusCounts.notStarted})",
             selected = selectedStatus == "NOT_STARTED",
-            accentColor = TextTertiary,
+            accentColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
             isDark = isDark,
             onClick = { onSelectStatus("NOT_STARTED") }
         )
@@ -631,21 +658,22 @@ private fun StatusFilterPill(
     isDark: Boolean,
     onClick: () -> Unit,
 ) {
+    val pillBg = if (selected) accentColor.copy(alpha = if (isDark) 0.18f else 0.12f) else (if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
+    val pillBorder = if (selected) accentColor else (if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
+    val pillText = if (selected) accentColor else (if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B))
+
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        color = if (selected) accentColor.copy(alpha = 0.12f) else CosmicSurface2,
-        border = BorderStroke(
-            0.5.dp,
-            if (selected) accentColor.copy(alpha = 0.4f) else GlassBorder
-        )
+        shape = RoundedCornerShape(12.dp),
+        color = pillBg,
+        border = BorderStroke(1.dp, pillBorder)
     ) {
         Text(
             text = label,
             fontSize = 11.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) accentColor else TextSecondary,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            color = pillText,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
         )
     }
 }
@@ -656,11 +684,20 @@ private fun StudentReadingProgressCard(
     isDark: Boolean,
     onClickDetail: () -> Unit,
 ) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     val progressFraction = (row.completionPercentage.toFloat() / 100f).coerceIn(0f, 1f)
     val progressColor = when {
-        row.isCompleted -> NeonSuccess
-        row.currentPage > 0 -> NeonBlue
-        else -> TextTertiary
+        row.isCompleted -> emeraldAccent
+        row.currentPage > 0 -> if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+        else -> textTertiary
     }
 
     Surface(
@@ -668,14 +705,14 @@ private fun StudentReadingProgressCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clickable(onClick = onClickDetail),
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(16.dp)
         ) {
             // Header: Student Name + Class Badge + NISN + Status Badge
             Row(
@@ -688,30 +725,30 @@ private fun StudentReadingProgressCard(
                         text = row.studentName,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(3.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
                             text = "NISN: ${row.nisn}",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
-                            color = TextTertiary
+                            color = textTertiary
                         )
                         Spacer(Modifier.width(8.dp))
                         Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = CosmicSurface2,
-                            border = BorderStroke(0.5.dp, GlassBorder)
+                            shape = RoundedCornerShape(8.dp),
+                            color = innerCardBg,
+                            border = BorderStroke(1.dp, innerCardBorder)
                         ) {
                             Text(
                                 text = row.className,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NeonBlue,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                color = emeraldAccent,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -725,34 +762,34 @@ private fun StudentReadingProgressCard(
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             // Material title & subject
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                color = CosmicSurface2,
-                border = BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(14.dp),
+                color = innerCardBg,
+                border = BorderStroke(1.dp, innerCardBorder)
             ) {
-                Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
+                Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
                     Text(
                         text = row.materialTitle,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
+                        color = textPrimary,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(3.dp))
                     Text(
                         text = row.subjectName,
-                        fontSize = 10.sp,
-                        color = TextSecondary
+                        fontSize = 11.sp,
+                        color = textSecondary
                     )
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             // Progress Bar & Stats
             Row(
@@ -763,7 +800,7 @@ private fun StudentReadingProgressCard(
                 Text(
                     text = "Progress Membaca:",
                     fontSize = 11.sp,
-                    color = TextTertiary
+                    color = textTertiary
                 )
                 Text(
                     text = "${row.currentPage} / ${row.totalPages} hlm (${row.completionPercentage}%)",
@@ -773,19 +810,19 @@ private fun StudentReadingProgressCard(
                 )
             }
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
 
             LinearProgressIndicator(
                 progress = { progressFraction },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(5.dp)
+                    .height(6.dp)
                     .clip(RoundedCornerShape(3.dp)),
                 color = progressColor,
-                trackColor = CosmicSurface2,
+                trackColor = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0),
             )
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             // Footer Row: Last Read & Detail Button
             Row(
@@ -797,7 +834,7 @@ private fun StudentReadingProgressCard(
                 Text(
                     text = if (lastRead != null) "Terakhir: ${lastRead.take(16).replace("T", " ")}" else "Belum ada aktivitas",
                     fontSize = 10.sp,
-                    color = TextTertiary
+                    color = textTertiary
                 )
 
                 Row(
@@ -808,13 +845,13 @@ private fun StudentReadingProgressCard(
                         text = "Detail Siswa",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = NeonBlue
+                        color = emeraldAccent
                     )
                     Spacer(Modifier.width(3.dp))
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                         contentDescription = null,
-                        tint = NeonBlue,
+                        tint = emeraldAccent,
                         modifier = Modifier.size(10.dp)
                     )
                 }
@@ -829,28 +866,37 @@ private fun ReadingStatusBadge(
     currentPage: Int,
     isDark: Boolean,
 ) {
-    val (bgColor, textColor, text) = when {
-        isCompleted -> Triple(
-            NeonSuccess.copy(alpha = 0.12f),
-            NeonSuccess,
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val blueAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFCBD5E1)
+
+    val (bgColor, textColor, border, text) = when {
+        isCompleted -> Quad(
+            emeraldAccent.copy(alpha = 0.12f),
+            emeraldAccent,
+            emeraldAccent.copy(alpha = 0.3f),
             "Selesai"
         )
-        currentPage > 0 -> Triple(
-            NeonBlue.copy(alpha = 0.12f),
-            NeonBlue,
+        currentPage > 0 -> Quad(
+            blueAccent.copy(alpha = 0.12f),
+            blueAccent,
+            blueAccent.copy(alpha = 0.3f),
             "Sedang Baca"
         )
-        else -> Triple(
-            CosmicSurface2,
-            TextTertiary,
+        else -> Quad(
+            innerCardBg,
+            textTertiary,
+            innerCardBorder,
             "Belum Mulai"
         )
     }
 
     Surface(
-        shape = RoundedCornerShape(6.dp),
+        shape = RoundedCornerShape(8.dp),
         color = bgColor,
-        border = BorderStroke(0.5.dp, textColor.copy(alpha = 0.3f))
+        border = BorderStroke(1.dp, border)
     ) {
         Text(
             text = text,
@@ -862,8 +908,16 @@ private fun ReadingStatusBadge(
     }
 }
 
+private data class Quad<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)
+
 @Composable
 private fun EmptyReadingState(isDark: Boolean) {
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -872,33 +926,33 @@ private fun EmptyReadingState(isDark: Boolean) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Surface(
-                modifier = Modifier.size(48.dp),
+                modifier = Modifier.size(52.dp),
                 shape = CircleShape,
-                color = CosmicSurface2,
-                border = BorderStroke(0.5.dp, GlassBorder)
+                color = innerCardBg,
+                border = BorderStroke(1.dp, innerCardBorder)
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         imageVector = Icons.Default.Description,
                         contentDescription = null,
-                        tint = TextTertiary,
-                        modifier = Modifier.size(22.dp)
+                        tint = textTertiary,
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
             Text(
                 text = "Tidak Ada Data Pembaca",
-                fontSize = 14.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = textPrimary
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Sesuaikan filter rombel, materi, atau kata kunci pencarian Anda.",
-                fontSize = 11.sp,
+                fontSize = 12.sp,
                 textAlign = TextAlign.Center,
-                color = TextSecondary
+                color = textSecondary
             )
         }
     }

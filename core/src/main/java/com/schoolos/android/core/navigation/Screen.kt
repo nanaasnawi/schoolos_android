@@ -95,6 +95,7 @@ sealed class Screen(val route: String) {
         }
     }
     data object Chat : Screen("chat")
+    data object AiChat : Screen("ai-chat")
     data object ChatDetail : Screen("chat/{recipientId}/{recipientName}") {
         fun createRoute(recipientId: String, recipientName: String) =
             "chat/${Uri.encode(recipientId)}/${Uri.encode(recipientName)}"

@@ -2,6 +2,7 @@ package com.schoolos.android.feature.home
 
 import com.schoolos.android.core.R as CoreR
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,23 +19,20 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.Assessment
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -47,19 +45,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.CosmicDark
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface2
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassBorder2
+import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.Assignment
@@ -232,6 +223,14 @@ fun LazyListScope.teacherContent(
 
     // ── 2. CLASS COMMAND HERO (WALI KELAS / KELAS PENGAMPU) ─────────────────────
     item {
+        val isDark = LocalIsDarkTheme.current
+        val cardBg = if (isDark) Color(0xFF111113) else Color.White
+        val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+        val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+        val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+        val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+        val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
         val heroBadge = if (isHomeroom) "WALI KELAS" else "KELAS PENGAMPU"
         val heroTitle = if (rawClass != "-") formatClassName(rawClass) else if (isHomeroom) "Wali Kelas" else "Kelas Pengampu"
         val heroSubtitle = if (isHomeroom && heroTitle != "Wali Kelas") {
@@ -240,18 +239,22 @@ fun LazyListScope.teacherContent(
             "Rekap data siswa, kehadiran presensi harian, dan pantauan kelas"
         }
 
-        Box(
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+                .clip(RoundedCornerShape(22.dp))
                 .clickable {
                     onNavigateToRombelStudents(if (teacherClasses.size > 1) "ALL" else rawClass)
-                }
-                .padding(14.dp),
+                },
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            shadowElevation = if (isDark) 0.dp else 1.dp,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 // Top Row: Role badge & quick action
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -264,14 +267,14 @@ fun LazyListScope.teacherContent(
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(badgeBg)
-                            .border(0.5.dp, badgeBorder, RoundedCornerShape(6.dp))
-                            .padding(horizontal = 7.dp, vertical = 2.dp),
+                            .border(0.5.dp, badgeBorder, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                     ) {
                         Text(
                             text = heroBadge,
-                            fontSize = 9.sp,
+                            fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = badgeFg,
                             letterSpacing = 0.5.sp,
@@ -280,7 +283,7 @@ fun LazyListScope.teacherContent(
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
                         Text(
                             text = "Presensi & Siswa",
@@ -292,7 +295,7 @@ fun LazyListScope.teacherContent(
                             imageVector = Icons.AutoMirrored.Filled.ArrowForward,
                             contentDescription = null,
                             tint = TeacherNeon,
-                            modifier = Modifier.size(11.dp),
+                            modifier = Modifier.size(12.dp),
                         )
                     }
                 }
@@ -304,17 +307,17 @@ fun LazyListScope.teacherContent(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(CosmicSurface2)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Default.Group,
                             contentDescription = null,
-                            tint = TextPrimary,
-                            modifier = Modifier.size(20.dp),
+                            tint = textPrimary,
+                            modifier = Modifier.size(22.dp),
                         )
                     }
 
@@ -325,15 +328,15 @@ fun LazyListScope.teacherContent(
                             text = heroTitle,
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
+                            color = textPrimary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
                             text = heroSubtitle,
-                            fontSize = 11.sp,
-                            color = TextSecondary,
+                            fontSize = 11.5.sp,
+                            color = textSecondary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -373,25 +376,36 @@ fun LazyListScope.teacherContent(
 
     if (todaySessions.isNotEmpty()) {
         items(todaySessions.take(3), key = { it.id }) { session ->
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+            val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+            val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+            val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+            val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+            val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
             val isLive = session.status.equals("active", ignoreCase = true)
             val timeLabel = formatSessionTime(session.scheduledAt, session.startedAt)
             val sessionClass = formatClassName(session.className ?: session.room)
 
-            Box(
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(
-                        0.5.dp,
-                        if (isLive) NeonSuccess.copy(alpha = 0.45f) else GlassBorder,
-                        RoundedCornerShape(12.dp)
-                    )
-                    .clickable { onNavigateToSessionDetail(session.id) }
-                    .padding(12.dp),
+                    .clip(RoundedCornerShape(22.dp))
+                    .clickable { onNavigateToSessionDetail(session.id) },
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(
+                    1.dp,
+                    if (isLive) NeonSuccess.copy(alpha = 0.5f) else cardBorder
+                ),
+                shadowElevation = if (isDark) 0.dp else 1.dp,
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
@@ -402,32 +416,32 @@ fun LazyListScope.teacherContent(
                         // Time indicator box
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isLive) NeonSuccess.copy(alpha = 0.12f) else CosmicSurface2)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isLive) NeonSuccess.copy(alpha = 0.12f) else innerCardBg)
                                 .border(
-                                    0.5.dp,
-                                    if (isLive) NeonSuccess.copy(alpha = 0.35f) else GlassBorder,
-                                    RoundedCornerShape(8.dp)
+                                    1.dp,
+                                    if (isLive) NeonSuccess.copy(alpha = 0.35f) else innerCardBorder,
+                                    RoundedCornerShape(10.dp)
                                 )
-                                .padding(horizontal = 8.dp, vertical = 6.dp),
+                                .padding(horizontal = 10.dp, vertical = 7.dp),
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
                                 text = timeLabel,
-                                fontSize = 11.sp,
+                                fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (isLive) NeonSuccess else TextPrimary,
+                                color = if (isLive) NeonSuccess else textPrimary,
                             )
                         }
 
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = session.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -438,8 +452,8 @@ fun LazyListScope.teacherContent(
                             ) {
                                 Text(
                                     text = sessionClass,
-                                    fontSize = 11.sp,
-                                    color = TextSecondary,
+                                    fontSize = 11.5.sp,
+                                    color = textSecondary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
                                 )
@@ -447,7 +461,7 @@ fun LazyListScope.teacherContent(
                                     Text("•", fontSize = 8.sp, color = NeonSuccess)
                                     Text(
                                         text = "Sedang Berlangsung",
-                                        fontSize = 10.sp,
+                                        fontSize = 10.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = NeonSuccess,
                                     )
@@ -457,55 +471,62 @@ fun LazyListScope.teacherContent(
                     }
 
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                         contentDescription = null,
-                        tint = TextTertiary,
-                        modifier = Modifier.size(14.dp),
+                        tint = textTertiary,
+                        modifier = Modifier.size(13.dp),
                     )
                 }
             }
         }
     } else {
         item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                    .padding(14.dp),
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+            val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+            val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+            val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = if (isDark) 0.dp else 1.dp,
             ) {
                 Row(
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(CosmicSurface2),
+                            .size(42.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(innerCardBg),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(
                             imageVector = Icons.Default.CalendarMonth,
                             contentDescription = null,
-                            tint = TextTertiary,
-                            modifier = Modifier.size(18.dp),
+                            tint = textTertiary,
+                            modifier = Modifier.size(20.dp),
                         )
                     }
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Tidak Ada Sesi Mengajar Hari Ini",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
                             text = "Jadwal tatap muka bebas. Manfaatkan waktu untuk evaluasi tugas atau menyusun modul ajar.",
-                            fontSize = 11.sp,
-                            color = TextTertiary,
+                            fontSize = 11.5.sp,
+                            color = textTertiary,
                         )
                     }
                 }
@@ -526,26 +547,36 @@ fun LazyListScope.teacherContent(
 
     if (teacherAssignments.isNotEmpty()) {
         items(teacherAssignments.take(3), key = { it.id }) { assignment ->
-            Box(
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+            val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+            val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+            val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                    .clickable(onClick = onNavigateToAssignments)
-                    .padding(12.dp),
+                    .clip(RoundedCornerShape(22.dp))
+                    .clickable(onClick = onNavigateToAssignments),
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = if (isDark) 0.dp else 1.dp,
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = assignment.title.ifBlank { "Tugas Siswa" },
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -558,24 +589,24 @@ fun LazyListScope.teacherContent(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(4.dp))
-                                    .background(CosmicSurface2)
-                                    .padding(horizontal = 5.dp, vertical = 1.dp),
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(innerCardBg)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
                             ) {
                                 Text(
                                     text = formatClassName(assignment.className ?: assignment.subjectName),
-                                    fontSize = 10.sp,
+                                    fontSize = 10.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextTertiary,
+                                    color = textTertiary,
                                 )
                             }
 
-                            Text("•", fontSize = 8.sp, color = TextTertiary)
+                            Text("•", fontSize = 8.sp, color = textTertiary)
 
                             Text(
                                 text = formatDueDate(assignment.dueAt),
                                 fontSize = 11.sp,
-                                color = TextTertiary,
+                                color = textTertiary,
                             )
                         }
 
@@ -583,24 +614,24 @@ fun LazyListScope.teacherContent(
                             Spacer(Modifier.height(2.dp))
                             Text(
                                 text = "Diterbitkan: ${com.schoolos.android.core.common.formatPublishTimestamp(assignment.createdAt)}",
-                                fontSize = 10.sp,
-                                color = TextTertiary
+                                fontSize = 10.5.sp,
+                                color = textTertiary
                             )
                         }
                     }
 
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(10.dp))
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(TeacherNeon.copy(alpha = 0.12f))
-                            .border(0.5.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            .border(1.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                     ) {
                         Text(
                             text = "Periksa",
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = TeacherNeon,
                         )
@@ -610,41 +641,46 @@ fun LazyListScope.teacherContent(
         }
     } else {
         item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                    .padding(14.dp),
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+            val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+            val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = if (isDark) 0.dp else 1.dp,
             ) {
                 Row(
+                    modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth(),
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = "Belum Ada Tugas Aktif",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary,
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
                             text = "Buat penugasan baru untuk melatih pemahaman siswa.",
-                            fontSize = 11.sp,
-                            color = TextTertiary,
+                            fontSize = 11.5.sp,
+                            color = textTertiary,
                         )
                     }
 
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(TeacherNeon.copy(alpha = 0.12f))
-                            .border(0.5.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .border(1.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                             .clickable(onClick = onNavigateToAssignmentCreator)
-                            .padding(horizontal = 10.dp, vertical = 5.dp),
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                     ) {
                         Text(
                             text = "+ Buat Tugas",
@@ -670,24 +706,34 @@ fun LazyListScope.teacherContent(
 
     if (teacherAnnouncements.isNotEmpty()) {
         items(teacherAnnouncements.take(2), key = { it.id }) { notif ->
-            Box(
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+            val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+            val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+            val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                    .clickable(onClick = onNavigateToNotifications)
-                    .padding(12.dp),
+                    .clip(RoundedCornerShape(22.dp))
+                    .clickable(onClick = onNavigateToNotifications),
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = if (isDark) 0.dp else 1.dp,
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
                     verticalAlignment = Alignment.Top,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(34.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
                             .background(NeonBlue.copy(alpha = 0.12f)),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -695,7 +741,7 @@ fun LazyListScope.teacherContent(
                             imageVector = Icons.Default.Campaign,
                             contentDescription = null,
                             tint = NeonBlue,
-                            modifier = Modifier.size(17.dp),
+                            modifier = Modifier.size(19.dp),
                         )
                     }
 
@@ -707,25 +753,25 @@ fun LazyListScope.teacherContent(
                         ) {
                             Text(
                                 text = notif.title.ifBlank { "Pengumuman Sekolah" },
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
                             )
                             Text(
                                 text = formatTimeAgo(notif.createdAt),
-                                fontSize = 10.sp,
-                                color = TextTertiary,
+                                fontSize = 10.5.sp,
+                                color = textTertiary,
                             )
                         }
                         Spacer(Modifier.height(2.dp))
                         Text(
                             text = notif.body,
-                            fontSize = 11.sp,
-                            color = TextSecondary,
-                            maxLines = 1,
+                            fontSize = 11.5.sp,
+                            color = textSecondary,
+                            maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
@@ -734,28 +780,37 @@ fun LazyListScope.teacherContent(
         }
     } else {
         item {
-            Box(
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+            val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+            val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                    .clickable(onClick = onNavigateToBroadcastCenter)
-                    .padding(12.dp),
+                    .clip(RoundedCornerShape(22.dp))
+                    .clickable(onClick = onNavigateToBroadcastCenter),
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = if (isDark) 0.dp else 1.dp,
             ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(8.dp))
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
                                 .background(NeonBlue.copy(alpha = 0.12f)),
                             contentAlignment = Alignment.Center,
                         ) {
@@ -763,30 +818,30 @@ fun LazyListScope.teacherContent(
                                 imageVector = Icons.Default.Campaign,
                                 contentDescription = null,
                                 tint = NeonBlue,
-                                modifier = Modifier.size(17.dp),
+                                modifier = Modifier.size(19.dp),
                             )
                         }
 
                         Column {
                             Text(
                                 text = "Kirim Pengumuman Rombel",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary,
                             )
                             Text(
                                 text = "Kirim broadcast pesan cepat ke seluruh siswa dan orang tua",
-                                fontSize = 11.sp,
-                                color = TextTertiary,
+                                fontSize = 11.5.sp,
+                                color = textTertiary,
                             )
                         }
                     }
 
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                         contentDescription = null,
-                        tint = TextTertiary,
-                        modifier = Modifier.size(14.dp),
+                        tint = textTertiary,
+                        modifier = Modifier.size(13.dp),
                     )
                 }
             }
@@ -810,15 +865,25 @@ private fun TeacherKpiCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+    Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(12.dp),
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -826,24 +891,24 @@ private fun TeacherKpiCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(34.dp)
+                        .clip(RoundedCornerShape(9.dp))
                         .background(accentColor.copy(alpha = 0.12f))
-                        .border(0.5.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
+                        .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(9.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(16.dp),
+                        modifier = Modifier.size(17.dp),
                     )
                 }
 
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                     contentDescription = null,
-                    tint = TextTertiary,
+                    tint = textTertiary,
                     modifier = Modifier.size(12.dp),
                 )
             }
@@ -853,7 +918,7 @@ private fun TeacherKpiCard(
                     text = value,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -861,7 +926,7 @@ private fun TeacherKpiCard(
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
-                    color = TextTertiary,
+                    color = textTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -880,12 +945,17 @@ private fun TeacherStudioConsole(
     onNavigateToGrades: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp)),
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // 1. Buat Tugas
@@ -901,7 +971,7 @@ private fun TeacherStudioConsole(
             HorizontalDivider(
                 modifier = Modifier.padding(start = 62.dp, end = 14.dp),
                 thickness = 0.5.dp,
-                color = GlassBorder.copy(alpha = 0.35f),
+                color = innerCardBorder,
             )
 
             // 2. Buat Kuis
@@ -917,7 +987,7 @@ private fun TeacherStudioConsole(
             HorizontalDivider(
                 modifier = Modifier.padding(start = 62.dp, end = 14.dp),
                 thickness = 0.5.dp,
-                color = GlassBorder.copy(alpha = 0.35f),
+                color = innerCardBorder,
             )
 
             // 3. Bahan Ajar
@@ -933,7 +1003,7 @@ private fun TeacherStudioConsole(
             HorizontalDivider(
                 modifier = Modifier.padding(start = 62.dp, end = 14.dp),
                 thickness = 0.5.dp,
-                color = GlassBorder.copy(alpha = 0.35f),
+                color = innerCardBorder,
             )
 
             // 4. Buku Nilai
@@ -958,28 +1028,32 @@ private fun StudioConsoleRow(
     accentColor: Color,
     onClick: () -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 11.dp),
+            .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Squircle Icon
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(9.dp))
+                .size(38.dp)
+                .clip(RoundedCornerShape(10.dp))
                 .background(accentColor.copy(alpha = 0.12f))
-                .border(0.7.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(9.dp)),
+                .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(
                 painter = painterResource(id = iconRes),
                 contentDescription = title,
                 tint = accentColor,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier.size(19.dp),
             )
         }
 
@@ -990,29 +1064,29 @@ private fun StudioConsoleRow(
         ) {
             Text(
                 text = title,
-                fontSize = 13.5.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
                 text = subtitle,
-                fontSize = 11.sp,
-                color = TextSecondary,
+                fontSize = 11.5.sp,
+                color = textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
 
-        // Action Button (Uniform fixed geometry: 66.dp x 28.dp for razor-sharp alignment)
+        // Action Button
         Box(
             modifier = Modifier
-                .width(66.dp)
-                .height(28.dp)
-                .clip(RoundedCornerShape(7.dp))
+                .width(68.dp)
+                .height(29.dp)
+                .clip(RoundedCornerShape(8.dp))
                 .background(accentColor.copy(alpha = 0.12f))
-                .border(0.6.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(7.dp)),
+                .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Row(
@@ -1046,6 +1120,13 @@ private fun TeacherSectionHeader(
     actionLabel: String? = null,
     onActionClick: (() -> Unit)? = null,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1061,22 +1142,22 @@ private fun TeacherSectionHeader(
                 Text(
                     text = title,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
                 )
                 if (count != null && count > 0) {
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(CosmicSurface2)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
-                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp),
                     ) {
                         Text(
                             text = "$count",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextSecondary,
+                            color = textSecondary,
                         )
                     }
                 }
@@ -1085,8 +1166,8 @@ private fun TeacherSectionHeader(
                 Spacer(Modifier.height(1.dp))
                 Text(
                     text = subtitle,
-                    fontSize = 11.sp,
-                    color = TextTertiary,
+                    fontSize = 11.5.sp,
+                    color = textTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1104,8 +1185,8 @@ private fun TeacherSectionHeader(
             ) {
                 Text(
                     text = actionLabel,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
+                    fontSize = 11.5.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = TeacherNeon,
                 )
                 Icon(
@@ -1127,9 +1208,14 @@ private fun TeacherScheduleAlertCard(
     onCreateQuiz: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     val isLive = urgentSession.isLive
     val cardBorder = if (isLive) NeonError.copy(alpha = 0.7f) else NeonWarning.copy(alpha = 0.6f)
-    val cardBg = CosmicNavy
     val headerColor = if (isLive) NeonError else NeonWarning
     val headerBg = if (isLive) NeonError.copy(alpha = 0.15f) else NeonWarning.copy(alpha = 0.15f)
     val headerTitle = if (isLive) {
@@ -1143,15 +1229,17 @@ private fun TeacherScheduleAlertCard(
         "Jadwal tutorial dimulai pukul ${urgentSession.scheduledTimeStr}. Siapkan modul pembelajaran dan instrumen asesmen sebelum sesi dimulai."
     }
 
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(cardBg)
-            .border(1.2.dp, cardBorder, RoundedCornerShape(14.dp))
-            .padding(14.dp),
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.2.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp,
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             // Top Badge & Schedule Time
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1160,9 +1248,9 @@ private fun TeacherScheduleAlertCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(headerBg)
-                        .border(0.5.dp, cardBorder, RoundedCornerShape(6.dp))
+                        .border(1.dp, cardBorder, RoundedCornerShape(8.dp))
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
                     Text(
@@ -1188,7 +1276,7 @@ private fun TeacherScheduleAlertCard(
                     text = urgentSession.subjectName,
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
+                    color = textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1196,7 +1284,7 @@ private fun TeacherScheduleAlertCard(
                     text = urgentSession.className,
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
-                    color = TextSecondary,
+                    color = textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -1205,9 +1293,9 @@ private fun TeacherScheduleAlertCard(
             // Description / Warning message
             Text(
                 text = descriptionText,
-                fontSize = 11.sp,
+                fontSize = 11.5.sp,
                 lineHeight = 16.sp,
-                color = TextTertiary,
+                color = textTertiary,
             )
 
             // 3 Quick Action Buttons
@@ -1253,7 +1341,7 @@ private fun AlertActionButton(
         modifier = modifier
             .clip(RoundedCornerShape(8.dp))
             .background(accentColor.copy(alpha = 0.12f))
-            .border(0.5.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+            .border(1.dp, accentColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 7.dp, horizontal = 4.dp),
         contentAlignment = Alignment.Center,
@@ -1278,4 +1366,3 @@ private fun AlertActionButton(
         }
     }
 }
-

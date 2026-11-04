@@ -113,10 +113,10 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) TeacherNeon.copy(alpha = 0.2f) else CosmicNavy)
+                                .background(if (isSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)))
                                 .border(
                                     if (isSelected) 1.dp else 0.5.dp,
-                                    if (isSelected) TeacherNeon else GlassBorder,
+                                    if (isSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                                     RoundedCornerShape(8.dp)
                                 )
                                 .clickable { onSelectSubject(subj) }
@@ -157,10 +157,10 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(if (isAllSelected) TeacherNeon.copy(alpha = 0.2f) else CosmicNavy)
+                        .background(if (isAllSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)))
                         .border(
                             if (isAllSelected) 1.dp else 0.5.dp,
-                            if (isAllSelected) TeacherNeon else GlassBorder,
+                            if (isAllSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                             RoundedCornerShape(8.dp)
                         )
                         .clickable { onSelectClassFilter("ALL") }
@@ -180,10 +180,10 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) TeacherNeon.copy(alpha = 0.2f) else CosmicNavy)
+                            .background(if (isSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)))
                             .border(
                                 if (isSelected) 1.dp else 0.5.dp,
-                                if (isSelected) TeacherNeon else GlassBorder,
+                                if (isSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                                 RoundedCornerShape(8.dp)
                             )
                             .clickable { onSelectClassFilter(cls.name) }
@@ -203,12 +203,15 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
 
     // ── 5. SEARCH BAR ────────────────────────────────────────────────────
     item {
+        val isDark = LocalIsDarkTheme.current
+        val cardBg = if (isDark) Color(0xFF111113) else Color.White
+        val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(14.dp))
+                .background(cardBg)
+                .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
                 .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -282,12 +285,15 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
     // ── 7. STUDENT GRADEBOOK ROSTER ──────────────────────────────────────
     if (filteredRows.isEmpty()) {
         item {
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(cardBg)
+                    .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
                     .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -328,9 +334,9 @@ private fun GradebookHeroBanner(
     val heroGradient = if (isDark) {
         Brush.linearGradient(
             listOf(
-                Color(0xFF064E3B).copy(alpha = 0.45f),
-                CosmicNavy,
-                CosmicSurface2
+                Color(0xFF064E3B).copy(alpha = 0.35f),
+                Color(0xFF111113),
+                Color(0xFF161618)
             )
         )
     } else {
@@ -346,12 +352,12 @@ private fun GradebookHeroBanner(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(22.dp))
             .background(heroGradient)
             .border(
                 1.dp,
                 if (isDark) TeacherNeon.copy(alpha = 0.35f) else Color(0xFFA7F3D0),
-                RoundedCornerShape(20.dp)
+                RoundedCornerShape(22.dp)
             )
             .padding(16.dp)
     ) {
@@ -399,7 +405,7 @@ private fun GradebookHeroBanner(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9))
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                    .border(0.5.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
                     .padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -564,11 +570,17 @@ private fun KpiStatCard(
     accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+            .background(cardBg)
+            .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
             .padding(12.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -632,12 +644,19 @@ private fun StudentGradebookItemCard(
     onClickDetail: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+            .clip(RoundedCornerShape(22.dp))
+            .background(cardBg)
+            .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
             .padding(14.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -693,7 +712,7 @@ private fun StudentGradebookItemCard(
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (isDark) Color(0xFF18181B) else Color(0xFFF8FAFC))
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                    .border(0.5.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
                     .padding(10.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -716,7 +735,7 @@ private fun StudentGradebookItemCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(0.5.dp)
-                                .background(GlassBorder)
+                                .background(if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                         )
 
                         // Row 2: Rerata Modul (100%), Nilai Akhir, Predikat, KKTP
@@ -771,7 +790,7 @@ private fun StudentGradebookItemCard(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(0.5.dp)
-                                .background(GlassBorder)
+                                .background(if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                         )
 
                         // Row 2: Ujian & Evaluasi Akhir (ATS, SAS, N. Akhir, Predikat)
@@ -947,7 +966,7 @@ fun GradeDetailModalSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = CosmicNavy,
+        containerColor = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
         dragHandle = {
             Box(
                 modifier = Modifier
@@ -955,7 +974,7 @@ fun GradeDetailModalSheet(
                     .width(40.dp)
                     .height(4.dp)
                     .clip(CircleShape)
-                    .background(GlassBorder2)
+                    .background(if (LocalIsDarkTheme.current) Color(0xFF3F3F46) else Color(0xFFCBD5E1))
             )
         }
     ) {
@@ -1040,7 +1059,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1054,7 +1073,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1074,7 +1093,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1088,7 +1107,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1117,7 +1136,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1131,7 +1150,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1145,7 +1164,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1165,7 +1184,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1179,7 +1198,7 @@ fun GradeDetailModalSheet(
                         modifier = Modifier.weight(1f),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary,
                         ),
@@ -1206,7 +1225,7 @@ fun GradeDetailModalSheet(
                 minLines = 2,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = TeacherNeon,
-                    unfocusedBorderColor = GlassBorder,
+                    unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
                 )
@@ -1221,7 +1240,7 @@ fun GradeDetailModalSheet(
                 minLines = 2,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = TeacherNeon,
-                    unfocusedBorderColor = GlassBorder,
+                    unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
                 )
@@ -1236,7 +1255,7 @@ fun GradeDetailModalSheet(
                 minLines = 2,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = TeacherNeon,
-                    unfocusedBorderColor = GlassBorder,
+                    unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                     focusedTextColor = TextPrimary,
                     unfocusedTextColor = TextPrimary,
                 )
@@ -1253,7 +1272,7 @@ fun GradeDetailModalSheet(
                     onClick = onDismiss,
                     modifier = Modifier.weight(1f),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                    border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1))
                 ) {
                     Text("Batal")
                 }
@@ -1351,10 +1370,10 @@ fun LazyListScope.teacherGradebookContent(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) TeacherNeon.copy(alpha = 0.15f) else CosmicNavy)
+                            .background(if (isSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)))
                             .border(
                                 0.5.dp,
-                                if (isSelected) TeacherNeon.copy(alpha = 0.4f) else GlassBorder,
+                                if (isSelected) TeacherNeon.copy(alpha = 0.4f) else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                                 RoundedCornerShape(8.dp),
                             )
                             .clickable { onSelectFilter(filter) }
@@ -1377,9 +1396,9 @@ fun LazyListScope.teacherGradebookContent(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(CosmicNavy)
-                    .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(22.dp))
+                    .background(if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White)
+                    .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0), RoundedCornerShape(22.dp))
                     .padding(32.dp),
                 contentAlignment = Alignment.Center
             ) {
@@ -1458,16 +1477,16 @@ private fun TeacherClassHeroHeader(
         Brush.linearGradient(
             listOf(
                 TeacherContainer.copy(alpha = 0.35f),
-                CosmicNavy,
-                CosmicSurface2
+                Color(0xFF111113),
+                Color(0xFF161618)
             )
         )
     } else {
         Brush.linearGradient(
             listOf(
                 TeacherNeon.copy(alpha = 0.08f),
-                CosmicNavy,
-                CosmicSurface2.copy(alpha = 0.5f)
+                Color(0xFFF0FDF4),
+                Color.White
             )
         )
     }
@@ -1475,12 +1494,12 @@ private fun TeacherClassHeroHeader(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
+            .clip(RoundedCornerShape(22.dp))
             .background(heroBg)
             .border(
                 width = 1.dp,
                 color = if (isDark) TeacherNeon.copy(alpha = 0.35f) else TeacherNeon.copy(alpha = 0.25f),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(22.dp)
             )
             .padding(16.dp)
     ) {
@@ -1532,8 +1551,8 @@ private fun TeacherClassHeroHeader(
         Row(
             modifier = Modifier
                 .clip(RoundedCornerShape(12.dp))
-                .background(if (hasGrades) TeacherNeon.copy(alpha = 0.12f) else CosmicNavy)
-                .border(0.5.dp, if (hasGrades) TeacherNeon.copy(alpha = 0.35f) else GlassBorder, RoundedCornerShape(12.dp))
+                .background(if (hasGrades) TeacherNeon.copy(alpha = 0.12f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)))
+                .border(0.5.dp, if (hasGrades) TeacherNeon.copy(alpha = 0.35f) else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1)), RoundedCornerShape(12.dp))
                 .padding(horizontal = 10.dp, vertical = 5.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -1564,8 +1583,8 @@ private fun TeacherClassHeroHeader(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(CosmicNavy.copy(alpha = 0.6f))
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
+                .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC))
+                .border(0.5.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
                 .padding(vertical = 10.dp, horizontal = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
@@ -1590,7 +1609,7 @@ private fun TeacherClassHeroHeader(
                 modifier = Modifier
                     .width(1.dp)
                     .height(26.dp)
-                    .background(GlassBorder)
+                    .background(if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
             )
 
             Column {
@@ -1613,7 +1632,7 @@ private fun TeacherClassHeroHeader(
                 modifier = Modifier
                     .width(1.dp)
                     .height(26.dp)
-                    .background(GlassBorder)
+                    .background(if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
             )
 
             Column {
@@ -1645,17 +1664,19 @@ fun TeacherSubjectGradeCard(
     val score = summary.finalScore
     val isPassing = summary.isPassed
     val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
     val accentColor = if (isGraded) (if (isPassing) TeacherNeon else Color(0xFFFF5252)) else TeacherNeon
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
+            .clip(RoundedCornerShape(22.dp))
+            .background(cardBg)
             .border(
-                width = if (isGraded) 1.dp else 0.5.dp,
-                color = if (isGraded) accentColor.copy(alpha = 0.3f) else GlassBorder,
-                shape = RoundedCornerShape(16.dp)
+                width = 1.dp,
+                color = if (isGraded) accentColor.copy(alpha = 0.35f) else cardBorder,
+                shape = RoundedCornerShape(22.dp)
             )
             .clickable(onClick = onClick)
             .padding(14.dp)
@@ -1701,8 +1722,8 @@ fun TeacherSubjectGradeCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(4.dp))
-                                .background(CosmicSurface2)
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
+                                .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC))
+                                .border(0.5.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -1760,7 +1781,7 @@ fun TeacherSubjectGradeCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(0.5.dp)
-                    .background(GlassBorder)
+                    .background(if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
             )
 
             Row(
@@ -1782,7 +1803,7 @@ fun TeacherSubjectGradeCard(
                             .height(6.dp)
                             .clip(CircleShape),
                         color = if (isGraded) accentColor else TextTertiary.copy(alpha = 0.4f),
-                        trackColor = CosmicSurface2,
+                        trackColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0),
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
@@ -1799,7 +1820,7 @@ fun TeacherSubjectGradeCard(
 
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
+                        .clip(RoundedCornerShape(22.dp))
                         .background(accentColor.copy(alpha = 0.1f))
                         .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(20.dp))
                         .padding(horizontal = 12.dp, vertical = 6.dp)

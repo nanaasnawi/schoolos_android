@@ -61,7 +61,7 @@ fun TeacherAnalyticsHubScreen(
     }
 
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             ExecutiveTopBar(
@@ -124,18 +124,21 @@ private fun SegmentedHubTabs(
     isDark: Boolean,
     onSelectTab: (Int) -> Unit,
 ) {
+    val barBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)
+    val barBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 3.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = CosmicSurface2,
-        border = BorderStroke(0.5.dp, GlassBorder)
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = barBg,
+        border = BorderStroke(1.dp, barBorder)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(3.dp),
+                .padding(4.dp),
             horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             // Tab 0: Literasi & Bacaan (Zero Emoji)
@@ -172,24 +175,30 @@ private fun HubTabItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val tabActiveBg = if (isDark) Color(0xFF27272A) else Color.White
+    val tabBorderColor = if (isDark) Color(0xFF3F3F46) else Color(0xFFCBD5E1)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     val bgColor by animateColorAsState(
-        targetValue = if (isSelected) CosmicNavy else Color.Transparent,
+        targetValue = if (isSelected) tabActiveBg else Color.Transparent,
         label = "TabBg"
     )
 
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(9.dp),
+        shape = RoundedCornerShape(10.dp),
         color = bgColor,
         shadowElevation = 0.dp,
         tonalElevation = 0.dp,
         border = if (isSelected) {
-            BorderStroke(0.5.dp, GlassBorder)
+            BorderStroke(1.dp, tabBorderColor)
         } else null,
         modifier = modifier
     ) {
         Row(
-            modifier = Modifier.padding(vertical = 7.dp, horizontal = 10.dp),
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 10.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.Center
         ) {
@@ -197,9 +206,9 @@ private fun HubTabItem(
                 imageVector = icon,
                 contentDescription = null,
                 tint = if (isSelected) {
-                    if (title.contains("Early", ignoreCase = true) && (badgeCount ?: 0) > 0) NeonError else NeonBlue
-                } else TextSecondary,
-                modifier = Modifier.size(15.dp)
+                    if (title.contains("Early", ignoreCase = true) && (badgeCount ?: 0) > 0) Color(0xFFEF4444) else emeraldAccent
+                } else textSecondary,
+                modifier = Modifier.size(16.dp)
             )
 
             Spacer(Modifier.width(6.dp))
@@ -207,8 +216,8 @@ private fun HubTabItem(
             Text(
                 text = title,
                 fontSize = 12.sp,
-                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                color = if (isSelected) TextPrimary else TextSecondary,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                color = if (isSelected) textPrimary else textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -218,7 +227,7 @@ private fun HubTabItem(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
-                        .background(NeonError)
+                        .background(Color(0xFFEF4444))
                         .padding(horizontal = 6.dp, vertical = 1.dp)
                 ) {
                     Text(

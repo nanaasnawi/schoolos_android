@@ -107,9 +107,9 @@ fun QuizBuilderScreen(
     }
 
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = if (LocalIsDarkTheme.current) Color(0xFF09090B) else Color(0xFFF8FAFC),
         topBar = {
-            Column(modifier = Modifier.fillMaxWidth().background(CosmicNavy)) {
+            Column(modifier = Modifier.fillMaxWidth().background(if (LocalIsDarkTheme.current) Color(0xFF09090B) else Color(0xFFF8FAFC))) {
                 ExecutiveTopBar(
                     title = when (state.currentStep) {
                         1 -> "Konfigurasi Kuis CBT"
@@ -153,7 +153,7 @@ fun QuizBuilderScreen(
                             .clip(RoundedCornerShape(2.dp))
                             .background(
                                 if (state.currentStep >= 2) TeacherNeon
-                                else CosmicSurface3
+                                else (if (LocalIsDarkTheme.current) Color(0xFF27272A) else Color(0xFFE2E8F0))
                             )
                     )
                     // Step 3 Segment
@@ -164,11 +164,11 @@ fun QuizBuilderScreen(
                             .clip(RoundedCornerShape(2.dp))
                             .background(
                                 if (state.currentStep >= 3) TeacherNeon
-                                else CosmicSurface3
+                                else (if (LocalIsDarkTheme.current) Color(0xFF27272A) else Color(0xFFE2E8F0))
                             )
                     )
                 }
-                androidx.compose.material3.HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+                androidx.compose.material3.HorizontalDivider(color = if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0), thickness = 1.dp)
             }
         }
     ) { padding ->
@@ -258,7 +258,7 @@ private fun QuizInfoForm(
                 .fillMaxWidth()
                 .clickable { onOpenAiGenerator() },
             shape = RoundedCornerShape(16.dp),
-            color = if (LocalIsDarkTheme.current) CosmicNavy else MaterialTheme.colorScheme.surface,
+            color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
                 Brush.horizontalGradient(
@@ -326,9 +326,9 @@ private fun QuizInfoForm(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(22.dp))
+                .background(if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White)
+                .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0), RoundedCornerShape(22.dp))
                 .padding(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -375,9 +375,9 @@ private fun QuizInfoForm(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(22.dp))
+                .background(if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White)
+                .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0), RoundedCornerShape(22.dp))
                 .padding(16.dp)
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -426,11 +426,11 @@ private fun QuizInfoForm(
                                     .weight(1f)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(
-                                        if (isSelected) TeacherNeon.copy(alpha = 0.15f) else CosmicSurface2
+                                        if (isSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC))
                                     )
                                     .border(
                                         width = if (isSelected) 1.5.dp else 0.5.dp,
-                                        color = if (isSelected) TeacherNeon else GlassBorder,
+                                        color = if (isSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                                         shape = RoundedCornerShape(10.dp)
                                     )
                                     .clickable { selectedDuration = mins }
@@ -634,8 +634,8 @@ private fun QuizQuestionForm(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = CosmicNavy,
-            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+            color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+            border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
@@ -707,7 +707,7 @@ private fun QuizQuestionForm(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(10.dp))
-                        .background(CosmicSurface2)
+                        .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
                         .padding(horizontal = 10.dp, vertical = 7.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -735,8 +735,8 @@ private fun QuizQuestionForm(
                     if (state.questionsList.isNotEmpty()) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = CosmicNavy,
-                            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                            color = if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color.White,
+                            border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                             modifier = Modifier.clickable {
                                 viewModel.balancePoints(100)
                                 Toast.makeText(context, "Poin otomatis dibagi rata ke 100!", Toast.LENGTH_SHORT).show()
@@ -764,11 +764,11 @@ private fun QuizQuestionForm(
                         Surface(
                             shape = RoundedCornerShape(12.dp),
                             color = if (isSelected) (if (isPg) NeonBlue else TeacherNeon).copy(alpha = 0.22f)
-                            else CosmicSurface2,
+                            else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)),
                             border = androidx.compose.foundation.BorderStroke(
                                 width = if (isSelected) 1.5.dp else 0.5.dp,
                                 color = if (isSelected) (if (isPg) NeonBlue else TeacherNeon)
-                                else GlassBorder
+                                else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                             ),
                             modifier = Modifier.clickable {
                                 if (qText.isNotBlank() && isViewingExisting) {
@@ -811,10 +811,10 @@ private fun QuizQuestionForm(
                         val isAddNew = selectedQuestionIndex >= state.questionsList.size
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isAddNew) TeacherNeon.copy(alpha = 0.18f) else CosmicSurface2,
+                            color = if (isAddNew) TeacherNeon.copy(alpha = 0.18f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)),
                             border = androidx.compose.foundation.BorderStroke(
                                 width = if (isAddNew) 1.5.dp else 0.8.dp,
-                                color = if (isAddNew) TeacherNeon else GlassBorder
+                                color = if (isAddNew) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                             ),
                             modifier = Modifier.clickable {
                                 if (qText.isNotBlank() && isViewingExisting) {
@@ -851,8 +851,8 @@ private fun QuizQuestionForm(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = CosmicNavy,
-            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+            color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+            border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -940,10 +940,10 @@ private fun QuizQuestionForm(
                         val isSelected = questionType == type
                         Surface(
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isSelected) TeacherNeon.copy(alpha = 0.14f) else CosmicSurface2,
+                            color = if (isSelected) TeacherNeon.copy(alpha = 0.14f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)),
                             border = androidx.compose.foundation.BorderStroke(
                                 width = if (isSelected) 1.5.dp else 0.5.dp,
-                                color = if (isSelected) TeacherNeon else GlassBorder
+                                color = if (isSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                             ),
                             modifier = Modifier
                                 .weight(1f)
@@ -974,7 +974,7 @@ private fun QuizQuestionForm(
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = TeacherNeon,
-                        unfocusedBorderColor = GlassBorder,
+                        unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                         focusedLabelColor = TeacherNeon,
                         focusedTextColor = TextPrimary,
                         unfocusedTextColor = TextPrimary,
@@ -1011,10 +1011,10 @@ private fun QuizQuestionForm(
                             val isP = points == p
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
-                                color = if (isP) TeacherNeon.copy(alpha = 0.16f) else CosmicSurface2,
+                                color = if (isP) TeacherNeon.copy(alpha = 0.16f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)),
                                 border = androidx.compose.foundation.BorderStroke(
                                     1.dp,
-                                    if (isP) TeacherNeon else GlassBorder
+                                    if (isP) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                                 ),
                                 modifier = Modifier.clickable { points = p }
                             ) {
@@ -1036,9 +1036,9 @@ private fun QuizQuestionForm(
         if (questionType == "MULTIPLE_CHOICE") {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(22.dp),
+                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -1064,10 +1064,10 @@ private fun QuizQuestionForm(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(14.dp),
-                            color = if (isCorrect) TeacherNeon.copy(alpha = 0.08f) else CosmicSurface2,
+                            color = if (isCorrect) TeacherNeon.copy(alpha = 0.08f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)),
                             border = androidx.compose.foundation.BorderStroke(
                                 width = if (isCorrect) 1.5.dp else 0.5.dp,
-                                color = if (isCorrect) TeacherNeon else GlassBorder
+                                color = if (isCorrect) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                             )
                         ) {
                             Row(
@@ -1080,10 +1080,10 @@ private fun QuizQuestionForm(
                                 // SINGLE CIRCLE SELECTOR BADGE: NO REDUNDANT RADIO BUTTON!
                                 Surface(
                                     shape = CircleShape,
-                                    color = if (isCorrect) TeacherNeon else CosmicSurface3,
+                                    color = if (isCorrect) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF232326) else Color.White),
                                     border = androidx.compose.foundation.BorderStroke(
                                         1.dp,
-                                        if (isCorrect) TeacherNeon else GlassBorder
+                                        if (isCorrect) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                                     ),
                                     modifier = Modifier
                                         .size(34.dp)
@@ -1106,7 +1106,7 @@ private fun QuizQuestionForm(
                                     modifier = Modifier.weight(1f),
                                     shape = RoundedCornerShape(10.dp),
                                     colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = if (isCorrect) TeacherNeon else GlassBorder,
+                                        focusedBorderColor = if (isCorrect) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1)),
                                         unfocusedBorderColor = Color.Transparent,
                                         focusedTextColor = TextPrimary,
                                         unfocusedTextColor = TextPrimary
@@ -1159,9 +1159,9 @@ private fun QuizQuestionForm(
         } else {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(22.dp),
+                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -1192,7 +1192,7 @@ private fun QuizQuestionForm(
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
+                            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                             focusedLabelColor = TeacherNeon,
                             focusedTextColor = TextPrimary,
                             unfocusedTextColor = TextPrimary
@@ -1219,8 +1219,8 @@ private fun QuizQuestionForm(
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
-            color = CosmicNavy,
-            border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+            color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+            border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
@@ -1242,7 +1242,7 @@ private fun QuizQuestionForm(
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(44.dp),
                         colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
+                        border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1))
                     ) {
                         Icon(Icons.Default.ChevronLeft, null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(4.dp))
@@ -1319,7 +1319,7 @@ private fun QuizQuestionForm(
                         modifier = Modifier.weight(1.3f).height(48.dp),
                         shape = RoundedCornerShape(14.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (LocalIsDarkTheme.current) CosmicSurface3 else Color(0xFF1E293B),
+                            containerColor = if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9),
                             contentColor = Color.White
                         )
                     ) {
@@ -1397,7 +1397,7 @@ private fun QuizDropdown(
             shape = RoundedCornerShape(14.dp),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = accentColor,
-                unfocusedBorderColor = GlassBorder,
+                unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
                 focusedLabelColor = accentColor,
                 focusedLeadingIconColor = accentColor,
                 focusedTextColor = TextPrimary,
@@ -1408,7 +1408,7 @@ private fun QuizDropdown(
         ExposedDropdownMenu(
             expanded = expanded,
             onDismissRequest = onDismiss,
-            modifier = Modifier.background(CosmicNavy)
+            modifier = Modifier.background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color.White)
         ) {
             options.forEach { option ->
                 val isSelected = option == value
@@ -1452,7 +1452,7 @@ private fun QuizTextField(
         shape = RoundedCornerShape(14.dp),
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = accentColor,
-            unfocusedBorderColor = GlassBorder,
+            unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
             focusedLabelColor = accentColor,
             focusedLeadingIconColor = accentColor,
             focusedTextColor = TextPrimary,
@@ -1471,14 +1471,14 @@ private fun QuizReviewAndPublishPage(
     val state by viewModel.state.collectAsState()
     val context = LocalContext.current
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) CosmicNavy else MaterialTheme.colorScheme.surface
-    val cardBorder = if (isDark) GlassBorder else MaterialTheme.colorScheme.outlineVariant
-    val itemBg = if (isDark) CosmicSurface2 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val itemBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(if (isDark) CosmicBlack else MaterialTheme.colorScheme.background)
+            .background(if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC))
     ) {
         // Scrollable content
         Column(
@@ -1720,7 +1720,7 @@ private fun QuizReviewAndPublishPage(
                                                 modifier = Modifier
                                                     .size(22.dp)
                                                     .clip(CircleShape)
-                                                    .background(if (isCorrect) NeonSuccess else CosmicSurface3),
+                                                    .background(if (isCorrect) NeonSuccess else (if (isDark) Color(0xFF27272A) else Color(0xFFCBD5E1))),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Text(

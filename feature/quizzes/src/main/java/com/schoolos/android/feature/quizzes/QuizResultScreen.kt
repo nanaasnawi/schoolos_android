@@ -6,6 +6,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -28,20 +29,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.EmojiEvents
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,35 +43,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.schoolos.android.core.designsystem.AnimatedScoreCircle
-import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.ShimmerBox
-import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonError
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.NeonWarning
-import com.schoolos.android.core.designsystem.StudentNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.R as CoreR
+import com.schoolos.android.core.designsystem.*
 import kotlin.random.Random
 
 @Composable
 private fun statusFromAttempt(isPassed: Boolean): Pair<String, Color> {
+    val isDark = LocalIsDarkTheme.current
     return if (isPassed) {
-        Pair("Kompeten & Tuntas KKTP", NeonSuccess)
+        Pair("Kompeten & Tuntas KKTP", if (isDark) Color(0xFF34D399) else Color(0xFF16A34A))
     } else {
-        Pair("Perlu Penguatan Modul", NeonWarning)
+        Pair("Perlu Penguatan Modul", if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706))
     }
 }
 
@@ -99,6 +80,19 @@ fun QuizResultScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val studentAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val warningColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+    val successColor = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+    val errorColor = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
+
     when {
         state.isLoading -> QuizResultShimmer()
         else -> {
@@ -110,15 +104,7 @@ fun QuizResultScreen(
             val (statusLabel, statusColor) = statusFromAttempt(isPassed)
             val isCelebration = isGraded && isPassed
 
-            Box(modifier = Modifier.fillMaxSize()) {
-                // Dark cosmic background
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .background(CosmicBlack)
-                )
-
-                // Confetti particles (only if celebration and already graded by teacher)
+            Box(modifier = Modifier.fillMaxSize().background(CosmicBlack)) {
                 if (isCelebration) {
                     ConfettiCanvas(modifier = Modifier.fillMaxSize())
                 }
@@ -129,10 +115,10 @@ fun QuizResultScreen(
                         .statusBarsPadding()
                         .navigationBarsPadding()
                         .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 14.dp),
+                        .padding(horizontal = 16.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Spacer(Modifier.height(32.dp))
+                    Spacer(Modifier.height(28.dp))
 
                     if (!isGraded) {
                         // Belum Dinilai Tutor (Menunggu Koreksi)
@@ -140,53 +126,64 @@ fun QuizResultScreen(
                             modifier = Modifier
                                 .size(72.dp)
                                 .clip(CircleShape)
-                                .background(NeonWarning.copy(alpha = 0.12f)),
+                                .background(warningColor.copy(alpha = 0.14f))
+                                .border(1.dp, warningColor.copy(alpha = 0.35f), CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Assessment,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_clock),
                                 contentDescription = null,
-                                tint = NeonWarning,
-                                modifier = Modifier.size(36.dp)
+                                tint = warningColor,
+                                modifier = Modifier.size(34.dp)
                             )
                         }
-                        Spacer(Modifier.height(12.dp))
+                        Spacer(Modifier.height(14.dp))
                         Text(
                             "Jawaban Berhasil Terkirim",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 22.sp,
-                            color = NeonWarning,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp,
+                            color = textPrimary,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Lembar pengerjaan telah tersimpan di server",
-                            fontSize = 13.sp,
-                            color = TextTertiary,
+                            "Lembar pengerjaan kuis CBT telah tersimpan di server",
+                            fontSize = 12.5.sp,
+                            color = textSecondary,
+                            textAlign = TextAlign.Center
                         )
 
-                        Spacer(Modifier.height(24.dp))
+                        Spacer(Modifier.height(20.dp))
 
                         Surface(
-                            shape = RoundedCornerShape(16.dp),
-                            color = CosmicNavy,
-                            border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder2)
+                            shape = RoundedCornerShape(22.dp),
+                            color = cardBg,
+                            border = BorderStroke(1.dp, cardBorder),
+                            shadowElevation = if (isDark) 0.dp else 1.dp
                         ) {
                             Column(
                                 modifier = Modifier.padding(20.dp),
                                 horizontalAlignment = Alignment.CenterHorizontally
                             ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = warningColor.copy(alpha = 0.12f),
+                                    border = BorderStroke(1.dp, warningColor.copy(alpha = 0.35f))
+                                ) {
+                                    Text(
+                                        text = "MENUNGGU VERIFIKASI TUTOR",
+                                        fontWeight = FontWeight.Bold,
+                                        color = warningColor,
+                                        fontSize = 10.5.sp,
+                                        letterSpacing = 0.5.sp,
+                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                                    )
+                                }
+                                Spacer(Modifier.height(10.dp))
                                 Text(
-                                    "Menunggu Koreksi Tutor Pamong",
-                                    fontWeight = FontWeight.Bold,
-                                    color = NeonWarning,
-                                    fontSize = 16.sp
-                                )
-                                Spacer(Modifier.height(8.dp))
-                                Text(
-                                    "Koreksi hasil kuis dan evaluasi modul diserahkan kepada Tutor pengampu. Nilai resmi dan pembahasan akan tampil setelah diverifikasi oleh Tutor.",
-                                    style = MaterialTheme.typography.bodySmall,
-                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                    color = TextSecondary,
+                                    "Koreksi hasil evaluasi dan soal uraian diserahkan kepada Tutor Pamong pengampu. Nilai resmi dan umpan balik belajar akan tampil setelah diverifikasi.",
+                                    fontSize = 12.5.sp,
+                                    textAlign = TextAlign.Center,
+                                    color = textSecondary,
                                     lineHeight = 18.sp
                                 )
                             }
@@ -197,31 +194,32 @@ fun QuizResultScreen(
                             modifier = Modifier
                                 .size(72.dp)
                                 .clip(CircleShape)
-                                .background(statusColor.copy(alpha = 0.12f)),
+                                .background(statusColor.copy(alpha = 0.14f))
+                                .border(1.dp, statusColor.copy(alpha = 0.35f), CircleShape),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
-                                imageVector = if (isCelebration) Icons.Default.EmojiEvents else Icons.Default.CheckCircle,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_check_circle),
                                 contentDescription = null,
                                 tint = statusColor,
-                                modifier = Modifier.size(38.dp)
+                                modifier = Modifier.size(36.dp)
                             )
                         }
-                        Spacer(Modifier.height(8.dp))
+                        Spacer(Modifier.height(10.dp))
                         Text(
-                            if (isCelebration) "Selamat!" else "Kamu sudah berusaha!",
-                            fontWeight = FontWeight.ExtraBold,
-                            fontSize = 24.sp,
-                            color = statusColor,
+                            if (isCelebration) "Luar Biasa, Selamat!" else "Evaluasi Selesai!",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 22.sp,
+                            color = textPrimary,
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Uji kompetensi telah dinilai oleh Tutor Pamong",
-                            fontSize = 13.sp,
-                            color = TextTertiary,
+                            "Hasil evaluasi telah dinilai oleh Tutor Pamong",
+                            fontSize = 12.5.sp,
+                            color = textSecondary,
                         )
 
-                        Spacer(Modifier.height(28.dp))
+                        Spacer(Modifier.height(24.dp))
 
                         // Animated score circle
                         AnimatedScoreCircle(
@@ -231,27 +229,28 @@ fun QuizResultScreen(
                             color = statusColor,
                         )
 
-                        Spacer(Modifier.height(16.dp))
+                        Spacer(Modifier.height(14.dp))
 
                         // KKTP Achievement badge
                         Surface(
-                            shape = RoundedCornerShape(14.dp),
+                            shape = RoundedCornerShape(10.dp),
                             color = statusColor.copy(alpha = 0.12f),
+                            border = BorderStroke(1.dp, statusColor.copy(alpha = 0.35f))
                         ) {
                             Row(
-                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                                 verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
                             ) {
                                 Icon(
-                                    imageVector = if (isPassed) Icons.Default.CheckCircle else Icons.Default.Info,
+                                    painter = painterResource(id = CoreR.drawable.ic_modern_check_circle),
                                     contentDescription = null,
                                     tint = statusColor,
-                                    modifier = Modifier.size(18.dp)
+                                    modifier = Modifier.size(14.dp)
                                 )
-                                Spacer(Modifier.width(8.dp))
                                 Text(
                                     statusLabel,
-                                    style = MaterialTheme.typography.titleMedium,
+                                    fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = statusColor,
                                 )
@@ -259,53 +258,83 @@ fun QuizResultScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(24.dp))
+                    Spacer(Modifier.height(20.dp))
 
-                    // Stats breakdown
+                    // Stats breakdown Card
                     val attempt = state.attempt
                     val hasAnswers = attempt?.answers?.isNotEmpty() == true
                     val correctCount = if (hasAnswers) attempt!!.correctCount else (pct * 10).toInt()
                     val incorrectCount = if (hasAnswers) attempt!!.incorrectCount else (10 - correctCount).coerceAtLeast(0)
 
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(CosmicNavy)
-                            .border(1.dp, GlassBorder2, RoundedCornerShape(20.dp))
-                            .padding(14.dp),
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        color = cardBg,
+                        border = BorderStroke(1.dp, cardBorder),
+                        shadowElevation = if (isDark) 0.dp else 1.dp,
                     ) {
-                        Column {
+                        Column(
+                            modifier = Modifier.padding(18.dp),
+                            verticalArrangement = Arrangement.spacedBy(14.dp),
+                        ) {
                             Text(
                                 "Ringkasan Hasil Evaluasi",
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 14.sp,
-                                color = TextPrimary,
+                                fontSize = 14.5.sp,
+                                color = textPrimary,
                             )
-                            Spacer(Modifier.height(14.dp))
-                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                StatItem(Icons.Default.CheckCircle, "Benar", "$correctCount", NeonSuccess)
-                                StatItem(Icons.Default.Close, "Salah", "$incorrectCount", NeonError)
-                                StatItem(Icons.Default.Assessment, "Nilai", "$score", StudentNeon)
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                ModernStatItem(
+                                    iconRes = CoreR.drawable.ic_modern_check_circle,
+                                    label = "Benar",
+                                    value = "$correctCount",
+                                    color = successColor,
+                                    innerCardBg = innerCardBg,
+                                    innerCardBorder = innerCardBorder,
+                                    textTertiary = textTertiary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ModernStatItem(
+                                    iconRes = CoreR.drawable.ic_modern_warning,
+                                    label = "Salah",
+                                    value = "$incorrectCount",
+                                    color = errorColor,
+                                    innerCardBg = innerCardBg,
+                                    innerCardBorder = innerCardBorder,
+                                    textTertiary = textTertiary,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                ModernStatItem(
+                                    iconRes = CoreR.drawable.ic_modern_grades,
+                                    label = "Nilai Akhir",
+                                    value = "$score",
+                                    color = studentAccent,
+                                    innerCardBg = innerCardBg,
+                                    innerCardBorder = innerCardBorder,
+                                    textTertiary = textTertiary,
+                                    modifier = Modifier.weight(1f)
+                                )
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
+                    Spacer(Modifier.height(14.dp))
 
                     // Motivational quote card
-                    Box(
-                        modifier = Modifier.fillMaxWidth()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(statusColor.copy(alpha = 0.08f))
-                            .border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                            .padding(14.dp),
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        color = innerCardBg,
+                        border = BorderStroke(1.dp, innerCardBorder),
                     ) {
                         Text(
-                            motivationQuote(isPassed),
-                            fontSize = 14.sp,
+                            text = motivationQuote(isPassed),
+                            fontSize = 13.sp,
                             color = statusColor,
                             textAlign = TextAlign.Center,
                             fontWeight = FontWeight.Medium,
+                            lineHeight = 18.sp,
+                            modifier = Modifier.padding(16.dp)
                         )
                     }
 
@@ -320,22 +349,23 @@ fun QuizResultScreen(
                                 "Rincian Jawaban Soal",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 15.sp,
-                                color = TextPrimary,
+                                color = textPrimary,
                                 modifier = Modifier.padding(start = 4.dp),
                             )
 
                             attempt!!.answers.forEachIndexed { idx, ans ->
                                 val isCorrect = ans.isCorrect == true
-                                val badgeColor = if (isCorrect) NeonSuccess else NeonError
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(16.dp))
-                                        .background(CosmicNavy)
-                                        .border(1.dp, badgeColor.copy(alpha = 0.25f), RoundedCornerShape(16.dp))
-                                        .padding(14.dp)
+                                val badgeColor = if (isCorrect) successColor else errorColor
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = cardBg,
+                                    border = BorderStroke(1.dp, cardBorder),
                                 ) {
-                                    Column {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -345,51 +375,66 @@ fun QuizResultScreen(
                                                 "Soal ${idx + 1}",
                                                 fontWeight = FontWeight.Bold,
                                                 fontSize = 13.sp,
-                                                color = TextSecondary,
+                                                color = textPrimary,
                                             )
                                             Surface(
-                                                shape = RoundedCornerShape(8.dp),
+                                                shape = RoundedCornerShape(6.dp),
                                                 color = badgeColor.copy(alpha = 0.12f),
+                                                border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.35f))
                                             ) {
                                                 Text(
-                                                    if (isCorrect) "+${ans.pointsEarned} pts (Benar)" else "0 pts (Salah)",
-                                                    style = MaterialTheme.typography.labelSmall,
+                                                    if (isCorrect) "+${ans.pointsEarned} Pts (Benar)" else "0 Pts (Salah)",
+                                                    fontSize = 10.5.sp,
                                                     color = badgeColor,
                                                     fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
                                                 )
                                             }
                                         }
 
                                         val qText = ans.questionText
                                         if (!qText.isNullOrBlank()) {
-                                            Spacer(Modifier.height(6.dp))
                                             Text(
                                                 qText,
-                                                style = MaterialTheme.typography.bodyMedium,
-                                                color = TextPrimary,
+                                                fontSize = 13.sp,
+                                                color = textPrimary,
                                                 fontWeight = FontWeight.Medium,
+                                                lineHeight = 18.sp,
                                             )
                                         }
 
                                         val answerText = ans.chosenChoiceText ?: ans.textAnswer
                                         if (!answerText.isNullOrBlank()) {
-                                            Spacer(Modifier.height(6.dp))
-                                            Text(
-                                                "Jawaban kamu: $answerText",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = if (isCorrect) NeonSuccess else TextTertiary,
-                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = innerCardBg,
+                                                border = BorderStroke(1.dp, innerCardBorder),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text(
+                                                    "Jawaban kamu: $answerText",
+                                                    fontSize = 12.sp,
+                                                    color = if (isCorrect) successColor else textSecondary,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                )
+                                            }
                                         }
 
                                         val feedback = ans.teacherFeedback
                                         if (!feedback.isNullOrBlank()) {
-                                            Spacer(Modifier.height(6.dp))
-                                            Text(
-                                                "Catatan Guru: $feedback",
-                                                style = MaterialTheme.typography.bodySmall,
-                                                color = NeonWarning,
-                                            )
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = warningColor.copy(alpha = 0.10f),
+                                                border = BorderStroke(1.dp, warningColor.copy(alpha = 0.35f)),
+                                                modifier = Modifier.fillMaxWidth()
+                                            ) {
+                                                Text(
+                                                    "Catatan Tutor: $feedback",
+                                                    fontSize = 11.5.sp,
+                                                    color = warningColor,
+                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
@@ -397,20 +442,32 @@ fun QuizResultScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(32.dp))
+                    Spacer(Modifier.height(28.dp))
 
-                    // Action buttons
-                    Box(
-                        modifier = Modifier.fillMaxWidth().height(52.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                            .background(Brush.horizontalGradient(listOf(statusColor, statusColor.copy(alpha = 0.7f))))
+                    // Action button: Return to Home
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp)
+                            .clip(RoundedCornerShape(16.dp))
                             .clickable(onClick = onBack),
-                        contentAlignment = Alignment.Center,
+                        shape = RoundedCornerShape(16.dp),
+                        color = studentAccent,
+                        shadowElevation = if (isDark) 0.dp else 2.dp,
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Home, null, tint = CosmicBlack)
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_home),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(18.dp)
+                            )
                             Spacer(Modifier.width(8.dp))
-                            Text("Kembali ke Beranda", color = CosmicBlack, fontWeight = FontWeight.ExtraBold, fontSize = 15.sp)
+                            Text("Kembali ke Beranda", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
                     }
 
@@ -422,20 +479,40 @@ fun QuizResultScreen(
 }
 
 @Composable
-private fun StatItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String, color: Color) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Icon(imageVector = icon, contentDescription = null, tint = color, modifier = Modifier.size(20.dp))
-        Spacer(Modifier.height(4.dp))
-        Text(value, fontWeight = FontWeight.ExtraBold, fontSize = 22.sp, color = color)
-        Text(label, fontSize = 11.sp, color = TextTertiary)
+private fun ModernStatItem(
+    iconRes: Int,
+    label: String,
+    value: String,
+    color: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textTertiary: Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.height(72.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = innerCardBg,
+        border = BorderStroke(1.dp, innerCardBorder),
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                painter = painterResource(id = iconRes),
+                contentDescription = null,
+                tint = color,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(Modifier.height(3.dp))
+            Text(value, fontWeight = FontWeight.Bold, fontSize = 16.sp, color = color)
+            Text(label, fontSize = 10.5.sp, color = textTertiary)
+        }
     }
 }
 
-/**
- * Skeleton for the quiz / CBT result page. Mirrors the real layout (reaction emoji,
- * headline, score ring, grade badge, summary card, quote, answer review, CTA) so the
- * result fades in without layout jump instead of showing a bare spinner.
- */
 @Composable
 private fun QuizResultShimmer() {
     Column(
@@ -445,139 +522,89 @@ private fun QuizResultShimmer() {
             .statusBarsPadding()
             .navigationBarsPadding()
             .verticalScroll(rememberScrollState(), enabled = false)
-            .padding(horizontal = 14.dp),
+            .padding(horizontal = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Spacer(Modifier.height(32.dp))
-        // Reaction emoji
-        ShimmerBox(Modifier.size(76.dp), CircleShape)
-        Spacer(Modifier.height(12.dp))
-        // Headline + subtitle
-        ShimmerBox(Modifier.width(170.dp).height(24.dp), RoundedCornerShape(6.dp))
+        Spacer(Modifier.height(40.dp))
+        ShimmerBox(modifier = Modifier.size(80.dp).clip(CircleShape))
+        Spacer(Modifier.height(16.dp))
+        ShimmerBox(modifier = Modifier.width(180.dp).height(24.dp).clip(RoundedCornerShape(8.dp)))
         Spacer(Modifier.height(8.dp))
-        ShimmerBox(Modifier.width(190.dp).height(12.dp), RoundedCornerShape(4.dp))
-
-        Spacer(Modifier.height(28.dp))
-        // Score ring: shimmering ring with a hollow centre
-        Box(contentAlignment = Alignment.Center) {
-            ShimmerBox(Modifier.size(140.dp), CircleShape)
-            Box(
-                modifier = Modifier
-                    .size(116.dp)
-                    .clip(CircleShape)
-                    .background(CosmicBlack),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    ShimmerBox(Modifier.width(56.dp).height(28.dp), RoundedCornerShape(6.dp))
-                    Spacer(Modifier.height(6.dp))
-                    ShimmerBox(Modifier.width(36.dp).height(10.dp), RoundedCornerShape(3.dp))
-                }
-            }
-        }
-
-        Spacer(Modifier.height(16.dp))
-        // Grade badge
-        ShimmerBox(Modifier.width(220.dp).height(44.dp), RoundedCornerShape(14.dp))
-
+        ShimmerBox(modifier = Modifier.width(220.dp).height(16.dp).clip(RoundedCornerShape(6.dp)))
+        Spacer(Modifier.height(32.dp))
+        ShimmerBox(modifier = Modifier.size(140.dp).clip(CircleShape))
         Spacer(Modifier.height(24.dp))
-        // Summary card
-        ResultSkeletonCard {
-            ShimmerBox(Modifier.width(170.dp).height(14.dp), RoundedCornerShape(4.dp))
-            Spacer(Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                repeat(3) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        ShimmerBox(Modifier.size(24.dp), CircleShape)
-                        Spacer(Modifier.height(6.dp))
-                        ShimmerBox(Modifier.width(32.dp).height(22.dp), RoundedCornerShape(5.dp))
-                        Spacer(Modifier.height(4.dp))
-                        ShimmerBox(Modifier.width(40.dp).height(10.dp), RoundedCornerShape(3.dp))
-                    }
-                }
-            }
-        }
-
+        ShimmerBox(modifier = Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(22.dp)))
         Spacer(Modifier.height(16.dp))
-        // Motivational quote
-        ShimmerBox(Modifier.fillMaxWidth().height(62.dp), RoundedCornerShape(20.dp))
-
-        Spacer(Modifier.height(20.dp))
-        // Answer review header + items
-        Column(modifier = Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            ShimmerBox(
-                Modifier.padding(start = 4.dp).width(150.dp).height(15.dp),
-                RoundedCornerShape(4.dp),
-            )
-            repeat(3) {
-                ResultSkeletonCard(cornerRadius = 16.dp) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        ShimmerBox(Modifier.width(56.dp).height(13.dp), RoundedCornerShape(4.dp))
-                        ShimmerBox(Modifier.width(96.dp).height(22.dp), RoundedCornerShape(8.dp))
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    ShimmerBox(Modifier.fillMaxWidth(0.9f).height(13.dp), RoundedCornerShape(4.dp))
-                    Spacer(Modifier.height(6.dp))
-                    ShimmerBox(Modifier.fillMaxWidth(0.55f).height(11.dp), RoundedCornerShape(4.dp))
-                }
-            }
-        }
-
-        Spacer(Modifier.height(32.dp))
-        // CTA button
-        ShimmerBox(Modifier.fillMaxWidth().height(52.dp), RoundedCornerShape(14.dp))
-        Spacer(Modifier.height(32.dp))
+        ShimmerBox(modifier = Modifier.fillMaxWidth().height(52.dp).clip(RoundedCornerShape(16.dp)))
     }
 }
 
-@Composable
-private fun ResultSkeletonCard(
-    cornerRadius: androidx.compose.ui.unit.Dp = 20.dp,
-    content: @Composable () -> Unit,
-) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(cornerRadius))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder2, RoundedCornerShape(cornerRadius))
-            .padding(14.dp),
-    ) {
-        Column { content() }
-    }
-}
+private data class ConfettiParticle(
+    val x: Float,
+    val y: Float,
+    val vx: Float,
+    val vy: Float,
+    val size: Float,
+    val color: Color,
+    val rotation: Float,
+    val rotSpeed: Float,
+)
 
 @Composable
 private fun ConfettiCanvas(modifier: Modifier = Modifier) {
-    val infiniteTransition = rememberInfiniteTransition(label = "confetti")
-    val animProgress by infiniteTransition.animateFloat(
-        initialValue = 0f, targetValue = 1f,
-        animationSpec = infiniteRepeatable(tween(3000, easing = FastOutSlowInEasing), RepeatMode.Restart),
+    val transition = rememberInfiniteTransition(label = "confettiTransition")
+    val progress by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(3500, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Restart,
+        ),
         label = "confettiAnim",
     )
-    val confettiColors = listOf(
-        Color(0xFFB18CFF), Color(0xFF00E676), Color(0xFF4FC3F7),
-        Color(0xFFFFB300), Color(0xFFFF5252), Color(0xFF18FFFF),
+
+    val colors = listOf(
+        Color(0xFF38BDF8),
+        Color(0xFF10B981),
+        Color(0xFFFBBF24),
+        Color(0xFFA855F7),
+        Color(0xFFEC4899),
     )
+
     val particles = remember {
-        List(50) {
-            Triple(Random.nextFloat(), Random.nextFloat(), Random.nextInt(confettiColors.size))
+        val rng = Random(42)
+        List(40) {
+            ConfettiParticle(
+                x = rng.nextFloat(),
+                y = rng.nextFloat() * -0.5f,
+                vx = (rng.nextFloat() - 0.5f) * 0.3f,
+                vy = rng.nextFloat() * 0.8f + 0.4f,
+                size = rng.nextFloat() * 7f + 5f,
+                color = colors[rng.nextInt(colors.size)],
+                rotation = rng.nextFloat() * 360f,
+                rotSpeed = (rng.nextFloat() - 0.5f) * 180f,
+            )
         }
     }
+
     Canvas(modifier = modifier) {
-        particles.forEach { (startX, startY, colorIdx) ->
-            val x = startX * size.width
-            val y = ((startY + animProgress * 1.2f) % 1f) * size.height
-            rotate(animProgress * 360f, Offset(x, y)) {
-                drawRect(
-                    color = confettiColors[colorIdx].copy(alpha = 0.7f),
-                    topLeft = Offset(x - 4f, y - 4f),
-                    size = androidx.compose.ui.geometry.Size(8f, 8f),
-                )
+        val w = size.width
+        val h = size.height
+
+        for (p in particles) {
+            val curY = ((p.y + p.vy * progress) % 1.2f) * h
+            val curX = (p.x + p.vx * progress) * w
+            val curRot = p.rotation + p.rotSpeed * progress
+
+            if (curY in 0f..h && curX in 0f..w) {
+                rotate(curRot, pivot = Offset(curX, curY)) {
+                    drawRect(
+                        color = p.color.copy(alpha = (1f - (curY / h) * 0.6f).coerceIn(0f, 1f)),
+                        topLeft = Offset(curX - p.size / 2, curY - p.size / 2),
+                        size = androidx.compose.ui.geometry.Size(p.size, p.size * 0.6f),
+                    )
+                }
             }
         }
     }
