@@ -760,25 +760,28 @@ private fun HabitTaskJournalCard(
 
                 // Judul & Bar Frekuensi
                 Column(modifier = Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = habit.title,
-                            fontSize = 14.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = textPrimary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = habit.title,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (visual.timeBadge.isNotBlank()) {
+                        Spacer(Modifier.height(2.dp))
                         Text(
                             text = visual.timeBadge,
-                            fontSize = 10.sp,
+                            fontSize = 10.5.sp,
                             color = visual.accentColor,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false,
+                            overflow = TextOverflow.Ellipsis
                         )
                     }
 
-                    Spacer(Modifier.height(6.dp))
+                    Spacer(Modifier.height(5.dp))
 
                     val animatedProgress by animateFloatAsState(
                         targetValue = if (isChecked) 1f else (weeklyFrequency.toFloat() / 7f).coerceIn(0.12f, 1f),
