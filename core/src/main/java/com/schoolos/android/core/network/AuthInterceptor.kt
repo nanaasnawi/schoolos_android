@@ -65,16 +65,6 @@ class AuthInterceptor @Inject constructor(
             original
         }
 
-        val response = chain.proceed(request)
-
-        // 2. Intercept HTTP 401 Unauthorized:
-        // When backend returns 401 Unauthorized (and Authenticator either cannot refresh or refresh failed),
-        // immediately clear local session and DataStore to trigger navigation to Screen.Auth/Login
-        // and stop zombie requests from overwhelming the server.
-        if (response.code == 401 && !path.contains("/auth/refresh")) {
-            authManager.clearSessionSync()
-        }
-
-        return response
+        return chain.proceed(request)
     }
 }

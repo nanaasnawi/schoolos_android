@@ -180,14 +180,46 @@ class AuthManager @Inject constructor(
     }
 
     suspend fun checkIsLoggedIn(): Boolean {
-        return context.dataStore.data.first()[KEY_IS_LOGGED_IN] ?: false
+        val prefs = context.dataStore.data.first()
+        cachedAccessToken = prefs[KEY_ACCESS_TOKEN]
+        cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
+        cachedIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
+        cachedCustomServerUrl = prefs[KEY_CUSTOM_SERVER_URL]
+        return cachedIsLoggedIn
     }
 
     val isLoggedIn: Boolean
         get() = cachedIsLoggedIn
 
-    fun getAccessTokenSync(): String? = cachedAccessToken
-    fun getRefreshTokenSync(): String? = cachedRefreshToken
+    fun getAccessTokenSync(): String? {
+        val cached = cachedAccessToken
+        if (!cached.isNullOrBlank()) return cached
+        return try {
+            kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                val prefs = context.dataStore.data.first()
+                cachedAccessToken = prefs[KEY_ACCESS_TOKEN]
+                cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
+                cachedIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
+                cachedAccessToken
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun getRefreshTokenSync(): String? {
+        val cached = cachedRefreshToken
+        if (!cached.isNullOrBlank()) return cached
+        return try {
+            kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                val prefs = context.dataStore.data.first()
+                cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
+                cachedRefreshToken
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
     fun getCustomServerUrlSync(): String? {
         val buildConfigUrl = com.schoolos.android.core.common.BuildConfig.API_BASE_URL
         if (buildConfigUrl.startsWith("https://")) {

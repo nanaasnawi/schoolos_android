@@ -85,6 +85,8 @@ class LearningViewModel @Inject constructor(
     private var dateFilter: String? = savedStateHandle.get<String>("date")?.takeIf { it.isNotBlank() }
 
     val selectedMaterial = MutableStateFlow<com.schoolos.android.domain.model.LearningMaterial?>(null)
+    val isLoadingMaterialDetail = MutableStateFlow(false)
+    val materialDetailError = MutableStateFlow<String?>(null)
     val materialCompletions = MutableStateFlow<List<com.schoolos.android.domain.model.MaterialStudentCompletion>>(emptyList())
     val isLoadingCompletions = MutableStateFlow(false)
     val xpRewardEvent = MutableStateFlow<com.schoolos.android.core.designsystem.XpRewardData?>(null)
@@ -225,12 +227,19 @@ class LearningViewModel @Inject constructor(
 
     fun loadMaterialDetail(id: String) {
         viewModelScope.launch {
+            isLoadingMaterialDetail.value = true
+            materialDetailError.value = null
             repository.getMaterialById(id)
                 .onSuccess {
                     selectedMaterial.value = it
+                    isLoadingMaterialDetail.value = false
                     loadMaterialCompletions(id)
                 }
-                .onFailure { selectedMaterial.value = null }
+                .onFailure { err ->
+                    selectedMaterial.value = null
+                    isLoadingMaterialDetail.value = false
+                    materialDetailError.value = err.message ?: "Materi modul pembelajaran tidak dapat dimuat atau belum tersedia untuk rombel kelas Anda."
+                }
         }
     }
 

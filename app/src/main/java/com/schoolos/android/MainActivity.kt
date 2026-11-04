@@ -161,6 +161,7 @@ class MainActivity : ComponentActivity() {
                             maintenanceManager = maintenanceManager,
                             chatManager = chatManager,
                             pendingDeepLink = pendingNavigationRoute,
+                            onDeepLinkConsumed = { pendingNavigationRoute = null },
                         )
                     }
                 }

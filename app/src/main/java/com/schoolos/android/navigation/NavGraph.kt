@@ -69,6 +69,7 @@ fun NavGraph(
     chatManager: ChatManager,
     navController: NavHostController = rememberNavController(),
     pendingDeepLink: String? = null,
+    onDeepLinkConsumed: () -> Unit = {},
 ) {
     var startCheck by remember { mutableStateOf(false) }
     var isLoggedIn by remember { mutableStateOf(false) }
@@ -84,6 +85,7 @@ fun NavGraph(
     LaunchedEffect(pendingDeepLink, isLoggedIn, startCheck) {
         if (startCheck && isLoggedIn && !pendingDeepLink.isNullOrBlank()) {
             val link = pendingDeepLink
+            onDeepLinkConsumed()
             try {
                 when {
                     link.startsWith("announcement_detail:") -> {
