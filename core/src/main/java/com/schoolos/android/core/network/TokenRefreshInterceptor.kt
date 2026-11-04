@@ -15,10 +15,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Serializable
-data class RefreshBody(val refreshToken: String)
+data class RefreshBody(
+    val refreshToken: String,
+    @kotlinx.serialization.SerialName("refresh_token") val refreshTokenSnake: String = refreshToken,
+)
 
 @Serializable
-data class RefreshResult(val accessToken: String, val refreshToken: String)
+data class RefreshResult(
+    val accessToken: String? = null,
+    val refreshToken: String? = null,
+    @kotlinx.serialization.SerialName("access_token") val accessTokenSnake: String? = null,
+    @kotlinx.serialization.SerialName("refresh_token") val refreshTokenSnake: String? = null,
+)
 
 @Singleton
 class TokenRefreshInterceptor @Inject constructor(
@@ -100,27 +108,37 @@ class TokenRefreshInterceptor @Inject constructor(
 
                 refreshClient.newCall(refreshRequest).execute().use { refreshResponse ->
                     if (!refreshResponse.isSuccessful) {
-                        authManager.clearSessionSync()
+                        // Only clear session if server explicitly rejects with 400, 401, or 403 (invalid/expired refresh token)
+                        if (refreshResponse.code in listOf(400, 401, 403)) {
+                            authManager.clearSessionSync()
+                        }
                         return null
                     }
 
-                    val responseBody = refreshResponse.body?.string() ?: run {
-                        authManager.clearSessionSync()
-                        return null
-                    }
+                    val responseBody = refreshResponse.body?.string() ?: return null
                     val tokenResponse = json.decodeFromString<RefreshResult>(responseBody)
 
-                    authManager.updateTokensSync(
-                        accessToken = tokenResponse.accessToken,
-                        refreshToken = tokenResponse.refreshToken,
-                    )
+                    val newAccessToken = tokenResponse.accessToken ?: tokenResponse.accessTokenSnake
+                    val newRefreshToken = tokenResponse.refreshToken ?: tokenResponse.refreshTokenSnake
 
-                    response.request.newBuilder()
-                        .header("Authorization", "Bearer ${tokenResponse.accessToken}")
-                        .build()
+                    if (!newAccessToken.isNullOrBlank()) {
+                        authManager.updateTokensSync(
+                            accessToken = newAccessToken,
+                            refreshToken = newRefreshToken ?: refreshToken,
+                        )
+
+                        response.request.newBuilder()
+                            .header("Authorization", "Bearer $newAccessToken")
+                            .build()
+                    } else {
+                        null
+                    }
                 }
-            } catch (_: Exception) {
-                authManager.clearSessionSync()
+            } catch (e: Exception) {
+                // If it's a network error (IOException/timeout), NEVER clear session so user is not logged out during bad signal!
+                if (e !is java.io.IOException) {
+                    authManager.clearSessionSync()
+                }
                 null
             }
         }
