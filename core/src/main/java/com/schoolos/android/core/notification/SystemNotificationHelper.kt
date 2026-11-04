@@ -209,7 +209,7 @@ object SystemNotificationHelper {
         } catch (_: Exception) {}
 
         val launchIntent = context.packageManager.getLaunchIntentForPackage(context.packageName)?.apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("navigate_to", navigateTo)
             if (!referenceId.isNullOrBlank()) putExtra("reference_id", referenceId)
             if (!referenceType.isNullOrBlank()) putExtra("reference_type", referenceType)
@@ -218,7 +218,7 @@ object SystemNotificationHelper {
             if (!clickAction.isNullOrBlank()) action = clickAction
         } ?: Intent(Intent.ACTION_MAIN).apply {
             `package` = context.packageName
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
             putExtra("navigate_to", navigateTo)
             if (!referenceId.isNullOrBlank()) putExtra("reference_id", referenceId)
             if (!referenceType.isNullOrBlank()) putExtra("reference_type", referenceType)

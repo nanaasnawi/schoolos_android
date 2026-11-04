@@ -55,12 +55,15 @@ fun LearningMaterialDetailScreen(
     }
 
     val materialState by viewModel.selectedMaterial.collectAsState()
+    val isLoadingDetail by viewModel.isLoadingMaterialDetail.collectAsState()
+    val detailError by viewModel.materialDetailError.collectAsState()
+
     if (materialState == null) {
         Scaffold(
             containerColor = CosmicBlack,
             topBar = {
                 ExecutiveTopBar(
-                    title = "Memuat Modul...",
+                    title = if (detailError != null) "Materi Pembelajaran" else "Memuat Modul...",
                     onBack = onBack,
                 )
             }
@@ -68,10 +71,60 @@ fun LearningMaterialDetailScreen(
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding),
+                    .padding(padding)
+                    .padding(24.dp),
                 contentAlignment = Alignment.Center
             ) {
-                LoadingState()
+                if (detailError != null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(CosmicNavy)
+                            .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
+                            .padding(24.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(NeonWarning.copy(alpha = 0.12f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = NeonWarning,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                        Text(
+                            text = "Akses Materi Dibatasi",
+                            color = Color.White,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
+                        Text(
+                            text = detailError ?: "Modul ini tidak tersedia untuk rombel belajar Anda atau telah diarsipkan oleh guru pengampu.",
+                            color = TextSecondary,
+                            fontSize = 13.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            lineHeight = 18.sp,
+                        )
+                        Button(
+                            onClick = onBack,
+                            colors = ButtonDefaults.buttonColors(containerColor = PrimaryBlue),
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.fillMaxWidth().height(44.dp)
+                        ) {
+                            Text("Kembali", color = Color.White, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                } else {
+                    LoadingState()
+                }
             }
         }
         return
