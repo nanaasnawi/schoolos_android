@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.sessions
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -27,10 +29,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.CalendarMonth
-import androidx.compose.material.icons.filled.Today
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,15 +42,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.ErrorState
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
-import com.schoolos.android.core.designsystem.NeonSuccess
 import com.schoolos.android.core.designsystem.PullRefreshContainer
 import com.schoolos.android.core.designsystem.ShimmerBox
 import com.schoolos.android.core.designsystem.StudentNeon
@@ -79,7 +79,7 @@ fun TodayScreen(
     viewModel: TodayViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val idLocale = remember { Locale("id", "ID") }
+    val idLocale = remember { Locale.Builder().setLanguage("id").setRegion("ID").build() }
     val isDark = LocalIsDarkTheme.current
 
     val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
@@ -283,10 +283,12 @@ private fun ScreenTopNavigation(
                     modifier = Modifier.size(36.dp),
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                         contentDescription = "Kembali",
                         tint = textPrimary,
-                        modifier = Modifier.size(20.dp),
+                        modifier = Modifier
+                            .size(18.dp)
+                            .padding(end = 2.dp)
                     )
                 }
             }
@@ -324,12 +326,12 @@ private fun ScreenTopNavigation(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.Today,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_calendar),
                         contentDescription = null,
                         tint = accentColor,
                         modifier = Modifier.size(13.dp)
                     )
-                    Spacer(Modifier.width(4.dp))
+                    Spacer(Modifier.width(5.dp))
                     Text(
                         text = "Hari Ini",
                         fontSize = 11.sp,
@@ -342,7 +344,7 @@ private fun ScreenTopNavigation(
     }
 }
 
-// ── SIGNATURE EXECUTIVE HERO BANNER (ADAPTIVE LIGHT / DARK) ──────────────────
+// ── SIGNATURE EXECUTIVE HERO BANNER (MATCHES HOME STUDENT GREETING) ──────────
 
 @Composable
 private fun AgendaHeroBanner(
@@ -364,7 +366,11 @@ private fun AgendaHeroBanner(
     val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
     val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
     val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
-    val primaryBlue = if (isDark) Color(0xFF3B82F6) else Color(0xFF2563EB)
+    val studentNameColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
+    // Separate day name and date: "Rabu, 4 November 2026" -> day="Rabu", date="4 November 2026"
+    val dayPart = fullDateTitle.substringBefore(",").trim()
+    val datePart = fullDateTitle.substringAfter(",").trim()
 
     val progress = if (totalCount > 0) completedCount.toFloat() / totalCount.toFloat() else 0f
     val animatedProgress by animateFloatAsState(
@@ -380,50 +386,43 @@ private fun AgendaHeroBanner(
         border = BorderStroke(1.dp, cardBorder),
         shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column(modifier = Modifier.padding(18.dp)) {
-            // Top Tag Row
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            // ── TOP PILL ROW: [KELAS/ROLE] [LIVE/TOTAL SESI] ──────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                // Class or Role Tag
+                val classLabel = if (className.isNotBlank()) "KELAS $className".uppercase() else if (isTeacher) "TUTOR / PAMONG" else "WARGA BELAJAR"
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD))
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(30.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isDark) Color(0xFF161618) else Color(0xFFEFF6FF))
-                            .border(1.dp, if (isDark) Color(0xFF27272A) else Color(0xFFDBEAFE), RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = primaryBlue,
-                            modifier = Modifier.size(16.dp)
-                        )
-                    }
                     Text(
-                        text = fullDateTitle,
-                        color = textPrimary,
-                        fontSize = 13.5.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        text = classLabel,
+                        color = studentNameColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
 
-                // Live or Status Badge
+                // Live status or session count pill
                 if (hasLiveSession) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isDark) successColor.copy(alpha = 0.15f) else Color(0xFFDCFCE7))
-                            .border(1.dp, if (isDark) successColor.copy(alpha = 0.35f) else Color(0xFF86EFAC), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isDark) successColor.copy(alpha = 0.15f) else Color(0xFFDCFCE7),
+                        border = BorderStroke(1.dp, if (isDark) successColor.copy(alpha = 0.35f) else Color(0xFF86EFAC))
                     ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(6.dp)
@@ -439,27 +438,73 @@ private fun AgendaHeroBanner(
                             )
                         }
                     }
-                } else if (className.isNotBlank()) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isDark) Color(0xFF161618) else Color(0xFFE0F2FE))
-                            .border(1.dp, if (isDark) Color(0xFF27272A) else Color(0xFFBAE6FD), RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
+                } else {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = innerCardBg,
+                        border = BorderStroke(1.dp, innerCardBorder)
                     ) {
                         Text(
-                            text = "Kelas $className",
-                            color = if (isDark) textSecondary else Color(0xFF0284C7),
+                            text = "$totalCount Sesi Terjadwal",
+                            color = textSecondary,
                             fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
+            // ── PROMINENT DATE HEADING (COLOR MATCHES STUDENT GREETING) ───────
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE))
+                        .border(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_modern_calendar),
+                        contentDescription = null,
+                        tint = studentNameColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
 
-            // Main Stats Row (3 Mini Cards)
+                Column {
+                    Text(
+                        text = buildAnnotatedString {
+                            withStyle(SpanStyle(color = studentNameColor)) {
+                                append(dayPart)
+                            }
+                            append(", ")
+                            append(datePart)
+                        },
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary,
+                        letterSpacing = (-0.3).sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Text(
+                        text = "Agenda pembelajaran dan sesi kelas terjadwal.",
+                        fontSize = 11.5.sp,
+                        color = textSecondary,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+
+            // ── MAIN STATS ROW (3 MINI CARDS) ─────────────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -493,9 +538,7 @@ private fun AgendaHeroBanner(
                 )
             }
 
-            Spacer(Modifier.height(14.dp))
-
-            // Completion Progress Bar
+            // ── COMPLETION PROGRESS BAR ───────────────────────────────────────
             Column {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -503,19 +546,19 @@ private fun AgendaHeroBanner(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Progres Hari Ini",
-                        fontSize = 12.sp,
+                        text = "Progres Sesi Hari Ini",
+                        fontSize = 11.5.sp,
                         color = textSecondary,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
                         text = if (totalCount > 0) "$completedCount/$totalCount (${(progress * 100).toInt()}%)" else "0 Sesi",
-                        fontSize = 12.sp,
-                        color = if (progress >= 1f && totalCount > 0) successColor else textPrimary,
+                        fontSize = 11.5.sp,
+                        color = if (progress >= 1f && totalCount > 0) successColor else studentNameColor,
                         fontWeight = FontWeight.Bold
                     )
                 }
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(6.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -528,7 +571,7 @@ private fun AgendaHeroBanner(
                             .fillMaxWidth(animatedProgress)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(3.dp))
-                            .background(if (progress >= 1f && totalCount > 0) successColor else primaryBlue)
+                            .background(if (progress >= 1f && totalCount > 0) successColor else studentNameColor)
                     )
                 }
             }
@@ -548,23 +591,23 @@ private fun StatMiniCard(
 ) {
     Column(
         modifier = modifier
-            .height(68.dp)
+            .height(66.dp)
             .clip(RoundedCornerShape(14.dp))
             .background(cardBg)
             .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
-            .padding(vertical = 8.dp, horizontal = 8.dp),
+            .padding(vertical = 8.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = value,
             color = textPrimary,
-            fontSize = 18.sp,
+            fontSize = 17.sp,
             fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
-        Spacer(Modifier.height(3.dp))
+        Spacer(Modifier.height(2.dp))
         Text(
             text = title,
             color = textSecondary,
@@ -576,7 +619,7 @@ private fun StatMiniCard(
     }
 }
 
-// ── INTERACTIVE WEEKLY CALENDAR STRIP (ADAPTIVE LIGHT / DARK) ─────────────
+// ── INTERACTIVE WEEKLY CALENDAR STRIP (UNIFIED CAPSULE DESIGN) ────────────
 
 @Composable
 private fun WeeklyCalendarStrip(
@@ -588,101 +631,80 @@ private fun WeeklyCalendarStrip(
 ) {
     val isDark = LocalIsDarkTheme.current
     val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
-    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
-    val primaryBlue = if (isDark) Color(0xFF3B82F6) else Color(0xFF2563EB)
-    val normalDayBg = if (isDark) Color(0xFF161618) else Color.White
-    val normalDayBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val studentNameColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
     val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
 
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.SpaceBetween,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        days.forEach { day ->
+        days.take(6).forEach { day ->
             val isSelected = day.localDate == selectedDate
             val isToday = day.isToday
             val classCount = scheduleCounts[day.localDate] ?: 0
 
-            Box(
+            Surface(
                 modifier = Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(14.dp))
-                    .clickable { onDaySelected(day.localDate) }
-                    .padding(vertical = 2.dp),
-                contentAlignment = Alignment.Center,
+                    .clickable { onDaySelected(day.localDate) },
+                shape = RoundedCornerShape(14.dp),
+                color = when {
+                    isSelected -> studentNameColor
+                    isToday -> if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE)
+                    else -> if (isDark) Color(0xFF161618) else Color.White
+                },
+                border = when {
+                    isSelected -> null
+                    isToday -> BorderStroke(1.dp, if (isDark) studentNameColor.copy(alpha = 0.5f) else Color(0xFFBAE6FD))
+                    else -> BorderStroke(1.dp, cardBorder)
+                },
+                shadowElevation = if (isSelected && !isDark) 2.dp else 0.dp
             ) {
                 Column(
+                    modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
                     Text(
-                        text = day.dayName.uppercase(),
-                        fontSize = 11.sp,
-                        fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.Medium,
-                        letterSpacing = 0.5.sp,
+                        text = day.dayName.take(3),
+                        fontSize = 10.5.sp,
+                        fontWeight = if (isSelected || isToday) FontWeight.Bold else FontWeight.Medium,
                         color = when {
-                            isSelected -> primaryBlue
-                            isToday -> if (isDark) Color(0xFF60A5FA) else Color(0xFF0284C7)
-                            else -> textTertiary
-                        },
+                            isSelected -> Color.White
+                            isToday -> studentNameColor
+                            else -> textSecondary
+                        }
                     )
-
-                    Spacer(Modifier.height(6.dp))
-
-                    // Date number box
-                    Box(
-                        modifier = Modifier
-                            .defaultMinSize(minWidth = 38.dp)
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(
-                                when {
-                                    isSelected -> Color(0xFF2563EB)
-                                    isToday -> if (isDark) Color(0xFF2563EB).copy(alpha = 0.18f) else Color(0xFFEFF6FF)
-                                    else -> normalDayBg
-                                }
-                            )
-                            .border(
-                                width = 1.dp,
-                                color = when {
-                                    isSelected -> Color(0xFF3B82F6)
-                                    isToday -> if (isDark) Color(0xFF2563EB).copy(alpha = 0.6f) else Color(0xFFBFDBFE)
-                                    else -> normalDayBorder
-                                },
-                                shape = RoundedCornerShape(12.dp)
-                            )
-                            .padding(horizontal = 8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = day.dateNum,
-                            fontSize = 15.sp,
-                            fontWeight = if (isToday || isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                            color = when {
-                                isSelected -> Color.White
-                                isToday -> if (isDark) Color(0xFF93C5FD) else Color(0xFF1D4ED8)
-                                else -> textPrimary
-                            },
-                        )
-                    }
-
-                    Spacer(Modifier.height(5.dp))
-
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        text = day.dateNum,
+                        fontSize = 15.sp,
+                        fontWeight = if (isSelected || isToday) FontWeight.ExtraBold else FontWeight.SemiBold,
+                        color = when {
+                            isSelected -> Color.White
+                            isToday -> studentNameColor
+                            else -> textPrimary
+                        }
+                    )
+                    Spacer(Modifier.height(4.dp))
                     if (classCount > 0) {
                         Box(
                             modifier = Modifier
-                                .size(5.dp)
+                                .size(4.dp)
                                 .clip(CircleShape)
                                 .background(
                                     when {
-                                        isSelected -> primaryBlue
+                                        isSelected -> Color.White
                                         isToday -> successColor
-                                        else -> textTertiary
+                                        else -> studentNameColor
                                     }
                                 )
                         )
                     } else {
-                        Spacer(Modifier.height(5.dp))
+                        Spacer(Modifier.height(4.dp))
                     }
                 }
             }
@@ -703,7 +725,7 @@ private fun ScheduleFilterChips(
     accentColor: Color,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val primaryBlue = if (isDark) Color(0xFF3B82F6) else Color(0xFF2563EB)
+    val studentNameColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
     val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
     val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
     val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
@@ -713,7 +735,7 @@ private fun ScheduleFilterChips(
     val tabs = listOf(
         TabItem("ALL", "Semua", totalCount, null),
         TabItem("ACTIVE", "Berlangsung", activeCount, successColor),
-        TabItem("UPCOMING", "Mendatang", upcomingCount, primaryBlue),
+        TabItem("UPCOMING", "Mendatang", upcomingCount, studentNameColor),
         TabItem("COMPLETED", "Selesai", completedCount, textTertiary),
     )
 
@@ -853,19 +875,14 @@ private fun TodayScreenShimmer() {
         // ── 3. WEEKLY CALENDAR STRIP ────────────────────────────────
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             repeat(6) {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(6.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    ShimmerBox(Modifier.width(24.dp).height(9.dp), RoundedCornerShape(3.dp))
-                    ShimmerBox(Modifier.width(38.dp).height(44.dp), RoundedCornerShape(12.dp))
-                    Spacer(Modifier.height(4.dp))
-                }
+                ShimmerBox(
+                    modifier = Modifier.weight(1f).height(58.dp),
+                    shape = RoundedCornerShape(14.dp)
+                )
             }
         }
 

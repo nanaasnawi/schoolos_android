@@ -271,10 +271,10 @@ private fun TeacherTimelineItem(
             ) {
                 if (isCompleted) {
                     Icon(
-                        imageVector = Icons.Default.Check,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_check_circle),
                         contentDescription = null,
                         tint = successColor,
-                        modifier = Modifier.size(10.dp),
+                        modifier = Modifier.size(11.dp),
                     )
                 } else {
                     Box(
@@ -345,12 +345,21 @@ private fun TeacherTimelineItem(
                                 .border(1.dp, if (isActive) (if (isDark) successColor.copy(alpha = 0.4f) else Color(0xFF86EFAC)) else innerCardBorder, RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                imageVector = if (isOnline) Icons.Default.Videocam else subjectIcon(subjectName),
-                                contentDescription = null,
-                                tint = if (isActive) successColor else primaryBlue,
-                                modifier = Modifier.size(20.dp),
-                            )
+                            if (isOnline) {
+                                Icon(
+                                    painter = painterResource(id = CoreR.drawable.ic_modern_classes),
+                                    contentDescription = null,
+                                    tint = if (isActive) successColor else primaryBlue,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = subjectIcon(subjectName),
+                                    contentDescription = null,
+                                    tint = if (isActive) successColor else primaryBlue,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
 
                         Spacer(Modifier.width(12.dp))
@@ -435,7 +444,7 @@ private fun TeacherTimelineItem(
                     ) {
                         if (isOnline) {
                             Icon(
-                                imageVector = Icons.Default.Videocam,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_classes),
                                 contentDescription = null,
                                 tint = textSecondary,
                                 modifier = Modifier.size(14.dp),
