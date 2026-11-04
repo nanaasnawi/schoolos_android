@@ -8,6 +8,7 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -42,6 +43,8 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -107,6 +110,7 @@ fun HomeScreen(
     onNavigateToQuizzesWithSubject: (String) -> Unit = {},
     onNavigateToLearningWithSubject: (String) -> Unit = {},
     onNavigateToRombelStudents: (String) -> Unit = {},
+    onNavigateToAiChat: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -161,7 +165,37 @@ fun HomeScreen(
         viewModel.refresh(isPullRefresh = false)
     }
 
-    Scaffold(containerColor = CosmicBlack) { padding ->
+    val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+
+    Scaffold(
+        containerColor = CosmicBlack,
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = onNavigateToAiChat,
+                shape = CircleShape,
+                containerColor = if (isDark) Color(0xFF161618) else Color.White,
+                contentColor = Color.Unspecified,
+                elevation = FloatingActionButtonDefaults.elevation(
+                    defaultElevation = 6.dp,
+                    pressedElevation = 10.dp
+                ),
+                modifier = Modifier
+                    .size(62.dp)
+                    .border(
+                        width = 1.5.dp,
+                        color = if (isDark) Color(0xFF38BDF8).copy(alpha = 0.55f) else Color(0xFF0284C7).copy(alpha = 0.35f),
+                        shape = CircleShape
+                    )
+            ) {
+                Image(
+                    painter = painterResource(id = CoreR.drawable.mascot_akselerasi_edu),
+                    contentDescription = "Tanya Guru AI",
+                    modifier = Modifier.size(46.dp),
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
+                )
+            }
+        }
+    ) { padding ->
         PullRefreshContainer(
             isRefreshing = state.isRefreshing,
             onRefresh = { viewModel.refresh(isPullRefresh = true) },

@@ -280,7 +280,8 @@ fun NavGraph(
                         } else {
                             navController.navigate(Screen.RombelStudents.createRoute(className))
                         }
-                    }
+                    },
+                    onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) }
                 )
             }
 
@@ -644,6 +645,18 @@ fun NavGraph(
                         navController.navigate(Screen.ChatDetail.createRoute(threadId, recipientName))
                     },
                     isTeacherMode = authState?.isTeacher == true
+                )
+            }
+
+            // Dedicated Guru AI Screen (Akselerasi Mascot & NVIDIA NIM)
+            composable(Screen.AiChat.route) {
+                val aiThread = remember { chatManager.getOrCreateAiThread() }
+                ChatDetailScreen(
+                    threadId = aiThread.id,
+                    initialRecipientName = "Guru AI Akselerasi",
+                    chatManager = chatManager,
+                    onBack = { navController.popBackStack() },
+                    isTeacherMode = false
                 )
             }
             composable(

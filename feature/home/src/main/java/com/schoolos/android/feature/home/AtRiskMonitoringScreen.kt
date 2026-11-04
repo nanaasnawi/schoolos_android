@@ -56,7 +56,7 @@ fun AtRiskMonitoringScreen(
 
     if (showHeader) {
         Scaffold(
-            containerColor = CosmicBlack,
+            containerColor = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 AtRiskTopHeader(
@@ -277,11 +277,15 @@ private fun AtRiskTopHeader(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
 ) {
+    val headerBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .statusBarsPadding(),
-        color = CosmicBlack
+        color = headerBg
     ) {
         Row(
             modifier = Modifier
@@ -296,7 +300,7 @@ private fun AtRiskTopHeader(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
-                            tint = TextPrimary
+                            tint = textPrimary
                         )
                     }
                 }
@@ -305,12 +309,12 @@ private fun AtRiskTopHeader(
                         text = "Siswa Perlu Perhatian",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary
+                        color = textPrimary
                     )
                     Text(
                         text = "Early Warning System (At-Risk Monitoring)",
                         fontSize = 11.sp,
-                        color = TextSecondary
+                        color = textSecondary
                     )
                 }
             }
@@ -329,7 +333,7 @@ private fun AtRiskTopHeader(
                     Icon(
                         imageVector = Icons.Default.Refresh,
                         contentDescription = "Muat Ulang",
-                        tint = TextSecondary
+                        tint = textSecondary
                     )
                 }
             }
@@ -344,18 +348,23 @@ private fun EarlyWarningHeroBanner(
     isDark: Boolean,
     onSendBatch: () -> Unit,
 ) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
     Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 2.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, if (totalAtRisk > 0) NeonError.copy(alpha = 0.35f) else GlassBorder)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, if (totalAtRisk > 0) NeonError.copy(alpha = 0.35f) else cardBorder)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 14.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
@@ -366,17 +375,17 @@ private fun EarlyWarningHeroBanner(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(34.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(12.dp))
                         .background(NeonError.copy(alpha = 0.12f))
-                        .border(0.5.dp, NeonError.copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                        .border(1.dp, NeonError.copy(alpha = 0.3f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.Warning,
                         contentDescription = null,
                         tint = NeonError,
-                        modifier = Modifier.size(17.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
                 Column(verticalArrangement = Arrangement.Center) {
@@ -384,14 +393,14 @@ private fun EarlyWarningHeroBanner(
                         text = if (totalAtRisk > 0) "$totalAtRisk Siswa Perlu Perhatian" else "Kondisi Siswa Terpantau Aman",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
                         text = if (totalAtRisk > 0) "Kendala materi, tugas, atau nilai KKM" else "Tidak ada indikasi kendala belajar aktif",
                         fontSize = 11.sp,
-                        color = TextSecondary,
+                        color = textSecondary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -404,9 +413,9 @@ private fun EarlyWarningHeroBanner(
                 Button(
                     onClick = onSendBatch,
                     enabled = !isSendingBatch,
-                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 0.dp),
-                    modifier = Modifier.height(32.dp),
-                    shape = RoundedCornerShape(8.dp),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
+                    modifier = Modifier.height(34.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = NeonError,
                         contentColor = Color.White
@@ -504,18 +513,25 @@ private fun StatFilterTile(
     accentColor: Color,
     onClick: () -> Unit,
 ) {
-    val bg = if (isSelected) accentColor.copy(alpha = 0.14f) else CosmicNavy
-    val border = if (isSelected) accentColor.copy(alpha = 0.45f) else GlassBorder
-    val fg = if (isSelected) accentColor else TextSecondary
+    val isDark = LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+    val bg = if (isSelected) accentColor.copy(alpha = if (isDark) 0.18f else 0.12f) else innerCardBg
+    val border = if (isSelected) accentColor else innerCardBorder
+    val fg = if (isSelected) accentColor else textSecondary
 
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(12.dp),
         color = bg,
-        border = BorderStroke(if (isSelected) 1.dp else 0.5.dp, border)
+        border = BorderStroke(1.dp, border)
     ) {
         Row(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
@@ -523,19 +539,19 @@ private fun StatFilterTile(
                 imageVector = icon,
                 contentDescription = null,
                 tint = fg,
-                modifier = Modifier.size(13.dp)
+                modifier = Modifier.size(14.dp)
             )
             Text(
                 text = count.toString(),
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isSelected) TextPrimary else fg
+                color = if (isSelected) textPrimary else fg
             )
             Text(
                 text = label,
                 fontSize = 11.sp,
                 fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (isSelected) TextPrimary else TextTertiary
+                color = if (isSelected) textPrimary else textTertiary
             )
         }
     }
@@ -553,22 +569,31 @@ private fun AtRiskFilterToolbar(
     onSelectClass: (String) -> Unit,
     isDark: Boolean,
 ) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(6.dp)
     ) {
-        // Compact Search Field (Custom Surface with BasicTextField - Zero Clipping!)
+        // Compact Search Field
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(42.dp),
-            shape = RoundedCornerShape(10.dp),
-            color = CosmicNavy,
+                .height(44.dp),
+            shape = RoundedCornerShape(14.dp),
+            color = cardBg,
             border = BorderStroke(
-                0.5.dp,
-                if (searchQuery.isNotBlank()) NeonError else GlassBorder
+                1.dp,
+                if (searchQuery.isNotBlank()) Color(0xFFEF4444) else cardBorder
             )
         ) {
             Row(
@@ -581,8 +606,8 @@ private fun AtRiskFilterToolbar(
                 Icon(
                     imageVector = Icons.Default.Search,
                     contentDescription = "Search",
-                    tint = if (searchQuery.isNotBlank()) NeonError else TextTertiary,
-                    modifier = Modifier.size(16.dp)
+                    tint = if (searchQuery.isNotBlank()) Color(0xFFEF4444) else textTertiary,
+                    modifier = Modifier.size(18.dp)
                 )
                 BasicTextField(
                     value = searchQuery,
@@ -590,9 +615,9 @@ private fun AtRiskFilterToolbar(
                     singleLine = true,
                     textStyle = TextStyle(
                         fontSize = 13.sp,
-                        color = TextPrimary
+                        color = textPrimary
                     ),
-                    cursorBrush = SolidColor(NeonError),
+                    cursorBrush = SolidColor(Color(0xFFEF4444)),
                     modifier = Modifier.weight(1f),
                     decorationBox = { innerTextField ->
                         Box(contentAlignment = Alignment.CenterStart) {
@@ -600,7 +625,7 @@ private fun AtRiskFilterToolbar(
                                 Text(
                                     text = "Cari siswa, NISN, atau kendala belajar...",
                                     fontSize = 13.sp,
-                                    color = TextTertiary,
+                                    color = textTertiary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -617,7 +642,7 @@ private fun AtRiskFilterToolbar(
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Clear",
-                            tint = TextSecondary,
+                            tint = textSecondary,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -638,23 +663,24 @@ private fun AtRiskFilterToolbar(
                 val isSelected = selectedClass == rombel
                 val label = if (rombel == "ALL") "Semua Rombel" else rombel
 
+                val chipBg = if (isSelected) emeraldAccent.copy(alpha = if (isDark) 0.18f else 0.12f) else innerCardBg
+                val chipBorder = if (isSelected) emeraldAccent else innerCardBorder
+                val chipFg = if (isSelected) emeraldAccent else textSecondary
+
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isSelected) NeonBlue.copy(alpha = 0.12f) else CosmicSurface2,
-                    border = BorderStroke(
-                        0.5.dp,
-                        if (isSelected) NeonBlue.copy(alpha = 0.4f) else GlassBorder
-                    ),
+                    shape = RoundedCornerShape(10.dp),
+                    color = chipBg,
+                    border = BorderStroke(1.dp, chipBorder),
                     modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
+                        .clip(RoundedCornerShape(10.dp))
                         .clickable { onSelectClass(rombel) }
                 ) {
                     Text(
                         text = label,
                         fontSize = 11.sp,
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) NeonBlue else TextSecondary,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        color = chipFg,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
             }
@@ -669,21 +695,26 @@ private fun AtRiskFilterPill(
     accentColor: Color,
     onClick: () -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
-        color = if (selected) accentColor.copy(alpha = 0.12f) else CosmicSurface2,
+        shape = RoundedCornerShape(12.dp),
+        color = if (selected) accentColor.copy(alpha = if (isDark) 0.18f else 0.12f) else innerCardBg,
         border = BorderStroke(
-            0.5.dp,
-            if (selected) accentColor.copy(alpha = 0.4f) else GlassBorder
+            1.dp,
+            if (selected) accentColor else innerCardBorder
         )
     ) {
         Text(
             text = label,
             fontSize = 11.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) accentColor else TextSecondary,
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+            color = if (selected) accentColor else textSecondary,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
         )
     }
 }
@@ -698,6 +729,15 @@ private fun AtRiskStudentItemCard(
     onSendReminder: () -> Unit,
     onClick: () -> Unit,
 ) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     val initial = student.studentName.firstOrNull()?.uppercase() ?: "S"
 
     val (badgeText, badgeColor) = when (student.category) {
@@ -713,14 +753,14 @@ private fun AtRiskStudentItemCard(
             .fillMaxWidth()
             .padding(horizontal = 16.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(16.dp)
         ) {
             // Top Row: Avatar + Name + Class + Category Badge
             Row(
@@ -735,17 +775,17 @@ private fun AtRiskStudentItemCard(
                     // Avatar Box
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(CosmicSurface2)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                            .size(40.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = initial,
-                            fontSize = 15.sp,
+                            fontSize = 16.sp,
                             fontWeight = FontWeight.ExtraBold,
-                            color = TextPrimary
+                            color = textPrimary
                         )
                     }
 
@@ -756,7 +796,7 @@ private fun AtRiskStudentItemCard(
                             text = student.studentName,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary,
+                            color = textPrimary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
@@ -765,20 +805,20 @@ private fun AtRiskStudentItemCard(
                             Text(
                                 text = "NISN: ${student.nisn}",
                                 fontSize = 11.sp,
-                                color = TextTertiary
+                                color = textTertiary
                             )
                             Spacer(Modifier.width(8.dp))
                             Surface(
-                                shape = RoundedCornerShape(4.dp),
-                                color = CosmicSurface2,
-                                border = BorderStroke(0.5.dp, GlassBorder)
+                                shape = RoundedCornerShape(8.dp),
+                                color = innerCardBg,
+                                border = BorderStroke(1.dp, innerCardBorder)
                             ) {
                                 Text(
                                     text = student.className,
                                     fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = NeonBlue,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                                    color = emeraldAccent,
+                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                                 )
                             }
                         }
@@ -787,9 +827,9 @@ private fun AtRiskStudentItemCard(
 
                 // Category Badge
                 Surface(
-                    shape = RoundedCornerShape(6.dp),
+                    shape = RoundedCornerShape(8.dp),
                     color = badgeColor.copy(alpha = 0.12f),
-                    border = BorderStroke(0.5.dp, badgeColor.copy(alpha = 0.3f))
+                    border = BorderStroke(1.dp, badgeColor.copy(alpha = 0.3f))
                 ) {
                     Text(
                         text = badgeText,
@@ -801,30 +841,30 @@ private fun AtRiskStudentItemCard(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             // Issue Description Box
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(8.dp),
-                color = CosmicSurface2,
-                border = BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(14.dp),
+                color = innerCardBg,
+                border = BorderStroke(1.dp, innerCardBorder)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Default.Info,
                         contentDescription = null,
                         tint = badgeColor,
-                        modifier = Modifier.size(14.dp)
+                        modifier = Modifier.size(15.dp)
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = if (student.title.isNotBlank()) "${student.title}: ${student.description}" else student.description,
-                        fontSize = 11.5.sp,
-                        color = TextPrimary,
+                        fontSize = 12.sp,
+                        color = textPrimary,
                         lineHeight = 16.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -832,7 +872,7 @@ private fun AtRiskStudentItemCard(
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             // Footer Row: Last Seen / Status & Send Reminder Action
             Row(
@@ -843,42 +883,42 @@ private fun AtRiskStudentItemCard(
                 Text(
                     text = "Perlu tindak lanjut guru",
                     fontSize = 10.5.sp,
-                    color = TextTertiary
+                    color = textTertiary
                 )
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     // Send Single Reminder Button
                     Surface(
                         onClick = onSendReminder,
-                        shape = RoundedCornerShape(6.dp),
-                        color = if (student.isReminded) NeonSuccess.copy(alpha = 0.12f) else NeonError.copy(alpha = 0.12f),
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (student.isReminded) emeraldAccent.copy(alpha = 0.12f) else Color(0xFFEF4444).copy(alpha = 0.12f),
                         border = BorderStroke(
-                            0.5.dp,
-                            if (student.isReminded) NeonSuccess.copy(alpha = 0.35f) else NeonError.copy(alpha = 0.35f)
+                            1.dp,
+                            if (student.isReminded) emeraldAccent.copy(alpha = 0.35f) else Color(0xFFEF4444).copy(alpha = 0.35f)
                         )
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (isSending) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(11.dp),
                                     strokeWidth = 1.5.dp,
-                                    color = NeonError
+                                    color = Color(0xFFEF4444)
                                 )
                                 Spacer(Modifier.width(4.dp))
                                 Text(
                                     text = "Mengirim...",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = NeonError
+                                    color = Color(0xFFEF4444)
                                 )
                             } else if (student.isReminded) {
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = null,
-                                    tint = NeonSuccess,
+                                    tint = emeraldAccent,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
@@ -886,13 +926,13 @@ private fun AtRiskStudentItemCard(
                                     text = "Terkirim",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = NeonSuccess
+                                    color = emeraldAccent
                                 )
                             } else {
                                 Icon(
                                     imageVector = Icons.Default.Notifications,
                                     contentDescription = null,
-                                    tint = NeonError,
+                                    tint = Color(0xFFEF4444),
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(Modifier.width(4.dp))
@@ -900,7 +940,7 @@ private fun AtRiskStudentItemCard(
                                     text = "Ingatkan",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = NeonError
+                                    color = Color(0xFFEF4444)
                                 )
                             }
                         }
@@ -911,7 +951,7 @@ private fun AtRiskStudentItemCard(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowForwardIos,
                         contentDescription = "Detail",
-                        tint = TextTertiary,
+                        tint = textTertiary,
                         modifier = Modifier.size(11.dp)
                     )
                 }
@@ -924,13 +964,17 @@ private fun AtRiskStudentItemCard(
 private fun AtRiskStudentCardSkeleton(
     modifier: Modifier = Modifier,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+
     Surface(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder)
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder)
     ) {
         Column(
             modifier = Modifier

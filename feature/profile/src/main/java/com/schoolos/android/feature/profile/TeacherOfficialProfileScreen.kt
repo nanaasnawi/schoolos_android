@@ -258,8 +258,8 @@ fun TeacherOfficialProfileScreen(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(CosmicSurface2)
-                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                                    .background(innerCardBg)
+                                    .border(1.dp, innerCardBorder, RoundedCornerShape(10.dp))
                                     .padding(12.dp)
                             ) {
                                 Row(

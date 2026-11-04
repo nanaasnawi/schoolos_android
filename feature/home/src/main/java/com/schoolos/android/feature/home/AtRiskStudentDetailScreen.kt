@@ -55,12 +55,12 @@ fun AtRiskStudentDetailScreen(
     }
 
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = if (LocalIsDarkTheme.current) Color(0xFF09090B) else Color(0xFFF8FAFC),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             Surface(
-                color = CosmicNavy,
-                border = BorderStroke(0.5.dp, GlassBorder)
+                color = if (LocalIsDarkTheme.current) Color(0xFF09090B) else Color(0xFFF8FAFC),
+                border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
             ) {
                 Row(
                     modifier = Modifier
@@ -102,8 +102,8 @@ fun AtRiskStudentDetailScreen(
         bottomBar = {
             if (state.items.isNotEmpty()) {
                 Surface(
-                    color = CosmicNavy,
-                    border = BorderStroke(0.5.dp, GlassBorder),
+                    color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                    border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
                     modifier = Modifier.navigationBarsPadding()
                 ) {
                     Row(
@@ -210,9 +210,9 @@ fun AtRiskStudentDetailScreen(
                     if (state.filteredItems.isEmpty()) {
                         item {
                             Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = CosmicSurface,
-                                border = BorderStroke(0.5.dp, GlassBorder),
+                                shape = RoundedCornerShape(22.dp),
+                                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                                border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
@@ -291,9 +291,9 @@ private fun StudentIdentityHeroCard(
     val initial = studentName.firstOrNull()?.uppercase() ?: "S"
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, if (totalIssues > 0) NeonError.copy(alpha = 0.35f) else GlassBorder),
+        shape = RoundedCornerShape(22.dp),
+        color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+        border = BorderStroke(1.dp, if (totalIssues > 0) NeonError.copy(alpha = 0.35f) else (if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -310,8 +310,8 @@ private fun StudentIdentityHeroCard(
                     modifier = Modifier
                         .size(46.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp)),
+                        .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
+                        .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
@@ -343,8 +343,8 @@ private fun StudentIdentityHeroCard(
                         Spacer(Modifier.width(8.dp))
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = CosmicSurface2,
-                            border = BorderStroke(0.5.dp, GlassBorder)
+                            color = if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9),
+                            border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
                         ) {
                             Text(
                                 text = className.ifBlank { "Rombel" },
@@ -374,7 +374,7 @@ private fun StudentIdentityHeroCard(
             }
 
             Spacer(Modifier.height(14.dp))
-            HorizontalDivider(thickness = 0.5.dp, color = GlassBorder)
+            HorizontalDivider(thickness = 1.dp, color = if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
             Spacer(Modifier.height(12.dp))
 
             // Link to Full Dapodik Biodata
@@ -463,9 +463,9 @@ private fun PillarStatBox(
     color: Color,
 ) {
     Surface(
-        shape = RoundedCornerShape(10.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder),
+        shape = RoundedCornerShape(14.dp),
+        color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
         modifier = modifier
     ) {
         Column(
@@ -544,16 +544,16 @@ private fun CategoryFilterChip(
     onClick: () -> Unit,
 ) {
     Surface(
-        shape = RoundedCornerShape(8.dp),
-        color = if (isSelected) NeonBlue.copy(alpha = 0.2f) else CosmicSurface2,
-        border = BorderStroke(0.5.dp, if (isSelected) NeonBlue else GlassBorder),
+        shape = RoundedCornerShape(12.dp),
+        color = if (isSelected) (if (LocalIsDarkTheme.current) Color(0xFF10B981).copy(alpha = 0.18f) else Color(0xFFD1FAE5)) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)),
+        border = BorderStroke(1.dp, if (isSelected) (if (LocalIsDarkTheme.current) Color(0xFF10B981) else Color(0xFF059669)) else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))),
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
             text = label,
             fontSize = 11.5.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) NeonBlue else TextSecondary,
+            color = if (isSelected) (if (LocalIsDarkTheme.current) Color(0xFF10B981) else Color(0xFF059669)) else (if (LocalIsDarkTheme.current) Color(0xFF94A3B8) else Color(0xFF64748B)),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
         )
     }
@@ -582,9 +582,9 @@ private fun AtRiskDetailItemCard(
     }
 
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder),
+        shape = RoundedCornerShape(22.dp),
+        color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -642,9 +642,9 @@ private fun AtRiskDetailItemCard(
 
             // Explanation box
             Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = CosmicSurface2,
-                border = BorderStroke(0.5.dp, GlassBorder),
+                shape = RoundedCornerShape(14.dp),
+                color = if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC),
+                border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -764,9 +764,9 @@ private fun AtRiskDetailItemCard(
 @Composable
 private fun PedagogicalInterventionCard() {
     Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = CosmicNavy,
-        border = BorderStroke(0.5.dp, GlassBorder),
+        shape = RoundedCornerShape(22.dp),
+        color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
@@ -821,7 +821,7 @@ private fun InterventionStepItem(
             modifier = Modifier
                 .size(18.dp)
                 .clip(CircleShape)
-                .background(CosmicSurface2),
+                .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)),
             contentAlignment = Alignment.Center
         ) {
             Text(

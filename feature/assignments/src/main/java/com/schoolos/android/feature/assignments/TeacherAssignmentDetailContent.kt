@@ -1,5 +1,7 @@
-    package com.schoolos.android.feature.assignments
+package com.schoolos.android.feature.assignments
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,9 +17,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -40,6 +41,16 @@ fun TeacherAssignmentDetailContent(
     onDismissGradeSuccess: () -> Unit = {},
     onDismissGradeError: () -> Unit = {},
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     // 0: Butir Soal & Petunjuk, 1: Pengumpulan Siswa
     var selectedTab by remember { mutableStateOf(if (assignment.questions.isNotEmpty()) 0 else 1) }
     // Filter: ALL, PENDING, GRADED, UNSUBMITTED
@@ -66,16 +77,17 @@ fun TeacherAssignmentDetailContent(
 
     Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
         // ── METADATA & OVERVIEW CARD ──
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .shadow(2.dp, RoundedCornerShape(20.dp), spotColor = GlassOverlay)
-                .clip(RoundedCornerShape(20.dp))
-                .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                .padding(14.dp)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            shadowElevation = if (isDark) 0.dp else 1.dp,
         ) {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -84,7 +96,7 @@ fun TeacherAssignmentDetailContent(
                         EducationalDateBadge(
                             dateIso = assignment.createdAt,
                             showTime = true,
-                            accentColor = TeacherNeon,
+                            accentColor = teacherAccent,
                             labelPrefix = "Diterbitkan: "
                         )
                     }
@@ -99,14 +111,14 @@ fun TeacherAssignmentDetailContent(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(SuccessBg)
-                            .border(1.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                            .background(if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5))
+                            .border(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0), RoundedCornerShape(10.dp))
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Grade, null, tint = NeonSuccess, modifier = Modifier.size(13.dp))
+                            Icon(Icons.Default.Grade, null, tint = teacherAccent, modifier = Modifier.size(13.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Maks: ${assignment.maxScore} Poin", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("Maks: ${assignment.maxScore} Poin", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = textPrimary)
                         }
                     }
                     if (assignment.questions.isNotEmpty()) {
@@ -120,7 +132,7 @@ fun TeacherAssignmentDetailContent(
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Default.MenuBook, null, tint = NeonBlue, modifier = Modifier.size(13.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("${assignment.questions.size} Butir Soal", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = NeonBlue)
+                                Text("${assignment.questions.size} Butir Soal", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = NeonBlue)
                             }
                         }
                     }
@@ -129,67 +141,80 @@ fun TeacherAssignmentDetailContent(
         }
 
         // ── SEGMENTED NAVIGATION TABS (Butir Soal & Petunjuk vs Pengumpulan Siswa) ──
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(14.dp))
-                .background(CosmicNavy)
-                .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
-                .padding(4.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(14.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            shadowElevation = if (isDark) 0.dp else 1.dp,
         ) {
-            val isTab0 = selectedTab == 0
-            val isTab1 = selectedTab == 1
-
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isTab0) NeonBlue.copy(alpha = 0.18f) else Color.Transparent)
-                    .clickable { selectedTab = 0 }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
+            Row(
+                modifier = Modifier.padding(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.MenuBook,
-                        contentDescription = null,
-                        tint = if (isTab0) NeonBlue else TextSecondary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Butir Soal (${assignment.questions.size})",
-                        fontSize = 12.sp,
-                        fontWeight = if (isTab0) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isTab0) NeonBlue else TextSecondary
-                    )
+                val isTab0 = selectedTab == 0
+                val isTab1 = selectedTab == 1
+
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isTab0) NeonBlue.copy(alpha = 0.15f) else Color.Transparent)
+                        .border(
+                            if (isTab0) 1.dp else 0.dp,
+                            if (isTab0) NeonBlue.copy(alpha = 0.35f) else Color.Transparent,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { selectedTab = 0 }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.MenuBook,
+                            contentDescription = null,
+                            tint = if (isTab0) NeonBlue else textSecondary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Butir Soal (${assignment.questions.size})",
+                            fontSize = 12.sp,
+                            fontWeight = if (isTab0) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isTab0) NeonBlue else textSecondary
+                        )
+                    }
                 }
-            }
 
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isTab1) NeonBlue.copy(alpha = 0.18f) else Color.Transparent)
-                    .clickable { selectedTab = 1 }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        Icons.Default.AssignmentTurnedIn,
-                        contentDescription = null,
-                        tint = if (isTab1) NeonBlue else TextSecondary,
-                        modifier = Modifier.size(15.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = "Koreksi Siswa ($submittedOrGradedCount/$totalStudents)",
-                        fontSize = 12.sp,
-                        fontWeight = if (isTab1) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isTab1) NeonBlue else TextSecondary
-                    )
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isTab1) NeonBlue.copy(alpha = 0.15f) else Color.Transparent)
+                        .border(
+                            if (isTab1) 1.dp else 0.dp,
+                            if (isTab1) NeonBlue.copy(alpha = 0.35f) else Color.Transparent,
+                            RoundedCornerShape(10.dp)
+                        )
+                        .clickable { selectedTab = 1 }
+                        .padding(vertical = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            Icons.Default.AssignmentTurnedIn,
+                            contentDescription = null,
+                            tint = if (isTab1) NeonBlue else textSecondary,
+                            modifier = Modifier.size(15.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Koreksi ($submittedOrGradedCount/$totalStudents)",
+                            fontSize = 12.sp,
+                            fontWeight = if (isTab1) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isTab1) NeonBlue else textSecondary
+                        )
+                    }
                 }
             }
         }
@@ -200,33 +225,35 @@ fun TeacherAssignmentDetailContent(
         if (selectedTab == 0) {
             // Petunjuk Pengerjaan & Deskripsi
             if (assignment.instructions?.isNotBlank() == true || assignment.description?.isNotBlank() == true) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CosmicNavy)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-                        .padding(14.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = cardBg,
+                    border = BorderStroke(1.dp, cardBorder),
+                    shadowElevation = if (isDark) 0.dp else 1.dp,
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Default.Description, null, tint = NeonBlue, modifier = Modifier.size(16.dp))
+                            Icon(Icons.Default.Description, null, tint = NeonBlue, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Petunjuk & Deskripsi Tugas", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                            Text("Petunjuk & Deskripsi Tugas", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = textPrimary)
                         }
                         if (assignment.instructions?.isNotBlank() == true) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(12.dp))
                                     .background(NeonBlue.copy(alpha = 0.08f))
-                                    .border(1.dp, NeonBlue.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
-                                    .padding(10.dp)
+                                    .border(1.dp, NeonBlue.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
+                                    .padding(12.dp)
                             ) {
                                 Text(
                                     assignment.instructions!!,
-                                    fontSize = 12.sp,
-                                    color = TextPrimary,
+                                    fontSize = 12.5.sp,
+                                    color = textPrimary,
                                     lineHeight = 18.sp
                                 )
                             }
@@ -235,7 +262,7 @@ fun TeacherAssignmentDetailContent(
                             Text(
                                 assignment.description!!,
                                 fontSize = 12.sp,
-                                color = TextSecondary,
+                                color = textSecondary,
                                 lineHeight = 18.sp
                             )
                         }
@@ -245,16 +272,18 @@ fun TeacherAssignmentDetailContent(
 
             // Questions List
             if (assignment.questions.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CosmicNavy)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = cardBg,
+                    border = BorderStroke(1.dp, cardBorder),
+                    shadowElevation = if (isDark) 0.dp else 1.dp,
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Icon(
                             Icons.Default.Description,
                             contentDescription = null,
@@ -263,14 +292,14 @@ fun TeacherAssignmentDetailContent(
                         )
                         Text(
                             "Tugas Berbasis Instruksi / Pengumpulan Dokumen",
-                            fontSize = 13.sp,
+                            fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = textPrimary
                         )
                         Text(
                             "Tugas ini tidak menggunakan butir soal pilihan ganda maupun esai. Siswa mengumpulkan lembar pengerjaan berupa file atau uraian teks langsung.",
-                            fontSize = 11.sp,
-                            color = TextSecondary,
+                            fontSize = 11.5.sp,
+                            color = textSecondary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                             lineHeight = 16.sp
                         )
@@ -279,24 +308,26 @@ fun TeacherAssignmentDetailContent(
             } else {
                 Text(
                     "Daftar Butir Soal (${assignment.questions.size} Soal):",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Black,
-                    color = TextPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
                     modifier = Modifier.padding(start = 4.dp)
                 )
 
                 assignment.questions.forEachIndexed { qIdx, q ->
                     val isPg = q.questionType.uppercase().contains("CHOICE") || q.questionType.uppercase() == "PG"
 
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(CosmicNavy)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-                            .padding(14.dp)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(22.dp),
+                        color = cardBg,
+                        border = BorderStroke(1.dp, cardBorder),
+                        shadowElevation = if (isDark) 0.dp else 1.dp,
                     ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
                             // Question Card Header
                             Row(
                                 modifier = Modifier.fillMaxWidth(),
@@ -307,13 +338,13 @@ fun TeacherAssignmentDetailContent(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
-                                            .background(NeonBlue.copy(alpha = 0.2f))
+                                            .background(NeonBlue.copy(alpha = 0.15f))
                                             .padding(horizontal = 8.dp, vertical = 3.dp)
                                     ) {
                                         Text(
                                             "Soal #${q.orderIndex ?: (qIdx + 1)}",
                                             fontSize = 11.sp,
-                                            fontWeight = FontWeight.Black,
+                                            fontWeight = FontWeight.Bold,
                                             color = NeonBlue
                                         )
                                     }
@@ -335,18 +366,18 @@ fun TeacherAssignmentDetailContent(
 
                                 Text(
                                     "${q.points ?: 10} Poin",
-                                    fontSize = 11.sp,
+                                    fontSize = 11.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = NeonSuccess
+                                    color = teacherAccent
                                 )
                             }
 
                             // Question Text
                             Text(
                                 text = q.questionText,
-                                fontSize = 13.sp,
+                                fontSize = 13.5.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = TextPrimary,
+                                color = textPrimary,
                                 lineHeight = 19.sp
                             )
 
@@ -360,14 +391,14 @@ fun TeacherAssignmentDetailContent(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
-                                                .clip(RoundedCornerShape(10.dp))
-                                                .background(if (isCorrect) NeonSuccess.copy(alpha = 0.1f) else CosmicBlack)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(if (isCorrect) (if (isDark) Color(0xFF064E3B).copy(alpha = 0.3f) else Color(0xFFECFDF5)) else innerCardBg)
                                                 .border(
                                                     1.dp,
-                                                    if (isCorrect) NeonSuccess.copy(alpha = 0.6f) else GlassBorder,
-                                                    RoundedCornerShape(10.dp)
+                                                    if (isCorrect) (if (isDark) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFFA7F3D0)) else innerCardBorder,
+                                                    RoundedCornerShape(12.dp)
                                                 )
-                                                .padding(horizontal = 10.dp, vertical = 8.dp)
+                                                .padding(horizontal = 12.dp, vertical = 10.dp)
                                         ) {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
@@ -375,16 +406,16 @@ fun TeacherAssignmentDetailContent(
                                             ) {
                                                 Box(
                                                     modifier = Modifier
-                                                        .size(24.dp)
+                                                        .size(26.dp)
                                                         .clip(CircleShape)
-                                                        .background(if (isCorrect) NeonSuccess else NeonBlue.copy(alpha = 0.15f)),
+                                                        .background(if (isCorrect) teacherAccent else NeonBlue.copy(alpha = 0.15f)),
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     Text(
                                                         choiceLetter,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = FontWeight.Black,
-                                                        color = if (isCorrect) CosmicBlack else TextPrimary
+                                                        fontSize = 11.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isCorrect) Color.White else textPrimary
                                                     )
                                                 }
                                                 Spacer(Modifier.width(10.dp))
@@ -392,16 +423,16 @@ fun TeacherAssignmentDetailContent(
                                                     choice.choiceText,
                                                     fontSize = 12.sp,
                                                     fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
-                                                    color = if (isCorrect) NeonSuccess else TextSecondary,
+                                                    color = if (isCorrect) teacherAccent else textSecondary,
                                                     modifier = Modifier.weight(1f)
                                                 )
                                                 if (isCorrect) {
                                                     Spacer(Modifier.width(6.dp))
                                                     Text(
                                                         "Kunci Benar",
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Black,
-                                                        color = NeonSuccess
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = teacherAccent
                                                     )
                                                 }
                                             }
@@ -412,18 +443,18 @@ fun TeacherAssignmentDetailContent(
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .clip(RoundedCornerShape(10.dp))
+                                        .clip(RoundedCornerShape(12.dp))
                                         .background(NeonWarning.copy(alpha = 0.08f))
-                                        .border(1.dp, NeonWarning.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
-                                        .padding(10.dp)
-                                ) {
+                                        .border(1.dp, NeonWarning.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
+                                        .padding(12.dp)
+                                    ) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(Icons.Default.Info, null, tint = NeonWarning, modifier = Modifier.size(14.dp))
+                                        Icon(Icons.Default.Info, null, tint = NeonWarning, modifier = Modifier.size(15.dp))
                                         Spacer(Modifier.width(8.dp))
                                         Text(
                                             "Siswa akan menjawab soal ini secara deskriptif / uraian teks di HP mereka. Guru mengoreksi dan memberikan nilai secara objektif.",
-                                            fontSize = 11.sp,
-                                            color = TextSecondary,
+                                            fontSize = 11.5.sp,
+                                            color = textSecondary,
                                             lineHeight = 16.sp
                                         )
                                     }
@@ -443,19 +474,17 @@ fun TeacherAssignmentDetailContent(
             if (totalStudents > 0) {
                 val progress = if (totalStudents > 0) gradedCount.toFloat() / totalStudents else 0f
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(
-                            Brush.linearGradient(
-                                colors = listOf(CosmicNavy, NeonBlue.copy(alpha = 0.08f))
-                            )
-                        )
-                        .border(1.dp, NeonBlue.copy(alpha = 0.25f), RoundedCornerShape(18.dp))
-                        .padding(14.dp)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = cardBg,
+                    border = BorderStroke(1.dp, cardBorder),
+                    shadowElevation = if (isDark) 0.dp else 1.dp,
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -463,9 +492,9 @@ fun TeacherAssignmentDetailContent(
                         ) {
                             Text(
                                 "Rekap Progres Penilaian Rombel",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                color = TextPrimary
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary
                             )
                             Text(
                                 "$gradedCount / $totalStudents Dinilai",
@@ -481,16 +510,15 @@ fun TeacherAssignmentDetailContent(
                                 .fillMaxWidth()
                                 .height(8.dp)
                                 .clip(CircleShape)
-                                .background(NeonBlue.copy(alpha = 0.1f))
+                                .background(innerCardBg)
+                                .border(1.dp, innerCardBorder, CircleShape)
                         ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth(progress)
                                     .height(8.dp)
                                     .clip(CircleShape)
-                                    .background(
-                                        Brush.horizontalGradient(listOf(NeonBlue, NeonSuccess))
-                                    )
+                                    .background(teacherAccent)
                             )
                         }
 
@@ -500,8 +528,8 @@ fun TeacherAssignmentDetailContent(
                         ) {
                             StatBadge("Kumpul", submittedOrGradedCount.toString(), NeonBlue, Modifier.weight(1f))
                             StatBadge("Perlu Nilai", pendingCount.toString(), NeonWarning, Modifier.weight(1f))
-                            StatBadge("Dinilai", gradedCount.toString(), NeonSuccess, Modifier.weight(1f))
-                            StatBadge("Belum Kumpul", unsubmittedCount.toString(), TextTertiary, Modifier.weight(1f))
+                            StatBadge("Dinilai", gradedCount.toString(), teacherAccent, Modifier.weight(1f))
+                            StatBadge("Belum Kumpul", unsubmittedCount.toString(), textTertiary, Modifier.weight(1f))
                         }
                     }
                 }
@@ -512,9 +540,9 @@ fun TeacherAssignmentDetailContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(NeonSuccess.copy(alpha = 0.12f))
-                        .border(1.dp, NeonSuccess.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .border(1.dp, NeonSuccess.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                         .padding(12.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -529,9 +557,9 @@ fun TeacherAssignmentDetailContent(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(14.dp))
                         .background(NeonError.copy(alpha = 0.12f))
-                        .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                        .border(1.dp, NeonError.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
                         .clickable { onDismissGradeError() }
                         .padding(12.dp)
                 ) {
@@ -565,14 +593,14 @@ fun TeacherAssignmentDetailContent(
                     label = "Dinilai ($gradedCount)",
                     isSelected = submissionFilter == "GRADED",
                     onClick = { submissionFilter = "GRADED" },
-                    accentColor = NeonSuccess,
+                    accentColor = teacherAccent,
                     modifier = Modifier.weight(1f)
                 )
                 FilterTabChip(
                     label = "Belum ($unsubmittedCount)",
                     isSelected = submissionFilter == "UNSUBMITTED",
                     onClick = { submissionFilter = "UNSUBMITTED" },
-                    accentColor = TextTertiary,
+                    accentColor = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -588,20 +616,22 @@ fun TeacherAssignmentDetailContent(
             }
 
             if (displayedSubmissions.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(CosmicNavy)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                        .padding(24.dp),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(22.dp),
+                    color = cardBg,
+                    border = BorderStroke(1.dp, cardBorder),
+                    shadowElevation = if (isDark) 0.dp else 1.dp,
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                         Icon(
                             imageVector = if (submissionFilter == "UNSUBMITTED") Icons.Default.CheckCircle else Icons.Default.Inbox,
                             contentDescription = null,
-                            tint = if (submissionFilter == "UNSUBMITTED") NeonSuccess else TextTertiary,
+                            tint = if (submissionFilter == "UNSUBMITTED") teacherAccent else textTertiary,
                             modifier = Modifier.size(36.dp)
                         )
                         Text(
@@ -612,7 +642,7 @@ fun TeacherAssignmentDetailContent(
                                 else -> "Belum ada warga belajar yang mengumpulkan."
                             },
                             fontSize = 13.sp,
-                            color = TextTertiary,
+                            color = textTertiary,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
@@ -658,7 +688,7 @@ fun TeacherAssignmentDetailContent(
                     sub.studentName ?: "Informasi Siswa",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = textPrimary
                 )
             },
             text = {
@@ -666,12 +696,12 @@ fun TeacherAssignmentDetailContent(
                     Text(
                         "NISN: ${sub.studentNisn ?: "-"}",
                         fontSize = 12.sp,
-                        color = TextSecondary
+                        color = textSecondary
                     )
                     Text(
                         "Siswa ini belum mengumpulkan tugas. Siswa dapat mengerjakan tugas ini melalui aplikasi Akselerasi-Edu Siswa.",
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = textSecondary,
                         lineHeight = 17.sp
                     )
                 }
@@ -681,8 +711,8 @@ fun TeacherAssignmentDetailContent(
                     Text("Tutup", color = NeonBlue, fontWeight = FontWeight.Bold)
                 }
             },
-            containerColor = CosmicNavy,
-            shape = RoundedCornerShape(16.dp)
+            containerColor = cardBg,
+            shape = RoundedCornerShape(22.dp)
         )
     }
 }
@@ -695,24 +725,29 @@ private fun FilterTabChip(
     modifier: Modifier = Modifier,
     accentColor: Color = NeonBlue,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
-            .background(if (isSelected) accentColor.copy(alpha = 0.2f) else CosmicNavy)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (isSelected) accentColor.copy(alpha = 0.15f) else innerCardBg)
             .border(
                 1.dp,
-                if (isSelected) accentColor.copy(alpha = 0.6f) else GlassBorder,
-                RoundedCornerShape(8.dp)
+                if (isSelected) accentColor.copy(alpha = 0.5f) else innerCardBorder,
+                RoundedCornerShape(10.dp)
             )
             .clickable(onClick = onClick)
-            .padding(vertical = 7.dp, horizontal = 2.dp),
+            .padding(vertical = 8.dp, horizontal = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = label,
-            fontSize = 10.sp,
-            fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
-            color = if (isSelected) accentColor else TextTertiary,
+            fontSize = 10.5.sp,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) accentColor else textTertiary,
             maxLines = 1
         )
     }
@@ -720,17 +755,20 @@ private fun FilterTabChip(
 
 @Composable
 private fun StatBadge(label: String, value: String, color: Color, modifier: Modifier = Modifier) {
+    val isDark = LocalIsDarkTheme.current
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(10.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(color.copy(alpha = 0.08f))
-            .border(1.dp, color.copy(alpha = 0.2f), RoundedCornerShape(10.dp))
+            .border(1.dp, color.copy(alpha = 0.2f), RoundedCornerShape(12.dp))
             .padding(vertical = 8.dp, horizontal = 2.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(value, fontSize = 16.sp, fontWeight = FontWeight.Black, color = color)
-            Text(label, fontSize = 8.sp, fontWeight = FontWeight.Bold, color = TextTertiary, maxLines = 1)
+            Text(value, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = color)
+            Text(label, fontSize = 8.5.sp, fontWeight = FontWeight.Medium, color = textTertiary, maxLines = 1)
         }
     }
 }
@@ -741,26 +779,37 @@ private fun TeacherSubmissionRow(
     maxScore: Int,
     onClick: () -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     val isUnsubmitted = submission.status == "unsubmitted"
     val isGraded = submission.status == "graded"
     val accentColor = when {
-        isGraded -> NeonSuccess
-        isUnsubmitted -> TextTertiary
+        isGraded -> teacherAccent
+        isUnsubmitted -> textTertiary
         else -> NeonWarning
     }
 
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .shadow(3.dp, RoundedCornerShape(16.dp), spotColor = accentColor.copy(alpha = 0.1f))
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(1.dp, if (isUnsubmitted) GlassBorder else accentColor.copy(alpha = 0.35f), RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, if (isUnsubmitted) cardBorder else accentColor.copy(alpha = 0.35f)),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(14.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Avatar
@@ -768,7 +817,7 @@ private fun TeacherSubmissionRow(
                 modifier = Modifier
                     .size(44.dp)
                     .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.1f))
+                    .background(accentColor.copy(alpha = 0.12f))
                     .border(1.dp, accentColor.copy(alpha = 0.3f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
@@ -790,26 +839,26 @@ private fun TeacherSubmissionRow(
                 Text(
                     submission.studentName ?: "Siswa: ${submission.studentId.take(8)}...",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = TextPrimary
+                    fontSize = 13.5.sp,
+                    color = textPrimary
                 )
                 if (submission.studentNisn != null) {
                     Spacer(Modifier.height(1.dp))
-                    Text("NISN: ${submission.studentNisn}", fontSize = 10.sp, color = TextTertiary)
+                    Text("NISN: ${submission.studentNisn}", fontSize = 10.5.sp, color = textTertiary)
                 }
                 Spacer(Modifier.height(2.dp))
                 if (isUnsubmitted) {
                     Text(
                         "Belum Mengumpulkan",
-                        fontSize = 10.sp,
-                        color = TextTertiary,
+                        fontSize = 10.5.sp,
+                        color = textTertiary,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                     )
                 } else {
                     Text(
                         "Kumpul: ${submission.submittedAt.take(10)}",
-                        fontSize = 10.sp,
-                        color = TextTertiary
+                        fontSize = 10.5.sp,
+                        color = textTertiary
                     )
                 }
                 val subContent = submission.content
@@ -817,8 +866,8 @@ private fun TeacherSubmissionRow(
                     Spacer(Modifier.height(3.dp))
                     Text(
                         subContent.take(50) + if (subContent.length > 50) "..." else "",
-                        fontSize = 10.sp,
-                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        color = textSecondary,
                         maxLines = 1
                     )
                 }
@@ -832,15 +881,15 @@ private fun TeacherSubmissionRow(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(SuccessBg)
-                                .border(1.dp, NeonSuccess.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                                .background(teacherAccent.copy(alpha = 0.12f))
+                                .border(1.dp, teacherAccent.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
                             Text(
                                 "${submission.score ?: 0}/${maxScore}",
-                                color = NeonSuccess,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black
+                                color = teacherAccent,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -848,11 +897,11 @@ private fun TeacherSubmissionRow(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(8.dp))
-                                .background(CosmicBlack)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(8.dp))
+                                .background(innerCardBg)
+                                .border(1.dp, cardBorder, RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text("BELUM KUMPUL", color = TextTertiary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                            Text("BELUM KUMPUL", color = textTertiary, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                     else -> {
@@ -863,7 +912,7 @@ private fun TeacherSubmissionRow(
                                 .border(1.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                         ) {
-                            Text("KOREKSI", color = NeonWarning, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                            Text("KOREKSI", color = NeonWarning, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -889,6 +938,16 @@ private fun GradingDialog(
     onDismiss: () -> Unit,
     onGrade: (score: Int, feedback: String?) -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val dialogBg = if (isDark) Color(0xFF111113) else Color.White
+    val dialogBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
     var scoreInput by remember { mutableStateOf((submission.score ?: maxScore).toFloat()) }
     var feedbackInput by remember { mutableStateOf(submission.feedback ?: "") }
 
@@ -896,18 +955,19 @@ private fun GradingDialog(
         onDismissRequest = { if (!isGrading) onDismiss() },
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Box(
+        Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp)
-                .clip(RoundedCornerShape(24.dp))
-                .background(CosmicNavy)
-                .border(1.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(24.dp))
+                .padding(horizontal = 16.dp),
+            shape = RoundedCornerShape(22.dp),
+            color = dialogBg,
+            border = BorderStroke(1.dp, dialogBorder),
+            shadowElevation = if (isDark) 0.dp else 4.dp
         ) {
             Column(
                 modifier = Modifier
                     .verticalScroll(rememberScrollState())
-                    .padding(16.dp),
+                    .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 // Header
@@ -931,43 +991,43 @@ private fun GradingDialog(
                             Text(
                                 "Lembar Koreksi Siswa",
                                 fontSize = 15.sp,
-                                fontWeight = FontWeight.Black,
-                                color = TextPrimary
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary
                             )
                             val displayName = submission.studentName ?: "ID: ${submission.studentId.take(8)}"
-                            Text("$displayName (${submission.studentNisn ?: "-"})", fontSize = 11.sp, color = TextTertiary)
+                            Text("$displayName (${submission.studentNisn ?: "-"})", fontSize = 11.5.sp, color = textTertiary)
                         }
                     }
                     IconButton(onClick = { if (!isGrading) onDismiss() }) {
-                        Icon(Icons.Default.Close, null, tint = TextTertiary)
+                        Icon(Icons.Default.Close, null, tint = textTertiary)
                     }
                 }
 
-                HorizontalDivider(color = GlassBorder)
+                HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp)
 
                 // Structured per-question answers (PG + Essay)
                 if (submission.answers.isNotEmpty()) {
                     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                         Text(
                             "JAWABAN BUTIR SOAL (${submission.answers.size} SOAL)",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
                             color = NeonBlue,
-                            letterSpacing = 1.sp
+                            letterSpacing = 0.5.sp
                         )
                         submission.answers.forEachIndexed { idx, answer ->
                             val isPg = answer.questionType.uppercase().contains("CHOICE") || answer.questionType.uppercase() == "PG"
                             val answerBg = when {
-                                isPg && answer.isCorrect == true -> NeonSuccess
+                                isPg && answer.isCorrect == true -> teacherAccent
                                 isPg && answer.isCorrect == false -> NeonError
                                 else -> NeonWarning
                             }
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(answerBg.copy(alpha = 0.06f))
-                                    .border(1.dp, answerBg.copy(alpha = 0.25f), RoundedCornerShape(10.dp))
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(answerBg.copy(alpha = 0.08f))
+                                    .border(1.dp, answerBg.copy(alpha = 0.25f), RoundedCornerShape(12.dp))
                                     .padding(10.dp)
                             ) {
                                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -977,26 +1037,26 @@ private fun GradingDialog(
                                     ) {
                                         Text(
                                             "${idx + 1}. ${answer.questionText}",
-                                            fontSize = 11.sp,
+                                            fontSize = 11.5.sp,
                                             fontWeight = FontWeight.SemiBold,
-                                            color = TextPrimary,
+                                            color = textPrimary,
                                             modifier = Modifier.weight(1f)
                                         )
                                         Text(
                                             "${answer.pointsEarned}/${answer.maxPoints} Poin",
-                                            fontSize = 11.sp,
-                                            fontWeight = FontWeight.Black,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold,
                                             color = answerBg
                                         )
                                     }
                                     if (isPg) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             val icon = if (answer.isCorrect == true) Icons.Default.CheckCircle else Icons.Default.Cancel
-                                            Icon(icon, null, tint = answerBg, modifier = Modifier.size(12.dp))
+                                            Icon(icon, null, tint = answerBg, modifier = Modifier.size(13.dp))
                                             Spacer(Modifier.width(4.dp))
                                             Text(
                                                 "Jawaban Siswa: ${answer.chosenChoiceText ?: "-"}",
-                                                fontSize = 11.sp,
+                                                fontSize = 11.5.sp,
                                                 color = answerBg,
                                                 fontWeight = FontWeight.Bold
                                             )
@@ -1006,16 +1066,17 @@ private fun GradingDialog(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(CosmicBlack)
+                                                .background(innerCardBg)
+                                                .border(1.dp, innerCardBorder, RoundedCornerShape(8.dp))
                                                 .padding(8.dp)
                                         ) {
                                             Column {
-                                                Text("Jawaban Uraian Siswa:", fontSize = 9.sp, fontWeight = FontWeight.Bold, color = TextTertiary)
+                                                Text("Jawaban Uraian Siswa:", fontSize = 9.5.sp, fontWeight = FontWeight.Bold, color = textTertiary)
                                                 Spacer(Modifier.height(2.dp))
                                                 Text(
                                                     answer.textAnswer ?: "-",
-                                                    fontSize = 11.sp,
-                                                    color = TextPrimary,
+                                                    fontSize = 11.5.sp,
+                                                    color = textPrimary,
                                                     lineHeight = 16.sp
                                                 )
                                             }
@@ -1025,7 +1086,7 @@ private fun GradingDialog(
                             }
                         }
                     }
-                    HorizontalDivider(color = GlassBorder)
+                    HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp)
                 }
 
                 // Free-text answer preview
@@ -1034,20 +1095,20 @@ private fun GradingDialog(
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Text(
                             "CATATAN / TEKS PENGUMPULAN SISWA",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
                             color = NeonBlue,
-                            letterSpacing = 1.sp
+                            letterSpacing = 0.5.sp
                         )
                         Box(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(CosmicBlack)
-                                .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                                .background(innerCardBg)
+                                .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp))
                                 .padding(12.dp)
                         ) {
-                            Text(dialogContent, fontSize = 12.sp, color = TextSecondary, lineHeight = 18.sp)
+                            Text(dialogContent, fontSize = 12.sp, color = textSecondary, lineHeight = 18.sp)
                         }
                     }
                 }
@@ -1068,7 +1129,7 @@ private fun GradingDialog(
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
                             .background(NeonBlue.copy(alpha = 0.12f))
-                            .border(1.dp, NeonBlue.copy(alpha = 0.4f), RoundedCornerShape(12.dp))
+                            .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
                             .clickable {
                                 runCatching {
                                     val intent = android.content.Intent(
@@ -1093,11 +1154,11 @@ private fun GradingDialog(
                                         "Lampiran Dokumen Siswa",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
+                                        color = textPrimary
                                     )
                                     Text(
                                         rawFileUrl.substringAfterLast('/'),
-                                        fontSize = 10.sp,
+                                        fontSize = 10.5.sp,
                                         color = NeonBlue,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis
@@ -1110,14 +1171,12 @@ private fun GradingDialog(
                                     .background(NeonBlue)
                                     .padding(horizontal = 10.dp, vertical = 5.dp)
                             ) {
-                                Text("Buka Berkas", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                Text("Buka Berkas", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
                             }
                         }
                     }
                 }
 
-                // No recorded answers at all — e.g. submissions made while the server failed to
-                // persist PG/essay answers. Tell the teacher explicitly instead of an empty sheet.
                 if (submission.answers.isEmpty() && dialogContent.isNullOrBlank() && submission.fileUrl.isNullOrBlank()) {
                     Box(
                         modifier = Modifier
@@ -1139,8 +1198,8 @@ private fun GradingDialog(
                                 )
                                 Text(
                                     "Lembar ini dikumpulkan tanpa jawaban PG/esai yang tersimpan di server. Minta siswa mengerjakan & mengumpulkan ulang tugas ini.",
-                                    fontSize = 11.sp,
-                                    color = TextSecondary,
+                                    fontSize = 11.5.sp,
+                                    color = textSecondary,
                                     lineHeight = 16.sp
                                 )
                             }
@@ -1157,10 +1216,10 @@ private fun GradingDialog(
                     ) {
                         Text(
                             "NILAI AKHIR TUGAS",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextTertiary,
-                            letterSpacing = 1.sp
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textTertiary,
+                            letterSpacing = 0.5.sp
                         )
                         Box(
                             modifier = Modifier
@@ -1171,7 +1230,7 @@ private fun GradingDialog(
                             Text(
                                 "${scoreInput.toInt()} / $maxScore",
                                 fontSize = 14.sp,
-                                fontWeight = FontWeight.Black,
+                                fontWeight = FontWeight.Bold,
                                 color = NeonBlue
                             )
                         }
@@ -1184,15 +1243,15 @@ private fun GradingDialog(
                         colors = SliderDefaults.colors(
                             thumbColor = NeonBlue,
                             activeTrackColor = NeonBlue,
-                            inactiveTrackColor = GlassBorder,
+                            inactiveTrackColor = innerCardBorder,
                         )
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text("0", fontSize = 10.sp, color = TextTertiary)
-                        Text("$maxScore", fontSize = 10.sp, color = TextTertiary)
+                        Text("0", fontSize = 10.5.sp, color = textTertiary)
+                        Text("$maxScore", fontSize = 10.5.sp, color = textTertiary)
                     }
                 }
 
@@ -1200,25 +1259,25 @@ private fun GradingDialog(
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text(
                         "CATATAN / KOMENTAR GURU (opsional)",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Black,
-                        color = TextTertiary,
-                        letterSpacing = 1.sp
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textTertiary,
+                        letterSpacing = 0.5.sp
                     )
                     OutlinedTextField(
                         value = feedbackInput,
                         onValueChange = { feedbackInput = it },
-                        placeholder = { Text("Tuliskan evaluasi atau catatan koreksi untuk siswa...", fontSize = 11.sp, color = TextTertiary) },
+                        placeholder = { Text("Tuliskan evaluasi atau catatan koreksi untuk siswa...", fontSize = 11.5.sp, color = textTertiary) },
                         modifier = Modifier.fillMaxWidth().height(90.dp),
                         maxLines = 4,
                         shape = RoundedCornerShape(12.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = NeonBlue,
-                            unfocusedBorderColor = GlassBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = CosmicBlack,
-                            unfocusedContainerColor = CosmicBlack,
+                            unfocusedBorderColor = innerCardBorder,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary,
+                            focusedContainerColor = innerCardBg,
+                            unfocusedContainerColor = innerCardBg,
                         )
                     )
                 }
@@ -1233,10 +1292,8 @@ private fun GradingDialog(
                         enabled = !isGrading,
                         modifier = Modifier.weight(1f).height(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary),
-                        border = ButtonDefaults.outlinedButtonBorder().copy(
-                            brush = Brush.linearGradient(listOf(GlassBorder, GlassBorder))
-                        )
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = textSecondary),
+                        border = BorderStroke(1.dp, innerCardBorder)
                     ) {
                         Text("Batal", fontWeight = FontWeight.Bold)
                     }
@@ -1266,7 +1323,7 @@ private fun GradingDialog(
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text("Simpan Nilai", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                            Text("Simpan Nilai", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }

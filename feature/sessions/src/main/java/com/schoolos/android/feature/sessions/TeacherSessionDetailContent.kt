@@ -622,7 +622,7 @@ fun TeacherSessionDetailContent(
                     effectiveStudents.forEachIndexed { idx, student ->
                         if (idx > 0) {
                             HorizontalDivider(
-                                color = GlassBorder,
+                                color = cardBorder,
                                 thickness = 0.5.dp,
                                 modifier = Modifier.padding(vertical = 4.dp)
                             )

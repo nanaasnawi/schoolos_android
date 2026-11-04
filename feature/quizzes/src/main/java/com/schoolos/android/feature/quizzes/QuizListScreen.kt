@@ -1,6 +1,11 @@
 package com.schoolos.android.feature.quizzes
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
+
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -67,6 +72,15 @@ fun QuizListScreen(
     val activeQuizzes = state.quizzes.filter {
         it !in scheduledQuizzes && it !in doneQuizzes && (isTeacher || it.status.lowercase() in listOf("active", "open", "published"))
     }
+
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
 
     Scaffold(
         containerColor = CosmicBlack,
@@ -172,33 +186,42 @@ fun QuizListScreen(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(CosmicNavy)
-                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                                    .padding(32.dp),
+                                    .clip(RoundedCornerShape(22.dp))
+                                    .background(cardBg)
+                                    .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
+                                    .padding(36.dp),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        imageVector = Icons.Default.List,
-                                        contentDescription = null,
-                                        tint = TextTertiary,
-                                        modifier = Modifier.size(36.dp)
-                                    )
-                                    Spacer(Modifier.height(10.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(52.dp)
+                                            .clip(CircleShape)
+                                            .background(innerCardBg)
+                                            .border(1.dp, innerCardBorder, CircleShape),
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = CoreR.drawable.ic_modern_quiz),
+                                            contentDescription = null,
+                                            tint = textTertiary,
+                                            modifier = Modifier.size(24.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.height(12.dp))
                                     Text(
                                         text = "Belum Ada Kuis",
-                                        color = TextPrimary,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                        color = textPrimary,
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = if (isTeacher) "Buat kuis baru melalui tombol tambah" else "Guru belum menambahkan kuis untuk kelas ini",
-                                        color = TextTertiary,
+                                        text = if (isTeacher) "Buat kuis baru melalui tombol tambah kuis di pojok kanan bawah" else "Guru belum menambahkan kuis untuk kelas ini",
+                                        color = textSecondary,
                                         fontSize = 12.sp,
                                         textAlign = TextAlign.Center,
-                                        lineHeight = 16.sp
+                                        lineHeight = 17.sp
                                     )
                                 }
                             }
@@ -234,126 +257,144 @@ private fun StudentQuizHeroBanner(
     doneCount: Int,
     totalCount: Int,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val studentAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
     val progressFraction = if (totalCount > 0) doneCount.toFloat() / totalCount.toFloat() else 0f
     val animatedProgress by animateFloatAsState(targetValue = progressFraction, label = "quizProgress")
     val completionPercent = (progressFraction * 100).toInt()
     val allDone = activeCount == 0 && totalCount > 0
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(14.dp)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp,
     ) {
-        Column {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = studentAccent.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.35f))
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.List,
-                        contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(Modifier.width(5.dp))
-                    Text(
-                        "PORTAL KUIS",
-                        color = TextSecondary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.6.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_quiz),
+                            contentDescription = null,
+                            tint = studentAccent,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            "PORTAL EVALUASI & CBT",
+                            color = studentAccent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.6.sp
+                        )
+                    }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (allDone) NeonSuccess.copy(alpha = 0.12f) else CosmicSurface2)
-                        .border(0.5.dp, if (allDone) NeonSuccess.copy(alpha = 0.25f) else GlassBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (allDone) (if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7)) else innerCardBg,
+                    border = BorderStroke(1.dp, if (allDone) (if (isDark) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFF86EFAC)) else innerCardBorder)
                 ) {
                     Text(
-                        text = if (allDone) "Semua Selesai" else "$completionPercent% Selesai",
-                        color = if (allDone) NeonSuccess else TextSecondary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
+                        text = if (allDone) "Semua Selesai ✓" else "$completionPercent% Selesai",
+                        color = if (allDone) (if (isDark) Color(0xFF34D399) else Color(0xFF15803D)) else textSecondary,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
-
-            Text(
-                text = if (allDone) "Semua kuis telah diselesaikan" else "Uji Pemahaman Materi",
-                color = TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = if (activeCount > 0) "$activeCount kuis menunggu untuk dikerjakan" else "Pantau hasil evaluasi dan ulas materi yang diperlukan",
-                color = TextTertiary,
-                fontSize = 12.sp,
-                lineHeight = 16.sp
-            )
-
-            Spacer(Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = if (allDone) "Semua kuis telah tuntas diselesaikan" else "Uji Pemahaman Materi & CBT",
+                    color = textPrimary,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = if (activeCount > 0) "$activeCount kuis siap untuk dikerjakan hari ini" else "Pantau hasil evaluasi dan ulas materi pembelajaranmu.",
+                    color = textSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
 
             // Quick stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                QuizStatCard(
+                ModernQuizStatCard(
                     title = "Total Kuis",
                     value = "$totalCount",
-                    icon = Icons.Default.List,
+                    iconRes = CoreR.drawable.ic_modern_quiz,
+                    valueColor = textPrimary,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
-                QuizStatCard(
+                ModernQuizStatCard(
                     title = "Dikerjakan",
                     value = "$doneCount",
-                    icon = Icons.Default.CheckCircle,
-                    valueColor = NeonSuccess,
+                    iconRes = CoreR.drawable.ic_modern_check_circle,
+                    valueColor = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A),
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
-                QuizStatCard(
-                    title = "Aktif",
+                ModernQuizStatCard(
+                    title = "Kuis Aktif",
                     value = "$activeCount",
-                    icon = Icons.Default.PlayArrow,
-                    valueColor = if (activeCount > 0) NeonWarning else TextSecondary,
+                    iconRes = CoreR.drawable.ic_modern_clock,
+                    valueColor = if (activeCount > 0) (if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)) else textSecondary,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            Spacer(Modifier.height(10.dp))
 
             // Progress bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(CosmicSurface2)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(innerCardBorder)
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(animatedProgress)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(NeonBlue)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(studentAccent)
                 )
             }
         }
@@ -364,94 +405,110 @@ private fun StudentQuizHeroBanner(
 
 @Composable
 private fun TeacherQuizHeroBanner(activeCount: Int, totalCount: Int) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(14.dp)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp,
     ) {
-        Column {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = teacherAccent.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, teacherAccent.copy(alpha = 0.35f))
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.List,
-                        contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(12.dp)
-                    )
-                    Spacer(Modifier.width(5.dp))
-                    Text(
-                        "MANAJEMEN KUIS",
-                        color = TextSecondary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.6.sp
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_quiz),
+                            contentDescription = null,
+                            tint = teacherAccent,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            "MANAJEMEN KUIS & CBT",
+                            color = teacherAccent,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 0.6.sp
+                        )
+                    }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder)
                 ) {
                     Text(
-                        "$totalCount Kuis",
-                        color = TextSecondary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold
+                        "$totalCount Total Kuis",
+                        color = textSecondary,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
-
-            Text(
-                text = "Evaluasi & Kuis Siswa",
-                color = TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "Pantau partisipasi serta distribusi nilai siswa di setiap kelas.",
-                color = TextTertiary,
-                fontSize = 12.sp,
-                lineHeight = 16.sp
-            )
-
-            Spacer(Modifier.height(12.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(
+                    text = "Evaluasi & Kuis CBT Siswa",
+                    color = textPrimary,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                )
+                Text(
+                    text = "Pantau pengerjaan siswa, berikan koreksi dan distribusi nilai secara realtime.",
+                    color = textSecondary,
+                    fontSize = 12.sp,
+                    lineHeight = 16.sp
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                QuizStatCard(
+                ModernQuizStatCard(
                     title = "Kuis Aktif",
                     value = "$activeCount",
-                    icon = Icons.Default.PlayArrow,
-                    valueColor = NeonWarning,
+                    iconRes = CoreR.drawable.ic_modern_clock,
+                    valueColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
-                QuizStatCard(
+                ModernQuizStatCard(
                     title = "Total Dibuat",
                     value = "$totalCount",
-                    icon = Icons.Default.List,
-                    valueColor = TextPrimary,
+                    iconRes = CoreR.drawable.ic_modern_quiz,
+                    valueColor = textPrimary,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -460,48 +517,53 @@ private fun TeacherQuizHeroBanner(activeCount: Int, totalCount: Int) {
 }
 
 @Composable
-private fun QuizStatCard(
+private fun ModernQuizStatCard(
     title: String,
     value: String,
-    icon: ImageVector,
-    valueColor: Color = TextPrimary,
+    iconRes: Int,
+    valueColor: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textTertiary: Color,
     modifier: Modifier = Modifier,
 ) {
-    Column(
-        modifier = modifier
-            .height(58.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(CosmicSurface2)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-            .padding(vertical = 6.dp, horizontal = 8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+    Surface(
+        modifier = modifier.height(64.dp),
+        shape = RoundedCornerShape(14.dp),
+        color = innerCardBg,
+        border = BorderStroke(1.dp, innerCardBorder),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = valueColor,
-                modifier = Modifier.size(13.dp)
-            )
-            Spacer(Modifier.width(4.dp))
+        Column(
+            modifier = Modifier.padding(vertical = 8.dp, horizontal = 8.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    painter = painterResource(id = iconRes),
+                    contentDescription = null,
+                    tint = valueColor,
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(5.dp))
+                Text(
+                    text = value,
+                    color = valueColor,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Spacer(Modifier.height(2.dp))
             Text(
-                text = value,
-                color = valueColor,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
+                text = title,
+                color = textTertiary,
+                fontSize = 10.5.sp,
+                fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = title,
-            color = TextTertiary,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Normal,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
     }
 }

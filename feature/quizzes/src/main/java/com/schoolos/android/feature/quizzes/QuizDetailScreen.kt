@@ -1,5 +1,10 @@
 package com.schoolos.android.feature.quizzes
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.material3.Surface
+
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -65,16 +70,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.AccentNeonAmber
-import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface
-import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.core.designsystem.ErrorState
 import com.schoolos.android.core.designsystem.ExecutiveTopBar
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.GlassCard
 import com.schoolos.android.core.designsystem.LoadingState
 import com.schoolos.android.core.designsystem.NeonBlue
 import com.schoolos.android.core.designsystem.NeonError
@@ -105,6 +104,18 @@ fun QuizDetailScreen(
     var tokenInput by remember { mutableStateOf("") }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val studentAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val warningColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+    val successColor = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+
     LaunchedEffect(state.attempt) {
         state.attempt?.let { attempt ->
             viewModel.dismissAttempt()
@@ -115,7 +126,7 @@ fun QuizDetailScreen(
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            containerColor = CosmicNavy,
+            containerColor = cardBg, shape = RoundedCornerShape(22.dp),
             title = {
                 Text("Hapus Paket Kuis CBT?", color = TextPrimary, fontWeight = FontWeight.Bold)
             },
@@ -159,7 +170,7 @@ fun QuizDetailScreen(
     }
 
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC),
         topBar = {
             ExecutiveTopBar(
                 title = state.quiz?.title ?: "Detail Kuis CBT",
@@ -263,14 +274,20 @@ fun QuizDetailScreen(
                                 fontSize = 14.sp,
                                 color = TextPrimary
                             )
-                            GlassCard(cornerRadius = 14.dp) {
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(22.dp),
+                                color = cardBg,
+                                border = BorderStroke(1.dp, cardBorder),
+                                shadowElevation = if (isDark) 0.dp else 1.dp
+                            ) {
                                 Text(
                                     text = q.description?.takeIf { it.isNotBlank() }
                                         ?: "Kuis evaluasi pemahaman materi. Kerjakan dengan teliti dan jujur untuk mengukur kompetensi pembelajaran Anda.",
-                                    fontSize = 13.sp,
-                                    color = TextSecondary,
-                                    lineHeight = 20.sp,
-                                    modifier = Modifier.padding(14.dp)
+                                    fontSize = 13.5.sp,
+                                    color = textSecondary,
+                                    lineHeight = 21.sp,
+                                    modifier = Modifier.padding(16.dp)
                                 )
                             }
                         }
@@ -372,7 +389,7 @@ fun QuizDetailScreen(
                                     ) {
                                         if (state.isPublishing) {
                                             CircularProgressIndicator(
-                                                color = CosmicBlack,
+                                                color = Color.White,
                                                 strokeWidth = 2.dp,
                                                 modifier = Modifier.size(20.dp)
                                             )
@@ -381,13 +398,13 @@ fun QuizDetailScreen(
                                                 "Menerbitkan Kuis...",
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = CosmicBlack
+                                                color = Color.White
                                             )
                                         } else {
                                             Icon(
                                                 Icons.Default.Check,
                                                 contentDescription = null,
-                                                tint = CosmicBlack,
+                                                tint = Color.White,
                                                 modifier = Modifier.size(18.dp)
                                             )
                                             Spacer(Modifier.width(6.dp))
@@ -395,7 +412,7 @@ fun QuizDetailScreen(
                                                 "PUBLIKASIKAN KUIS CBT",
                                                 fontSize = 13.sp,
                                                 fontWeight = FontWeight.Black,
-                                                color = CosmicBlack,
+                                                color = Color.White,
                                                 letterSpacing = 0.5.sp
                                             )
                                         }
@@ -406,12 +423,12 @@ fun QuizDetailScreen(
                                     onClick = onBack,
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = CosmicSurface2,
+                                        containerColor = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9),
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(50.dp)
-                                        .border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                                        .border(1.dp, if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
                                 ) {
                                     Text(
                                         "KEMBALI KE DAFTAR KUIS",
@@ -426,13 +443,13 @@ fun QuizDetailScreen(
                                     onClick = onCreateQuiz,
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (isDraft) CosmicSurface2 else TeacherNeon,
+                                        containerColor = if (isDraft) (if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)) else TeacherNeon,
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(50.dp)
                                         .then(
-                                            if (isDraft) Modifier.border(1.dp, GlassBorder, RoundedCornerShape(14.dp))
+                                            if (isDraft) Modifier.border(1.dp, if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(14.dp))
                                             else Modifier
                                         )
                                 ) {
@@ -440,7 +457,7 @@ fun QuizDetailScreen(
                                         "+ BUAT KUIS BARU",
                                         fontSize = 13.sp,
                                         fontWeight = FontWeight.Black,
-                                        color = if (isDraft) TextPrimary else CosmicBlack,
+                                        color = if (isDraft) textPrimary else Color.White,
                                         letterSpacing = 0.5.sp
                                     )
                                 }
@@ -518,7 +535,7 @@ fun QuizDetailScreen(
                                         progress = { progressPct },
                                         modifier = Modifier.width(120.dp).height(6.dp).clip(RoundedCornerShape(3.dp)),
                                         color = TeacherNeon,
-                                        trackColor = CosmicSurface2
+                                        trackColor = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
                                     )
                                 }
 
@@ -544,8 +561,8 @@ fun QuizDetailScreen(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clip(RoundedCornerShape(10.dp))
-                                                .background(if (isSelected) tabColor.copy(alpha = 0.16f) else CosmicSurface2)
-                                                .border(1.dp, if (isSelected) tabColor.copy(alpha = 0.5f) else GlassBorder, RoundedCornerShape(10.dp))
+                                                .background(if (isSelected) tabColor.copy(alpha = 0.16f) else (if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)))
+                                                .border(1.dp, if (isSelected) tabColor.copy(alpha = 0.5f) else (if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)), RoundedCornerShape(10.dp))
                                                 .clickable { selectedFilter = tab }
                                                 .padding(vertical = 7.dp),
                                             contentAlignment = Alignment.Center
@@ -579,7 +596,7 @@ fun QuizDetailScreen(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(10.dp))
-                                            .background(CosmicSurface2)
+                                            .background(if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
                                             .padding(16.dp),
                                         contentAlignment = Alignment.Center
                                     ) {
@@ -600,10 +617,10 @@ fun QuizDetailScreen(
                                                 .fillMaxWidth()
                                                 .padding(bottom = 8.dp)
                                                 .clip(RoundedCornerShape(12.dp))
-                                                .background(CosmicSurface2)
+                                                .background(if (isDark) Color(0xFF111113) else Color.White)
                                                 .border(
                                                     1.dp,
-                                                    if (isInProgress) NeonBlue.copy(alpha = 0.4f) else GlassBorder,
+                                                    if (isInProgress) NeonBlue.copy(alpha = 0.4f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)),
                                                     RoundedCornerShape(12.dp)
                                                 )
                                                 .clickable(enabled = canGrade) {
@@ -620,7 +637,7 @@ fun QuizDetailScreen(
                                                     .background(
                                                         if (isInProgress) Brush.linearGradient(listOf(NeonBlue, TeacherNeon))
                                                         else if (isDone) Brush.linearGradient(listOf(NeonSuccess, NeonBlue))
-                                                        else Brush.linearGradient(listOf(CosmicSurface, CosmicSurface2))
+                                                        else Brush.linearGradient(listOf(if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0), if (isDark) Color(0xFF18181B) else Color(0xFFCBD5E1)))
                                                     ),
                                                 contentAlignment = Alignment.Center
                                             ) {
@@ -699,8 +716,8 @@ fun QuizDetailScreen(
                                                     Box(
                                                         modifier = Modifier
                                                             .clip(RoundedCornerShape(8.dp))
-                                                            .background(CosmicSurface)
-                                                            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                                                            .background(if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
+                                                            .border(1.dp, if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
                                                             .padding(horizontal = 8.dp, vertical = 4.dp)
                                                     ) {
                                                         Text(
@@ -732,8 +749,8 @@ fun QuizDetailScreen(
                                     enabled = canViewResult,
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (canViewResult) CosmicSurface2 else CosmicSurface,
-                                        disabledContainerColor = CosmicSurface2.copy(alpha = 0.6f)
+                                        containerColor = if (canViewResult) (if (isDark) Color(0xFF111113) else Color.White) else (if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)),
+                                        disabledContainerColor = (if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)).copy(alpha = 0.6f)
                                     ),
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -741,7 +758,7 @@ fun QuizDetailScreen(
                                         .clip(RoundedCornerShape(14.dp))
                                         .border(
                                             width = 1.dp,
-                                            color = if (canViewResult) NeonSuccess.copy(alpha = 0.45f) else GlassBorder,
+                                            color = if (canViewResult) NeonSuccess.copy(alpha = 0.45f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)),
                                             shape = RoundedCornerShape(14.dp)
                                         )
                                 ) {
@@ -767,54 +784,72 @@ fun QuizDetailScreen(
                                 }
                             } else {
                                 if (q.examMode == "PROCTORED_CBT") {
-                                    Column(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clip(RoundedCornerShape(12.dp))
-                                            .background(CosmicNavy)
-                                            .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
-                                            .padding(14.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    Surface(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(22.dp),
+                                        color = cardBg,
+                                        border = BorderStroke(1.dp, cardBorder),
+                                        shadowElevation = if (isDark) 0.dp else 1.dp
                                     ) {
-                                        Row(
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        Column(
+                                            modifier = Modifier.padding(18.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
                                         ) {
-                                            Icon(
-                                                imageVector = Icons.Default.Lock,
-                                                contentDescription = null,
-                                                tint = com.schoolos.android.core.designsystem.NeonWarning,
-                                                modifier = Modifier.size(16.dp)
-                                            )
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            ) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = warningColor.copy(alpha = 0.12f),
+                                                    border = BorderStroke(1.dp, warningColor.copy(alpha = 0.35f))
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = Icons.Default.Lock,
+                                                            contentDescription = null,
+                                                            tint = warningColor,
+                                                            modifier = Modifier.size(13.dp)
+                                                        )
+                                                        Text(
+                                                            text = "TOKEN UJIAN CBT PROCTORED",
+                                                            fontSize = 10.5.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = warningColor,
+                                                            letterSpacing = 0.5.sp,
+                                                        )
+                                                    }
+                                                }
+                                            }
                                             Text(
-                                                text = "TOKEN UJIAN CBT PROCTORED",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = com.schoolos.android.core.designsystem.NeonWarning,
-                                                letterSpacing = 0.5.sp,
+                                                text = "Ujian ini terproctor dan diawasi ketat. Masukkan token resmi yang diberikan oleh guru pengawas sebelum memulai pengerjaan.",
+                                                fontSize = 12.sp,
+                                                color = textSecondary,
+                                                lineHeight = 17.sp
+                                            )
+                                            OutlinedTextField(
+                                                value = tokenInput,
+                                                onValueChange = { if (it.length <= 10) tokenInput = it.uppercase() },
+                                                placeholder = { Text("Contoh: TOKEN6", color = textTertiary, fontSize = 13.5.sp) },
+                                                singleLine = true,
+                                                modifier = Modifier.fillMaxWidth(),
+                                                colors = OutlinedTextFieldDefaults.colors(
+                                                    focusedContainerColor = innerCardBg,
+                                                    unfocusedContainerColor = innerCardBg,
+                                                    focusedBorderColor = warningColor,
+                                                    unfocusedBorderColor = innerCardBorder,
+                                                    focusedTextColor = textPrimary,
+                                                    unfocusedTextColor = textPrimary,
+                                                ),
+                                                shape = RoundedCornerShape(14.dp),
                                             )
                                         }
-                                        Text(
-                                            text = "Ujian ini diawasi ketat. Masukkan token resmi yang diberikan oleh guru pengawas.",
-                                            fontSize = 11.sp,
-                                            color = TextTertiary,
-                                        )
-                                        OutlinedTextField(
-                                            value = tokenInput,
-                                            onValueChange = { if (it.length <= 10) tokenInput = it.uppercase() },
-                                            placeholder = { Text("Contoh: TOKEN6", color = TextTertiary, fontSize = 13.sp) },
-                                            singleLine = true,
-                                            modifier = Modifier.fillMaxWidth(),
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                focusedBorderColor = com.schoolos.android.core.designsystem.NeonWarning,
-                                                unfocusedBorderColor = GlassBorder,
-                                                focusedTextColor = TextPrimary,
-                                                unfocusedTextColor = TextPrimary,
-                                            ),
-                                            shape = RoundedCornerShape(10.dp),
-                                        )
                                     }
-                                    Spacer(Modifier.height(10.dp))
+                                    Spacer(Modifier.height(12.dp))
                                 }
 
                                 val canStartAttempt = !state.isStarting && isAvailable && (q.examMode != "PROCTORED_CBT" || tokenInput.isNotBlank())
@@ -838,13 +873,13 @@ fun QuizDetailScreen(
                                                 )
                                             } else {
                                                 Brush.horizontalGradient(
-                                                    listOf(CosmicSurface2, CosmicSurface)
+                                                    listOf(if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0), if (isDark) Color(0xFF18181B) else Color(0xFFCBD5E1))
                                                 )
                                             }
                                         )
                                         .border(
                                             width = 1.dp,
-                                            color = if (canStartAttempt) GlassBorder2 else GlassBorder,
+                                            color = if (canStartAttempt) (if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)) else (if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
                                             shape = RoundedCornerShape(14.dp)
                                         )
                                 ) {
@@ -888,30 +923,41 @@ fun QuizDetailScreen(
 
 @Composable
 private fun TeacherCbtGuideCard() {
-    GlassCard(cornerRadius = 14.dp) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
+    ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 Icon(
-                    imageVector = Icons.Default.Info,
+                    painter = painterResource(id = CoreR.drawable.ic_modern_quiz),
                     contentDescription = null,
-                    tint = TeacherNeon,
+                    tint = teacherAccent,
                     modifier = Modifier.size(16.dp)
                 )
-                Spacer(Modifier.width(6.dp))
                 Text(
-                    text = "Mode Pendidik / Guru Pengampu",
-                    fontSize = 13.sp,
+                    text = "Mode Pendidik & Tutor Pengampu",
+                    fontSize = 13.5.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TeacherNeon
+                    color = teacherAccent
                 )
             }
             Text(
-                text = "Kuis ini diterbitkan untuk dikerjakan secara mandiri oleh peserta didik di kelas. Guru memantau kehadiran, rekonsiliasi nilai, dan analisis butir soal secara komprehensif melalui Web Portal CBT.",
-                fontSize = 12.sp,
-                color = TextSecondary,
+                text = "Kuis ini diterbitkan untuk dikerjakan secara mandiri atau terjadwal oleh peserta didik. Guru memantau kehadiran, rekonsiliasi nilai, dan analisis butir soal secara komprehensif melalui Web Workstation CBT.",
+                fontSize = 12.5.sp,
+                color = textSecondary,
                 lineHeight = 18.sp
             )
         }
@@ -926,55 +972,69 @@ private fun CosmicQuizHeroCard(
     isTeacher: Boolean = false,
     createdAt: String = "",
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(
-                Brush.linearGradient(
-                    colors = listOf(CosmicNavy, CosmicSurface)
-                )
-            )
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .padding(16.dp)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val studentAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val successColor = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Potensi XP / Role Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(if (isTeacher) TeacherNeon.copy(alpha = 0.15f) else AccentNeonAmber.copy(alpha = 0.15f))
-                        .border(0.5.dp, if (isTeacher) TeacherNeon.copy(alpha = 0.4f) else AccentNeonAmber.copy(alpha = 0.4f), RoundedCornerShape(20.dp))
-                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = (if (isTeacher) teacherAccent else studentAccent).copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, (if (isTeacher) teacherAccent else studentAccent).copy(alpha = 0.35f))
                 ) {
                     val potentialXp = if (maxScore > 0) maxScore * 5 else 100
                     Text(
                         text = if (isTeacher) "Pendidik / Tutor Pengampu" else "Potensi $potentialXp XP",
-                        color = if (isTeacher) TeacherNeon else AccentNeonAmber,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold
+                        color = if (isTeacher) teacherAccent else studentAccent,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
                     )
                 }
 
-                // Mapel Pill
-                Text(
-                    text = subjectName,
-                    color = TextTertiary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder)
+                ) {
+                    Text(
+                        text = subjectName,
+                        color = textSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                    )
+                }
             }
 
             Text(
                 text = title,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary,
                 lineHeight = 24.sp
             )
 
@@ -991,12 +1051,13 @@ private fun CosmicQuizHeroCard(
                         modifier = Modifier
                             .size(6.dp)
                             .clip(CircleShape)
-                            .background(NeonSuccess)
+                            .background(successColor)
                     )
                     Text(
-                        text = "CBT Online Terstandarisasi",
-                        fontSize = 11.sp,
-                        color = TextSecondary
+                        text = "CBT Online Terverifikasi",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textSecondary
                     )
                 }
 
@@ -1006,15 +1067,15 @@ private fun CosmicQuizHeroCard(
                         horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Schedule,
+                            painter = painterResource(id = CoreR.drawable.ic_modern_clock),
                             contentDescription = null,
-                            tint = TextTertiary,
-                            modifier = Modifier.size(11.dp)
+                            tint = textTertiary,
+                            modifier = Modifier.size(12.dp)
                         )
                         Text(
                             text = "Diterbitkan: ${formatPublishTimestamp(createdAt)}",
-                            fontSize = 10.sp,
-                            color = TextTertiary,
+                            fontSize = 10.5.sp,
+                            color = textTertiary,
                             fontWeight = FontWeight.Medium
                         )
                     }
@@ -1033,15 +1094,20 @@ private fun CosmicMetricCard(
     accentColor: Color,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
-            .padding(vertical = 12.dp, horizontal = 8.dp),
-        contentAlignment = Alignment.Center
+    val isDark = LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(14.dp),
+        color = innerCardBg,
+        border = BorderStroke(1.dp, innerCardBorder)
     ) {
         Column(
+            modifier = Modifier.padding(vertical = 12.dp, horizontal = 8.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
@@ -1061,15 +1127,15 @@ private fun CosmicMetricCard(
             }
             Text(
                 text = value,
-                fontWeight = FontWeight.Black,
+                fontWeight = FontWeight.Bold,
                 fontSize = 16.sp,
-                color = TextPrimary
+                color = textPrimary
             )
             Text(
                 text = "$unit • $label",
-                fontSize = 9.sp,
+                fontSize = 9.5.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextTertiary,
+                color = textTertiary,
                 textAlign = TextAlign.Center,
                 maxLines = 1
             )
@@ -1079,30 +1145,37 @@ private fun CosmicMetricCard(
 
 @Composable
 private fun CbtRulesCard() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy.copy(alpha = 0.7f))
-            .border(0.5.dp, NeonWarning.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
-            .padding(14.dp)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val warningColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Default.Info,
+                    painter = painterResource(id = CoreR.drawable.ic_modern_warning),
                     contentDescription = null,
-                    tint = NeonWarning,
+                    tint = warningColor,
                     modifier = Modifier.size(16.dp)
                 )
                 Text(
                     text = "Panduan Pengerjaan CBT",
-                    fontSize = 12.sp,
+                    fontSize = 13.5.sp,
                     fontWeight = FontWeight.Bold,
-                    color = NeonWarning
+                    color = warningColor
                 )
             }
 
@@ -1137,26 +1210,34 @@ fun TeacherGradeQuizDialog(
     onDismiss: () -> Unit,
     onConfirm: (score: Int, feedback: String?) -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val dialogBg = if (isDark) Color(0xFF111113) else Color.White
+    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val inputBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val inputBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+
     var scoreText by remember { mutableStateOf(attempt.score.toString()) }
     var feedbackText by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = CosmicNavy,
-        shape = RoundedCornerShape(18.dp),
+        containerColor = dialogBg,
+        shape = RoundedCornerShape(22.dp),
         title = {
             Column {
                 Text(
                     text = "Koreksi Hasil Ujian",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = textPrimary
                 )
                 Text(
                     text = "${attempt.studentName ?: "Siswa"} (NISN: ${attempt.studentNisn ?: "-"})",
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = textSecondary
                 )
             }
         },
@@ -1167,14 +1248,14 @@ fun TeacherGradeQuizDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(8.dp))
-                            .background(NeonBlue.copy(alpha = 0.12f))
-                            .border(1.dp, NeonBlue.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                            .background(if (isDark) Color(0xFF38BDF8).copy(alpha = 0.12f) else Color(0xFF0284C7).copy(alpha = 0.08f))
+                            .border(1.dp, if (isDark) Color(0xFF38BDF8).copy(alpha = 0.3f) else Color(0xFF0284C7).copy(alpha = 0.2f), RoundedCornerShape(8.dp))
                             .padding(8.dp)
                     ) {
                         Text(
                             "Status: Siswa sedang mengerjakan ujian. Anda dapat menetapkan nilai akhir secara langsung.",
                             fontSize = 11.sp,
-                            color = NeonBlue
+                            color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
                         )
                     }
                 }
@@ -1184,7 +1265,7 @@ fun TeacherGradeQuizDialog(
                         text = "Nilai Skor (Maksimal: $maxScore)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary
+                        color = textSecondary
                     )
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(
@@ -1198,12 +1279,12 @@ fun TeacherGradeQuizDialog(
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = CosmicSurface2,
-                            unfocusedContainerColor = CosmicSurface2,
-                            focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
+                            focusedContainerColor = inputBg,
+                            unfocusedContainerColor = inputBg,
+                            focusedBorderColor = if (isDark) Color(0xFF34D399) else Color(0xFF059669),
+                            unfocusedBorderColor = inputBorder,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1211,7 +1292,7 @@ fun TeacherGradeQuizDialog(
                         Text(
                             text = errorMessage!!,
                             fontSize = 10.sp,
-                            color = NeonError,
+                            color = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
                             modifier = Modifier.padding(top = 4.dp)
                         )
                     }
@@ -1222,22 +1303,22 @@ fun TeacherGradeQuizDialog(
                         text = "Catatan / Umpan Balik Guru (Opsional)",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary
+                        color = textSecondary
                     )
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(
                         value = feedbackText,
                         onValueChange = { feedbackText = it },
-                        placeholder = { Text("Tulis umpan balik untuk siswa...", fontSize = 12.sp, color = TextTertiary) },
+                        placeholder = { Text("Tulis umpan balik untuk siswa...", fontSize = 12.sp, color = textTertiary) },
                         minLines = 2,
                         maxLines = 4,
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = CosmicSurface2,
-                            unfocusedContainerColor = CosmicSurface2,
-                            focusedBorderColor = TeacherNeon,
-                            unfocusedBorderColor = GlassBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary
+                            focusedContainerColor = inputBg,
+                            unfocusedContainerColor = inputBg,
+                            focusedBorderColor = if (isDark) Color(0xFF34D399) else Color(0xFF059669),
+                            unfocusedBorderColor = inputBorder,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
@@ -1254,15 +1335,15 @@ fun TeacherGradeQuizDialog(
                         onConfirm(parsed, feedbackText.takeIf { it.isNotBlank() })
                     }
                 },
-                colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon),
+                colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF34D399) else Color(0xFF059669)),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Simpan Nilai", color = CosmicBlack, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Text("Simpan Nilai", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Batal", color = TextTertiary, fontSize = 12.sp)
+                Text("Batal", color = textTertiary, fontSize = 12.sp)
             }
         }
     )

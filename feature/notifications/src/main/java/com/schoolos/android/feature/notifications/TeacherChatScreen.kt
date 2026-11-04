@@ -75,18 +75,12 @@ import com.schoolos.android.core.chat.ChatManager
 import com.schoolos.android.core.chat.ChatThread
 import com.schoolos.android.core.chat.InquiryStatus
 import com.schoolos.android.core.chat.InquiryType
-import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.ExecutiveTopBar
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.PullRefreshContainer
 import com.schoolos.android.core.designsystem.ShimmerList
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
-
-enum class ChatSectionTab {
-    GURU,
-    AI
-}
 
 enum class ChatFilter {
     ALL,
@@ -129,7 +123,6 @@ fun TeacherChatScreen(
     val isLoading by chatManager.isLoading.collectAsState()
     val isOnline by chatManager.isOnline.collectAsState()
 
-    var activeSection by remember { mutableStateOf(ChatSectionTab.GURU) }
     var selectedFilter by remember { mutableStateOf(ChatFilter.ALL) }
     var searchQuery by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
@@ -181,19 +174,17 @@ fun TeacherChatScreen(
     )
 
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC),
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
                 title = "Tanya Jawab",
-                subtitle = if (activeSection == ChatSectionTab.AI) {
-                    "Guru AI Pembelajaran • Didukung NVIDIA NIM"
-                } else if (isTeacherMode) {
+                subtitle = if (isTeacherMode) {
                     if (waitingCount > 0) "$waitingCount pertanyaan menunggu tanggapan"
                     else "Semua pertanyaan siswa telah dijawab"
                 } else {
                     if (waitingCount > 0) "$waitingCount pertanyaan menunggu balasan guru"
-                    else "Konsultasi materi & tugas bersama guru"
+                    else "Konsultasi materi & tugas bersama guru pengampu"
                 },
                 onBack = onBack,
                 actions = {
@@ -246,26 +237,30 @@ fun TeacherChatScreen(
             Column(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // ── 1. SEGMENTED SECTION TABS: [KONSULTASI GURU] | [TANYA GURU AI] ───
-                ChatSectionSegmentedControl(
-                    activeSection = activeSection,
-                    onSectionChanged = { activeSection = it },
+                // ── 1. METRIC OVERVIEW ──────────────────────────────────────────
+                ChatOverviewCard(
+                    totalCount = threads.size,
+                    waitingCount = waitingCount,
+                    contactCount = uniqueContacts,
+                    selectedFilter = selectedFilter,
+                    onFilterSelected = { selectedFilter = it },
+                    isTeacherMode = isTeacherMode,
                     isDark = isDark,
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
                     textPrimary = textPrimary,
                     textSecondary = textSecondary,
                     studentAccent = studentAccent,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                    teacherAccent = teacherAccent,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                 )
 
-                // ── 2. DEDICATED SECTION CONTENT ─────────────────────────────
-                if (activeSection == ChatSectionTab.AI) {
-                    // ── TAB GURU AI (DEDICATED HUB) ──────────────────────────
-                    AiTutorHubContent(
-                        onOpenAiChat = { prompt ->
-                            val aiThread = chatManager.getOrCreateAiThread()
-                            onOpenThread(aiThread.id, "Guru AI (NVIDIA NIM)")
-                        },
+                // ── 2. KONTAK GURU PENGAMPU (Direct Contact Hub) ───────────────
+                if (!isTeacherMode) {
+                    TeacherContactsSection(
+                        threads = threads,
                         chatManager = chatManager,
+                        onOpenThread = onOpenThread,
                         isDark = isDark,
                         cardBg = cardBg,
                         cardBorder = cardBorder,
@@ -274,27 +269,10 @@ fun TeacherChatScreen(
                         textPrimary = textPrimary,
                         textSecondary = textSecondary,
                         textTertiary = textTertiary,
-                        studentAccent = studentAccent
-                    )
-                } else {
-                    // ── TAB KONSULTASI GURU (DEDICATED TEACHER CHAT) ──────────
-                    // A. Metric Overview
-                    ChatOverviewCard(
-                        totalCount = threads.size,
-                        waitingCount = waitingCount,
-                        contactCount = uniqueContacts,
-                        selectedFilter = selectedFilter,
-                        onFilterSelected = { selectedFilter = it },
-                        isTeacherMode = isTeacherMode,
-                        isDark = isDark,
-                        cardBg = cardBg,
-                        cardBorder = cardBorder,
-                        textPrimary = textPrimary,
-                        textSecondary = textSecondary,
                         studentAccent = studentAccent,
-                        teacherAccent = teacherAccent,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
+                }
 
                     // B. Search Bar
                     Box(
@@ -525,126 +503,67 @@ fun TeacherChatScreen(
             }
         }
     }
-}
 
-// ── 1. SEGMENTED SECTION CONTROL: [KONSULTASI GURU] | [TANYA GURU AI] ─────────
+// ── 1. KONTAK GURU MAPEL SECTION (Direct Interaction for Students) ────────
 
-@Composable
-private fun ChatSectionSegmentedControl(
-    activeSection: ChatSectionTab,
-    onSectionChanged: (ChatSectionTab) -> Unit,
-    isDark: Boolean,
-    textPrimary: Color,
-    textSecondary: Color,
-    studentAccent: Color,
-    modifier: Modifier = Modifier,
-) {
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9),
-        border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)),
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(4.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // Tab 1: Konsultasi Guru
-            val isGuruActive = activeSection == ChatSectionTab.GURU
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isGuruActive) (if (isDark) Color(0xFF27272A) else Color.White) else Color.Transparent)
-                    .border(
-                        1.dp,
-                        if (isGuruActive) (if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)) else Color.Transparent,
-                        RoundedCornerShape(12.dp)
-                    )
-                    .clickable { onSectionChanged(ChatSectionTab.GURU) }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(7.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = CoreR.drawable.ic_modern_chat),
-                        contentDescription = null,
-                        tint = if (isGuruActive) (if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)) else textSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Konsultasi Guru",
-                        fontSize = 13.sp,
-                        fontWeight = if (isGuruActive) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isGuruActive) textPrimary else textSecondary
-                    )
-                }
-            }
+data class TeacherContactItem(
+    val id: String,
+    val name: String,
+    val subject: String,
+    val phone: String,
+    val email: String,
+    val roleTitle: String = "Tutor Pengampu",
+    val status: String = "Online",
+)
 
-            Spacer(Modifier.width(4.dp))
-
-            // Tab 2: Tanya Guru AI
-            val isAiActive = activeSection == ChatSectionTab.AI
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(if (isAiActive) (if (isDark) Color(0xFF27272A) else Color.White) else Color.Transparent)
-                    .border(
-                        1.dp,
-                        if (isAiActive) (if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)) else Color.Transparent,
-                        RoundedCornerShape(12.dp)
-                    )
-                    .clickable { onSectionChanged(ChatSectionTab.AI) }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                ) {
-                    Icon(
-                        painter = painterResource(id = CoreR.drawable.ic_modern_ai),
-                        contentDescription = null,
-                        tint = if (isAiActive) studentAccent else textSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Tanya Guru AI",
-                        fontSize = 13.sp,
-                        fontWeight = if (isAiActive) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isAiActive) studentAccent else textSecondary
-                    )
-                    Surface(
-                        shape = RoundedCornerShape(4.dp),
-                        color = if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7),
-                        border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFF86EFAC))
-                    ) {
-                        Text(
-                            text = "NVIDIA",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = if (isDark) Color(0xFF34D399) else Color(0xFF15803D),
-                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
-                        )
-                    }
-                }
-            }
-        }
-    }
-}
-
-// ── 2. DEDICATED AI TUTOR HUB CONTENT (SEPARATED SCREEN) ──────────────────────
+private val OfficialTeachersList = listOf(
+    TeacherContactItem(
+        id = "teacher-asep-rifai",
+        name = "ASEP RIFAI, S.Pd",
+        subject = "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
+        phone = "081223344551",
+        email = "aseprifai@pkbm.sch.id",
+        roleTitle = "Tutor IPAS",
+    ),
+    TeacherContactItem(
+        id = "teacher-asy-syifa",
+        name = "ASY SYIFA RAHMAH IHSANI, S.Pd",
+        subject = "Bahasa Inggris",
+        phone = "085211223344",
+        email = "asysyifa@pkbm.sch.id",
+        roleTitle = "Tutor Bhs. Inggris",
+    ),
+    TeacherContactItem(
+        id = "teacher-amin-lisana",
+        name = "AMIN LISANA, S.Pd",
+        subject = "Bahasa Indonesia",
+        phone = "087799881122",
+        email = "aminlisana@pkbm.sch.id",
+        roleTitle = "Tutor Bhs. Indonesia",
+    ),
+    TeacherContactItem(
+        id = "teacher-siti-muniroh",
+        name = "Siti Muniroh, S.Pd",
+        subject = "Pendidikan Pancasila & Karakter",
+        phone = "081388776655",
+        email = "sitimuniroh@pkbm.sch.id",
+        roleTitle = "Tutor Karakter & PKn",
+    ),
+    TeacherContactItem(
+        id = "teacher-eulis-komala",
+        name = "Dra. Hj. Eulis Komala",
+        subject = "Bimbingan & Konseling",
+        phone = "081299887766",
+        email = "euliskomala@pkbm.sch.id",
+        roleTitle = "Kepala PKBM / Pembina",
+    ),
+)
 
 @Composable
-private fun AiTutorHubContent(
-    onOpenAiChat: (initialPrompt: String?) -> Unit,
+private fun TeacherContactsSection(
+    threads: List<ChatThread>,
     chatManager: ChatManager,
+    onOpenThread: (threadId: String, recipientName: String) -> Unit,
     isDark: Boolean,
     cardBg: Color,
     cardBorder: Color,
@@ -654,313 +573,115 @@ private fun AiTutorHubContent(
     textSecondary: Color,
     textTertiary: Color,
     studentAccent: Color,
+    modifier: Modifier = Modifier,
 ) {
-    val rawThreads by chatManager.threads.collectAsState()
-    val aiThread = remember(rawThreads) {
-        rawThreads.firstOrNull { it.id.startsWith("ai-tutor") }
-    }
+    val context = LocalContext.current
+    var isExpanded by remember { mutableStateOf(false) }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 96.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp,
     ) {
-        // ── HERO BANNER: GURU AI (NVIDIA NIM) ────────────────────────────────
-        item {
-            Surface(
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            // Header Row
+            Row(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = cardBg,
-                border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(
-                    modifier = Modifier.padding(18.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    // Top tag: [NVIDIA NIM AI] [STATUS: ONLINE 24/7]
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .size(32.dp)
+                            .clip(CircleShape)
+                            .background(studentAccent.copy(alpha = 0.12f))
+                            .border(1.dp, studentAccent.copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7),
-                            border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFF86EFAC))
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(6.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isDark) Color(0xFF34D399) else Color(0xFF15803D))
-                                )
-                                Spacer(Modifier.width(5.dp))
-                                Text(
-                                    text = "NVIDIA NIM AI ACTIVE",
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isDark) Color(0xFF34D399) else Color(0xFF15803D)
-                                )
-                            }
-                        }
-
-                        Surface(
-                            shape = RoundedCornerShape(8.dp),
-                            color = innerCardBg,
-                            border = BorderStroke(1.dp, innerCardBorder)
-                        ) {
-                            Text(
-                                text = "24 Jam Interaktif",
-                                fontSize = 10.5.sp,
-                                color = textSecondary,
-                                fontWeight = FontWeight.Medium,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                            )
-                        }
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_classes),
+                            contentDescription = null,
+                            tint = studentAccent,
+                            modifier = Modifier.size(16.dp),
+                        )
                     }
+                    Column {
+                        Text(
+                            text = "Kontak Guru Mapel",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
+                        )
+                        Text(
+                            text = "Hubungi langsung guru via WhatsApp atau Chat",
+                            fontSize = 10.5.sp,
+                            color = textSecondary,
+                        )
+                    }
+                }
 
-                    // Main Header Row
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder),
+                    modifier = Modifier.clickable { isExpanded = !isExpanded }
+                ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE))
-                                .border(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD), RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(id = CoreR.drawable.ic_modern_ai),
-                                contentDescription = null,
-                                tint = studentAccent,
-                                modifier = Modifier.size(24.dp)
-                            )
-                        }
-
-                        Column {
-                            Text(
-                                text = "Guru AI Pintar",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary,
-                                letterSpacing = (-0.3).sp
-                            )
-                            Spacer(Modifier.height(1.dp))
-                            Text(
-                                text = "Asisten belajar kurikulum personal siap membantu materi & soalmu.",
-                                fontSize = 11.5.sp,
-                                color = textSecondary,
-                                lineHeight = 15.sp
-                            )
-                        }
-                    }
-
-                    // Primary CTA to launch chat
-                    Surface(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .clickable { onOpenAiChat(null) },
-                        shape = RoundedCornerShape(12.dp),
-                        color = studentAccent,
-                        shadowElevation = if (isDark) 0.dp else 2.dp
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                painter = painterResource(id = CoreR.drawable.ic_modern_chat),
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                text = "Mulai Diskusi dengan Guru AI",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Icon(
-                                painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(14.dp)
-                            )
-                        }
+                        Text(
+                            text = if (isExpanded) "Sembunyikan" else "Lihat Semua",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = studentAccent,
+                        )
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
+                            contentDescription = null,
+                            tint = studentAccent,
+                            modifier = Modifier.size(12.dp),
+                        )
                     }
                 }
             }
-        }
 
-        // ── SECTION TITLE: TOPIK KONSULTASI CEPAT ────────────────────────────
-        item {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 2.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Panduan & Topik Pertanyaan Cepat",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textPrimary
-                )
-                Text(
-                    text = "Klik untuk tanyakan",
-                    fontSize = 11.sp,
-                    color = textTertiary
-                )
-            }
-        }
-
-        // ── 2x2 BENTO QUICK PROMPTS ──────────────────────────────────────────
-        item {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    AiPromptCard(
-                        emoji = "💡",
-                        title = "Konsep Materi",
-                        desc = "Jelaskan konsep topik yang belum dipahami secara tuntas",
-                        cardBg = cardBg,
-                        cardBorder = cardBorder,
+            // Teachers List
+            val displayTeachers = if (isExpanded) OfficialTeachersList else OfficialTeachersList.take(2)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                displayTeachers.forEach { teacher ->
+                    TeacherContactCardItem(
+                        teacher = teacher,
+                        threads = threads,
+                        chatManager = chatManager,
+                        onOpenThread = onOpenThread,
+                        isDark = isDark,
                         innerCardBg = innerCardBg,
+                        innerCardBorder = innerCardBorder,
                         textPrimary = textPrimary,
                         textSecondary = textSecondary,
-                        onClick = { onOpenAiChat("Tolong jelaskan konsep materi ini secara sederhana:") },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    AiPromptCard(
-                        emoji = "📐",
-                        title = "Rumus & Hitungan",
-                        desc = "Langkah demi langkah cara penyelesaian rumus sains & matematika",
-                        cardBg = cardBg,
-                        cardBorder = cardBorder,
-                        innerCardBg = innerCardBg,
-                        textPrimary = textPrimary,
-                        textSecondary = textSecondary,
-                        onClick = { onOpenAiChat("Bantu saya memecahkan rumus dan contoh soal berikut:") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    AiPromptCard(
-                        emoji = "📝",
-                        title = "Ringkas Catatan",
-                        desc = "Buatkan rangkuman poin-poin inti dari modul bab pelajaran",
-                        cardBg = cardBg,
-                        cardBorder = cardBorder,
-                        innerCardBg = innerCardBg,
-                        textPrimary = textPrimary,
-                        textSecondary = textSecondary,
-                        onClick = { onOpenAiChat("Mohon bantu ringkas poin penting materi berikut:") },
-                        modifier = Modifier.weight(1f)
-                    )
-
-                    AiPromptCard(
-                        emoji = "🎯",
-                        title = "Latihan Tugas",
-                        desc = "Tips dan kerangka berpikir untuk menyelesaikan tugas mandiri",
-                        cardBg = cardBg,
-                        cardBorder = cardBorder,
-                        innerCardBg = innerCardBg,
-                        textPrimary = textPrimary,
-                        textSecondary = textSecondary,
-                        onClick = { onOpenAiChat("Berikan tips dan panduan untuk tugas ini:") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-
-        // ── ACTIVE AI SESSION CARD (IF EXISTS) ───────────────────────────────
-        if (aiThread != null && aiThread.messages.isNotEmpty()) {
-            item {
-                Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(22.dp))
-                        .clickable { onOpenAiChat(null) },
-                    shape = RoundedCornerShape(22.dp),
-                    color = cardBg,
-                    border = BorderStroke(1.dp, cardBorder),
-                    shadowElevation = if (isDark) 0.dp else 1.dp
-                ) {
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Sesi Chat AI Terakhir",
-                                fontSize = 12.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = studentAccent
-                            )
-                            Text(
-                                text = formatTimeAgo(aiThread.lastUpdated),
-                                fontSize = 11.sp,
-                                color = textTertiary
-                            )
+                        textTertiary = textTertiary,
+                        studentAccent = studentAccent,
+                        onWhatsAppClick = {
+                            openWhatsAppDirect(context, teacher.phone, teacher.name, teacher.subject, chatManager)
+                        },
+                        onCallClick = {
+                            openDialerDirect(context, teacher.phone)
+                        },
+                        onEmailClick = {
+                            openEmailDirect(context, teacher.email, teacher.name, teacher.subject, chatManager)
                         }
-
-                        val lastMsg = aiThread.lastMessage
-                        if (lastMsg != null) {
-                            Text(
-                                text = lastMsg.content,
-                                fontSize = 12.5.sp,
-                                color = textSecondary,
-                                maxLines = 2,
-                                overflow = TextOverflow.Ellipsis,
-                                lineHeight = 17.sp
-                            )
-                        }
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.End,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Lanjutkan Diskusi",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = studentAccent
-                            )
-                            Spacer(Modifier.width(4.dp))
-                            Icon(
-                                painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
-                                contentDescription = null,
-                                tint = studentAccent,
-                                modifier = Modifier.size(12.dp)
-                            )
-                        }
-                    }
+                    )
                 }
             }
         }
@@ -968,46 +689,253 @@ private fun AiTutorHubContent(
 }
 
 @Composable
-private fun AiPromptCard(
-    emoji: String,
-    title: String,
-    desc: String,
-    cardBg: Color,
-    cardBorder: Color,
+private fun TeacherContactCardItem(
+    teacher: TeacherContactItem,
+    threads: List<ChatThread>,
+    chatManager: ChatManager,
+    onOpenThread: (threadId: String, recipientName: String) -> Unit,
+    isDark: Boolean,
     innerCardBg: Color,
+    innerCardBorder: Color,
     textPrimary: Color,
     textSecondary: Color,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
+    textTertiary: Color,
+    studentAccent: Color,
+    onWhatsAppClick: () -> Unit,
+    onCallClick: () -> Unit,
+    onEmailClick: () -> Unit,
 ) {
     Surface(
-        modifier = modifier
-            .clip(RoundedCornerShape(18.dp))
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(18.dp),
-        color = cardBg,
-        border = BorderStroke(1.dp, cardBorder)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = innerCardBg,
+        border = BorderStroke(1.dp, innerCardBorder),
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            Text(text = emoji, fontSize = 20.sp)
-            Text(
-                text = title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Bold,
-                color = textPrimary
-            )
-            Text(
-                text = desc,
-                fontSize = 11.sp,
-                color = textSecondary,
-                lineHeight = 15.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.weight(1f),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF10B981).copy(alpha = 0.15f))
+                            .border(1.dp, Color(0xFF10B981).copy(alpha = 0.35f), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = teacher.name.take(1).uppercase(),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDark) Color(0xFF34D399) else Color(0xFF059669),
+                        )
+                    }
+
+                    Column {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = teacher.name,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(6.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF10B981))
+                            )
+                        }
+                        Text(
+                            text = teacher.subject,
+                            fontSize = 11.sp,
+                            color = studentAccent,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                // Phone text label
+                Text(
+                    text = teacher.phone,
+                    fontSize = 10.5.sp,
+                    color = textTertiary,
+                    fontWeight = FontWeight.Medium,
+                )
+            }
+
+            // Action Buttons Row (WhatsApp, Telepon, Chat di Aplikasi)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // 1. WhatsApp Button
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.45f) else Color(0xFF86EFAC)),
+                    modifier = Modifier
+                        .weight(1.1f)
+                        .clickable { onWhatsAppClick() },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_whatsapp),
+                            contentDescription = null,
+                            tint = if (isDark) Color(0xFF34D399) else Color(0xFF15803D),
+                            modifier = Modifier.size(13.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "WhatsApp",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isDark) Color(0xFF34D399) else Color(0xFF15803D),
+                        )
+                    }
+                }
+
+                // 2. Call Button
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder),
+                    modifier = Modifier
+                        .weight(0.9f)
+                        .clickable { onCallClick() },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_phone),
+                            contentDescription = null,
+                            tint = textSecondary,
+                            modifier = Modifier.size(12.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Telepon",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textSecondary,
+                        )
+                    }
+                }
+
+                // 3. In-App Chat Button
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = studentAccent,
+                    modifier = Modifier
+                        .weight(1.2f)
+                        .clickable {
+                            val existingThread = threads.firstOrNull {
+                                it.teacherName.contains(teacher.name.take(6), ignoreCase = true) ||
+                                it.subjectName.contains(teacher.subject.take(5), ignoreCase = true)
+                            }
+                            if (existingThread != null) {
+                                onOpenThread(existingThread.id, teacher.name)
+                            } else {
+                                val dummyThreadId = "teacher-${teacher.name.filter { it.isLetter() }.lowercase()}"
+                                onOpenThread(dummyThreadId, teacher.name)
+                            }
+                        },
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_chat),
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(12.dp),
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = "Tanya di Chat",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
         }
+    }
+}
+
+private fun openWhatsAppDirect(
+    context: android.content.Context,
+    phone: String,
+    teacherName: String,
+    subject: String,
+    chatManager: ChatManager
+) {
+    try {
+        val clean = phone.replace("+", "").replace("-", "").replace(" ", "").trim()
+        val standardPhone = if (clean.startsWith("0")) "62" + clean.substring(1) else clean
+        val auth = chatManager.currentAuth
+        val studentName = auth?.name?.ifBlank { "Siswa" } ?: "Siswa"
+        val studentClass = auth?.className?.ifBlank { "PKBM As-Salafiyah" } ?: "PKBM As-Salafiyah"
+        val message = "Halo Bapak/Ibu $teacherName, saya $studentName ($studentClass) ingin berkonsultasi mengenai mata pelajaran $subject."
+        val url = "https://api.whatsapp.com/send?phone=$standardPhone&text=${java.net.URLEncoder.encode(message, "UTF-8")}"
+        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(context, "Tidak dapat membuka WhatsApp", android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun openDialerDirect(context: android.content.Context, phone: String) {
+    try {
+        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$phone"))
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(context, "Tidak dapat membuka panggilan", android.widget.Toast.LENGTH_SHORT).show()
+    }
+}
+
+private fun openEmailDirect(
+    context: android.content.Context,
+    email: String,
+    teacherName: String,
+    subject: String,
+    chatManager: ChatManager
+) {
+    try {
+        val auth = chatManager.currentAuth
+        val studentName = auth?.name?.ifBlank { "Siswa" } ?: "Siswa"
+        val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
+            data = android.net.Uri.parse("mailto:$email")
+            putExtra(android.content.Intent.EXTRA_SUBJECT, "Konsultasi $subject - $studentName")
+        }
+        context.startActivity(intent)
+    } catch (e: Exception) {
+        android.widget.Toast.makeText(context, "Tidak dapat membuka email", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 
