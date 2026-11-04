@@ -178,7 +178,7 @@ private fun StudentGreetingHeroCard(
     val isUuidLike = studentClass.contains("-") && studentClass.length >= 32
     val effectiveClass = if (studentClass.isNotBlank() && !isUuidLike) studentClass.uppercase() else "WARGA BELAJAR"
     val effectiveNisn = if (studentNisn.isNotBlank()) "NISN: $studentNisn" else null
-    val effectiveStreak = if (streakDays > 0) streakDays else 5
+    val effectiveStreak = streakDays
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -212,7 +212,7 @@ private fun StudentGreetingHeroCard(
                 if (effectiveNisn != null) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+                        color = if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)
                     ) {
                         Text(
                             text = effectiveNisn,
@@ -623,9 +623,9 @@ private fun HomeTodayScheduleCard(
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(14.dp))
                                 .clickable { onNavigateToSessionDetail(session.id) },
-                            color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
+                            color = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
                             shape = RoundedCornerShape(14.dp),
-                            border = BorderStroke(1.dp, cardBorder)
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
                         ) {
                             Row(
                                 modifier = Modifier
@@ -804,18 +804,18 @@ private fun HomeAcademicPerformanceCard(
                     modifier = Modifier.size(52.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    val progress = if (hasGrade) (avgNum / 100.0).toFloat().coerceIn(0f, 1f) else 0.7f
+                    val progress = if (hasGrade) (avgNum / 100.0).toFloat().coerceIn(0f, 1f) else 0f
                     CircularProgressIndicator(
                         progress = { progress },
                         modifier = Modifier.fillMaxSize(),
-                        color = Color(0xFF0284C7),
-                        trackColor = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9),
+                        color = if (hasGrade) Color(0xFF10B981) else Color(0xFF27272A),
+                        trackColor = if (isDark) Color(0xFF1F1F23) else Color(0xFFF1F5F9),
                         strokeWidth = 5.dp
                     )
                     Icon(
                         imageVector = if (hasGrade) Icons.Default.CheckCircle else Icons.Default.School,
                         contentDescription = null,
-                        tint = Color(0xFF0284C7),
+                        tint = if (hasGrade) Color(0xFF10B981) else textSecondary,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -841,8 +841,8 @@ private fun HomeAcademicPerformanceCard(
                         Surface(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
-                            border = BorderStroke(1.dp, cardBorder)
+                            color = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
                                 Text(
@@ -950,9 +950,9 @@ private fun HomeSibiReadingCard(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .clickable { onOpenBookReading(currentBook) },
-                    color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
+                    color = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
                     shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, cardBorder)
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -1005,9 +1005,9 @@ private fun HomeSibiReadingCard(
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
                         .clickable { onStartReadingSibi(recommendedSibiBook) },
-                    color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
+                    color = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
                     shape = RoundedCornerShape(14.dp),
-                    border = BorderStroke(1.dp, cardBorder)
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -1081,8 +1081,9 @@ private fun HomeWeeklyActivityCard(
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
-    var selectedDayIndex by remember { mutableIntStateOf(0) }
     val days = weeklyActivity?.days ?: emptyList()
+    val todayIdx = days.indexOfFirst { it.isToday }.coerceAtLeast(0)
+    var selectedDayIndex by remember(days) { mutableIntStateOf(todayIdx) }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -1167,7 +1168,8 @@ private fun HomeWeeklyActivityCard(
                                 .clip(RoundedCornerShape(10.dp))
                                 .clickable { selectedDayIndex = index },
                             shape = RoundedCornerShape(10.dp),
-                            color = if (isSelected) Color(0xFF0284C7) else if (isDark) Color(0xFF1A233A) else Color(0xFFF1F5F9)
+                            color = if (isSelected) Color(0xFF2563EB) else if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9),
+                            border = if (isSelected) null else BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
                         ) {
                             Column(
                                 modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -1207,8 +1209,8 @@ private fun HomeWeeklyActivityCard(
                                         }
                                     },
                                 shape = RoundedCornerShape(12.dp),
-                                color = if (isDark) Color(0xFF1A233A) else Color(0xFFF8FAFC),
-                                border = BorderStroke(1.dp, cardBorder)
+                                color = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
+                                border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
                             ) {
                                 Row(
                                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),

@@ -552,7 +552,7 @@ class HomeViewModel @Inject constructor(
                 _state.update { current ->
                     current.copy(
                         xpCount = gamification.totalXp.toString(),
-                        streakDays = if (gamification.streakDays > 0) gamification.streakDays else 5,
+                        streakDays = gamification.streakDays,
                     )
                 }
             }
@@ -591,6 +591,55 @@ class HomeViewModel @Inject constructor(
 
             if (combinedHistory.isNotEmpty()) {
                 _state.update { it.copy(activeReadingHistory = combinedHistory, recommendedSibiBook = null) }
+
+                // Real-time synchronization of active reading sessions with Weekly Learning Activities
+                val currentWeekly = _state.value.weeklyActivity
+                if (currentWeekly != null) {
+                    val updatedDays = currentWeekly.days.map { day ->
+                        val matchingReadings = combinedHistory.filter { item ->
+                            val itemDate = item.lastReadAt?.take(10)
+                            itemDate == day.date && day.activities.none { act -> act.title == item.title }
+                        }
+                        if (matchingReadings.isNotEmpty()) {
+                            val newActs = day.activities.toMutableList()
+                            matchingReadings.forEach { r ->
+                                newActs.add(
+                                    com.schoolos.android.domain.model.DailyActivityItem(
+                                        id = r.id,
+                                        title = r.title,
+                                        category = "MATERIAL",
+                                        categoryLabel = "Materi Belajar",
+                                        subType = "Modul PDF",
+                                        subjectName = r.subjectName ?: "Pembelajaran",
+                                        time = r.lastReadAt?.substringAfter('T')?.take(5) ?: "Hari ini"
+                                    )
+                                )
+                            }
+                            day.copy(
+                                materialsCount = day.materialsCount + matchingReadings.size,
+                                totalCount = day.totalCount + matchingReadings.size,
+                                activities = newActs
+                            )
+                        } else {
+                            day
+                        }
+                    }
+                    val totalAct = updatedDays.sumOf { it.totalCount }
+                    val totalMat = updatedDays.sumOf { it.materialsCount }
+                    val peak = updatedDays.maxByOrNull { it.totalCount }
+                    _state.update {
+                        it.copy(
+                            weeklyActivity = currentWeekly.copy(
+                                days = updatedDays,
+                                totalActivities = totalAct,
+                                totalMaterials = totalMat,
+                                peakDay = peak?.dayName ?: currentWeekly.peakDay,
+                                peakCount = peak?.totalCount ?: currentWeekly.peakCount,
+                                activeDaysCount = updatedDays.count { d -> d.totalCount > 0 }
+                            )
+                        )
+                    }
+                }
             } else {
                 // If student has NO reading history, fetch integrated SIBI Kemendikdasmen books scoped to student's rombel
                 val studentClassName = (currentAuth.className ?: auth.className ?: "").lowercase()

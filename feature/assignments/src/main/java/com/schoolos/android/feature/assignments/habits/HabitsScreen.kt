@@ -569,7 +569,7 @@ private fun CompletionTrendCard(
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
+                    color = if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)
                 ) {
                     Text(
                         text = "🔥 Streak: $streakDays Hari",
@@ -674,7 +674,7 @@ private fun DayBarColumn(
                 )
             }
         } else {
-            val barBg = if (isDark) Color(0xFF1E293B) else Color(0xFFF8FAFC)
+            val barBg = if (isDark) Color(0xFF27272A) else Color(0xFFF8FAFC)
             val barBorderColor = if (isDark) Color(0xFF334155) else Color(0xFFE2E8F0)
 
             Box(
@@ -799,7 +799,7 @@ private fun HabitTaskJournalCard(
                             .fillMaxWidth()
                             .height(5.dp)
                             .clip(RoundedCornerShape(3.dp))
-                            .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0))
+                            .background(if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0))
                     ) {
                         Box(
                             modifier = Modifier
@@ -944,7 +944,8 @@ private fun HabitTaskJournalCard(
                         Surface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(10.dp),
-                            color = if (isDark) Color(0xFF1A233A) else Color(0xFFF1F5F9)
+                            color = if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
                         ) {
                             Text(
                                 text = "Catatan Ananda: \"$note\"",
