@@ -129,8 +129,8 @@ fun HabitsScreen(
     }
 
     // Modern card background and border colors respecting theme
-    val cardBg = if (isDark) Color(0xFF131B2E) else Color.White
-    val cardBorder = if (isDark) Color(0xFF1E293B) else Color(0xFFE2E8F0)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
     val screenBg = if (isDark) CosmicBlack else Color(0xFFF8FAFC)
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
@@ -145,7 +145,7 @@ fun HabitsScreen(
         )
     }
 
-    val peakStat = weeklyStats.find { it.isPeak } ?: weeklyStats.getOrNull(3) ?: weeklyStats.firstOrNull()
+    val peakStat = weeklyStats.find { it.isPeak && it.completedCount > 0 }
 
     Scaffold(
         containerColor = screenBg,
@@ -572,7 +572,7 @@ private fun CompletionTrendCard(
                     color = if (isDark) Color(0xFF1E293B) else Color(0xFFF1F5F9)
                 ) {
                     Text(
-                        text = "🔥 Streak: ${if (streakDays > 0) streakDays else 5} Hari",
+                        text = "🔥 Streak: $streakDays Hari",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = Color(0xFFD97706),
@@ -581,7 +581,7 @@ private fun CompletionTrendCard(
                 }
             }
 
-            // Skor % dan Hari Tertinggi
+            // Skor % dan Hari Tertinggi (Dihitung Real Tanpa Data Dummy)
             Row(
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
@@ -591,7 +591,7 @@ private fun CompletionTrendCard(
                 } else if (stateComplianceRate > 0.0) {
                     stateComplianceRate.toInt()
                 } else {
-                    91
+                    0
                 }
 
                 Text(
@@ -601,9 +601,14 @@ private fun CompletionTrendCard(
                     color = textPrimary
                 )
 
-                val peakDayName = peakStat?.dayFullIndo ?: "Kamis"
+                val trendSubtitle = when {
+                    peakStat != null && peakStat.completedCount > 0 -> "Tertinggi hari ${peakStat.dayFullIndo}"
+                    peakRate > 0 -> "Kepatuhan hari ini"
+                    else -> "Belum ada aktivitas selesai"
+                }
+
                 Text(
-                    text = "Tertinggi hari $peakDayName",
+                    text = trendSubtitle,
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
                     color = textSecondary,
@@ -1052,10 +1057,10 @@ private fun calculateWeeklyTrend(
     val peakIndex = if (maxCount > 0) {
         stats.indexOfFirst { it.completedCount == maxCount }
     } else {
-        3 // Kamis
+        -1
     }
 
-    return stats.mapIndexed { idx, s -> s.copy(isPeak = idx == peakIndex) }
+    return stats.mapIndexed { idx, s -> s.copy(isPeak = (peakIndex != -1 && idx == peakIndex)) }
 }
 
 private fun calculateHabitFrequency(
@@ -1065,7 +1070,5 @@ private fun calculateHabitFrequency(
 ): Int {
     val pastCompletedDays = weeklyHistory.count { it.habits[habitKey] == true }
     val effectiveDays = if (isCheckedToday) maxOf(pastCompletedDays, 1) else pastCompletedDays
-    return effectiveDays.coerceIn(0, 7).let { if (it == 0 && isCheckedToday) 1 else it }.let {
-        if (weeklyHistory.isEmpty() && isCheckedToday) 6 else if (weeklyHistory.isEmpty()) 0 else it
-    }
+    return effectiveDays.coerceIn(0, 7)
 }
