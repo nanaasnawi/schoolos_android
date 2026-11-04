@@ -84,34 +84,34 @@ fun LazyListScope.studentAgendaContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp, bottom = 24.dp)
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicNavy)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(Color(0xFF111113))
+                    .border(1.dp, Color(0xFF1F1F23), RoundedCornerShape(18.dp))
                     .padding(24.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color(0xFF161618))
+                            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             painter = painterResource(id = CoreR.drawable.ic_modern_calendar),
                             contentDescription = null,
                             tint = TextSecondary,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(22.dp)
                         )
                     }
-                    Spacer(Modifier.height(10.dp))
+                    Spacer(Modifier.height(12.dp))
                     Text(
                         text = if (selectedDayName.isNotBlank()) "Tidak Ada Jadwal di $selectedDayName" else "Tidak Ada Jadwal Pelajaran",
                         color = TextPrimary,
                         fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                     )
                     Spacer(Modifier.height(4.dp))
                     Text(
@@ -123,17 +123,17 @@ fun LazyListScope.studentAgendaContent(
                         Spacer(Modifier.height(14.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF161618))
+                                .border(1.dp, Color(0xFF27272A), RoundedCornerShape(10.dp))
                                 .clickable(onClick = onJumpToToday)
-                                .padding(horizontal = 14.dp, vertical = 7.dp),
+                                .padding(horizontal = 14.dp, vertical = 8.dp),
                         ) {
                             Text(
                                 text = "Lihat Jadwal Hari Ini",
                                 color = TextPrimary,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
+                                fontWeight = FontWeight.SemiBold,
                             )
                         }
                     }
@@ -201,8 +201,8 @@ private fun StudentTimelineItem(
             Text(
                 text = startHour,
                 fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = if (isActive) NeonSuccess else if (isCompleted) TextSecondary else TextPrimary,
+                fontWeight = FontWeight.Bold,
+                color = if (isActive) NeonSuccess else if (isCompleted) TextSecondary else Color.White,
             )
 
             Spacer(Modifier.height(4.dp))
@@ -216,7 +216,7 @@ private fun StudentTimelineItem(
                         when {
                             isActive -> NeonSuccess.copy(alpha = 0.20f)
                             isCompleted -> NeonSuccess.copy(alpha = 0.15f)
-                            else -> com.schoolos.android.core.designsystem.CosmicSurface2
+                            else -> Color(0xFF161618)
                         }
                     )
                     .border(
@@ -224,7 +224,7 @@ private fun StudentTimelineItem(
                         color = when {
                             isActive -> NeonSuccess.copy(alpha = pulseAlpha)
                             isCompleted -> NeonSuccess
-                            else -> GlassBorder
+                            else -> Color(0xFF27272A)
                         },
                         shape = CircleShape,
                     ),
@@ -260,11 +260,11 @@ private fun StudentTimelineItem(
             if (!isLast) {
                 Box(
                     modifier = Modifier
-                        .width(1.dp)
+                        .width(1.5.dp)
                         .weight(1f)
                         .background(
-                            if (isCompleted) NeonSuccess.copy(alpha = 0.3f)
-                            else GlassBorder
+                            if (isCompleted) NeonSuccess.copy(alpha = 0.35f)
+                            else Color(0xFF27272A)
                         ),
                 )
             }
@@ -276,59 +276,60 @@ private fun StudentTimelineItem(
         Box(
             modifier = Modifier
                 .weight(1f)
-                .padding(bottom = 10.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(CosmicNavy)
+                .padding(bottom = 12.dp)
+                .clip(RoundedCornerShape(18.dp))
+                .background(Color(0xFF111113))
                 .border(
-                    width = 0.5.dp,
-                    color = if (isActive) NeonSuccess.copy(alpha = 0.5f) else GlassBorder,
-                    shape = RoundedCornerShape(12.dp),
+                    width = 1.dp,
+                    color = if (isActive) NeonSuccess.copy(alpha = 0.6f) else Color(0xFF1F1F23),
+                    shape = RoundedCornerShape(18.dp),
                 )
                 .clickable(onClick = onClick)
-                .padding(14.dp)
+                .padding(16.dp)
         ) {
             Column {
                 // Top Row: Subject + Status Pill
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
+                    verticalAlignment = Alignment.Top,
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                        verticalAlignment = Alignment.Top,
                         modifier = Modifier.weight(1f),
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(34.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                                .size(38.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF161618))
+                                .border(1.dp, Color(0xFF27272A), RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = if (isOnline) Icons.Default.Videocam else subjectIcon(subjectName),
                                 contentDescription = null,
-                                tint = TextSecondary,
-                                modifier = Modifier.size(16.dp),
+                                tint = if (isActive) NeonSuccess else TextSecondary,
+                                modifier = Modifier.size(18.dp),
                             )
                         }
 
-                        Spacer(Modifier.width(10.dp))
+                        Spacer(Modifier.width(12.dp))
 
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = subjectName,
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
                                 color = TextPrimary,
-                                maxLines = 1,
+                                maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
+                                lineHeight = 20.sp,
                             )
-                            Spacer(Modifier.height(1.dp))
+                            Spacer(Modifier.height(3.dp))
                             Text(
                                 text = teacherName,
-                                fontSize = 11.sp,
+                                fontSize = 12.sp,
                                 color = TextTertiary,
                                 fontWeight = FontWeight.Normal,
                                 maxLines = 1,
@@ -343,27 +344,28 @@ private fun StudentTimelineItem(
                     val (statusLabel, statusColor) = when {
                         isActive -> Pair("LIVE", NeonSuccess)
                         isCompleted -> Pair("SELESAI", TextTertiary)
-                        else -> Pair("MENDATANG", TextSecondary)
+                        else -> Pair("MENDATANG", Color(0xFF60A5FA))
                     }
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(if (isActive) NeonSuccess.copy(alpha = 0.12f) else com.schoolos.android.core.designsystem.CosmicSurface2)
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(if (isActive) NeonSuccess.copy(alpha = 0.15f) else Color(0xFF161618))
+                            .border(1.dp, if (isActive) NeonSuccess.copy(alpha = 0.4f) else Color(0xFF27272A), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                     ) {
                         Text(
                             text = statusLabel,
                             color = statusColor,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
                             maxLines = 1,
                         )
                     }
                 }
 
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(12.dp))
 
-                // Location & Room Row
+                // Location & Room Row + CTA
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
@@ -378,20 +380,20 @@ private fun StudentTimelineItem(
                                 imageVector = Icons.Default.Videocam,
                                 contentDescription = null,
                                 tint = TextTertiary,
-                                modifier = Modifier.size(12.dp),
+                                modifier = Modifier.size(13.dp),
                             )
                         } else {
                             Icon(
                                 painter = painterResource(id = CoreR.drawable.ic_modern_location),
                                 contentDescription = null,
                                 tint = TextTertiary,
-                                modifier = Modifier.size(12.dp),
+                                modifier = Modifier.size(13.dp),
                             )
                         }
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(5.dp))
                         Text(
                             text = room,
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             color = TextSecondary,
                             fontWeight = FontWeight.Normal,
                             maxLines = 1,
@@ -404,17 +406,17 @@ private fun StudentTimelineItem(
                     // CTA Button
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isActive) NeonSuccess.copy(alpha = 0.15f) else Color(0xFF161618))
+                            .border(1.dp, if (isActive) NeonSuccess.copy(alpha = 0.4f) else Color(0xFF27272A), RoundedCornerShape(8.dp))
                             .clickable(onClick = onClick)
-                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                            .padding(horizontal = 10.dp, vertical = 5.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = if (isActive) "Masuk" else "Detail",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.Medium,
+                                fontWeight = FontWeight.SemiBold,
                                 color = if (isActive) NeonSuccess else TextSecondary,
                             )
                             Spacer(Modifier.width(3.dp))

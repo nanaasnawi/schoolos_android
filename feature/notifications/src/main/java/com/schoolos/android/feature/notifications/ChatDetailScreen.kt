@@ -1,6 +1,8 @@
 package com.schoolos.android.feature.notifications
 
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import com.schoolos.android.core.common.BuildConfig
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
@@ -16,6 +18,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imeNestedScroll
 import androidx.compose.foundation.layout.imePadding
@@ -38,9 +41,12 @@ import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -52,6 +58,7 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,9 +66,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import androidx.compose.ui.text.TextStyle
@@ -89,6 +98,8 @@ import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
+import kotlinx.coroutines.launch
+import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -107,6 +118,19 @@ fun ChatDetailScreen(
     val context = LocalContext.current
     val threads by chatManager.threads.collectAsState()
     val thread = threads.find { it.id == threadId }
+
+    val isAiThread = threadId.startsWith("ai-tutor") || thread?.teacherName?.contains("Guru AI") == true
+    var isAiThinking by remember { mutableStateOf(false) }
+    var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
+    var isUploadingImage by remember { mutableStateOf(false) }
+    var previewFullImageUrl by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        selectedImageUri = uri
+    }
 
     var inputText by remember { mutableStateOf("") }
     val listState = rememberLazyListState()
@@ -436,7 +460,44 @@ fun ChatDetailScreen(
                         roleNeon = roleNeon,
                         fallbackTeacherName = contactName,
                         isReadByRecipient = isReadByOther,
+                        onImageClick = { previewFullImageUrl = it },
                     )
+                }
+
+                if (isAiThinking) {
+                    item {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.Start,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 4.dp))
+                                    .background(Color(0xFF1E1B4B))
+                                    .border(1.dp, Color(0xFF4338CA).copy(alpha = 0.5f), RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 4.dp))
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    CircularProgressIndicator(
+                                        modifier = Modifier.size(14.dp),
+                                        strokeWidth = 2.dp,
+                                        color = Color(0xFF818CF8)
+                                    )
+                                    Text(
+                                        text = "Guru AI sedang meracik penjelasan...",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFFA5B4FC),
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -456,6 +517,63 @@ fun ChatDetailScreen(
                     .background(GlassBorder),
             )
 
+            // Attachment preview strip above input
+            if (selectedImageUri != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(Color(0xFF161618))
+                        .border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp))
+                        .padding(8.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            AsyncImage(
+                                model = selectedImageUri,
+                                contentDescription = "Preview",
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                            )
+                            Column {
+                                Text(
+                                    text = "Foto Terlampir",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = if (isUploadingImage) "Mengunggah berkas..." else "Siap dikirim bersama pesan",
+                                    fontSize = 10.sp,
+                                    color = if (isUploadingImage) roleNeon else TextTertiary
+                                )
+                            }
+                        }
+                        if (isUploadingImage) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp,
+                                color = roleNeon
+                            )
+                        } else {
+                            IconButton(
+                                onClick = { selectedImageUri = null },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(Icons.Default.Clear, contentDescription = "Hapus", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
+            }
+
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -474,14 +592,14 @@ fun ChatDetailScreen(
                 ) {
                     IconButton(
                         onClick = {
-                            Toast.makeText(context, "Fitur lampiran berkas sedang disiapkan...", Toast.LENGTH_SHORT).show()
+                            imagePickerLauncher.launch("image/*")
                         },
                         modifier = Modifier.size(26.dp),
                     ) {
                         Icon(
                             imageVector = Icons.Default.Attachment,
-                            contentDescription = "Lampiran",
-                            tint = TextTertiary,
+                            contentDescription = "Lampiran Foto",
+                            tint = if (selectedImageUri != null) roleNeon else TextTertiary,
                             modifier = Modifier.size(17.dp),
                         )
                     }
@@ -503,7 +621,7 @@ fun ChatDetailScreen(
                         decorationBox = { innerTextField ->
                             if (inputText.isEmpty()) {
                                 Text(
-                                    text = "Ketik pesan...",
+                                    text = if (isAiThread) "Tanya apa saja ke Guru AI..." else "Ketik pesan...",
                                     fontSize = 14.sp,
                                     color = TextTertiary,
                                 )
@@ -517,8 +635,9 @@ fun ChatDetailScreen(
 
                 // Send button
                 val hasText = inputText.isNotBlank()
+                val canSend = (hasText || selectedImageUri != null) && !isUploadingImage
                 val sendScale by animateFloatAsState(
-                    targetValue = if (hasText) 1f else 0.9f,
+                    targetValue = if (canSend) 1f else 0.9f,
                     label = "sendScale",
                 )
                 Box(
@@ -526,16 +645,57 @@ fun ChatDetailScreen(
                         .size(40.dp)
                         .scale(sendScale)
                         .clip(RoundedCornerShape(10.dp))
-                        .background(if (hasText) roleNeon.copy(alpha = 0.18f) else CosmicSurface2)
+                        .background(if (canSend) roleNeon.copy(alpha = 0.18f) else CosmicSurface2)
                         .border(
                             0.5.dp,
-                            if (hasText) roleNeon.copy(alpha = 0.50f) else GlassBorder,
+                            if (canSend) roleNeon.copy(alpha = 0.50f) else GlassBorder,
                             RoundedCornerShape(10.dp),
                         )
-                        .clickable(enabled = hasText) {
-                            sendMessage(inputText, thread, isTeacherMode, chatManager) {
+                        .clickable(enabled = canSend) {
+                            coroutineScope.launch {
+                                var uploadedUrl: String? = null
+                                if (selectedImageUri != null) {
+                                    isUploadingImage = true
+                                    try {
+                                        val bytes = context.contentResolver.openInputStream(selectedImageUri!!)?.use { it.readBytes() }
+                                        if (bytes != null) {
+                                            val uploadRes = chatManager.uploadAttachment(bytes, "chat_photo_${System.currentTimeMillis()}.jpg", "image/jpeg")
+                                            uploadedUrl = uploadRes.getOrNull()
+                                        }
+                                    } catch (e: Exception) {
+                                        Timber.w(e, "Upload attachment failed")
+                                    } finally {
+                                        isUploadingImage = false
+                                    }
+                                }
+
+                                val textToSend = inputText.trim()
+                                val imgToSend = uploadedUrl
                                 inputText = ""
+                                selectedImageUri = null
                                 focusManager.clearFocus()
+
+                                sendMessage(
+                                    text = textToSend,
+                                    attachmentUrl = imgToSend,
+                                    attachmentType = if (imgToSend != null) "image" else null,
+                                    thread = thread,
+                                    isTeacherMode = isTeacherMode,
+                                    chatManager = chatManager,
+                                    onSuccess = {}
+                                )
+
+                                if (isAiThread && textToSend.isNotBlank()) {
+                                    isAiThinking = true
+                                    chatManager.askAi(
+                                        threadId = threadId,
+                                        question = textToSend,
+                                        subjectName = thread?.subjectName,
+                                        gradeLevel = thread?.studentClass,
+                                        history = messages
+                                    )
+                                    isAiThinking = false
+                                }
                             }
                         },
                     contentAlignment = Alignment.Center,
@@ -543,9 +703,44 @@ fun ChatDetailScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Kirim",
-                        tint = if (hasText) roleNeon else TextTertiary,
+                        tint = if (canSend) roleNeon else TextTertiary,
                         modifier = Modifier.size(18.dp),
                     )
+                }
+            }
+        }
+    }
+
+    // Full screen image viewer dialog
+    if (previewFullImageUrl != null) {
+        androidx.compose.ui.window.Dialog(
+            onDismissRequest = { previewFullImageUrl = null }
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.92f))
+                    .clickable { previewFullImageUrl = null },
+                contentAlignment = Alignment.Center
+            ) {
+                AsyncImage(
+                    model = previewFullImageUrl,
+                    contentDescription = "Preview Lampiran",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                )
+                IconButton(
+                    onClick = { previewFullImageUrl = null },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(16.dp)
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.6f))
+                ) {
+                    Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color.White)
                 }
             }
         }
@@ -694,6 +889,7 @@ private fun MessageBubble(
     roleNeon: Color,
     fallbackTeacherName: String = "",
     isReadByRecipient: Boolean = false,
+    onImageClick: (String) -> Unit = {},
 ) {
     val align = if (isMe) Alignment.End else Alignment.Start
     val timeStr = remember(message.timestamp) {
@@ -741,7 +937,7 @@ private fun MessageBubble(
                     }
                     val rawName = message.senderName.trim()
                     val effectiveSenderName = when {
-                        isAi -> "Asisten AI"
+                        isAi -> "Guru AI"
                         message.isFromTeacher -> {
                             if (rawName.isNotBlank() &&
                                 !rawName.equals("Bapak/Ibu Guru", ignoreCase = true) &&
@@ -779,12 +975,45 @@ private fun MessageBubble(
                     }
                 }
 
-                Text(
-                    text = message.content,
-                    fontSize = 13.5.sp,
-                    color = TextPrimary,
-                    lineHeight = 20.sp,
-                )
+                // Render image attachment if present
+                if (!message.attachmentUrl.isNullOrBlank()) {
+                    val rawUrl = message.attachmentUrl.orEmpty()
+                    val fullUrl = remember(rawUrl) {
+                        if (rawUrl.startsWith("http") || rawUrl.startsWith("content:") || rawUrl.startsWith("file:")) {
+                            rawUrl
+                        } else {
+                            val host = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.substringBefore("/api/").trimEnd('/')
+                            val path = if (rawUrl.startsWith("/")) rawUrl else "/$rawUrl"
+                            "$host$path"
+                        }
+                    }
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = if (message.content.isNotBlank()) 6.dp else 0.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color(0xFF161618))
+                            .clickable { onImageClick(fullUrl) }
+                    ) {
+                        AsyncImage(
+                            model = fullUrl,
+                            contentDescription = "Lampiran Foto",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 120.dp, max = 220.dp)
+                        )
+                    }
+                }
+
+                if (message.content.isNotBlank()) {
+                    Text(
+                        text = message.content,
+                        fontSize = 13.5.sp,
+                        color = TextPrimary,
+                        lineHeight = 20.sp,
+                    )
+                }
 
                 Spacer(Modifier.height(4.dp))
 
@@ -831,12 +1060,14 @@ private fun MessageBubble(
 
 private fun sendMessage(
     text: String,
+    attachmentUrl: String? = null,
+    attachmentType: String? = null,
     thread: ChatThread?,
     isTeacherMode: Boolean,
     chatManager: ChatManager,
     onSuccess: () -> Unit,
 ) {
-    if (text.isNotBlank() && thread != null) {
+    if ((text.isNotBlank() || !attachmentUrl.isNullOrBlank()) && thread != null) {
         val auth = chatManager.currentAuth
         val isTeacher = isTeacherMode || auth?.isTeacher == true
         val senderRole = if (isTeacher) "TEACHER" else "STUDENT"
@@ -854,6 +1085,8 @@ private fun sendMessage(
             senderName = senderName,
             senderRole = senderRole,
             content = text,
+            attachmentUrl = attachmentUrl,
+            attachmentType = attachmentType,
         )
         onSuccess()
     }

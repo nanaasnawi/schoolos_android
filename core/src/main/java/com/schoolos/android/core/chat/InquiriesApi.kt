@@ -58,12 +58,40 @@ data class InquiryMessageDto(
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("is_read") val isRead: Boolean = false,
     @SerialName("read_at") val readAt: String? = null,
+    @SerialName("attachment_url") val attachmentUrl: String? = null,
+    @SerialName("attachment_type") val attachmentType: String? = null,
 )
 
 @Serializable
 data class InquiryDetailDto(
     @SerialName("thread") val thread: InquiryThreadDto,
     @SerialName("messages") val messages: List<InquiryMessageDto> = emptyList(),
+)
+
+@Serializable
+data class ChatUploadResponseDto(
+    @SerialName("url") val url: String,
+    @SerialName("filename") val filename: String = "",
+)
+
+@Serializable
+data class TanyaAiHistoryDto(
+    @SerialName("role") val role: String,
+    @SerialName("content") val content: String,
+)
+
+@Serializable
+data class TanyaAiRequestDto(
+    @SerialName("question") val question: String,
+    @SerialName("subject_name") val subjectName: String? = null,
+    @SerialName("grade_level") val gradeLevel: String? = null,
+    @SerialName("history") val history: List<TanyaAiHistoryDto>? = null,
+)
+
+@Serializable
+data class TanyaAiResponseDto(
+    @SerialName("reply") val reply: String,
+    @SerialName("model") val model: String? = null,
 )
 
 @Serializable
@@ -89,6 +117,8 @@ data class SendInquiryMessageRequestDto(
     @SerialName("sender_name") val senderName: String? = null,
     @SerialName("sender_role") val senderRole: String,
     @SerialName("content") val content: String,
+    @SerialName("attachment_url") val attachmentUrl: String? = null,
+    @SerialName("attachment_type") val attachmentType: String? = null,
 )
 
 @Serializable
@@ -130,4 +160,15 @@ interface InquiriesApi {
     suspend fun markAsRead(
         @Path("id") threadId: String,
     ): ChatApiResponse<Boolean>
+
+    @retrofit2.http.Multipart
+    @POST("learning/inquiries/upload")
+    suspend fun uploadAttachment(
+        @retrofit2.http.Part file: okhttp3.MultipartBody.Part
+    ): ChatApiResponse<ChatUploadResponseDto>
+
+    @POST("ai/tanya-ai")
+    suspend fun tanyaAi(
+        @Body request: TanyaAiRequestDto
+    ): ChatApiResponse<TanyaAiResponseDto>
 }
