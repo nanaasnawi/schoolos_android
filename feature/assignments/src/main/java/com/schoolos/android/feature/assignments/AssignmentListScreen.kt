@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.assignments
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -7,6 +9,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,9 +26,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,17 +34,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -55,8 +51,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -187,7 +181,7 @@ fun AssignmentListScreen(
                             }
                         }
 
-                        // ── ACTIVE SUBJECT / CLASS / DATE FILTER (from session detail) ──────
+                        // ── ACTIVE SUBJECT / CLASS / DATE FILTER ──────────────
                         if (state.subjectFilter != null || state.classFilter != null || state.dateFilter != null) {
                             item {
                                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -210,7 +204,7 @@ fun AssignmentListScreen(
 
                         val hasTeacherAssignments = state.active.isNotEmpty() || state.dueSoon.isNotEmpty() || state.completed.isNotEmpty() || state.scheduled.isNotEmpty()
 
-                        // Empty state for teachers — only shown when truly NO assignments exist (including drafts)
+                        // Empty state for teachers
                         if (isTeacher && !hasTeacherAssignments) {
                             item {
                                 TeacherEmptyState()
@@ -251,7 +245,7 @@ fun AssignmentListScreen(
                 }
             }
 
-            // Speed dial scrim — tap to dismiss
+            // Speed dial scrim
             AnimatedVisibility(
                 visible = speedDialExpanded,
                 enter = fadeIn(tween(200)),
@@ -268,103 +262,7 @@ fun AssignmentListScreen(
     }
 }
 
-// ── SPEED DIAL FAB (Apple Minimalist) ──────────────────────────────────────────
-
-@Composable
-private fun TeacherSpeedDialFab(
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    onCreateAssignment: () -> Unit,
-    onCreateQuiz: () -> Unit,
-) {
-    val rotation by animateFloatAsState(
-        targetValue = if (expanded) 45f else 0f,
-        animationSpec = tween(200),
-        label = "fab_rotation"
-    )
-
-    Column(
-        horizontalAlignment = Alignment.End,
-        verticalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        // Sub-actions
-        AnimatedVisibility(
-            visible = expanded,
-            enter = fadeIn(tween(160)) + expandVertically(tween(160), expandFrom = Alignment.Bottom),
-            exit = fadeOut(tween(120)) + shrinkVertically(tween(120), shrinkTowards = Alignment.Bottom)
-        ) {
-            Column(
-                horizontalAlignment = Alignment.End,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                SpeedDialOption(
-                    label = "Buat Kuis",
-                    icon = Icons.Default.Quiz,
-                    accentColor = NeonBlue,
-                    onClick = onCreateQuiz
-                )
-                SpeedDialOption(
-                    label = "Buat Tugas",
-                    icon = Icons.Default.Edit,
-                    accentColor = TeacherNeon,
-                    onClick = onCreateAssignment
-                )
-            }
-        }
-
-        // Main Minimalist FAB
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .clip(RoundedCornerShape(14.dp))
-                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
-                .clickable(onClick = onToggle),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = Icons.Default.Add,
-                contentDescription = if (expanded) "Tutup" else "Buat",
-                tint = TextPrimary,
-                modifier = Modifier
-                    .size(20.dp)
-                    .rotate(rotation)
-            )
-        }
-    }
-}
-
-@Composable
-private fun SpeedDialOption(
-    label: String,
-    icon: ImageVector,
-    accentColor: Color,
-    onClick: () -> Unit,
-) {
-    Row(
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.End,
-        modifier = Modifier
-            .clip(RoundedCornerShape(10.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 8.dp)
-    ) {
-        Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(16.dp))
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-// ── STUDENT HERO HEADER (Apple / Linear Minimalist) ──────────────────────────
+// ── STUDENT HERO HEADER (ADAPTIVE LIGHT / DARK & 22.dp ROUNDED) ──────────────
 
 @Composable
 private fun StudentAssignmentHeroHeader(
@@ -374,122 +272,171 @@ private fun StudentAssignmentHeroHeader(
     isParent: Boolean,
     childName: String = ""
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
+    val studentAccentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
     val totalCount = activeCount + dueSoonCount + completedCount
     val completionPercent = if (totalCount > 0) (completedCount * 100) / totalCount else 100
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(16.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             // Top Tag Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "STATUS PENUGASAN",
-                    color = TextTertiary,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD))
+                ) {
+                    Text(
+                        text = "STATUS PENUGASAN",
+                        color = studentAccentColor,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
 
-                Text(
-                    text = if (totalCount > 0) "$completionPercent% Selesai" else "Bebas Tugas",
-                    color = NeonSuccess,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) successColor.copy(alpha = 0.15f) else Color(0xFFDCFCE7),
+                    border = BorderStroke(1.dp, if (isDark) successColor.copy(alpha = 0.35f) else Color(0xFF86EFAC))
+                ) {
+                    Text(
+                        text = if (totalCount > 0) "$completionPercent% Selesai" else "Bebas Tugas",
+                        color = if (isDark) successColor else Color(0xFF15803D),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
             }
 
-            Spacer(Modifier.height(10.dp))
+            // Title & Subtitle with Student Accent
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE))
+                        .border(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
+                        contentDescription = null,
+                        tint = studentAccentColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
 
-            val child = if (childName.isNotBlank()) childName else "Anak"
-            Text(
-                text = if (isParent) "Status Tugas $child" else "Daftar Tugas Siswa",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "Pantau tenggat waktu dan kumpulkan tepat waktu",
-                fontSize = 11.sp,
-                color = TextTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-
-            Spacer(Modifier.height(12.dp))
+                Column {
+                    val child = if (childName.isNotBlank()) childName else "Anak"
+                    Text(
+                        text = if (isParent) "Status Tugas $child" else "Daftar Tugas Mandiri",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary,
+                        letterSpacing = (-0.3).sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Text(
+                        text = "Pantau tenggat waktu dan kumpulkan tepat waktu.",
+                        fontSize = 11.5.sp,
+                        color = textSecondary,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
 
             // Completion Progress Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(if (totalCount > 0) (completionPercent / 100f).coerceIn(0f, 1f) else 1f)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(if (totalCount > 0 && completionPercent < 100) NeonBlue else NeonSuccess)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(if (totalCount > 0 && completionPercent < 100) studentAccentColor else successColor)
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
-
-            // 3-Metric Stat Cards (Fixed Height 60.dp, perfectly aligned)
+            // 3-Metric Stat Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 HeroMetricCard(
                     label = "TUGAS AKTIF",
                     value = "${activeCount + dueSoonCount}",
                     subtitle = "Belum Selesai",
-                    accent = TextPrimary,
+                    accent = textPrimary,
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
                     label = "MENDEKATI BATAS",
                     value = "$dueSoonCount",
                     subtitle = "Mendesak",
-                    accent = if (dueSoonCount > 0) NeonWarning else TextPrimary,
+                    accent = if (dueSoonCount > 0) NeonWarning else textPrimary,
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
                     label = "TERKUMPUL",
                     value = "$completedCount",
                     subtitle = "Selesai",
-                    accent = NeonSuccess,
+                    accent = successColor,
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
             }
 
             // Quiet Alert Pill if tasks are due soon
             if (dueSoonCount > 0) {
-                Spacer(Modifier.height(10.dp))
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isDark) NeonWarning.copy(alpha = 0.12f) else Color(0xFFFFFBEB))
+                        .border(1.dp, if (isDark) NeonWarning.copy(alpha = 0.35f) else Color(0xFFFDE68A), RoundedCornerShape(10.dp))
                         .padding(horizontal = 10.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -502,8 +449,8 @@ private fun StudentAssignmentHeroHeader(
                     Spacer(Modifier.width(8.dp))
                     Text(
                         text = "$dueSoonCount tugas mendekati batas waktu pengumpulan",
-                        color = TextPrimary,
-                        fontSize = 11.sp,
+                        color = if (isDark) NeonWarning else Color(0xFFB45309),
+                        fontSize = 11.5.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -515,7 +462,7 @@ private fun StudentAssignmentHeroHeader(
     }
 }
 
-// ── TEACHER HERO HEADER (Apple / Linear Minimalist) ──────────────────────────
+// ── TEACHER HERO HEADER (ADAPTIVE LIGHT / DARK & 22.dp ROUNDED) ──────────────
 
 @Composable
 private fun TeacherAssignmentHeroHeader(
@@ -523,15 +470,27 @@ private fun TeacherAssignmentHeroHeader(
     scheduledCount: Int = 0,
     pendingGradeCount: Int = 0,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(16.dp),
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val teacherAccentColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             val tagText = when {
                 activeCount > 0 && scheduledCount > 0 -> "$activeCount Berjalan • $scheduledCount Draf"
                 scheduledCount > 0 -> "$scheduledCount Draf Terjadwal"
@@ -545,71 +504,109 @@ private fun TeacherAssignmentHeroHeader(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "PORTAL EVALUASI PENGAJAR",
-                    color = TextTertiary,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0))
+                ) {
+                    Text(
+                        text = "PORTAL EVALUASI PENGAJAR",
+                        color = teacherAccentColor,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
 
-                Text(
-                    text = tagText,
-                    color = if (activeCount > 0 || scheduledCount > 0) TeacherNeon else TextTertiary,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder)
+                ) {
+                    Text(
+                        text = tagText,
+                        color = if (activeCount > 0 || scheduledCount > 0) teacherAccentColor else textTertiary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5))
+                        .border(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
+                        contentDescription = null,
+                        tint = teacherAccentColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
 
-            Text(
-                text = "Penugasan & Evaluasi Siswa",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "Kelola penugasan, kuis, dan review hasil kerja siswa",
-                fontSize = 11.sp,
-                color = TextTertiary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
+                Column {
+                    Text(
+                        text = "Penugasan & Evaluasi Siswa",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary,
+                        letterSpacing = (-0.3).sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Text(
+                        text = "Kelola penugasan, kuis, dan review hasil kerja siswa.",
+                        fontSize = 11.5.sp,
+                        color = textSecondary,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
 
-            Spacer(Modifier.height(12.dp))
-
-            // 3 Metric Cards (Aktual: Aktif, Terjadwal / Draf, Perlu Nilai)
+            // 3 Metric Cards
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 HeroMetricCard(
                     label = "TUGAS AKTIF",
                     value = "$activeCount",
                     subtitle = "Berjalan",
-                    accent = if (activeCount > 0) TeacherNeon else TextPrimary,
+                    accent = if (activeCount > 0) teacherAccentColor else textPrimary,
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
                     label = "DRAF TERJADWAL",
                     value = "$scheduledCount",
                     subtitle = "Terjadwal",
-                    accent = if (scheduledCount > 0) AccentNeonAmber else TextPrimary,
+                    accent = if (scheduledCount > 0) AccentNeonAmber else textPrimary,
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
                 HeroMetricCard(
                     label = "PERLU NILAI",
                     value = "$pendingGradeCount",
                     subtitle = "Menunggu",
-                    accent = if (pendingGradeCount > 0) NeonWarning else TextPrimary,
+                    accent = if (pendingGradeCount > 0) NeonWarning else textPrimary,
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -617,7 +614,7 @@ private fun TeacherAssignmentHeroHeader(
     }
 }
 
-// ── HERO METRIC CARD (Fixed Height, Strictly Constrained) ─────────────────────
+// ── HERO METRIC CARD (14.dp ROUNDED, ADAPTIVE) ───────────────────────────────
 
 @Composable
 private fun HeroMetricCard(
@@ -625,78 +622,90 @@ private fun HeroMetricCard(
     value: String,
     subtitle: String,
     accent: Color,
+    cardBg: Color,
+    cardBorder: Color,
+    textTertiary: Color,
     modifier: Modifier = Modifier
 ) {
     Column(
         modifier = modifier
-            .height(60.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-            .padding(vertical = 6.dp, horizontal = 6.dp),
+            .height(66.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(cardBg)
+            .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
+            .padding(vertical = 8.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = value,
             color = accent,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.SemiBold,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(2.dp))
         Text(
             text = subtitle,
-            color = TextTertiary,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Normal,
+            color = textTertiary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
-// ── TEACHER EMPTY STATE (Clean Obsidian) ──────────────────────────────────────
+// ── TEACHER EMPTY STATE (22.dp ROUNDED, ADAPTIVE) ────────────────────────────
 
 @Composable
 private fun TeacherEmptyState() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(24.dp),
-        contentAlignment = Alignment.Center
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Box(
                 modifier = Modifier
-                    .size(44.dp)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(innerCardBg)
+                    .border(1.dp, innerCardBorder, RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Assignment,
+                    painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
                     contentDescription = null,
                     tint = TextSecondary,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
             Text(
                 text = "Belum Ada Penugasan",
-                color = TextPrimary,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold
+                color = textPrimary,
+                fontSize = 15.5.sp,
+                fontWeight = FontWeight.Bold
             )
             Spacer(Modifier.height(4.dp))
             Text(
                 text = "Gunakan tombol '+ Buat Tugas' di pojok bawah untuk merancang tugas atau latihan bagi siswa Anda.",
-                color = TextTertiary,
+                color = textTertiary,
                 fontSize = 12.sp,
                 textAlign = TextAlign.Center
             )
@@ -704,9 +713,7 @@ private fun TeacherEmptyState() {
     }
 }
 
-
-
-// ── ASSIGNMENT TAB FILTER (Apple Segmented Style) ─────────────────────────────
+// ── ASSIGNMENT TAB FILTER (12.dp ROUNDED, ADAPTIVE) ──────────────────────────
 
 @Composable
 private fun AssignmentTabFilter(
@@ -715,11 +722,14 @@ private fun AssignmentTabFilter(
     onTabSelected: (String) -> Unit,
     counts: Map<String, Int> = emptyMap(),
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+
     val tabs = if (isTeacher) listOf("Semua", "Terjadwal", "Aktif", "Perlu Dinilai")
                else listOf("Semua", "Segera", "Aktif", "Selesai")
 
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier
             .fillMaxWidth()
             .padding(vertical = 2.dp)
@@ -728,17 +738,34 @@ private fun AssignmentTabFilter(
             val isSelected = tab == selectedTab
             val count = counts[tab] ?: 0
 
+            val chipBg = when {
+                isSelected -> if (isDark) Color(0xFF27272A) else Color(0xFF0F172A)
+                else -> if (isDark) Color(0xFF161618) else Color.White
+            }
+            val chipBorder = when {
+                isSelected -> if (isDark) Color(0xFF3F3F46) else Color(0xFF0F172A)
+                else -> if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+            }
+            val chipTextColor = when {
+                isSelected -> Color.White
+                else -> textSecondary
+            }
+            val badgeBg = when {
+                isSelected -> if (isDark) Color(0xFF3F3F46) else Color(0xFF334155)
+                else -> if (isDark) Color(0xFF222226) else Color(0xFFF1F5F9)
+            }
+            val badgeTextColor = when {
+                isSelected -> Color.White
+                else -> textSecondary
+            }
+
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) com.schoolos.android.core.designsystem.CosmicSurface2 else CosmicNavy)
-                    .border(
-                        0.5.dp,
-                        if (isSelected) com.schoolos.android.core.designsystem.GlassBorder2 else GlassBorder,
-                        RoundedCornerShape(8.dp)
-                    )
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(chipBg)
+                    .border(1.dp, chipBorder, RoundedCornerShape(12.dp))
                     .clickable { onTabSelected(tab) }
-                    .padding(horizontal = 12.dp, vertical = 7.dp),
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -746,24 +773,24 @@ private fun AssignmentTabFilter(
                 ) {
                     Text(
                         text = tab,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                        color = if (isSelected) TextPrimary else TextTertiary,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        color = chipTextColor,
                         maxLines = 1,
                     )
                     if (count > 0) {
                         Spacer(Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (isSelected) com.schoolos.android.core.designsystem.CosmicSurface3 else com.schoolos.android.core.designsystem.CosmicSurface2)
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(badgeBg)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "$count",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = if (isSelected) TextPrimary else TextTertiary
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = badgeTextColor
                             )
                         }
                     }
@@ -772,4 +799,3 @@ private fun AssignmentTabFilter(
         }
     }
 }
-

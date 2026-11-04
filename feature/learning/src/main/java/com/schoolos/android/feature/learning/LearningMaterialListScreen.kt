@@ -4,6 +4,7 @@ import com.schoolos.android.core.R as CoreR
 import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -15,16 +16,14 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.MenuBook
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -49,6 +48,11 @@ fun LearningMaterialListScreen(
     val materials = state.materials
     val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
+    val isDark = LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -102,210 +106,173 @@ fun LearningMaterialListScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
-
-            // ── ACTIVE SUBJECT / CLASS / DATE FILTER (passed from schedule/session) ─────────
-            if (state.subjectFilter != null || state.classFilter != null || state.dateFilter != null) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        if (state.subjectFilter != null || state.classFilter != null) {
-                            SubjectFilterChip(
-                                subject = state.subjectFilter.orEmpty(),
-                                className = state.classFilter,
-                                canClear = false,
-                            )
-                        }
-                        if (state.dateFilter != null) {
-                            SessionDateFilterBadge(
-                                dateStr = state.dateFilter!!,
-                                onShowAllArchive = { viewModel.clearDateFilter() }
-                            )
-                        }
-                    }
-                }
-            }
-
-            // ── HERO BANNER ──────────────────────────────────────────────────
-            item {
-                if (isTeacher) {
-                    TeacherLearningHeroBanner(
-                        totalMaterials = state.totalMaterials,
-                        completedCount = state.totalCompleted
-                    )
-                } else {
-                    StudentMaterialHeroBanner(
-                        totalMaterials = state.totalMaterials,
-                        completedCount = state.totalCompleted,
-                        pendingCount = state.pendingCount
-                    )
-                }
-            }
-
-            // ── SEARCH BAR ──────────────────────────────────────────────────
-            item {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(2.dp, RoundedCornerShape(16.dp), spotColor = GlassOverlay, ambientColor = GlassOverlay)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(CosmicNavy)
-                        .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-                        .padding(horizontal = 14.dp, vertical = 11.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.Search, null, tint = TextTertiary, modifier = Modifier.size(20.dp))
-                        Spacer(Modifier.width(10.dp))
-                        BasicTextField(
-                            value = state.searchQuery,
-                            onValueChange = { viewModel.onSearchQueryChanged(it) },
-                            modifier = Modifier.weight(1f),
-                            textStyle = TextStyle(color = TextPrimary, fontSize = 14.sp),
-                            singleLine = true,
-                            decorationBox = { innerTextField ->
-                                if (state.searchQuery.isEmpty()) {
-                                    Text("Cari judul materi, bab, topik...", color = TextTertiary, fontSize = 13.sp)
-                                }
-                                innerTextField()
+                // ── ACTIVE SUBJECT / CLASS / DATE FILTER ─────────
+                if (state.subjectFilter != null || state.classFilter != null || state.dateFilter != null) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            if (state.subjectFilter != null || state.classFilter != null) {
+                                SubjectFilterChip(
+                                    subject = state.subjectFilter.orEmpty(),
+                                    className = state.classFilter,
+                                    canClear = false,
+                                )
                             }
-                        )
-                        if (state.searchQuery.isNotEmpty()) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Hapus",
-                                tint = TextTertiary,
-                                modifier = Modifier
-                                    .size(18.dp)
-                                    .clickable { viewModel.onSearchQueryChanged("") }
-                            )
+                            if (state.dateFilter != null) {
+                                SessionDateFilterBadge(
+                                    dateStr = state.dateFilter!!,
+                                    onShowAllArchive = { viewModel.clearDateFilter() }
+                                )
+                            }
                         }
                     }
                 }
-            }
 
-            // ── CATEGORY / FORMAT FILTER TABS ────────────────────────────────
-            item {
-                MaterialCategoryTabs(
-                    selectedCategory = state.selectedCategory,
-                    onSelect = { viewModel.onCategorySelected(it) },
-                    totalCount = state.totalMaterials,
-                    bookPdfCount = state.bookPdfCount,
-                    videoCount = state.videoCount,
-                    infographicCount = state.infographicCount,
-                    articleCount = state.articleCount,
-                    pendingCount = state.pendingCount,
-                    completedCount = state.totalCompleted,
-                    scheduledCount = state.scheduledCount,
-                    isTeacher = isTeacher
-                )
-            }
-
-            // ── SKELETON SHIMMER LOADING STATE ───────────────────────────────
-            if (state.isLoading) {
-                items(4) {
-                    LearningMaterialShimmerItem()
+                // ── HERO BANNER ──────────────────────────────────────────────────
+                item {
+                    if (isTeacher) {
+                        TeacherLearningHeroBanner(
+                            totalMaterials = state.totalMaterials,
+                            completedCount = state.totalCompleted
+                        )
+                    } else {
+                        StudentMaterialHeroBanner(
+                            totalMaterials = state.totalMaterials,
+                            completedCount = state.totalCompleted,
+                            pendingCount = state.pendingCount
+                        )
+                    }
                 }
-            }
 
-            // ── EMPTY STATE ──────────────────────────────────────────────────
-            if (!state.isLoading && materials.isEmpty()) {
+                // ── SEARCH BAR ──────────────────────────────────────────────────
                 item {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                            .padding(28.dp),
-                        contentAlignment = Alignment.Center
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, RoundedCornerShape(16.dp))
+                            .padding(horizontal = 14.dp, vertical = 11.dp)
                     ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
-                                contentAlignment = Alignment.Center
-                            ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Search, null, tint = textTertiary, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            BasicTextField(
+                                value = state.searchQuery,
+                                onValueChange = { viewModel.onSearchQueryChanged(it) },
+                                modifier = Modifier.weight(1f),
+                                textStyle = TextStyle(color = textPrimary, fontSize = 14.sp),
+                                singleLine = true,
+                                decorationBox = { innerTextField ->
+                                    if (state.searchQuery.isEmpty()) {
+                                        Text("Cari judul materi, bab, topik...", color = textTertiary, fontSize = 13.sp)
+                                    }
+                                    innerTextField()
+                                }
+                            )
+                            if (state.searchQuery.isNotEmpty()) {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
-                                    contentDescription = null,
-                                    tint = TextSecondary,
-                                    modifier = Modifier.size(20.dp)
+                                    Icons.Default.Close,
+                                    contentDescription = "Hapus",
+                                    tint = textTertiary,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .clickable { viewModel.onSearchQueryChanged("") }
                                 )
                             }
-                            Spacer(Modifier.height(10.dp))
-                            Text(
-                                text = "Materi Tidak Ditemukan",
-                                color = TextPrimary,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Spacer(Modifier.height(4.dp))
-                            Text(
-                                text = if (state.searchQuery.isNotEmpty()) "Coba kata kunci pencarian yang lain" else "Belum ada materi ajar pada kategori ini",
-                                color = TextTertiary,
-                                fontSize = 12.sp,
-                                textAlign = TextAlign.Center
-                            )
                         }
                     }
                 }
-            }
 
-            // ── MATERIAL CARDS ───────────────────────────────────────────────
-            items(materials, key = { it.id }) { item ->
-                ModernMaterialCard(
-                    item = item,
-                    isTeacher = isTeacher,
-                    onClick = { onMaterialClick(item.id) }
-                )
+                // ── CATEGORY / FORMAT FILTER TABS ────────────────────────────────
+                item {
+                    MaterialCategoryTabs(
+                        selectedCategory = state.selectedCategory,
+                        onSelect = { viewModel.onCategorySelected(it) },
+                        totalCount = state.totalMaterials,
+                        bookPdfCount = state.bookPdfCount,
+                        videoCount = state.videoCount,
+                        infographicCount = state.infographicCount,
+                        articleCount = state.articleCount,
+                        pendingCount = state.pendingCount,
+                        completedCount = state.totalCompleted,
+                        scheduledCount = state.scheduledCount,
+                        isTeacher = isTeacher
+                    )
+                }
+
+                // ── SKELETON SHIMMER LOADING STATE ───────────────────────────────
+                if (state.isLoading) {
+                    items(4) {
+                        LearningMaterialShimmerItem()
+                    }
+                }
+
+                // ── EMPTY STATE ──────────────────────────────────────────────────
+                if (!state.isLoading && materials.isEmpty()) {
+                    item {
+                        EmptyMaterialState(searchQuery = state.searchQuery)
+                    }
+                }
+
+                // ── MATERIAL CARDS ───────────────────────────────────────────────
+                items(materials, key = { it.id }) { item ->
+                    ModernMaterialCard(
+                        item = item,
+                        isTeacher = isTeacher,
+                        onClick = { onMaterialClick(item.id) }
+                    )
+                }
             }
         }
     }
-}
 }
 
 // ── SKELETON SHIMMER ITEM ─────────────────────────────────────────────────────
 
 @Composable
 private fun LearningMaterialShimmerItem(modifier: Modifier = Modifier) {
-    Box(
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(14.dp)
+            .clip(RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                ShimmerBox(modifier = Modifier.width(64.dp).height(16.dp), shape = RoundedCornerShape(4.dp))
-                ShimmerBox(modifier = Modifier.width(52.dp).height(16.dp), shape = RoundedCornerShape(4.dp))
+                ShimmerBox(modifier = Modifier.width(64.dp).height(16.dp), shape = RoundedCornerShape(6.dp))
+                ShimmerBox(modifier = Modifier.width(52.dp).height(16.dp), shape = RoundedCornerShape(6.dp))
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
             ) {
-                ShimmerBox(modifier = Modifier.size(38.dp), shape = RoundedCornerShape(8.dp))
+                ShimmerBox(modifier = Modifier.size(40.dp), shape = RoundedCornerShape(12.dp))
                 Spacer(Modifier.width(12.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.72f).height(15.dp))
+                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.72f).height(15.dp), shape = RoundedCornerShape(4.dp))
                     Spacer(Modifier.height(6.dp))
-                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.48f).height(12.dp))
+                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.48f).height(12.dp), shape = RoundedCornerShape(4.dp))
                     Spacer(Modifier.height(6.dp))
-                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.30f).height(10.dp))
+                    ShimmerBox(modifier = Modifier.fillMaxWidth(0.30f).height(10.dp), shape = RoundedCornerShape(4.dp))
                 }
             }
         }
     }
 }
 
-// ── STUDENT MATERIAL HERO BANNER ──────────────────────────────────────────────
+// ── STUDENT MATERIAL HERO BANNER (22.dp ROUNDED, ADAPTIVE) ────────────────────
 
 @Composable
 private fun StudentMaterialHeroBanner(
@@ -313,95 +280,157 @@ private fun StudentMaterialHeroBanner(
     completedCount: Int,
     pendingCount: Int,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val studentAccentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
+
     val progressFraction = if (totalMaterials > 0) completedCount.toFloat() / totalMaterials.toFloat() else 0f
     val animatedProgress by animateFloatAsState(targetValue = progressFraction, label = "materialProgress")
     val completionPercent = (progressFraction * 100).toInt()
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
             // Top Tag Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = "MODUL BELAJAR",
-                    color = TextTertiary,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD))
+                ) {
+                    Text(
+                        text = "MODUL BELAJAR",
+                        color = studentAccentColor,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
 
-                Text(
-                    text = "$completionPercent% Selesai",
-                    color = TextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
-                )
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder)
+                ) {
+                    Text(
+                        text = "$completionPercent% Selesai",
+                        color = if (completionPercent >= 100) successColor else textSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
             }
 
-            Spacer(Modifier.height(8.dp))
+            // Title & Subtitle with Outline Book Icon
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE))
+                        .border(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_modern_book),
+                        contentDescription = null,
+                        tint = studentAccentColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
 
-            Text(
-                text = "Bahan Bacaan & Materi",
-                color = TextPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = "Pelajari modul mandiri dan video pembelajaran.",
-                color = TextTertiary,
-                fontSize = 12.sp,
-            )
-
-            Spacer(Modifier.height(12.dp))
+                Column {
+                    Text(
+                        text = "Bahan Bacaan & Materi",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary,
+                        letterSpacing = (-0.3).sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Text(
+                        text = "Pelajari modul mandiri dan video pembelajaran.",
+                        fontSize = 11.5.sp,
+                        color = textSecondary,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
 
             // Quick Stats Cards Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 StatMiniCard(
                     title = "Total",
                     value = "$totalMaterials",
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
                     modifier = Modifier.weight(1f)
                 )
                 StatMiniCard(
                     title = "Selesai",
                     value = "$completedCount",
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
                     modifier = Modifier.weight(1f)
                 )
                 StatMiniCard(
                     title = "Belum",
                     value = "$pendingCount",
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            Spacer(Modifier.height(10.dp))
 
             // Progress Bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
+                    .height(5.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0))
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(animatedProgress)
                         .fillMaxHeight()
-                        .clip(RoundedCornerShape(2.dp))
-                        .background(NeonBlue)
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(if (completionPercent >= 100) successColor else studentAccentColor)
                 )
             }
         }
@@ -412,39 +441,174 @@ private fun StudentMaterialHeroBanner(
 private fun StatMiniCard(
     title: String,
     value: String,
+    cardBg: Color,
+    cardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
     modifier: Modifier = Modifier,
 ) {
     Column(
         modifier = modifier
-            .height(58.dp)
-            .clip(RoundedCornerShape(8.dp))
-            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-            .padding(vertical = 6.dp, horizontal = 6.dp),
+            .height(66.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(cardBg)
+            .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
+            .padding(vertical = 8.dp, horizontal = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
         Text(
             text = value,
-            color = TextPrimary,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
+            color = textPrimary,
+            fontSize = 17.sp,
+            fontWeight = FontWeight.Bold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
         Spacer(Modifier.height(2.dp))
         Text(
             text = title,
-            color = TextTertiary,
-            fontSize = 10.sp,
-            fontWeight = FontWeight.Normal,
+            color = textSecondary,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Medium,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
-// ── CATEGORY & FORMAT TABS ────────────────────────────────────────────────────
+// ── TEACHER LEARNING HERO BANNER (22.dp ROUNDED, ADAPTIVE) ────────────────────
+
+@Composable
+private fun TeacherLearningHeroBanner(
+    totalMaterials: Int,
+    completedCount: Int,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val teacherAccentColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
+    val avgCompletion = if (totalMaterials > 0) (completedCount * 100) / totalMaterials else 0
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0))
+                ) {
+                    Text(
+                        text = "MANAJEMEN BAHAN AJAR",
+                        color = teacherAccentColor,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.5.sp,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder)
+                ) {
+                    Text(
+                        text = "$totalMaterials Materi Aktif",
+                        color = textSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                    )
+                }
+            }
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5))
+                        .border(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0), RoundedCornerShape(10.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_modern_book),
+                        contentDescription = null,
+                        tint = teacherAccentColor,
+                        modifier = Modifier.size(19.dp)
+                    )
+                }
+
+                Column {
+                    Text(
+                        text = "Modul & Bahan Bacaan",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary,
+                        letterSpacing = (-0.3).sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Spacer(Modifier.height(1.dp))
+                    Text(
+                        text = "Kelola dan distribusikan bahan ajar untuk siswa.",
+                        fontSize = 11.5.sp,
+                        color = textSecondary,
+                        lineHeight = 15.sp
+                    )
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                StatMiniCard(
+                    title = "Total Modul",
+                    value = "$totalMaterials",
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+                StatMiniCard(
+                    title = "Rata-rata Selesai",
+                    value = "$avgCompletion%",
+                    cardBg = innerCardBg,
+                    cardBorder = innerCardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+// ── CATEGORY & FORMAT TABS (12.dp ROUNDED, ADAPTIVE) ──────────────────────────
 
 @Composable
 private fun MaterialCategoryTabs(
@@ -460,6 +624,9 @@ private fun MaterialCategoryTabs(
     scheduledCount: Int = 0,
     isTeacher: Boolean,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+
     data class TabDef(val id: String, val label: String, val count: Int)
 
     val tabs = if (isTeacher) {
@@ -484,44 +651,64 @@ private fun MaterialCategoryTabs(
     }
 
     LazyRow(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         items(tabs) { tab ->
             val isSelected = tab.id == selectedCategory
 
+            val chipBg = when {
+                isSelected -> if (isDark) Color(0xFF27272A) else Color(0xFF0F172A)
+                else -> if (isDark) Color(0xFF161618) else Color.White
+            }
+            val chipBorder = when {
+                isSelected -> if (isDark) Color(0xFF3F3F46) else Color(0xFF0F172A)
+                else -> if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+            }
+            val chipTextColor = when {
+                isSelected -> Color.White
+                else -> textSecondary
+            }
+            val badgeBg = when {
+                isSelected -> if (isDark) Color(0xFF3F3F46) else Color(0xFF334155)
+                else -> if (isDark) Color(0xFF222226) else Color(0xFFF1F5F9)
+            }
+            val badgeTextColor = when {
+                isSelected -> Color.White
+                else -> textSecondary
+            }
+
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isSelected) com.schoolos.android.core.designsystem.CosmicSurface2 else CosmicNavy)
-                    .border(
-                        0.5.dp,
-                        if (isSelected) com.schoolos.android.core.designsystem.GlassBorder2 else GlassBorder,
-                        RoundedCornerShape(8.dp)
-                    )
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(chipBg)
+                    .border(1.dp, chipBorder, RoundedCornerShape(12.dp))
                     .clickable { onSelect(tab.id) }
-                    .padding(horizontal = 12.dp, vertical = 7.dp)
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center
+                ) {
                     Text(
                         text = tab.label,
-                        color = if (isSelected) TextPrimary else TextTertiary,
-                        fontSize = 12.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal
+                        color = chipTextColor,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
                     )
                     if (tab.count > 0) {
                         Spacer(Modifier.width(6.dp))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(if (isSelected) com.schoolos.android.core.designsystem.CosmicSurface3 else com.schoolos.android.core.designsystem.CosmicSurface2)
-                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(badgeBg)
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = "${tab.count}",
-                                color = if (isSelected) TextPrimary else TextTertiary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium
+                                color = badgeTextColor,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.SemiBold
                             )
                         }
                     }
@@ -531,7 +718,7 @@ private fun MaterialCategoryTabs(
     }
 }
 
-// ── MODERN MATERIAL CARD ─────────────────────────────────────────────────────
+// ── MODERN MATERIAL CARD (22.dp ROUNDED, ADAPTIVE) ───────────────────────────
 
 @Composable
 private fun ModernMaterialCard(
@@ -539,45 +726,53 @@ private fun ModernMaterialCard(
     isTeacher: Boolean = false,
     onClick: () -> Unit
 ) {
-    val cardAccent = if (item.isCompleted) NeonSuccess else item.color
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val studentAccentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
+
     val isLibraryBook = item.startPage != null
 
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(
-                width = 0.5.dp,
-                color = if (item.isCompleted) NeonSuccess.copy(alpha = 0.35f) else GlassBorder,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(14.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(
+            width = if (item.isCompleted) 1.5.dp else 1.dp,
+            color = if (item.isCompleted) (if (isDark) successColor.copy(alpha = 0.7f) else successColor) else cardBorder
+        ),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column {
+        Column(modifier = Modifier.padding(16.dp)) {
             // ── TOP ROW: SUBJECT TAG & STATUS BADGE ──────────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f, fill = false)
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
-                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD))
                 ) {
                     Text(
                         text = item.subject.uppercase(),
-                        color = TextSecondary,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        color = studentAccentColor,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
 
@@ -586,102 +781,98 @@ private fun ModernMaterialCard(
                 // Status Badge
                 if (isTeacher) {
                     if (item.isScheduled) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(NeonWarning.copy(alpha = 0.15f))
-                                .border(0.5.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) NeonWarning.copy(alpha = 0.15f) else Color(0xFFFFFBEB),
+                            border = BorderStroke(1.dp, if (isDark) NeonWarning.copy(alpha = 0.4f) else Color(0xFFFDE68A))
                         ) {
                             Text(
                                 text = "Terjadwal (Draft)",
-                                color = NeonWarning,
+                                color = if (isDark) NeonWarning else Color(0xFFB45309),
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                maxLines = 1,
-                                softWrap = false
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
                     } else {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(NeonSuccess.copy(alpha = 0.12f))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) successColor.copy(alpha = 0.12f) else Color(0xFFDCFCE7),
+                            border = BorderStroke(1.dp, if (isDark) successColor.copy(alpha = 0.35f) else Color(0xFF86EFAC))
                         ) {
                             Text(
                                 text = "Aktif",
-                                color = NeonSuccess,
+                                color = if (isDark) successColor else Color(0xFF15803D),
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                softWrap = false
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
                     }
                 } else if (item.isCompleted) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(NeonSuccess.copy(alpha = 0.12f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (isDark) successColor.copy(alpha = 0.12f) else Color(0xFFDCFCE7),
+                        border = BorderStroke(1.dp, if (isDark) successColor.copy(alpha = 0.35f) else Color(0xFF86EFAC))
                     ) {
-                        Text("Selesai", color = NeonSuccess, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+                        Text(
+                            text = "Selesai",
+                            color = if (isDark) successColor else Color(0xFF15803D),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                        )
                     }
                 } else {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = innerCardBg,
+                        border = BorderStroke(1.dp, innerCardBorder)
                     ) {
-                        Text("Belum Selesai", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false)
+                        Text(
+                            text = "Belum Selesai",
+                            color = textTertiary,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                        )
                     }
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // ── MAIN ROW: MEDIA ICON + TITLE & METADATA ─────────────────────
+            // ── MAIN ROW: OUTLINE ICON + TITLE & METADATA ────────────────────
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Top
             ) {
-                // Media Icon Container
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(innerCardBg)
+                        .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center
                 ) {
-                    if (isLibraryBook || item.type != "VIDEO") {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_modern_book),
-                            contentDescription = null,
-                            tint = NeonBlue,
-                            modifier = Modifier.size(19.dp),
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.PlayCircleFilled,
-                            contentDescription = null,
-                            tint = NeonSuccess,
-                            modifier = Modifier.size(19.dp),
-                        )
-                    }
+                    Icon(
+                        painter = painterResource(
+                            id = if (item.type == "VIDEO") CoreR.drawable.ic_modern_classes else CoreR.drawable.ic_modern_book
+                        ),
+                        contentDescription = null,
+                        tint = if (item.isCompleted) successColor else studentAccentColor,
+                        modifier = Modifier.size(20.dp),
+                    )
                 }
 
                 Spacer(Modifier.width(12.dp))
 
-                // Title & Subtitle Info
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = item.title,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 14.sp,
-                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = textPrimary,
                         lineHeight = 20.sp,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
@@ -690,18 +881,17 @@ private fun ModernMaterialCard(
                     // Library Book Page Range Pill
                     if (item.startPage != null && item.endPage != null) {
                         Spacer(Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = innerCardBg,
+                            border = BorderStroke(1.dp, innerCardBorder)
                         ) {
                             Text(
                                 text = "Hal. ${item.startPage} — ${item.endPage}",
-                                color = TextSecondary,
+                                color = textSecondary,
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
@@ -711,36 +901,31 @@ private fun ModernMaterialCard(
                     val rombel = item.className?.takeIf { it.isNotBlank() }
                     if (teacher != null || rombel != null) {
                         Spacer(Modifier.height(3.dp))
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(
-                                text = listOfNotNull(
-                                    teacher,
-                                    rombel?.let { "Kelas $it" }
-                                ).joinToString(" • "),
-                                color = TextTertiary,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Normal,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                        Text(
+                            text = listOfNotNull(
+                                teacher,
+                                rombel?.let { "Kelas $it" }
+                            ).joinToString(" • "),
+                            color = textSecondary,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
 
                     val targetDate = if (item.isScheduled) item.releaseAt ?: item.createdAt else item.createdAt
                     if (!targetDate.isNullOrBlank()) {
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(4.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Schedule,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_clock),
                                 contentDescription = null,
-                                tint = if (item.isScheduled) NeonWarning else TextTertiary,
-                                modifier = Modifier.size(11.dp)
+                                tint = if (item.isScheduled) NeonWarning else textTertiary,
+                                modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 text = if (item.isScheduled) {
@@ -748,9 +933,9 @@ private fun ModernMaterialCard(
                                 } else {
                                     "Diterbitkan: ${formatPublishTimestamp(targetDate)}"
                                 },
-                                color = if (item.isScheduled) NeonWarning else TextTertiary,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
+                                color = if (item.isScheduled) NeonWarning else textTertiary,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Normal,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -765,24 +950,24 @@ private fun ModernMaterialCard(
                 Spacer(Modifier.height(8.dp))
                 Text(
                     text = descExcerpt,
-                    color = TextSecondary,
-                    fontSize = 11.sp,
+                    color = textSecondary,
+                    fontSize = 11.5.sp,
                     lineHeight = 16.sp,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             // ── BOTTOM META ROW: FORMAT CHIP + TIME + ACTION BUTTON ─────────
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(innerCardBg)
+                    .border(1.dp, innerCardBorder, RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -799,8 +984,8 @@ private fun ModernMaterialCard(
                             isLibraryBook -> "Buku SIBI (Hal. ${item.startPage ?: 1} — ${item.endPage ?: ""})"
                             else -> "Buku / PDF"
                         },
-                        color = TextSecondary,
-                        fontSize = 10.sp,
+                        color = textSecondary,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -808,14 +993,14 @@ private fun ModernMaterialCard(
 
                     Text(
                         text = "•",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
+                        color = textTertiary,
+                        fontSize = 11.sp,
                     )
 
                     Text(
                         text = "${item.readTimeMinutes} mnt baca",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
+                        color = textTertiary,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -824,13 +1009,13 @@ private fun ModernMaterialCard(
                     if (isTeacher && item.completedCount >= 0) {
                         Text(
                             text = "•",
-                            color = TextTertiary,
-                            fontSize = 10.sp,
+                            color = textTertiary,
+                            fontSize = 11.sp,
                         )
                         Text(
                             text = "${item.completedCount} selesai",
                             color = TeacherNeon,
-                            fontSize = 10.sp,
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.SemiBold,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -841,135 +1026,80 @@ private fun ModernMaterialCard(
                 Icon(
                     painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                     contentDescription = "Buka",
-                    tint = TextTertiary,
-                    modifier = Modifier.size(14.dp)
+                    tint = textSecondary,
+                    modifier = Modifier.size(12.dp)
                 )
             }
 
             // Bottom completion bar
             if (item.isCompleted) {
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(3.dp)
                         .clip(RoundedCornerShape(1.5.dp))
-                        .background(NeonSuccess)
+                        .background(successColor)
                 )
             }
         }
     }
 }
 
-// ── TEACHER LEARNING HERO BANNER ──────────────────────────────────────────────
+// ── EMPTY STATE (22.dp ROUNDED, ADAPTIVE) ─────────────────────────────────────
 
 @Composable
-private fun TeacherLearningHeroBanner(
-    totalMaterials: Int,
-    completedCount: Int,
-) {
-    val avgCompletion = if (totalMaterials > 0) (completedCount * 100) / totalMaterials else 0
+private fun EmptyMaterialState(searchQuery: String) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
 
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+        Column(
+            modifier = Modifier.padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(innerCardBg)
+                    .border(1.dp, innerCardBorder, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "MANAJEMEN BAHAN AJAR",
-                    color = TextTertiary,
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp
-                )
-
-                Text(
-                    text = "$totalMaterials Materi Aktif",
-                    color = TextSecondary,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium
+                Icon(
+                    painter = painterResource(id = CoreR.drawable.ic_modern_book),
+                    contentDescription = null,
+                    tint = TextSecondary,
+                    modifier = Modifier.size(24.dp)
                 )
             }
-
-            Spacer(Modifier.height(8.dp))
-
+            Spacer(Modifier.height(14.dp))
             Text(
-                text = "Modul & Bahan Bacaan",
-                color = TextPrimary,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
+                text = "Materi Tidak Ditemukan",
+                color = textPrimary,
+                fontSize = 15.5.sp,
+                fontWeight = FontWeight.Bold
             )
-            Spacer(Modifier.height(2.dp))
+            Spacer(Modifier.height(4.dp))
             Text(
-                text = "Kelola dan distribusikan bahan ajar untuk siswa.",
-                color = TextTertiary,
+                text = if (searchQuery.isNotEmpty()) "Coba kata kunci pencarian yang lain" else "Belum ada materi ajar pada kategori ini.",
+                color = textTertiary,
                 fontSize = 12.sp,
+                textAlign = TextAlign.Center
             )
-
-            Spacer(Modifier.height(12.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                // Total materi card
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-                        .padding(vertical = 8.dp, horizontal = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        "$totalMaterials",
-                        color = TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        "Total Modul",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Normal
-                    )
-                }
-
-                // Avg completion card
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-                        .padding(vertical = 8.dp, horizontal = 10.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        "$avgCompletion%",
-                        color = TextPrimary,
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        "Rata-rata Selesai",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Normal
-                    )
-                }
-            }
         }
     }
 }

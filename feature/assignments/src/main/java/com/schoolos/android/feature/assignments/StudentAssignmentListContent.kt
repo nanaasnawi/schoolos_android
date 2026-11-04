@@ -2,17 +2,18 @@ package com.schoolos.android.feature.assignments
 
 import com.schoolos.android.core.R as CoreR
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -119,33 +120,38 @@ private fun SectionHeader(
     title: String,
     count: Int,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     Row(
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 2.dp, top = 12.dp, bottom = 4.dp)
+            .padding(horizontal = 2.dp, vertical = 4.dp)
     ) {
         Text(
-            title.uppercase(),
-            fontSize = 11.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextTertiary,
-            letterSpacing = 0.5.sp
+            text = title,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = textPrimary,
         )
-        Spacer(Modifier.width(6.dp))
         Box(
             modifier = Modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
-                .padding(horizontal = 6.dp, vertical = 2.dp),
+                .clip(RoundedCornerShape(8.dp))
+                .background(innerCardBg)
+                .border(1.dp, innerCardBorder, RoundedCornerShape(8.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                "$count",
-                color = TextSecondary,
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Medium
+                "$count Tugas",
+                color = textSecondary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold
             )
         }
     }
@@ -157,27 +163,36 @@ private fun StudentAssignmentCard(
     accentColor: Color,
     onClick: () -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val studentAccentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
     val dueInfo = dueDateInfo(assignment.dueAt)
     val isOverdue = dueInfo?.label?.contains("Terlambat") == true
     val isCompleted = assignment.status == "submitted" || assignment.status == "graded"
     val title = assignment.title.ifBlank { "Tugas Tanpa Judul" }
-
     val subjectLabel = assignment.subjectName ?: assignment.className ?: "Umum"
 
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(
-                width = 0.5.dp,
-                color = if (isOverdue) NeonWarning.copy(alpha = 0.4f) else GlassBorder,
-                shape = RoundedCornerShape(12.dp)
-            )
-            .clickable(onClick = onClick)
-            .padding(14.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(
+            width = if (isOverdue) 1.5.dp else 1.dp,
+            color = if (isOverdue) NeonWarning.copy(alpha = 0.6f) else cardBorder
+        ),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column {
+        Column(modifier = Modifier.padding(16.dp)) {
             // TOP ROW: SUBJECT TAG & SCORE PILL
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -185,38 +200,44 @@ private fun StudentAssignmentCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 // Subject / Class pill
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
-                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD))
                 ) {
                     Text(
                         text = subjectLabel.uppercase(),
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextSecondary,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = studentAccentColor,
                         letterSpacing = 0.5.sp,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
 
                 // Max Score pill
                 if (assignment.maxScore > 0) {
-                    Text(
-                        text = "${assignment.maxScore} Poin",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = TextTertiary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = innerCardBg,
+                        border = BorderStroke(1.dp, innerCardBorder)
+                    ) {
+                        Text(
+                            text = "${assignment.maxScore} Poin",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(12.dp))
 
             // MAIN CONTENT: ICON + TITLE + CLASS
             Row(
@@ -225,17 +246,21 @@ private fun StudentAssignmentCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isCompleted) (if (isDark) NeonSuccess.copy(alpha = 0.15f) else Color(0xFFDCFCE7)) else innerCardBg)
+                        .border(
+                            1.dp,
+                            if (isCompleted) (if (isDark) NeonSuccess.copy(alpha = 0.4f) else Color(0xFF86EFAC)) else innerCardBorder,
+                            RoundedCornerShape(12.dp)
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         painter = painterResource(id = if (isCompleted) CoreR.drawable.ic_modern_check_circle else CoreR.drawable.ic_modern_tasks),
                         contentDescription = null,
-                        tint = if (isCompleted) NeonSuccess else StudentNeon,
-                        modifier = Modifier.size(19.dp)
+                        tint = if (isCompleted) NeonSuccess else studentAccentColor,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
@@ -244,18 +269,19 @@ private fun StudentAssignmentCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = title,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                        lineHeight = 20.sp,
                     )
                     if (!assignment.className.isNullOrBlank() && assignment.subjectName != null) {
-                        Spacer(Modifier.height(2.dp))
+                        Spacer(Modifier.height(3.dp))
                         Text(
                             text = assignment.className!!,
-                            fontSize = 11.sp,
-                            color = TextTertiary,
+                            fontSize = 12.sp,
+                            color = textSecondary,
                             fontWeight = FontWeight.Normal,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
@@ -263,22 +289,22 @@ private fun StudentAssignmentCard(
                     }
 
                     if (assignment.createdAt.isNotBlank()) {
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(4.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Schedule,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_clock),
                                 contentDescription = null,
-                                tint = TextTertiary,
-                                modifier = Modifier.size(11.dp)
+                                tint = textTertiary,
+                                modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 text = "Diterbitkan: ${formatPublishTimestamp(assignment.createdAt)}",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = TextTertiary,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = textTertiary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -290,20 +316,20 @@ private fun StudentAssignmentCard(
                 Icon(
                     painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                     contentDescription = null,
-                    tint = TextTertiary,
-                    modifier = Modifier.size(14.dp)
+                    tint = textSecondary,
+                    modifier = Modifier.size(12.dp)
                 )
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
             // BOTTOM ROW: DUE DATE BADGE & STATUS
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(innerCardBg)
+                    .border(1.dp, innerCardBorder, RoundedCornerShape(10.dp))
                     .padding(horizontal = 10.dp, vertical = 7.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
@@ -318,19 +344,19 @@ private fun StudentAssignmentCard(
                         tint = when {
                             isOverdue -> NeonWarning
                             dueInfo != null -> dueInfo.color
-                            else -> TextTertiary
+                            else -> textTertiary
                         },
                         modifier = Modifier.size(13.dp)
                     )
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = dueInfo?.label ?: "Tanpa batas waktu",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Normal,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Medium,
                         color = when {
                             isOverdue -> NeonWarning
                             dueInfo != null -> dueInfo.color
-                            else -> TextSecondary
+                            else -> textSecondary
                         },
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -347,23 +373,17 @@ private fun StudentAssignmentCard(
                 val statusColor = when {
                     isCompleted -> NeonSuccess
                     isOverdue -> NeonWarning
-                    else -> TextTertiary
+                    else -> textTertiary
                 }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
-                        .background(if (isCompleted) NeonSuccess.copy(alpha = 0.12f) else com.schoolos.android.core.designsystem.CosmicSurface3)
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
-                ) {
-                    Text(
-                        text = statusText,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = statusColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
+
+                Text(
+                    text = statusText,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = statusColor,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }
@@ -371,6 +391,14 @@ private fun StudentAssignmentCard(
 
 @Composable
 private fun EmptyAssignmentState(selectedTab: String) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val (title, subtitle, accentColor) = when (selectedTab) {
         "Segera" -> Triple(
             "Tidak Ada Tugas Mendesak",
@@ -385,7 +413,7 @@ private fun EmptyAssignmentState(selectedTab: String) {
         "Selesai" -> Triple(
             "Belum Ada Tugas Selesai",
             "Tugas yang telah kamu kumpulkan akan tersimpan dan tampil di sini.",
-            TextTertiary
+            textTertiary
         )
         else -> Triple(
             "Semua Tugas Selesai",
@@ -394,16 +422,17 @@ private fun EmptyAssignmentState(selectedTab: String) {
         )
     }
 
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(vertical = 32.dp, horizontal = 24.dp),
-        contentAlignment = Alignment.Center
+            .clip(RoundedCornerShape(22.dp)),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
         Column(
+            modifier = Modifier.padding(vertical = 32.dp, horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
@@ -412,7 +441,7 @@ private fun EmptyAssignmentState(selectedTab: String) {
                     .size(52.dp)
                     .clip(RoundedCornerShape(14.dp))
                     .background(accentColor.copy(alpha = 0.12f))
-                    .border(0.5.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
+                    .border(1.dp, accentColor.copy(alpha = 0.25f), RoundedCornerShape(14.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
@@ -427,40 +456,18 @@ private fun EmptyAssignmentState(selectedTab: String) {
             Spacer(Modifier.height(4.dp))
             Text(
                 text = title,
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
+                fontSize = 15.5.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
             )
             Text(
                 text = subtitle,
                 fontSize = 12.sp,
-                color = TextTertiary,
+                color = textTertiary,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
                 lineHeight = 17.sp,
                 modifier = Modifier.padding(horizontal = 12.dp)
             )
-            Spacer(Modifier.height(8.dp))
-            Row(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                    .padding(horizontal = 10.dp, vertical = 5.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Refresh,
-                    contentDescription = null,
-                    tint = TextTertiary,
-                    modifier = Modifier.size(12.dp)
-                )
-                Text(
-                    text = "Tarik ke bawah untuk memuat ulang",
-                    fontSize = 11.sp,
-                    color = TextTertiary
-                )
-            }
         }
     }
-}
+}

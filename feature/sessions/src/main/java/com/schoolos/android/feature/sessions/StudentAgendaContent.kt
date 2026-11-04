@@ -181,8 +181,9 @@ private fun StudentTimelineItem(
     val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
     val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
     val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val studentNameColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
     val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
-    val primaryBlue = if (isDark) Color(0xFF3B82F6) else Color(0xFF2563EB)
+    val primaryBlue = studentNameColor
 
     val title = session.subjectName ?: session.notes ?: "Pelajaran"
     val subjectName = title.substringBefore(" • ").substringBefore(" (Ruang").trim()
@@ -256,10 +257,10 @@ private fun StudentTimelineItem(
             ) {
                 if (isCompleted) {
                     Icon(
-                        imageVector = Icons.Default.Check,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_check_circle),
                         contentDescription = null,
                         tint = successColor,
-                        modifier = Modifier.size(10.dp),
+                        modifier = Modifier.size(11.dp),
                     )
                 } else {
                     Box(
@@ -330,12 +331,21 @@ private fun StudentTimelineItem(
                                 .border(1.dp, if (isActive) (if (isDark) successColor.copy(alpha = 0.4f) else Color(0xFF86EFAC)) else innerCardBorder, RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(
-                                imageVector = if (isOnline) Icons.Default.Videocam else subjectIcon(subjectName),
-                                contentDescription = null,
-                                tint = if (isActive) successColor else primaryBlue,
-                                modifier = Modifier.size(20.dp),
-                            )
+                            if (isOnline) {
+                                Icon(
+                                    painter = painterResource(id = CoreR.drawable.ic_modern_classes),
+                                    contentDescription = null,
+                                    tint = if (isActive) successColor else primaryBlue,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = subjectIcon(subjectName),
+                                    contentDescription = null,
+                                    tint = if (isActive) successColor else primaryBlue,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
 
                         Spacer(Modifier.width(12.dp))
@@ -416,7 +426,7 @@ private fun StudentTimelineItem(
                     ) {
                         if (isOnline) {
                             Icon(
-                                imageVector = Icons.Default.Videocam,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_classes),
                                 contentDescription = null,
                                 tint = textSecondary,
                                 modifier = Modifier.size(14.dp),

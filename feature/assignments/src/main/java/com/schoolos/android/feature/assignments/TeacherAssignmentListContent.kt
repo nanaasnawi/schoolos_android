@@ -1,5 +1,8 @@
 package com.schoolos.android.feature.assignments
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,15 +10,14 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,29 +52,10 @@ private fun LazyListScope.renderTeacherSection(
     if (items.isEmpty()) return
 
     item {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.padding(start = 2.dp, top = 12.dp, bottom = 4.dp)
-        ) {
-            Text(
-                title.uppercase(),
-                fontSize = 11.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextTertiary,
-                letterSpacing = 0.5.sp
-            )
-            Spacer(Modifier.width(6.dp))
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(4.dp))
-                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("${items.size}", color = TextSecondary, fontSize = 10.sp, fontWeight = FontWeight.Medium)
-            }
-        }
+        TeacherSectionHeader(
+            title = title,
+            count = items.size,
+        )
     }
 
     items(items, key = { it.id }) { assignment ->
@@ -81,37 +64,90 @@ private fun LazyListScope.renderTeacherSection(
 }
 
 @Composable
+private fun TeacherSectionHeader(
+    title: String,
+    count: Int,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 2.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            color = textPrimary,
+        )
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(innerCardBg)
+                .border(1.dp, innerCardBorder, RoundedCornerShape(8.dp))
+                .padding(horizontal = 8.dp, vertical = 3.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                "$count Tugas",
+                color = textSecondary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
 private fun TeacherAssignmentCard(
     assignment: Assignment,
     onClick: () -> Unit,
 ) {
-    Box(
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val teacherAccentColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp)
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp)),
+                        .size(40.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5))
+                        .border(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
                         contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(18.dp)
+                        tint = teacherAccentColor,
+                        modifier = Modifier.size(20.dp)
                     )
                 }
 
@@ -120,13 +156,14 @@ private fun TeacherAssignmentCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         assignment.title,
-                        maxLines = 1,
+                        maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 14.sp,
-                        color = TextPrimary,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = textPrimary,
+                        lineHeight = 20.sp,
                     )
-                    Spacer(Modifier.height(2.dp))
+                    Spacer(Modifier.height(3.dp))
                     val subtitle = listOfNotNull(
                         assignment.subjectName,
                         assignment.className?.let { "Kelas $it" }
@@ -135,8 +172,8 @@ private fun TeacherAssignmentCard(
                     }
                     Text(
                         subtitle,
-                        fontSize = 11.sp,
-                        color = TextTertiary,
+                        fontSize = 12.sp,
+                        color = textSecondary,
                         fontWeight = FontWeight.Normal,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
@@ -145,26 +182,26 @@ private fun TeacherAssignmentCard(
                     val isScheduled = assignment.isScheduled || assignment.status == "draft"
                     val targetDate = if (isScheduled) assignment.releaseAt ?: assignment.createdAt else assignment.createdAt
                     if (targetDate.isNotBlank()) {
-                        Spacer(Modifier.height(3.dp))
+                        Spacer(Modifier.height(4.dp))
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Schedule,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_clock),
                                 contentDescription = null,
-                                tint = if (isScheduled) NeonWarning else TextTertiary,
-                                modifier = Modifier.size(11.dp)
+                                tint = if (isScheduled) NeonWarning else textTertiary,
+                                modifier = Modifier.size(12.dp)
                             )
                             Text(
                                 text = if (isScheduled) {
-                                    "Tayang: ${formatPublishTimestamp(targetDate)}"
+                                    "Terjadwal: ${formatPublishTimestamp(targetDate)}"
                                 } else {
                                     "Diterbitkan: ${formatPublishTimestamp(targetDate)}"
                                 },
-                                fontSize = 10.sp,
-                                color = if (isScheduled) NeonWarning else TextTertiary,
-                                fontWeight = FontWeight.Medium,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Normal,
+                                color = if (isScheduled) NeonWarning else textTertiary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -173,81 +210,12 @@ private fun TeacherAssignmentCard(
                 }
 
                 Spacer(Modifier.width(8.dp))
-                Icon(Icons.Default.ChevronRight, null, tint = TextTertiary, modifier = Modifier.size(18.dp))
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // METADATA STRIP
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(com.schoolos.android.core.designsystem.CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-                    .padding(horizontal = 10.dp, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.weight(1f, fill = false)
-                ) {
-                    Icon(Icons.Default.DateRange, null, tint = TextTertiary, modifier = Modifier.size(12.dp))
-                    Spacer(Modifier.width(6.dp))
-                    val dueIso = assignment.dueAt
-                    val dueLabel = if (!dueIso.isNullOrBlank()) {
-                        "Tenggat: ${formatPublishTimestamp(dueIso)}"
-                    } else {
-                        "Tanpa Batas Waktu"
-                    }
-                    Text(
-                        dueLabel,
-                        fontSize = 11.sp,
-                        color = TextSecondary,
-                        fontWeight = FontWeight.Normal,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                val isScheduledCard = assignment.isScheduled || assignment.status == "draft"
-                if (isScheduledCard) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(NeonWarning.copy(alpha = 0.15f))
-                            .border(0.5.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(4.dp))
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            "Terjadwal (Draft)",
-                            fontSize = 10.sp,
-                            color = NeonWarning,
-                            fontWeight = FontWeight.SemiBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(if (assignment.isActive) NeonSuccess.copy(alpha = 0.12f) else com.schoolos.android.core.designsystem.CosmicSurface3)
-                            .padding(horizontal = 6.dp, vertical = 2.dp)
-                    ) {
-                        Text(
-                            "Maks. ${assignment.maxScore} Poin",
-                            fontSize = 10.sp,
-                            color = if (assignment.isActive) NeonSuccess else TextTertiary,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
+                Icon(
+                    painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
+                    contentDescription = null,
+                    tint = textSecondary,
+                    modifier = Modifier.size(12.dp)
+                )
             }
         }
     }
