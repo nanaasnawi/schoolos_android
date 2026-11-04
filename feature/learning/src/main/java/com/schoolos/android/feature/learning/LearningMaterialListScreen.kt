@@ -738,6 +738,11 @@ private fun ModernMaterialCard(
     val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
 
     val isLibraryBook = item.startPage != null
+    val isVideo = item.type.equals("VIDEO", ignoreCase = true) ||
+        item.mediaUrl?.contains("youtube", ignoreCase = true) == true ||
+        item.mediaUrl?.contains("youtu.be", ignoreCase = true) == true ||
+        item.mediaUrl?.endsWith(".mp4", ignoreCase = true) == true ||
+        item.title.contains("video", ignoreCase = true)
 
     Surface(
         modifier = Modifier
@@ -857,7 +862,7 @@ private fun ModernMaterialCard(
                 ) {
                     Icon(
                         painter = painterResource(
-                            id = if (item.type == "VIDEO") CoreR.drawable.ic_modern_classes else CoreR.drawable.ic_modern_book
+                            id = if (isVideo) CoreR.drawable.ic_modern_video else CoreR.drawable.ic_modern_book
                         ),
                         contentDescription = null,
                         tint = if (item.isCompleted) successColor else studentAccentColor,
@@ -978,7 +983,7 @@ private fun ModernMaterialCard(
                 ) {
                     Text(
                         text = when {
-                            item.type == "VIDEO" -> "Video Pelajaran"
+                            isVideo -> "Video Pelajaran"
                             item.type == "ARTICLE" -> "Artikel Naskah"
                             item.type == "INFOGRAPHIC" || item.type == "IMAGE" -> "Infografis Digital"
                             isLibraryBook -> "Buku SIBI (Hal. ${item.startPage ?: 1} — ${item.endPage ?: ""})"
@@ -998,7 +1003,7 @@ private fun ModernMaterialCard(
                     )
 
                     Text(
-                        text = "${item.readTimeMinutes} mnt baca",
+                        text = if (isVideo) "${item.readTimeMinutes} mnt tonton" else "${item.readTimeMinutes} mnt baca",
                         color = textTertiary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Normal,

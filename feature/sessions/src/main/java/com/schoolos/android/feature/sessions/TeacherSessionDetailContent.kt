@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.sessions
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.LearningSession
+import com.schoolos.android.domain.model.MaterialType
 import com.schoolos.android.domain.model.SessionAttendance
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,6 +47,15 @@ fun TeacherSessionDetailContent(
     todayAssignments: List<com.schoolos.android.domain.model.Assignment> = emptyList(),
     accentColor: Color,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val effectiveStudents = if (students.isNotEmpty()) {
         students
     } else {
@@ -92,14 +104,14 @@ fun TeacherSessionDetailContent(
         // ── 1. UNIFIED EXECUTIVE SESSION CARD (ZERO GRADIENT, ZERO DUPLICATION) ──
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = CosmicNavy,
-            border = BorderStroke(0.5.dp, GlassBorder)
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(0.5.dp, cardBorder)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(16.dp),
+                    .padding(18.dp),
                 verticalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 // Top Header Row: Icon + Subject + Class + Time Badge
@@ -117,8 +129,8 @@ fun TeacherSessionDetailContent(
                             modifier = Modifier
                                 .size(44.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(CosmicSurface2)
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp)),
+                                .background(innerCardBg)
+                                .border(0.5.dp, innerCardBorder, RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -136,7 +148,7 @@ fun TeacherSessionDetailContent(
                                 text = subject,
                                 fontSize = 17.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
+                                color = textPrimary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -144,7 +156,7 @@ fun TeacherSessionDetailContent(
                             Text(
                                 text = roomText,
                                 fontSize = 12.sp,
-                                color = TextSecondary,
+                                color = textSecondary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -156,8 +168,8 @@ fun TeacherSessionDetailContent(
                     // Period & Time Badge
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = CosmicSurface2,
-                        border = BorderStroke(0.5.dp, GlassBorder)
+                        color = innerCardBg,
+                        border = BorderStroke(0.5.dp, innerCardBorder)
                     ) {
                         Column(
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -172,13 +184,13 @@ fun TeacherSessionDetailContent(
                             Text(
                                 text = timeText,
                                 fontSize = 10.sp,
-                                color = TextTertiary
+                                color = textTertiary
                             )
                         }
                     }
                 }
 
-                HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+                HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp)
 
                 // Attendance Metrics Row (3 Clean Cards, Zero Gradients)
                 Row(
@@ -215,7 +227,7 @@ fun TeacherSessionDetailContent(
                                 .height(5.dp)
                                 .clip(RoundedCornerShape(3.dp)),
                             color = NeonSuccess,
-                            trackColor = CosmicSurface2
+                            trackColor = innerCardBg
                         )
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -224,7 +236,7 @@ fun TeacherSessionDetailContent(
                             Text(
                                 text = "$presentCount dari $totalCount siswa hadir",
                                 fontSize = 11.sp,
-                                color = TextTertiary
+                                color = textTertiary
                             )
                             StatusChip(label = session.status)
                         }
@@ -255,14 +267,14 @@ fun TeacherSessionDetailContent(
                     text = "Kelola Sumber Daya Kelas",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = textPrimary
                 )
             }
             Text(
                 text = "Pintasan Aksi",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Medium,
-                color = TextTertiary
+                color = textTertiary
             )
         }
 
@@ -272,21 +284,21 @@ fun TeacherSessionDetailContent(
         ) {
             ResourceActionButton(
                 label = "Beri Tugas",
-                icon = Icons.AutoMirrored.Filled.Assignment,
+                iconRes = CoreR.drawable.ic_modern_tasks,
                 accentColor = StudentNeon,
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
             )
             ResourceActionButton(
                 label = "Buat Kuis",
-                icon = Icons.Default.Quiz,
+                iconRes = CoreR.drawable.ic_modern_quiz,
                 accentColor = NeonSuccess,
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenQuizzes(session.subjectName?.trim().orEmpty()) }
             )
             ResourceActionButton(
                 label = "Unggah Materi",
-                icon = Icons.AutoMirrored.Filled.MenuBook,
+                iconRes = CoreR.drawable.ic_modern_book,
                 accentColor = NeonBlue,
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
@@ -297,14 +309,14 @@ fun TeacherSessionDetailContent(
         if (todayMaterials.isNotEmpty() || todayAssignments.isNotEmpty()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = CosmicNavy,
-                border = BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(0.5.dp, cardBorder)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(14.dp),
+                        .padding(16.dp),
                     verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Row(
@@ -326,7 +338,7 @@ fun TeacherSessionDetailContent(
                                 text = "Bahan Ajar & Tugas Sesi Ini",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                color = textPrimary
                             )
                         }
                         Surface(
@@ -345,10 +357,14 @@ fun TeacherSessionDetailContent(
                     }
 
                     todayMaterials.forEach { mat ->
+                        val isVideo = mat.materialType == MaterialType.VIDEO ||
+                            mat.mediaUrl?.contains("youtube", ignoreCase = true) == true ||
+                            mat.mediaUrl?.contains("youtu.be", ignoreCase = true) == true ||
+                            mat.title.contains("video", ignoreCase = true)
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = CosmicSurface2,
-                            border = BorderStroke(0.5.dp, GlassBorder),
+                            shape = RoundedCornerShape(12.dp),
+                            color = innerCardBg,
+                            border = BorderStroke(0.5.dp, innerCardBorder),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
@@ -356,7 +372,7 @@ fun TeacherSessionDetailContent(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -366,9 +382,9 @@ fun TeacherSessionDetailContent(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                        painter = painterResource(if (isVideo) CoreR.drawable.ic_modern_video else CoreR.drawable.ic_modern_book),
                                         contentDescription = null,
-                                        tint = NeonBlue,
+                                        tint = if (isVideo) NeonWarning else NeonBlue,
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Column {
@@ -376,21 +392,21 @@ fun TeacherSessionDetailContent(
                                             text = mat.title,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary,
+                                            color = textPrimary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         Text(
-                                            text = "Tayang: Hari Ini • ${mat.materialType}",
+                                            text = if (isVideo) "Video Pelajaran • Real-Time Sesi" else "Bahan Bacaan • Real-Time Sesi",
                                             fontSize = 10.sp,
-                                            color = NeonWarning
+                                            color = if (isVideo) NeonWarning else NeonBlue
                                         )
                                     }
                                 }
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    painter = painterResource(CoreR.drawable.ic_modern_chevron_right),
                                     contentDescription = null,
-                                    tint = TextTertiary,
+                                    tint = textTertiary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -399,9 +415,9 @@ fun TeacherSessionDetailContent(
 
                     todayAssignments.forEach { assign ->
                         Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = CosmicSurface2,
-                            border = BorderStroke(0.5.dp, GlassBorder),
+                            shape = RoundedCornerShape(12.dp),
+                            color = innerCardBg,
+                            border = BorderStroke(0.5.dp, innerCardBorder),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
@@ -409,7 +425,7 @@ fun TeacherSessionDetailContent(
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -419,7 +435,7 @@ fun TeacherSessionDetailContent(
                                     horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.AutoMirrored.Filled.Assignment,
+                                        painter = painterResource(CoreR.drawable.ic_modern_tasks),
                                         contentDescription = null,
                                         tint = StudentNeon,
                                         modifier = Modifier.size(18.dp)
@@ -429,7 +445,7 @@ fun TeacherSessionDetailContent(
                                             text = assign.title,
                                             fontSize = 12.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = TextPrimary,
+                                            color = textPrimary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
@@ -441,9 +457,9 @@ fun TeacherSessionDetailContent(
                                     }
                                 }
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    painter = painterResource(CoreR.drawable.ic_modern_chevron_right),
                                     contentDescription = null,
-                                    tint = TextTertiary,
+                                    tint = textTertiary,
                                     modifier = Modifier.size(14.dp)
                                 )
                             }
@@ -466,14 +482,14 @@ fun TeacherSessionDetailContent(
                     text = "Rekap Presensi Siswa",
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = textPrimary
                 )
                 if (totalCount > 0) {
                     Spacer(Modifier.width(8.dp))
                     Surface(
                         shape = RoundedCornerShape(6.dp),
-                        color = CosmicSurface2,
-                        border = BorderStroke(0.5.dp, GlassBorder)
+                        color = innerCardBg,
+                        border = BorderStroke(0.5.dp, innerCardBorder)
                     ) {
                         Text(
                             text = "$totalCount Siswa",
@@ -499,8 +515,8 @@ fun TeacherSessionDetailContent(
                         .height(40.dp)
                         .clickable(enabled = !isBulkSaving, onClick = onMarkAllPresent),
                     shape = RoundedCornerShape(10.dp),
-                    color = CosmicSurface2,
-                    border = BorderStroke(0.5.dp, GlassBorder)
+                    color = innerCardBg,
+                    border = BorderStroke(0.5.dp, innerCardBorder)
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize(),
@@ -568,9 +584,9 @@ fun TeacherSessionDetailContent(
         // ── 4. STUDENT ATTENDANCE ROSTER LIST ──
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            color = CosmicNavy,
-            border = BorderStroke(0.5.dp, GlassBorder)
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(0.5.dp, cardBorder)
         ) {
             Column(
                 modifier = Modifier.padding(14.dp),
@@ -625,15 +641,15 @@ fun TeacherSessionDetailContent(
                                 modifier = Modifier
                                     .size(36.dp)
                                     .clip(RoundedCornerShape(10.dp))
-                                    .background(CosmicSurface2)
-                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                                    .background(innerCardBg)
+                                    .border(0.5.dp, innerCardBorder, RoundedCornerShape(10.dp)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
                                     text = initial,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
+                                    color = textPrimary
                                 )
                             }
 
@@ -644,7 +660,7 @@ fun TeacherSessionDetailContent(
                                     text = student.studentName,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = TextPrimary,
+                                    color = textPrimary,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis
                                 )
@@ -652,7 +668,7 @@ fun TeacherSessionDetailContent(
                                 Text(
                                     text = subText,
                                     fontSize = 10.5.sp,
-                                    color = TextTertiary
+                                    color = textTertiary
                                 )
                             }
 
@@ -664,24 +680,36 @@ fun TeacherSessionDetailContent(
                                     label = "H",
                                     selected = currentStatus == "present",
                                     activeColor = NeonSuccess,
+                                    inactiveBg = innerCardBg,
+                                    inactiveBorder = innerCardBorder,
+                                    inactiveText = textSecondary,
                                     onClick = { onUpdateAttendance(student.studentId, "present") }
                                 )
                                 AttendanceStatusButton(
                                     label = "S",
                                     selected = currentStatus == "sick",
                                     activeColor = NeonBlue,
+                                    inactiveBg = innerCardBg,
+                                    inactiveBorder = innerCardBorder,
+                                    inactiveText = textSecondary,
                                     onClick = { onUpdateAttendance(student.studentId, "sick") }
                                 )
                                 AttendanceStatusButton(
                                     label = "I",
                                     selected = currentStatus == "excused",
                                     activeColor = NeonWarning,
+                                    inactiveBg = innerCardBg,
+                                    inactiveBorder = innerCardBorder,
+                                    inactiveText = textSecondary,
                                     onClick = { onUpdateAttendance(student.studentId, "excused") }
                                 )
                                 AttendanceStatusButton(
                                     label = "A",
                                     selected = currentStatus == "absent",
                                     activeColor = NeonError,
+                                    inactiveBg = innerCardBg,
+                                    inactiveBorder = innerCardBorder,
+                                    inactiveText = textSecondary,
                                     onClick = { onUpdateAttendance(student.studentId, "absent") }
                                 )
                             }
@@ -700,11 +728,16 @@ private fun AttendanceMetricBox(
     color: Color,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val bg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val border = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(10.dp),
-        color = CosmicSurface2,
-        border = BorderStroke(0.5.dp, GlassBorder)
+        color = bg,
+        border = BorderStroke(0.5.dp, border)
     ) {
         Column(
             modifier = Modifier.padding(vertical = 10.dp),
@@ -721,7 +754,7 @@ private fun AttendanceMetricBox(
                 text = label,
                 fontSize = 9.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextTertiary
+                color = textTertiary
             )
         }
     }
@@ -730,11 +763,15 @@ private fun AttendanceMetricBox(
 @Composable
 private fun ResourceActionButton(
     label: String,
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
     accentColor: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+
     Column(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -751,18 +788,27 @@ private fun ResourceActionButton(
                 .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(13.dp)),
             contentAlignment = Alignment.Center
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = accentColor,
-                modifier = Modifier.size(22.dp)
-            )
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
         }
         Text(
             text = label,
             fontSize = 12.sp,
             fontWeight = FontWeight.SemiBold,
-            color = TextPrimary,
+            color = textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             textAlign = TextAlign.Center
@@ -775,15 +821,18 @@ private fun AttendanceStatusButton(
     label: String,
     selected: Boolean,
     activeColor: Color,
+    inactiveBg: Color,
+    inactiveBorder: Color,
+    inactiveText: Color,
     onClick: () -> Unit,
 ) {
     Surface(
         onClick = onClick,
         shape = RoundedCornerShape(8.dp),
-        color = if (selected) activeColor else CosmicSurface2,
+        color = if (selected) activeColor else inactiveBg,
         border = BorderStroke(
             0.5.dp,
-            if (selected) activeColor else GlassBorder
+            if (selected) activeColor else inactiveBorder
         ),
         modifier = Modifier.size(32.dp)
     ) {
@@ -792,7 +841,7 @@ private fun AttendanceStatusButton(
                 text = label,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (selected) Color.White else TextSecondary
+                color = if (selected) Color.White else inactiveText
             )
         }
     }
