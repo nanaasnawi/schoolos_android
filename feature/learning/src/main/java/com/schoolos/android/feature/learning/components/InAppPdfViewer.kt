@@ -155,55 +155,68 @@ fun InAppPdfViewer(
                     return@withContext
                 }
 
+                val candidateUrls = resolvePdfDownloadUrls(cleanUrl)
+                if (candidateUrls.isEmpty()) {
+                    withContext(Dispatchers.Main) {
+                        errorMessage = "Tautan dokumen PDF buku belum disematkan."
+                        isLoading = false
+                    }
+                    return@withContext
+                }
+
                 val cacheFileName = "book_pdf_${cleanUrl.hashCode().toString().replace("-", "n")}.pdf"
                 val pdfFile = File(context.cacheDir, cacheFileName)
 
-                var downloadSuccess = pdfFile.exists() && pdfFile.length() > 5000
+                var downloadSuccess = pdfFile.exists() && pdfFile.length() > 200
 
-                if (!downloadSuccess && (cleanUrl.startsWith("http://", ignoreCase = true) || cleanUrl.startsWith("https://", ignoreCase = true))) {
-                    var connection: HttpURLConnection? = null
-                    try {
-                        connection = (URL(cleanUrl).openConnection() as HttpURLConnection).apply {
-                            connectTimeout = 15000
-                            readTimeout = 60000
-                            instanceFollowRedirects = true
-                            setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
-                        }
-                        connection.connect()
-
-                        val code = connection.responseCode
-                        if (code in 200..299) {
-                            val tempFile = File(context.cacheDir, "${cacheFileName}.tmp")
-                            connection.inputStream.use { inputStream ->
-                                FileOutputStream(tempFile).use { outputStream ->
-                                    val buffer = ByteArray(16384)
-                                    var bytesRead: Int
-                                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                                        outputStream.write(buffer, 0, bytesRead)
-                                    }
-                                    outputStream.flush()
-                                }
-                            }
-
-                            if (tempFile.length() > 5000) {
-                                if (pdfFile.exists()) pdfFile.delete()
-                                tempFile.renameTo(pdfFile)
-                                downloadSuccess = true
-                            }
-                        } else {
-                            Timber.w("PDF download responded with HTTP code $code from $cleanUrl")
-                        }
-                    } catch (e: Exception) {
-                        Timber.e(e, "Failed to download PDF: $cleanUrl")
-                        downloadSuccess = false
-                    } finally {
+                if (!downloadSuccess) {
+                    for (targetUrl in candidateUrls) {
+                        if (downloadSuccess) break
+                        var connection: HttpURLConnection? = null
                         try {
-                            connection?.disconnect()
-                        } catch (_: Throwable) {}
+                            connection = (URL(targetUrl).openConnection() as HttpURLConnection).apply {
+                                connectTimeout = 15000
+                                readTimeout = 60000
+                                instanceFollowRedirects = true
+                                setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
+                                setRequestProperty("Accept", "application/pdf,application/octet-stream,*/*")
+                            }
+                            connection.connect()
+
+                            val code = connection.responseCode
+                            if (code in 200..299) {
+                                val tempFile = File(context.cacheDir, "${cacheFileName}.tmp")
+                                connection.inputStream.use { inputStream ->
+                                    FileOutputStream(tempFile).use { outputStream ->
+                                        val buffer = ByteArray(16384)
+                                        var bytesRead: Int
+                                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                            outputStream.write(buffer, 0, bytesRead)
+                                        }
+                                        outputStream.flush()
+                                    }
+                                }
+
+                                if (tempFile.length() > 200) {
+                                    if (pdfFile.exists()) pdfFile.delete()
+                                    tempFile.renameTo(pdfFile)
+                                    downloadSuccess = true
+                                    break
+                                }
+                            } else {
+                                Timber.w("PDF download responded with HTTP code $code from $targetUrl")
+                            }
+                        } catch (e: Exception) {
+                            Timber.e(e, "Failed to download PDF from $targetUrl")
+                        } finally {
+                            try {
+                                connection?.disconnect()
+                            } catch (_: Throwable) {}
+                        }
                     }
                 }
 
-                if (!downloadSuccess || !pdfFile.exists() || pdfFile.length() < 1000) {
+                if (!downloadSuccess || !pdfFile.exists() || pdfFile.length() < 200) {
                     withContext(Dispatchers.Main) {
                         errorMessage = "Gagal mengunduh berkas PDF buku dari server. Periksa koneksi internet Anda."
                         isLoading = false
@@ -358,17 +371,20 @@ fun InAppPdfViewer(
 
                         // External opening is restricted to teachers or when the whole document is assigned
                         // to prevent students from bypassing the page restriction outside the app.
-                        if (pdfUrl.isNotBlank() && (isTeacher || !isPageRestricted)) {
+                        val resolvedExternalUrl = remember(pdfUrl) {
+                            resolvePdfDownloadUrls(pdfUrl).firstOrNull() ?: pdfUrl
+                        }
+                        if (resolvedExternalUrl.isNotBlank() && (isTeacher || !isPageRestricted)) {
                             Button(
                                 onClick = {
                                     val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(Uri.parse(pdfUrl), "application/pdf")
+                                        setDataAndType(Uri.parse(resolvedExternalUrl), "application/pdf")
                                         flags = Intent.FLAG_ACTIVITY_NEW_TASK
                                     }
                                     try {
                                         context.startActivity(intent)
                                     } catch (_: Exception) {
-                                        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                        val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(resolvedExternalUrl))
                                         context.startActivity(webIntent)
                                     }
                                 },
@@ -510,10 +526,13 @@ fun InAppPdfViewer(
                             Text("Coba Lagi", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                         }
 
-                        if (pdfUrl.isNotBlank() && (isTeacher || !isPageRestricted)) {
+                        val resolvedBrowserUrl = remember(pdfUrl) {
+                            resolvePdfDownloadUrls(pdfUrl).firstOrNull() ?: pdfUrl
+                        }
+                        if (resolvedBrowserUrl.isNotBlank() && (isTeacher || !isPageRestricted)) {
                             OutlinedButton(
                                 onClick = {
-                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(resolvedBrowserUrl))
                                     context.startActivity(intent)
                                 },
                                 shape = RoundedCornerShape(8.dp),
@@ -763,5 +782,36 @@ fun InAppPdfViewer(
             }
         }
     }
+}
+
+/**
+ * Resolves any raw PDF URL (whether relative /uploads/uuid.pdf, uploads/uuid.pdf, or full HTTPS)
+ * into a ordered list of download URLs with domain fallback (production web & direct backend).
+ */
+fun resolvePdfDownloadUrls(rawUrl: String): List<String> {
+    val trimmed = rawUrl.trim()
+    if (trimmed.isBlank()) return emptyList()
+
+    if (trimmed.startsWith("http://", ignoreCase = true) || trimmed.startsWith("https://", ignoreCase = true)) {
+        val urls = mutableListOf(trimmed)
+        if (trimmed.contains("akselerasi-edu.id/uploads/")) {
+            urls.add(trimmed.replace("akselerasi-edu.id", "schoolosbackend-production.up.railway.app"))
+        } else if (trimmed.contains("schoolosbackend-production.up.railway.app/uploads/")) {
+            urls.add(trimmed.replace("schoolosbackend-production.up.railway.app", "akselerasi-edu.id"))
+        }
+        return urls
+    }
+
+    val path = when {
+        trimmed.startsWith("/uploads/") -> trimmed
+        trimmed.startsWith("uploads/") -> "/$trimmed"
+        trimmed.startsWith("/") -> trimmed
+        else -> "/uploads/$trimmed"
+    }
+
+    return listOf(
+        "https://akselerasi-edu.id$path",
+        "https://schoolosbackend-production.up.railway.app$path"
+    )
 }
 
