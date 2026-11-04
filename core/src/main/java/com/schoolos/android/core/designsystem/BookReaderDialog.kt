@@ -272,7 +272,11 @@ fun BookReaderDialog(
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = true)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            dismissOnBackPress = true,
+            decorFitsSystemWindows = false
+        )
     ) {
         Scaffold(
             containerColor = Color(0xFF0B0F19),
@@ -357,9 +361,8 @@ fun BookReaderDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .windowInsetsPadding(WindowInsets.navigationBars)
-                                .padding(horizontal = 16.dp, vertical = 12.dp)
-                                .padding(bottom = 6.dp),
+                                .navigationBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 12.dp),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
