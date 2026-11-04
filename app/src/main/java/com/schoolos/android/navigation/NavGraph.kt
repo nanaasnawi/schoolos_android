@@ -650,10 +650,11 @@ fun NavGraph(
 
             // Dedicated Guru AI Screen (Akselerasi Mascot & NVIDIA NIM)
             composable(Screen.AiChat.route) {
+                val isPrincipal = authState?.isPrincipal == true
                 val aiThread = remember { chatManager.getOrCreateAiThread() }
                 ChatDetailScreen(
                     threadId = aiThread.id,
-                    initialRecipientName = "Guru AI Akselerasi",
+                    initialRecipientName = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Guru AI Akselerasi",
                     chatManager = chatManager,
                     onBack = { navController.popBackStack() },
                     isTeacherMode = false

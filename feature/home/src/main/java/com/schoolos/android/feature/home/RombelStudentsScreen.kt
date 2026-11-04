@@ -144,6 +144,16 @@ fun RombelStudentsScreen(
     val isSupervisionMode = isPrincipal || (className != null && (className.equals("ALL", ignoreCase = true) || className.equals("SUPERVISION", ignoreCase = true)))
     var supervisionTab by remember(className) { mutableStateOf(if (isSupervisionMode) 0 else 1) }
 
+    val isDark = LocalIsDarkTheme.current
+    val screenBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     val titleText = if (isSupervisionMode) {
         if (supervisionTab == 0) "Supervisi 13 Rombel PKBM"
         else if (selectedFilter == "ALL" || selectedFilter.isBlank()) "Pengawasan Seluruh Warga Belajar"
@@ -165,7 +175,7 @@ fun RombelStudentsScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(CosmicBlack)
+            .background(screenBg)
     ) {
         // Executive TopBar
         ExecutiveTopBar(
@@ -180,29 +190,29 @@ fun RombelStudentsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(10.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(14.dp),
+                color = innerCardBg,
+                border = androidx.compose.foundation.BorderStroke(1.dp, innerCardBorder)
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(3.dp),
+                        .padding(4.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     val tab0Selected = supervisionTab == 0
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (tab0Selected) TeacherNeon.copy(alpha = 0.2f) else Color.Transparent)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (tab0Selected) TeacherNeon.copy(alpha = 0.18f) else Color.Transparent)
                             .border(
-                                width = if (tab0Selected) 0.8.dp else 0.dp,
-                                color = if (tab0Selected) TeacherNeon.copy(alpha = 0.5f) else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp)
+                                width = if (tab0Selected) 1.dp else 0.dp,
+                                color = if (tab0Selected) TeacherNeon.copy(alpha = 0.45f) else Color.Transparent,
+                                shape = RoundedCornerShape(10.dp)
                             )
                             .clickable { supervisionTab = 0 }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 9.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -212,14 +222,14 @@ fun RombelStudentsScreen(
                             Icon(
                                 imageVector = Icons.Default.School,
                                 contentDescription = null,
-                                tint = if (tab0Selected) TeacherNeon else TextTertiary,
+                                tint = if (tab0Selected) TeacherNeon else textTertiary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Text(
                                 text = "Supervisi 13 Rombel",
                                 fontSize = 11.5.sp,
                                 fontWeight = if (tab0Selected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (tab0Selected) TeacherNeon else TextSecondary
+                                color = if (tab0Selected) TeacherNeon else textSecondary
                             )
                         }
                     }
@@ -228,15 +238,15 @@ fun RombelStudentsScreen(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (tab1Selected) NeonBlue.copy(alpha = 0.2f) else Color.Transparent)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (tab1Selected) NeonBlue.copy(alpha = 0.18f) else Color.Transparent)
                             .border(
-                                width = if (tab1Selected) 0.8.dp else 0.dp,
-                                color = if (tab1Selected) NeonBlue.copy(alpha = 0.5f) else Color.Transparent,
-                                shape = RoundedCornerShape(8.dp)
+                                width = if (tab1Selected) 1.dp else 0.dp,
+                                color = if (tab1Selected) NeonBlue.copy(alpha = 0.45f) else Color.Transparent,
+                                shape = RoundedCornerShape(10.dp)
                             )
                             .clickable { supervisionTab = 1 }
-                            .padding(vertical = 8.dp),
+                            .padding(vertical = 9.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Row(
@@ -246,14 +256,14 @@ fun RombelStudentsScreen(
                             Icon(
                                 imageVector = Icons.Default.People,
                                 contentDescription = null,
-                                tint = if (tab1Selected) NeonBlue else TextTertiary,
+                                tint = if (tab1Selected) NeonBlue else textTertiary,
                                 modifier = Modifier.size(15.dp)
                             )
                             Text(
                                 text = "Warga Belajar (${students.size})",
                                 fontSize = 11.5.sp,
                                 fontWeight = if (tab1Selected) FontWeight.Bold else FontWeight.Medium,
-                                color = if (tab1Selected) NeonBlue else TextSecondary
+                                color = if (tab1Selected) NeonBlue else textSecondary
                             )
                         }
                     }
@@ -289,9 +299,9 @@ fun RombelStudentsScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp, vertical = 4.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    color = CosmicNavy,
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, TeacherNeon.copy(alpha = 0.4f))
+                    shape = RoundedCornerShape(12.dp),
+                    color = cardBg,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, TeacherNeon.copy(alpha = 0.45f))
                 ) {
                     Row(
                         modifier = Modifier
@@ -356,11 +366,11 @@ fun RombelStudentsScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isAllSelected) TeacherNeon.copy(alpha = 0.18f) else CosmicNavy)
+                            .background(if (isAllSelected) TeacherNeon.copy(alpha = 0.18f) else innerCardBg)
                             .border(
-                                width = if (isAllSelected) 1.dp else 0.5.dp,
-                                color = if (isAllSelected) TeacherNeon else GlassBorder,
-                                shape = RoundedCornerShape(10.dp)
+                                width = 1.dp,
+                                color = if (isAllSelected) TeacherNeon else innerCardBorder,
+                                shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { viewModel.selectClassFilter("ALL") }
                             .padding(horizontal = 12.dp, vertical = 7.dp)
@@ -381,11 +391,11 @@ fun RombelStudentsScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) NeonBlue.copy(alpha = 0.18f) else CosmicNavy)
+                            .background(if (isSelected) NeonBlue.copy(alpha = 0.18f) else innerCardBg)
                             .border(
-                                width = if (isSelected) 1.dp else 0.5.dp,
-                                color = if (isSelected) NeonBlue else GlassBorder,
-                                shape = RoundedCornerShape(10.dp)
+                                width = 1.dp,
+                                color = if (isSelected) NeonBlue else innerCardBorder,
+                                shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { viewModel.selectClassFilter(cls.name) }
                             .padding(horizontal = 12.dp, vertical = 7.dp)
@@ -407,9 +417,9 @@ fun RombelStudentsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
             ) {
                 Row(
                     modifier = Modifier
@@ -443,9 +453,9 @@ fun RombelStudentsScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 4.dp),
-                shape = RoundedCornerShape(12.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
             ) {
                 Row(
                     modifier = Modifier
@@ -530,14 +540,14 @@ fun RombelStudentsScreen(
                     )
                 },
                 singleLine = true,
-                shape = RoundedCornerShape(10.dp),
+                shape = RoundedCornerShape(14.dp),
                 colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = CosmicNavy,
-                    unfocusedContainerColor = CosmicNavy,
-                    focusedBorderColor = NeonBlue.copy(alpha = 0.5f),
-                    unfocusedBorderColor = GlassBorder,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
+                    focusedContainerColor = innerCardBg,
+                    unfocusedContainerColor = innerCardBg,
+                    focusedBorderColor = NeonBlue.copy(alpha = 0.65f),
+                    unfocusedBorderColor = innerCardBorder,
+                    focusedTextColor = textPrimary,
+                    unfocusedTextColor = textPrimary,
                 ),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() })
@@ -602,8 +612,8 @@ fun RombelStudentsScreen(
                             Surface(
                                 onClick = { viewModel.loadStudents(selectedFilter) },
                                 shape = RoundedCornerShape(8.dp),
-                                color = CosmicNavy,
-                                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+                                color = cardBg,
+                                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
                             ) {
                                 Text(
                                     text = "Coba Lagi",
@@ -632,8 +642,8 @@ fun RombelStudentsScreen(
                                 modifier = Modifier
                                     .size(56.dp)
                                     .clip(CircleShape)
-                                    .background(CosmicNavy)
-                                    .border(0.5.dp, GlassBorder, CircleShape),
+                                    .background(innerCardBg)
+                                    .border(1.dp, innerCardBorder, CircleShape),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -726,13 +736,21 @@ private fun StudentAttendanceCard(
     val genderLabel = if (isFemale) "P" else "L"
     val initial = student.fullName.firstOrNull()?.toString()?.uppercase() ?: "?"
 
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        color = CosmicNavy,
-        border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder)
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder)
     ) {
-        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // Top Section: Info & Class Badge
             Row(
                 modifier = Modifier
@@ -743,17 +761,17 @@ private fun StudentAttendanceCard(
                 // Avatar
                 Box(
                     modifier = Modifier
-                        .size(38.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, CircleShape),
+                        .background(innerCardBg)
+                        .border(1.dp, innerCardBorder, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = initial,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
+                        color = textPrimary
                     )
                 }
 
@@ -817,8 +835,8 @@ private fun StudentAttendanceCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(8.dp))
-                        .background(CosmicDark)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                        .background(innerCardBg)
+                    .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp))
                     .padding(3.dp),
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
@@ -931,11 +949,16 @@ private fun RombelSupervisionView(
     ) {
         // Summary Header Hero
         item {
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+            val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
             Surface(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = CosmicNavy,
-                border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
             ) {
                 Column(
                     modifier = Modifier.padding(14.dp),
@@ -1031,18 +1054,27 @@ private fun RombelSupervisionView(
                 val mCount = clsStudents.count { it.gender?.trim()?.uppercase() == "L" }
                 val fCount = clsStudents.count { it.gender?.trim()?.uppercase() == "P" }
 
+                val isDark = LocalIsDarkTheme.current
+                val cardBg = if (isDark) Color(0xFF111113) else Color.White
+                val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+                val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+                val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+                val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+                val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+                val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable { onRombelClick(cls.name) },
-                    shape = RoundedCornerShape(12.dp),
-                    color = CosmicNavy,
-                    border = androidx.compose.foundation.BorderStroke(0.5.dp, GlassBorder),
+                    shape = RoundedCornerShape(22.dp),
+                    color = cardBg,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, cardBorder),
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(14.dp),
+                            .padding(16.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween,
                     ) {
@@ -1052,10 +1084,10 @@ private fun RombelSupervisionView(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(CosmicSurface2)
-                                    .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(innerCardBg)
+                                    .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(

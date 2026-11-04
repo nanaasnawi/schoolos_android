@@ -761,6 +761,15 @@ class ChatManager @Inject constructor(
         }
     }
 
+    @Volatile
+    private var principalContextSummary: String? = null
+
+    fun setPrincipalContext(summary: String) {
+        principalContextSummary = summary
+    }
+
+    fun getPrincipalContext(): String? = principalContextSummary
+
     suspend fun askAi(
         threadId: String,
         question: String,
@@ -769,6 +778,19 @@ class ChatManager @Inject constructor(
         history: List<ChatMessage> = emptyList(),
     ): Result<String> {
         return try {
+            val isPrincipalMode = threadId.startsWith("ai-principal") ||
+                (cachedAuth?.isPrincipal == true) ||
+                com.schoolos.android.core.auth.isPrincipalRole(cachedAuth?.role ?: "")
+
+            val finalSubject = if (isPrincipalMode) "Supervisi & Analitik PKBM" else (subjectName ?: "Umum")
+            val finalGrade = if (isPrincipalMode) "KEPALA_SEKOLAH" else (gradeLevel ?: "Siswa")
+
+            val finalQuestion = if (isPrincipalMode && !principalContextSummary.isNullOrBlank()) {
+                "[KONTEKS DATA REAL-TIME SEKOLAH (PORTAL KEPALA SEKOLAH)]:\n$principalContextSummary\n\n[PERTANYAAN / INSTRUKSI KEPALA SEKOLAH]:\n$question"
+            } else {
+                question
+            }
+
             val historyDtos = history.takeLast(6).map {
                 TanyaAiHistoryDto(
                     role = if (it.isFromTeacher) "assistant" else "user",
@@ -777,20 +799,22 @@ class ChatManager @Inject constructor(
             }
             val resp = api.tanyaAi(
                 TanyaAiRequestDto(
-                    question = question,
-                    subjectName = subjectName,
-                    gradeLevel = gradeLevel,
+                    question = finalQuestion,
+                    subjectName = finalSubject,
+                    gradeLevel = finalGrade,
                     history = historyDtos,
                 )
             )
             if (resp.success && resp.data != null) {
                 val replyText = resp.data.reply
                 val now = System.currentTimeMillis()
+                val senderTitle = if (isPrincipalMode) "AI Analitik Kepala Sekolah" else "Guru AI"
+                val senderIdVal = if (isPrincipalMode) "ai-principal" else "ai-tutor"
                 val aiMsg = ChatMessage(
                     id = UUID.randomUUID().toString(),
                     threadId = threadId,
-                    senderId = "ai-tutor",
-                    senderName = "Guru AI",
+                    senderId = senderIdVal,
+                    senderName = senderTitle,
                     senderRole = "TEACHER",
                     content = replyText,
                     timestamp = now,
@@ -800,8 +824,8 @@ class ChatManager @Inject constructor(
                 firebaseRtdbManager.pushMessage(
                     threadId = threadId,
                     message = aiMsg,
-                    teacherId = "ai-tutor",
-                    teacherName = "Guru AI",
+                    teacherId = senderIdVal,
+                    teacherName = senderTitle,
                 )
                 _threads.value = _threads.value.map { thread ->
                     if (thread.id == threadId) {
@@ -811,9 +835,9 @@ class ChatManager @Inject constructor(
                             status = InquiryStatus.ANSWERED,
                             lastUpdated = now,
                             lastMessageContent = replyText,
-                            lastSenderName = "Guru AI",
+                            lastSenderName = senderTitle,
                             messageCount = updated.size,
-                            readStatusLabel = "Dijawab Guru AI",
+                            readStatusLabel = if (isPrincipalMode) "Dijawab AI Analitik" else "Dijawab Guru AI",
                         )
                     } else {
                         thread
@@ -831,21 +855,29 @@ class ChatManager @Inject constructor(
 
     fun getOrCreateAiThread(): ChatThread {
         val auth = cachedAuth
-        val studentId = auth?.userId ?: "student-default"
-        val studentName = auth?.name ?: "Siswa"
-        val studentClass = auth?.className ?: "Kelas"
-        val aiThreadId = "ai-tutor-$studentId"
+        val isPrincipal = auth?.isPrincipal == true || com.schoolos.android.core.auth.isPrincipalRole(auth?.role ?: "")
+        val studentId = auth?.userId ?: if (isPrincipal) "principal-default" else "student-default"
+        val studentName = auth?.name ?: if (isPrincipal) "Kepala PKBM" else "Siswa"
+        val studentClass = auth?.className ?: if (isPrincipal) "Manajerial" else "Kelas"
+        val aiThreadId = if (isPrincipal) "ai-principal-$studentId" else "ai-tutor-$studentId"
 
         val existing = _threads.value.find { it.id == aiThreadId }
         if (existing != null) return existing
 
+        val senderTitle = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Guru AI"
+        val initialContent = if (isPrincipal) {
+            "Halo Bapak/Ibu Kepala PKBM! 🏛️\n\nSaya **AI Analitik Kepala Sekolah** didukung komputasi cerdas NVIDIA AI.\n\nSaya siap menganalisis data operasional dan mutu akademik PKBM secara real-time:\n• **Keaktifan Guru/Tutor**: Pengunggahan materi/modul pembelajaran, penugasan mandiri warga belajar, & kuis asesmen CBT.\n• **Keterlaksanaan Pembelajaran**: Kehadiran warga belajar pada sesi tutorial & pemantauan jalannya rombel.\n• **Kualitas & Mutu Akademik**: Analisis ketercapaian KKTP rombel serta deteksi dini warga belajar butuh intervensi (Early Warning System).\n\nSilakan ajukan telaah analitik atau gunakan tombol pintasan di bawah ini!"
+        } else {
+            "Halo ${studentName.substringBefore(" ")}! 👋 Saya Guru AI (Asisten Belajar Pintar didukung NVIDIA AI).\n\nAda materi, rumus, konsep, atau tugas yang ingin kamu tanyakan hari ini? Ketik pertanyaanmu atau kirimkan foto soal/materi ya!"
+        }
+
         val initialAiMessage = ChatMessage(
-            id = "ai-welcome-$studentId",
+            id = if (isPrincipal) "ai-welcome-principal-$studentId" else "ai-welcome-$studentId",
             threadId = aiThreadId,
-            senderId = "ai-tutor",
-            senderName = "Guru AI",
+            senderId = if (isPrincipal) "ai-principal" else "ai-tutor",
+            senderName = senderTitle,
             senderRole = "TEACHER",
-            content = "Halo ${studentName.substringBefore(" ")}! 👋 Saya Guru AI (Asisten Belajar Pintar didukung NVIDIA AI).\n\nAda materi, rumus, konsep, atau tugas yang ingin kamu tanyakan hari ini? Ketik pertanyaanmu atau kirimkan foto soal/materi ya!",
+            content = initialContent,
             timestamp = System.currentTimeMillis(),
             isFromTeacher = true,
             isRead = true,
@@ -856,19 +888,19 @@ class ChatManager @Inject constructor(
             studentId = studentId,
             studentName = studentName,
             studentClass = studentClass,
-            teacherId = "ai-tutor",
-            teacherName = "Guru AI (NVIDIA NIM)",
-            subjectName = "Tanya AI",
+            teacherId = if (isPrincipal) "ai-principal" else "ai-tutor",
+            teacherName = if (isPrincipal) "AI Analitik Kepala Sekolah (NVIDIA NIM)" else "Guru AI (NVIDIA NIM)",
+            subjectName = if (isPrincipal) "Supervisi & Analitik PKBM" else "Tanya AI",
             inquiryType = InquiryType.GENERAL,
-            referenceTitle = "Asisten Belajar Pintar 24 Jam",
+            referenceTitle = if (isPrincipal) "Asisten Eksekutif Supervisi & Analitik Real-Time" else "Asisten Belajar Pintar 24 Jam",
             referenceId = null,
             messages = listOf(initialAiMessage),
             status = InquiryStatus.ANSWERED,
             lastUpdated = System.currentTimeMillis(),
             lastMessageContent = initialAiMessage.content,
-            lastSenderName = "Guru AI",
+            lastSenderName = senderTitle,
             messageCount = 1,
-            readStatusLabel = "Siap Menjawab 24 Jam",
+            readStatusLabel = if (isPrincipal) "Siap Menganalisis Real-Time" else "Siap Menjawab 24 Jam",
             teacherLastReadAt = System.currentTimeMillis(),
         )
 

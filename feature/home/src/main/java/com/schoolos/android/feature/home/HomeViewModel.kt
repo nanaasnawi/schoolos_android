@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.auth.AuthState
+import com.schoolos.android.core.chat.ChatManager
 import com.schoolos.android.core.notification.TeacherScheduleReminderManager
 import com.schoolos.android.core.reading.ReadingHistoryManager
 import com.schoolos.android.domain.model.AcademicClass
@@ -134,6 +135,7 @@ class HomeViewModel @Inject constructor(
     private val firebaseRtdbManager: com.schoolos.android.core.firebase.FirebaseRealtimeDatabaseManager,
     private val gamificationRepository: com.schoolos.android.domain.repository.GamificationRepository,
     private val analyticsRepository: AnalyticsRepository,
+    private val chatManager: ChatManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(HomeUiState())
@@ -712,6 +714,7 @@ class HomeViewModel @Inject constructor(
             academicRepository.getSubjects().onSuccess { subjects ->
                 _state.update { it.copy(teacherSubjects = subjects) }
             }
+            syncPrincipalAiContext(_state.value)
         } else if (isTeacher) {
             // Fetch total registered students across school from Railway PostgreSQL
             academicRepository.getClassStudents("ALL").onSuccess { students ->
@@ -966,4 +969,33 @@ class HomeViewModel @Inject constructor(
     fun logout() {
         viewModelScope.launch { authRepository.logout() }
     }
+
+    private fun syncPrincipalAiContext(state: HomeUiState) {
+        val metrics = state.schoolHealthMetrics
+        val stability = metrics?.stabilityScore ?: 0
+        val level = metrics?.stabilityLevel?.name ?: "STABLE"
+        val attendance = metrics?.attendanceRate?.toInt() ?: 0
+        val compliance = metrics?.complianceRate?.toInt() ?: 0
+        val mastery = metrics?.academicMasteryRate?.toInt() ?: 0
+        val anomalies = metrics?.anomalies?.joinToString("; ") { "${it.title}: ${it.description ?: ""}" }?.takeIf { it.isNotBlank() } ?: "Nihil (Kondusif)"
+        val sessions = state.todaySessions
+        val liveCount = sessions.count { it.status.equals("active", ignoreCase = true) }
+
+        val summary = """
+- Indeks Stabilitas PKBM: $stability% ($level)
+- Tingkat Kehadiran Warga Belajar: $attendance%
+- Keterlaksanaan Sesi Pembelajaran: $compliance%
+- Ketercapaian Target KKTP: $mastery%
+- Total Warga Belajar Terdaftar: ${state.totalStudentsCount} orang
+- Total Rombel Aktif: ${state.teacherClasses.size} rombel
+- Modul Pembelajaran Terunggah: ${state.teacherMaterialsCount} modul
+- Penugasan Mandiri Aktif: ${state.teacherPendingCount} tugas
+- Kuis & Ujian CBT Aktif: ${state.teacherQuizzesCount} asesmen
+- Sesi Tutorial Hari Ini: ${sessions.size} sesi ($liveCount sesi berlangsung LIVE)
+- Deteksi Early Warning & Anomali: $anomalies
+""".trimIndent()
+
+        chatManager.setPrincipalContext(summary)
+    }
+
 }

@@ -124,7 +124,8 @@ fun ChatDetailScreen(
     val threads by chatManager.threads.collectAsState()
     val thread = threads.find { it.id == threadId }
 
-    val isAiThread = threadId.startsWith("ai-tutor") || thread?.teacherName?.contains("Guru AI") == true
+    val isPrincipalAi = threadId.startsWith("ai-principal") || thread?.teacherName?.contains("Kepala Sekolah") == true || initialRecipientName.contains("Kepala Sekolah")
+    val isAiThread = threadId.startsWith("ai-tutor") || threadId.startsWith("ai-principal") || thread?.teacherName?.contains("Guru AI") == true || isPrincipalAi
     var isAiThinking by remember { mutableStateOf(false) }
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var isUploadingImage by remember { mutableStateOf(false) }
@@ -176,7 +177,9 @@ fun ChatDetailScreen(
         }
     }
 
-    val contactName = if (isTeacherMode) {
+    val contactName = if (isPrincipalAi) {
+        "AI Analitik Kepala Sekolah"
+    } else if (isTeacherMode) {
         thread?.studentName?.ifBlank { null } ?: initialRecipientName.ifBlank { null } ?: "Siswa"
     } else {
         val tName = thread?.teacherName
@@ -190,14 +193,16 @@ fun ChatDetailScreen(
     }
     val contactInitial = contactName.trim().take(1).uppercase().ifBlank { "?" }
     val statusText = if (isParticipantOnline) "Aktif" else "Tidak Aktif"
-    val contactSubtitle = if (isAiThread) {
+    val contactSubtitle = if (isPrincipalAi) {
+        "Asisten Eksekutif Supervisi & Analitik Real-Time • NVIDIA NIM"
+    } else if (isAiThread) {
         "Asisten Pintar 24 Jam • NVIDIA NIM"
     } else if (isTeacherMode) {
         "Siswa • ${thread?.studentClass?.ifBlank { "Rombel" } ?: "Rombel"} • $statusText"
     } else {
         "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • $statusText"
     }
-    val roleNeon = if (isTeacherMode) StudentNeon else TeacherNeon
+    val roleNeon = if (isPrincipalAi) Color(0xFF8B5CF6) else if (isTeacherMode) StudentNeon else TeacherNeon
 
     val rawAvatarUrl = if (isTeacherMode) thread?.studentAvatarUrl else thread?.teacherAvatarUrl
     val fullAvatarUrl = remember(rawAvatarUrl) {
@@ -226,7 +231,7 @@ fun ChatDetailScreen(
         Column(
             modifier = modifier
                 .fillMaxSize()
-                .background(CosmicBlack)
+                .background(if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC))
                 .statusBarsPadding()
                 .padding(24.dp),
             verticalArrangement = Arrangement.Center,
@@ -262,7 +267,7 @@ fun ChatDetailScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(CosmicBlack),
+            .background(if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)),
     ) {
         // ── 1. TOP BAR ────────────────────────────────────────────────────
         Column(
@@ -287,13 +292,27 @@ fun ChatDetailScreen(
                         modifier = Modifier
                             .size(42.dp)
                             .clip(CircleShape)
-                            .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE))
-                            .border(1.2.dp, if (isDark) Color(0xFF38BDF8).copy(alpha = 0.55f) else Color(0xFF0284C7).copy(alpha = 0.35f), CircleShape),
+                            .background(
+                                if (isPrincipalAi) {
+                                    if (isDark) Color(0xFF2E1065) else Color(0xFFEDE9FE)
+                                } else {
+                                    if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE)
+                                }
+                            )
+                            .border(
+                                1.2.dp,
+                                if (isPrincipalAi) {
+                                    if (isDark) Color(0xFF8B5CF6).copy(alpha = 0.65f) else Color(0xFF7C3AED).copy(alpha = 0.45f)
+                                } else {
+                                    if (isDark) Color(0xFF38BDF8).copy(alpha = 0.55f) else Color(0xFF0284C7).copy(alpha = 0.35f)
+                                },
+                                CircleShape
+                            ),
                         contentAlignment = Alignment.Center,
                     ) {
                         Image(
                             painter = painterResource(id = CoreR.drawable.mascot_akselerasi_edu),
-                            contentDescription = "Guru AI Akselerasi",
+                            contentDescription = if (isPrincipalAi) "AI Analitik Kepala Sekolah" else "Guru AI Akselerasi",
                             modifier = Modifier.size(32.dp),
                             contentScale = ContentScale.Fit
                         )
@@ -557,7 +576,7 @@ fun ChatDetailScreen(
                                         color = if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
                                     )
                                     Text(
-                                        text = "Guru AI sedang meracik penjelasan...",
+                                        text = if (isPrincipalAi) "AI Analitik sedang menganalisis data PKBM..." else "Guru AI sedang meracik penjelasan...",
                                         fontSize = 12.sp,
                                         color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA),
                                         fontWeight = FontWeight.Medium
@@ -584,6 +603,91 @@ fun ChatDetailScreen(
                     .height(1.dp)
                     .background(cardBorder),
             )
+
+            if (isAiThread) {
+                androidx.compose.foundation.lazy.LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (isPrincipalAi) {
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "📊 Evaluasi Keaktifan Guru",
+                                onClick = {
+                                    inputText = "Bagaimana keaktifan para guru/tutor dalam mengunggah modul pembelajaran dan memberikan penugasan mandiri minggu ini?"
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "📝 Rekap Tugas & Kuis CBT",
+                                onClick = {
+                                    inputText = "Bagaimana rekapitulasi penugasan mandiri dan asesmen CBT yang sedang aktif di seluruh rombel PKBM?"
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "⚠️ Analisis Early Warning",
+                                onClick = {
+                                    inputText = "Apakah ada anomali atau warga belajar yang terdeteksi berisiko (at-risk) yang memerlukan disposisi kepala sekolah?"
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "📈 Ketercapaian KKTP Rombel",
+                                onClick = {
+                                    inputText = "Bagaimana evaluasi ketuntasan KKTP dan tingkat presensi warga belajar pada sesi tutorial hari ini?"
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "💡 Rekomendasi Supervisi Guru",
+                                onClick = {
+                                    inputText = "Berikan rekomendasi taktis manajerial kepala sekolah untuk meningkatkan keterlaksanaan sesi belajar dan efektivitas tutor."
+                                }
+                            )
+                        }
+                    } else {
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "💡 Jelaskan Konsep",
+                                onClick = {
+                                    inputText = "Bisa tolong jelaskan konsep materi ini dengan bahasa yang mudah dipahami?"
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "📐 Rumus & Pembahasan",
+                                onClick = {
+                                    inputText = "Bagaimana rumus dan langkah-langkah penyelesaian untuk soal topik ini?"
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "📝 Ringkasan Poin Penting",
+                                onClick = {
+                                    inputText = "Tolong buatkan ringkasan poin-poin terpenting dari materi ini untuk persiapan ujian."
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "❓ Buat Soal Latihan",
+                                onClick = {
+                                    inputText = "Tolong berikan 3 contoh soal latihan beserta pembahasan jawabannya."
+                                }
+                            )
+                        }
+                    }
+                }
+            }
 
             // Attachment preview strip above input
             if (selectedImageUri != null) {
@@ -691,7 +795,7 @@ fun ChatDetailScreen(
                         decorationBox = { innerTextField ->
                             if (inputText.isEmpty()) {
                                 Text(
-                                    text = if (isAiThread) "Tanya apa saja ke Guru AI..." else "Ketik pesan...",
+                                    text = if (isPrincipalAi) "Tanya AI Analitik Kepala Sekolah..." else if (isAiThread) "Tanya apa saja ke Guru AI..." else "Ketik pesan...",
                                     fontSize = 14.sp,
                                     color = textTertiary,
                                 )
@@ -1469,5 +1573,32 @@ private fun TeacherDirectContactDialog(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun PrincipalChatSuggestionChip(
+    label: String,
+    onClick: () -> Unit,
+) {
+    val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFCBD5E1)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+
+    Box(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(innerCardBg)
+            .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.Medium,
+            color = textPrimary,
+        )
     }
 }

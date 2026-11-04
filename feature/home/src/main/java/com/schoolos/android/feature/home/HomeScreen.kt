@@ -129,9 +129,10 @@ fun HomeScreen(
                    }
 
     val roleAccent = when {
-        isTeacher -> TeacherNeon
-        isParent  -> ParentNeon
-        else      -> StudentNeon
+        isPrincipal -> Color(0xFF8B5CF6)
+        isTeacher   -> TeacherNeon
+        isParent    -> ParentNeon
+        else        -> StudentNeon
     }
 
     val avatarIcon = when {
@@ -183,13 +184,17 @@ fun HomeScreen(
                     .size(62.dp)
                     .border(
                         width = 1.5.dp,
-                        color = if (isDark) Color(0xFF38BDF8).copy(alpha = 0.55f) else Color(0xFF0284C7).copy(alpha = 0.35f),
+                        color = if (isPrincipal) {
+                            if (isDark) Color(0xFF8B5CF6).copy(alpha = 0.65f) else Color(0xFF8B5CF6).copy(alpha = 0.45f)
+                        } else {
+                            if (isDark) Color(0xFF38BDF8).copy(alpha = 0.55f) else Color(0xFF0284C7).copy(alpha = 0.35f)
+                        },
                         shape = CircleShape
                     )
             ) {
                 Image(
                     painter = painterResource(id = CoreR.drawable.mascot_akselerasi_edu),
-                    contentDescription = "Tanya Guru AI",
+                    contentDescription = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Tanya Guru AI",
                     modifier = Modifier.size(46.dp),
                     contentScale = androidx.compose.ui.layout.ContentScale.Fit
                 )
@@ -564,6 +569,7 @@ fun HomeScreen(
                             onNavigateToBroadcastCenter = onNavigateToBroadcastCenter,
                             onNavigateToLearning        = onNavigateToLearning,
                             onNavigateToRombelStudents  = onNavigateToRombelStudents,
+                            onNavigateToAiChat          = onNavigateToAiChat,
                             schoolClasses               = state.teacherClasses,
                             totalStudentsCount          = state.totalStudentsCount,
                             todaySessions               = state.todaySessions,
