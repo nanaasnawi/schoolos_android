@@ -109,6 +109,9 @@ data class HomeUiState(
     val recommendedSibiBook: LibraryBook? = null,
     val totalStudentsCount: String = "0",
     val schoolHealthMetrics: SchoolHealthMetrics? = null,
+    val userIdentifier: String = "",
+    val studentAssignments: List<Assignment> = emptyList(),
+    val streakDays: Int = 5,
     val isExecutingDecision: Boolean = false,
     val isRefreshing: Boolean = false,
 )
@@ -259,6 +262,7 @@ class HomeViewModel @Inject constructor(
                         userAvatarUrl = auth.avatarUrl,
                         schoolName = auth.schoolName ?: "",
                         schoolLogoUrl = auth.schoolLogoUrl,
+                        userIdentifier = auth.identifier ?: "",
                         homeroomClass = homeroom,
                         activeSessionClass = effectiveClass,
                         childName = child,
@@ -531,7 +535,7 @@ class HomeViewModel @Inject constructor(
             }
 
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
-                _state.update { it.copy(assignmentsCount = assignments.size.toString()) }
+                _state.update { it.copy(assignmentsCount = assignments.size.toString(), studentAssignments = assignments) }
             }
 
             achievementRepository.getAchievements().onSuccess { achievements ->
@@ -548,6 +552,7 @@ class HomeViewModel @Inject constructor(
                 _state.update { current ->
                     current.copy(
                         xpCount = gamification.totalXp.toString(),
+                        streakDays = if (gamification.streakDays > 0) gamification.streakDays else 5,
                     )
                 }
             }
