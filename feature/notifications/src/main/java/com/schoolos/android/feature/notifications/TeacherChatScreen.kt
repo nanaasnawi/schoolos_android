@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.notifications
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import com.schoolos.android.core.common.BuildConfig
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
@@ -11,6 +13,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,19 +38,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -77,23 +76,17 @@ import com.schoolos.android.core.chat.ChatThread
 import com.schoolos.android.core.chat.InquiryStatus
 import com.schoolos.android.core.chat.InquiryType
 import com.schoolos.android.core.designsystem.CosmicBlack
-import com.schoolos.android.core.designsystem.CosmicDark
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.core.designsystem.ExecutiveTopBar
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonError
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.NeonWarning
+import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.PullRefreshContainer
 import com.schoolos.android.core.designsystem.ShimmerList
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+
+enum class ChatSectionTab {
+    GURU,
+    AI
+}
 
 enum class ChatFilter {
     ALL,
@@ -111,17 +104,32 @@ fun TeacherChatScreen(
     onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val studentAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val activeRoleAccent = if (isTeacherMode) teacherAccent else studentAccent
+
     val rawThreads by chatManager.threads.collectAsState()
     val threads = remember(rawThreads, isTeacherMode, chatManager.currentAuth) {
-        if (!isTeacherMode) {
+        val userThreads = if (!isTeacherMode) {
             chatManager.filterThreadsForUser(rawThreads, chatManager.currentAuth)
         } else {
             rawThreads
         }
+        // Exclude AI thread from teacher consultation list so they are completely separated
+        userThreads.filterNot { it.id.startsWith("ai-tutor") }
     }
     val isLoading by chatManager.isLoading.collectAsState()
     val isOnline by chatManager.isOnline.collectAsState()
 
+    var activeSection by remember { mutableStateOf(ChatSectionTab.GURU) }
     var selectedFilter by remember { mutableStateOf(ChatFilter.ALL) }
     var searchQuery by remember { mutableStateOf("") }
     val focusManager = LocalFocusManager.current
@@ -178,9 +186,11 @@ fun TeacherChatScreen(
         topBar = {
             ExecutiveTopBar(
                 title = "Tanya Jawab",
-                subtitle = if (isTeacherMode) {
+                subtitle = if (activeSection == ChatSectionTab.AI) {
+                    "Guru AI Pembelajaran • Didukung NVIDIA NIM"
+                } else if (isTeacherMode) {
                     if (waitingCount > 0) "$waitingCount pertanyaan menunggu tanggapan"
-                    else "Semua pertanyaan telah terjawab"
+                    else "Semua pertanyaan siswa telah dijawab"
                 } else {
                     if (waitingCount > 0) "$waitingCount pertanyaan menunggu balasan guru"
                     else "Konsultasi materi & tugas bersama guru"
@@ -188,24 +198,23 @@ fun TeacherChatScreen(
                 onBack = onBack,
                 actions = {
                     if (!isOnline) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(NeonError.copy(alpha = 0.12f))
-                                .border(0.5.dp, NeonError.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 7.dp, vertical = 3.dp),
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) Color(0xFF4C0519) else Color(0xFFFEF2F2),
+                            border = BorderStroke(0.5.dp, if (isDark) Color(0xFFEF4444).copy(alpha = 0.5f) else Color(0xFFFECACA))
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
                                         .size(5.dp)
                                         .clip(CircleShape)
-                                        .background(NeonError),
+                                        .background(Color(0xFFEF4444))
                                 )
-                                Text("Offline", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = NeonError)
+                                Text("Offline", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFEF4444))
                             }
                         }
                     }
@@ -216,7 +225,7 @@ fun TeacherChatScreen(
                         Icon(
                             Icons.Default.Refresh,
                             contentDescription = "Muat Ulang",
-                            tint = TextSecondary,
+                            tint = textSecondary,
                             modifier = Modifier
                                 .size(18.dp)
                                 .rotate(if (isLoading) rotation else 0f),
@@ -237,229 +246,767 @@ fun TeacherChatScreen(
             Column(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // ── 1. UNIFIED STAT OVERVIEW ────────────────────────────────
-                ChatOverviewCard(
-                    totalCount = threads.size,
-                    waitingCount = waitingCount,
-                    contactCount = uniqueContacts,
-                    selectedFilter = selectedFilter,
-                    onFilterSelected = { selectedFilter = it },
-                    isTeacherMode = isTeacherMode,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                // ── 1. SEGMENTED SECTION TABS: [KONSULTASI GURU] | [TANYA GURU AI] ───
+                ChatSectionSegmentedControl(
+                    activeSection = activeSection,
+                    onSectionChanged = { activeSection = it },
+                    isDark = isDark,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    studentAccent = studentAccent,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
                 )
 
-                // ── 1.5. FEATURED TANYA GURU AI (NVIDIA NIM) ───────────────
-                TanyaAiBannerCard(
-                    onOpenAiChat = {
-                        val aiThread = chatManager.getOrCreateAiThread()
-                        onOpenThread(aiThread.id, "Guru AI (NVIDIA NIM)")
-                    },
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                )
-
-                // ── 2. SEARCH BAR ───────────────────────────────────────────
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 4.dp),
-                ) {
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                text = if (isTeacherMode) "Cari siswa, kelas, topik tugas/materi..."
-                                else "Cari nama guru, mata pelajaran, materi...",
-                                fontSize = 12.sp,
-                                color = TextTertiary,
-                            )
+                // ── 2. DEDICATED SECTION CONTENT ─────────────────────────────
+                if (activeSection == ChatSectionTab.AI) {
+                    // ── TAB GURU AI (DEDICATED HUB) ──────────────────────────
+                    AiTutorHubContent(
+                        onOpenAiChat = { prompt ->
+                            val aiThread = chatManager.getOrCreateAiThread()
+                            onOpenThread(aiThread.id, "Guru AI (NVIDIA NIM)")
                         },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Search,
-                                contentDescription = null,
-                                tint = TextTertiary,
-                                modifier = Modifier.size(18.dp),
-                            )
-                        },
-                        trailingIcon = {
-                            if (searchQuery.isNotBlank()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(
-                                        Icons.Default.Clear,
-                                        contentDescription = "Hapus",
-                                        tint = TextSecondary,
-                                        modifier = Modifier.size(16.dp),
-                                    )
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(12.dp),
-                        colors = OutlinedTextFieldDefaults.colors(
-                            focusedContainerColor = CosmicNavy,
-                            unfocusedContainerColor = CosmicNavy,
-                            focusedBorderColor = (if (isTeacherMode) TeacherNeon else StudentNeon).copy(alpha = 0.6f),
-                            unfocusedBorderColor = GlassBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                        ),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                        chatManager = chatManager,
+                        isDark = isDark,
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        innerCardBg = innerCardBg,
+                        innerCardBorder = innerCardBorder,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary,
+                        textTertiary = textTertiary,
+                        studentAccent = studentAccent
                     )
-                }
-
-                // ── 3. FILTER TABS (Only if meaningful content exists) ─────
-                val showFilterRow = threads.isNotEmpty()
-                if (showFilterRow) {
-                    Spacer(Modifier.height(4.dp))
-                    ChatFilterRow(
-                        selectedFilter = selectedFilter,
-                        onFilterSelected = { selectedFilter = it },
+                } else {
+                    // ── TAB KONSULTASI GURU (DEDICATED TEACHER CHAT) ──────────
+                    // A. Metric Overview
+                    ChatOverviewCard(
                         totalCount = threads.size,
                         waitingCount = waitingCount,
-                        assignmentCount = assignmentCount,
-                        materialCount = materialCount,
-                        answeredCount = answeredCount,
+                        contactCount = uniqueContacts,
+                        selectedFilter = selectedFilter,
+                        onFilterSelected = { selectedFilter = it },
+                        isTeacherMode = isTeacherMode,
+                        isDark = isDark,
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary,
+                        studentAccent = studentAccent,
+                        teacherAccent = teacherAccent,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
                     )
-                }
 
-                Spacer(Modifier.height(6.dp))
-
-                // ── 4. THREADS LIST CONTENT ─────────────────────────────────
-                AnimatedContent(
-                    targetState = when {
-                        isLoading && threads.isEmpty() -> "loading"
-                        filteredThreads.isEmpty()      -> "empty"
-                        else                           -> "list"
-                    },
-                    transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
-                    label = "chatContentTransition",
-                    modifier = Modifier.weight(1f),
-                ) { state ->
-                    when (state) {
-                        "loading" -> {
-                            ShimmerList(
-                                count = 5,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                            )
-                        }
-
-                        "empty" -> {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(horizontal = 24.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Column(
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                                ) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(56.dp)
-                                            .clip(RoundedCornerShape(16.dp))
-                                            .background(CosmicNavy)
-                                            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp)),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
+                    // B. Search Bar
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                    ) {
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            modifier = Modifier.fillMaxWidth(),
+                            placeholder = {
+                                Text(
+                                    text = if (isTeacherMode) "Cari siswa, kelas, topik tugas/materi..."
+                                    else "Cari nama guru, mata pelajaran, materi...",
+                                    fontSize = 12.5.sp,
+                                    color = textTertiary,
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    Icons.Default.Search,
+                                    contentDescription = null,
+                                    tint = textTertiary,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            },
+                            trailingIcon = {
+                                if (searchQuery.isNotBlank()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
                                         Icon(
-                                            imageVector = if (searchQuery.isNotBlank()) Icons.Default.Search else Icons.Default.Forum,
-                                            contentDescription = null,
-                                            tint = TextTertiary,
-                                            modifier = Modifier.size(26.dp),
+                                            Icons.Default.Clear,
+                                            contentDescription = "Hapus",
+                                            tint = textSecondary,
+                                            modifier = Modifier.size(16.dp),
                                         )
                                     }
-                                    Text(
-                                        text = if (searchQuery.isNotBlank()) "Tidak Ditemukan"
-                                        else if (selectedFilter != ChatFilter.ALL) "Tidak Ada Diskusi"
-                                        else "Belum Ada Tanya Jawab",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = TextPrimary,
-                                    )
-                                    Text(
-                                        text = if (searchQuery.isNotBlank())
-                                            "Tidak ada diskusi yang cocok dengan \"$searchQuery\""
-                                        else if (selectedFilter != ChatFilter.ALL)
-                                            "Tidak ada pertanyaan dalam kategori ini"
-                                        else if (isTeacherMode)
-                                            "Pertanyaan siswa seputar materi dan tugas akan muncul di sini"
-                                        else
-                                            "Ajukan pertanyaan kepada guru melalui halaman materi atau tugas",
-                                        fontSize = 12.sp,
-                                        color = TextSecondary,
-                                        textAlign = TextAlign.Center,
-                                    )
-                                    if (searchQuery.isNotBlank() || selectedFilter != ChatFilter.ALL) {
-                                        Spacer(Modifier.height(4.dp))
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(16.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedContainerColor = cardBg,
+                                unfocusedContainerColor = cardBg,
+                                focusedBorderColor = activeRoleAccent,
+                                unfocusedBorderColor = cardBorder,
+                                focusedTextColor = textPrimary,
+                                unfocusedTextColor = textPrimary,
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                        )
+                    }
+
+                    // C. Filter Tabs
+                    val showFilterRow = threads.isNotEmpty()
+                    if (showFilterRow) {
+                        Spacer(Modifier.height(4.dp))
+                        ChatFilterRow(
+                            selectedFilter = selectedFilter,
+                            onFilterSelected = { selectedFilter = it },
+                            totalCount = threads.size,
+                            waitingCount = waitingCount,
+                            assignmentCount = assignmentCount,
+                            materialCount = materialCount,
+                            answeredCount = answeredCount,
+                            isDark = isDark,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            textTertiary = textTertiary,
+                            studentAccent = studentAccent,
+                            cardBg = cardBg,
+                            cardBorder = cardBorder,
+                            innerCardBg = innerCardBg,
+                            innerCardBorder = innerCardBorder,
+                        )
+                    }
+
+                    Spacer(Modifier.height(6.dp))
+
+                    // D. Thread List Content
+                    AnimatedContent(
+                        targetState = when {
+                            isLoading && threads.isEmpty() -> "loading"
+                            filteredThreads.isEmpty()      -> "empty"
+                            else                           -> "list"
+                        },
+                        transitionSpec = { fadeIn(tween(180)) togetherWith fadeOut(tween(140)) },
+                        label = "chatContentTransition",
+                        modifier = Modifier.weight(1f),
+                    ) { state ->
+                        when (state) {
+                            "loading" -> {
+                                ShimmerList(
+                                    count = 5,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                                )
+                            }
+
+                            "empty" -> {
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 16.dp, vertical = 24.dp),
+                                    shape = RoundedCornerShape(22.dp),
+                                    color = cardBg,
+                                    border = BorderStroke(1.dp, cardBorder),
+                                    shadowElevation = if (isDark) 0.dp else 1.dp
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(28.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
                                         Box(
                                             modifier = Modifier
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(CosmicSurface2)
-                                                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
-                                                .clickable {
+                                                .size(52.dp)
+                                                .clip(RoundedCornerShape(16.dp))
+                                                .background(innerCardBg)
+                                                .border(1.dp, innerCardBorder, RoundedCornerShape(16.dp)),
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            Icon(
+                                                painter = painterResource(id = CoreR.drawable.ic_modern_chat),
+                                                contentDescription = null,
+                                                tint = studentAccent,
+                                                modifier = Modifier.size(24.dp),
+                                            )
+                                        }
+                                        Text(
+                                            text = if (searchQuery.isNotBlank()) "Tidak Ditemukan"
+                                            else if (selectedFilter != ChatFilter.ALL) "Tidak Ada Diskusi"
+                                            else "Belum Ada Tanya Jawab",
+                                            fontSize = 15.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textPrimary,
+                                        )
+                                        Text(
+                                            text = if (searchQuery.isNotBlank())
+                                                "Tidak ada diskusi yang cocok dengan \"$searchQuery\""
+                                            else if (selectedFilter != ChatFilter.ALL)
+                                                "Tidak ada pertanyaan dalam kategori ini"
+                                            else if (isTeacherMode)
+                                                "Pertanyaan siswa seputar materi dan tugas akan muncul di sini"
+                                            else
+                                                "Ajukan pertanyaan kepada bapak/ibu guru langsung melalui modul materi atau tugas pembelajaran.",
+                                            fontSize = 12.sp,
+                                            color = textSecondary,
+                                            textAlign = TextAlign.Center,
+                                            lineHeight = 17.sp
+                                        )
+                                        if (searchQuery.isNotBlank() || selectedFilter != ChatFilter.ALL) {
+                                            Spacer(Modifier.height(4.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(10.dp),
+                                                color = innerCardBg,
+                                                border = BorderStroke(1.dp, innerCardBorder),
+                                                modifier = Modifier.clickable {
                                                     searchQuery = ""
                                                     selectedFilter = ChatFilter.ALL
                                                 }
-                                                .padding(horizontal = 14.dp, vertical = 7.dp),
-                                        ) {
-                                            Text(
-                                                text = "Tampilkan Semua",
-                                                color = TextPrimary,
-                                                fontSize = 12.sp,
-                                                fontWeight = FontWeight.SemiBold,
-                                            )
+                                            ) {
+                                                Text(
+                                                    text = "Tampilkan Semua Diskusi",
+                                                    color = studentAccent,
+                                                    fontSize = 12.sp,
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
 
-                        else -> {
-                            val sortedThreads = remember(filteredThreads) {
-                                filteredThreads.sortedWith(
-                                    compareByDescending<ChatThread> { it.status == InquiryStatus.WAITING_REPLY }
-                                        .thenByDescending { it.lastUpdated }
-                                )
-                            }
-                            LazyColumn(
-                                modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(
-                                    start = 16.dp,
-                                    end = 16.dp,
-                                    top = 4.dp,
-                                    bottom = 96.dp,
-                                ),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                items(sortedThreads, key = { it.id }) { thread ->
-                                    ThreadCard(
-                                        thread = thread,
-                                        isTeacherMode = isTeacherMode,
-                                        onClick = {
-                                            val recipient = if (isTeacherMode) {
-                                                thread.studentName.ifBlank { "Siswa" }
-                                            } else {
-                                                if (thread.teacherName.isNotBlank() && !thread.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
-                                                    thread.teacherName
-                                                } else {
-                                                    "Guru Mata Pelajaran"
-                                                }
-                                            }
-                                            onOpenThread(thread.id, recipient)
-                                        },
+                            else -> {
+                                val sortedThreads = remember(filteredThreads) {
+                                    filteredThreads.sortedWith(
+                                        compareByDescending<ChatThread> { it.status == InquiryStatus.WAITING_REPLY }
+                                            .thenByDescending { it.lastUpdated }
                                     )
+                                }
+                                LazyColumn(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentPadding = PaddingValues(
+                                        start = 16.dp,
+                                        end = 16.dp,
+                                        top = 4.dp,
+                                        bottom = 96.dp,
+                                    ),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                                ) {
+                                    items(sortedThreads, key = { it.id }) { thread ->
+                                        ThreadCard(
+                                            thread = thread,
+                                            isTeacherMode = isTeacherMode,
+                                            isDark = isDark,
+                                            cardBg = cardBg,
+                                            cardBorder = cardBorder,
+                                            innerCardBg = innerCardBg,
+                                            innerCardBorder = innerCardBorder,
+                                            textPrimary = textPrimary,
+                                            textSecondary = textSecondary,
+                                            textTertiary = textTertiary,
+                                            studentAccent = studentAccent,
+                                            teacherAccent = teacherAccent,
+                                            onClick = {
+                                                val recipient = if (isTeacherMode) {
+                                                    thread.studentName.ifBlank { "Siswa" }
+                                                } else {
+                                                    if (thread.teacherName.isNotBlank() && !thread.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+                                                        thread.teacherName
+                                                    } else {
+                                                        "Guru Mata Pelajaran"
+                                                    }
+                                                }
+                                                onOpenThread(thread.id, recipient)
+                                            },
+                                        )
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+        }
+    }
+}
+
+// ── 1. SEGMENTED SECTION CONTROL: [KONSULTASI GURU] | [TANYA GURU AI] ─────────
+
+@Composable
+private fun ChatSectionSegmentedControl(
+    activeSection: ChatSectionTab,
+    onSectionChanged: (ChatSectionTab) -> Unit,
+    isDark: Boolean,
+    textPrimary: Color,
+    textSecondary: Color,
+    studentAccent: Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9),
+        border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            // Tab 1: Konsultasi Guru
+            val isGuruActive = activeSection == ChatSectionTab.GURU
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isGuruActive) (if (isDark) Color(0xFF27272A) else Color.White) else Color.Transparent)
+                    .border(
+                        1.dp,
+                        if (isGuruActive) (if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)) else Color.Transparent,
+                        RoundedCornerShape(12.dp)
+                    )
+                    .clickable { onSectionChanged(ChatSectionTab.GURU) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(7.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_modern_chat),
+                        contentDescription = null,
+                        tint = if (isGuruActive) (if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)) else textSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Konsultasi Guru",
+                        fontSize = 13.sp,
+                        fontWeight = if (isGuruActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isGuruActive) textPrimary else textSecondary
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(4.dp))
+
+            // Tab 2: Tanya Guru AI
+            val isAiActive = activeSection == ChatSectionTab.AI
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isAiActive) (if (isDark) Color(0xFF27272A) else Color.White) else Color.Transparent)
+                    .border(
+                        1.dp,
+                        if (isAiActive) (if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)) else Color.Transparent,
+                        RoundedCornerShape(12.dp)
+                    )
+                    .clickable { onSectionChanged(ChatSectionTab.AI) }
+                    .padding(vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(id = CoreR.drawable.ic_modern_ai),
+                        contentDescription = null,
+                        tint = if (isAiActive) studentAccent else textSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = "Tanya Guru AI",
+                        fontSize = 13.sp,
+                        fontWeight = if (isAiActive) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isAiActive) studentAccent else textSecondary
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(4.dp),
+                        color = if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7),
+                        border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFF86EFAC))
+                    ) {
+                        Text(
+                            text = "NVIDIA",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (isDark) Color(0xFF34D399) else Color(0xFF15803D),
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+// ── 2. DEDICATED AI TUTOR HUB CONTENT (SEPARATED SCREEN) ──────────────────────
+
+@Composable
+private fun AiTutorHubContent(
+    onOpenAiChat: (initialPrompt: String?) -> Unit,
+    chatManager: ChatManager,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
+    studentAccent: Color,
+) {
+    val rawThreads by chatManager.threads.collectAsState()
+    val aiThread = remember(rawThreads) {
+        rawThreads.firstOrNull { it.id.startsWith("ai-tutor") }
+    }
+
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        // ── HERO BANNER: GURU AI (NVIDIA NIM) ────────────────────────────────
+        item {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = if (isDark) 0.dp else 1.dp
+            ) {
+                Column(
+                    modifier = Modifier.padding(18.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Top tag: [NVIDIA NIM AI] [STATUS: ONLINE 24/7]
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFF86EFAC))
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isDark) Color(0xFF34D399) else Color(0xFF15803D))
+                                )
+                                Spacer(Modifier.width(5.dp))
+                                Text(
+                                    text = "NVIDIA NIM AI ACTIVE",
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFF34D399) else Color(0xFF15803D)
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = innerCardBg,
+                            border = BorderStroke(1.dp, innerCardBorder)
+                        ) {
+                            Text(
+                                text = "24 Jam Interaktif",
+                                fontSize = 10.5.sp,
+                                color = textSecondary,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    // Main Header Row
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE))
+                                .border(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD), RoundedCornerShape(12.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_ai),
+                                contentDescription = null,
+                                tint = studentAccent,
+                                modifier = Modifier.size(24.dp)
+                            )
+                        }
+
+                        Column {
+                            Text(
+                                text = "Guru AI Pintar",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary,
+                                letterSpacing = (-0.3).sp
+                            )
+                            Spacer(Modifier.height(1.dp))
+                            Text(
+                                text = "Asisten belajar kurikulum personal siap membantu materi & soalmu.",
+                                fontSize = 11.5.sp,
+                                color = textSecondary,
+                                lineHeight = 15.sp
+                            )
+                        }
+                    }
+
+                    // Primary CTA to launch chat
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .clickable { onOpenAiChat(null) },
+                        shape = RoundedCornerShape(12.dp),
+                        color = studentAccent,
+                        shadowElevation = if (isDark) 0.dp else 2.dp
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 12.dp, horizontal = 16.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_chat),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Mulai Diskusi dengan Guru AI",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(14.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // ── SECTION TITLE: TOPIK KONSULTASI CEPAT ────────────────────────────
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Panduan & Topik Pertanyaan Cepat",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary
+                )
+                Text(
+                    text = "Klik untuk tanyakan",
+                    fontSize = 11.sp,
+                    color = textTertiary
+                )
+            }
+        }
+
+        // ── 2x2 BENTO QUICK PROMPTS ──────────────────────────────────────────
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    AiPromptCard(
+                        emoji = "💡",
+                        title = "Konsep Materi",
+                        desc = "Jelaskan konsep topik yang belum dipahami secara tuntas",
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        innerCardBg = innerCardBg,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary,
+                        onClick = { onOpenAiChat("Tolong jelaskan konsep materi ini secara sederhana:") },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    AiPromptCard(
+                        emoji = "📐",
+                        title = "Rumus & Hitungan",
+                        desc = "Langkah demi langkah cara penyelesaian rumus sains & matematika",
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        innerCardBg = innerCardBg,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary,
+                        onClick = { onOpenAiChat("Bantu saya memecahkan rumus dan contoh soal berikut:") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    AiPromptCard(
+                        emoji = "📝",
+                        title = "Ringkas Catatan",
+                        desc = "Buatkan rangkuman poin-poin inti dari modul bab pelajaran",
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        innerCardBg = innerCardBg,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary,
+                        onClick = { onOpenAiChat("Mohon bantu ringkas poin penting materi berikut:") },
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    AiPromptCard(
+                        emoji = "🎯",
+                        title = "Latihan Tugas",
+                        desc = "Tips dan kerangka berpikir untuk menyelesaikan tugas mandiri",
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        innerCardBg = innerCardBg,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary,
+                        onClick = { onOpenAiChat("Berikan tips dan panduan untuk tugas ini:") },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
+        // ── ACTIVE AI SESSION CARD (IF EXISTS) ───────────────────────────────
+        if (aiThread != null && aiThread.messages.isNotEmpty()) {
+            item {
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(22.dp))
+                        .clickable { onOpenAiChat(null) },
+                    shape = RoundedCornerShape(22.dp),
+                    color = cardBg,
+                    border = BorderStroke(1.dp, cardBorder),
+                    shadowElevation = if (isDark) 0.dp else 1.dp
+                ) {
+                    Column(
+                        modifier = Modifier.padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Sesi Chat AI Terakhir",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = studentAccent
+                            )
+                            Text(
+                                text = formatTimeAgo(aiThread.lastUpdated),
+                                fontSize = 11.sp,
+                                color = textTertiary
+                            )
+                        }
+
+                        val lastMsg = aiThread.lastMessage
+                        if (lastMsg != null) {
+                            Text(
+                                text = lastMsg.content,
+                                fontSize = 12.5.sp,
+                                color = textSecondary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis,
+                                lineHeight = 17.sp
+                            )
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Lanjutkan Diskusi",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = studentAccent
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
+                                contentDescription = null,
+                                tint = studentAccent,
+                                modifier = Modifier.size(12.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AiPromptCard(
+    emoji: String,
+    title: String,
+    desc: String,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(18.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Text(text = emoji, fontSize = 20.sp)
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+            Text(
+                text = desc,
+                fontSize = 11.sp,
+                color = textSecondary,
+                lineHeight = 15.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }
@@ -474,43 +1021,54 @@ private fun ChatOverviewCard(
     selectedFilter: ChatFilter,
     onFilterSelected: (ChatFilter) -> Unit,
     isTeacherMode: Boolean,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    studentAccent: Color,
+    teacherAccent: Color,
     modifier: Modifier = Modifier,
 ) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
-            .padding(vertical = 10.dp, horizontal = 4.dp),
+    Surface(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp, horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             // 1. Total Diskusi
             OverviewStatItem(
                 value = "$totalCount",
                 label = "Total Diskusi",
-                valueColor = TextPrimary,
+                valueColor = textPrimary,
                 isSelected = selectedFilter == ChatFilter.ALL,
                 onClick = { onFilterSelected(ChatFilter.ALL) },
+                isDark = isDark,
                 modifier = Modifier.weight(1f),
             )
 
             // Divider
             Box(
                 modifier = Modifier
-                    .width(0.5.dp)
-                    .height(26.dp)
-                    .background(GlassBorder),
+                    .width(1.dp)
+                    .height(28.dp)
+                    .background(cardBorder),
             )
 
             // 2. Menunggu Respon
+            val warningColor = if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706)
+            val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
             OverviewStatItem(
                 value = "$waitingCount",
                 label = if (isTeacherMode) "Perlu Dibalas" else "Menunggu Jawaban",
-                valueColor = if (waitingCount > 0) NeonWarning else NeonSuccess,
+                valueColor = if (waitingCount > 0) warningColor else successColor,
                 hasWarningDot = waitingCount > 0,
                 isSelected = selectedFilter == ChatFilter.WAITING,
                 onClick = {
@@ -518,24 +1076,26 @@ private fun ChatOverviewCard(
                         if (selectedFilter == ChatFilter.WAITING) ChatFilter.ALL else ChatFilter.WAITING
                     )
                 },
+                isDark = isDark,
                 modifier = Modifier.weight(1f),
             )
 
             // Divider
             Box(
                 modifier = Modifier
-                    .width(0.5.dp)
-                    .height(26.dp)
-                    .background(GlassBorder),
+                    .width(1.dp)
+                    .height(28.dp)
+                    .background(cardBorder),
             )
 
             // 3. Kontak
             OverviewStatItem(
                 value = "$contactCount",
-                label = if (isTeacherMode) "Siswa Aktif" else "Guru",
-                valueColor = if (isTeacherMode) StudentNeon else TeacherNeon,
+                label = if (isTeacherMode) "Siswa Aktif" else "Guru Pengampu",
+                valueColor = if (isTeacherMode) studentAccent else teacherAccent,
                 isSelected = false,
                 onClick = {},
+                isDark = isDark,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -549,12 +1109,13 @@ private fun OverviewStatItem(
     valueColor: Color,
     isSelected: Boolean,
     onClick: () -> Unit,
+    isDark: Boolean,
     modifier: Modifier = Modifier,
     hasWarningDot: Boolean = false,
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(10.dp))
             .clickable(onClick = onClick)
             .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -566,7 +1127,7 @@ private fun OverviewStatItem(
         ) {
             Text(
                 text = value,
-                fontSize = 17.sp,
+                fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = valueColor,
             )
@@ -575,15 +1136,15 @@ private fun OverviewStatItem(
                     modifier = Modifier
                         .size(6.dp)
                         .clip(CircleShape)
-                        .background(NeonWarning),
+                        .background(if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706)),
                 )
             }
         }
         Text(
             text = label,
             fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (isSelected) TextPrimary else TextTertiary,
+            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+            color = if (isSelected) valueColor else if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B),
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -601,6 +1162,15 @@ private fun ChatFilterRow(
     assignmentCount: Int,
     materialCount: Int,
     answeredCount: Int,
+    isDark: Boolean,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
+    studentAccent: Color,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
     modifier: Modifier = Modifier,
 ) {
     LazyRow(
@@ -613,7 +1183,14 @@ private fun ChatFilterRow(
                 label = "Semua",
                 count = totalCount,
                 isSelected = selectedFilter == ChatFilter.ALL,
-                accentColor = TextPrimary,
+                accentColor = studentAccent,
+                isDark = isDark,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                cardBg = cardBg,
+                cardBorder = cardBorder,
+                innerCardBg = innerCardBg,
+                innerCardBorder = innerCardBorder,
                 onClick = { onFilterSelected(ChatFilter.ALL) },
             )
         }
@@ -623,7 +1200,14 @@ private fun ChatFilterRow(
                     label = "Menunggu Jawaban",
                     count = waitingCount,
                     isSelected = selectedFilter == ChatFilter.WAITING,
-                    accentColor = NeonWarning,
+                    accentColor = if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706),
+                    isDark = isDark,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
                     onClick = {
                         onFilterSelected(
                             if (selectedFilter == ChatFilter.WAITING) ChatFilter.ALL else ChatFilter.WAITING
@@ -638,7 +1222,14 @@ private fun ChatFilterRow(
                     label = "Tugas",
                     count = assignmentCount,
                     isSelected = selectedFilter == ChatFilter.ASSIGNMENT,
-                    accentColor = StudentNeon,
+                    accentColor = studentAccent,
+                    isDark = isDark,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
                     onClick = {
                         onFilterSelected(
                             if (selectedFilter == ChatFilter.ASSIGNMENT) ChatFilter.ALL else ChatFilter.ASSIGNMENT
@@ -653,7 +1244,14 @@ private fun ChatFilterRow(
                     label = "Materi",
                     count = materialCount,
                     isSelected = selectedFilter == ChatFilter.MATERIAL,
-                    accentColor = NeonBlue,
+                    accentColor = studentAccent,
+                    isDark = isDark,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
                     onClick = {
                         onFilterSelected(
                             if (selectedFilter == ChatFilter.MATERIAL) ChatFilter.ALL else ChatFilter.MATERIAL
@@ -668,7 +1266,14 @@ private fun ChatFilterRow(
                     label = "Dijawab",
                     count = answeredCount,
                     isSelected = selectedFilter == ChatFilter.ANSWERED,
-                    accentColor = NeonSuccess,
+                    accentColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A),
+                    isDark = isDark,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
                     onClick = {
                         onFilterSelected(
                             if (selectedFilter == ChatFilter.ANSWERED) ChatFilter.ALL else ChatFilter.ANSWERED
@@ -686,55 +1291,80 @@ private fun FilterPill(
     count: Int,
     isSelected: Boolean,
     accentColor: Color,
+    isDark: Boolean,
+    textPrimary: Color,
+    textSecondary: Color,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
     onClick: () -> Unit,
 ) {
-    val bg = if (isSelected) CosmicSurface2 else CosmicNavy
-    val borderCol = if (isSelected) GlassBorder2 else GlassBorder
+    val bg = if (isSelected) (if (isDark) Color(0xFF27272A) else Color(0xFF0F172A)) else cardBg
+    val borderCol = if (isSelected) (if (isDark) Color(0xFF3F3F46) else Color(0xFF0F172A)) else cardBorder
+    val textColor = if (isSelected) Color.White else textSecondary
 
-    Row(
+    Box(
         modifier = Modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(bg)
-            .border(0.5.dp, borderCol, RoundedCornerShape(8.dp))
+            .border(1.dp, borderCol, RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+            .padding(horizontal = 12.dp, vertical = 7.dp),
     ) {
-        Text(
-            text = label,
-            fontSize = 11.sp,
-            fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (isSelected) TextPrimary else TextSecondary,
-        )
-        Box(
-            modifier = Modifier
-                .clip(RoundedCornerShape(4.dp))
-                .background(if (isSelected) accentColor.copy(alpha = 0.16f) else CosmicDark)
-                .padding(horizontal = 5.dp, vertical = 1.dp),
-            contentAlignment = Alignment.Center,
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             Text(
-                text = "$count",
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isSelected) accentColor else TextTertiary,
+                text = label,
+                fontSize = 12.sp,
+                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                color = textColor,
             )
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(if (isSelected) (if (isDark) Color(0xFF3F3F46) else Color(0xFF334155)) else innerCardBg)
+                    .border(0.5.dp, if (isSelected) Color.Transparent else innerCardBorder, RoundedCornerShape(6.dp))
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = "$count",
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isSelected) Color.White else textSecondary,
+                )
+            }
         }
     }
 }
 
-// ── REDESIGNED CONVERSATION THREAD CARD ──────────────────────────────────────
+// ── REDESIGNED CONVERSATION THREAD CARD (22.dp ROUNDED, ADAPTIVE) ────────────
 
 @Composable
 private fun ThreadCard(
     thread: ChatThread,
     isTeacherMode: Boolean,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
+    studentAccent: Color,
+    teacherAccent: Color,
     onClick: () -> Unit,
 ) {
     val isWaiting = thread.status == InquiryStatus.WAITING_REPLY
     val isAnswered = thread.status == InquiryStatus.ANSWERED
     val isMaterial = thread.inquiryType == InquiryType.MATERIAL
+
+    val warningColor = if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706)
+    val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
 
     val contactName = if (isTeacherMode) {
         thread.studentName.ifBlank { "Siswa" }
@@ -763,26 +1393,29 @@ private fun ThreadCard(
     val avatarGradient = remember(thread.id) {
         val colorIndex = (thread.subjectName.hashCode() and 0x7FFFFFFF) % 4
         when (colorIndex) {
-            0 -> listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8)) // Blue
-            1 -> listOf(Color(0xFF10B981), Color(0xFF047857)) // Emerald
-            2 -> listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9)) // Violet
-            else -> listOf(Color(0xFFF59E0B), Color(0xFFD97706)) // Amber
+            0 -> listOf(Color(0xFF3B82F6), Color(0xFF1D4ED8))
+            1 -> listOf(Color(0xFF10B981), Color(0xFF047857))
+            2 -> listOf(Color(0xFF8B5CF6), Color(0xFF6D28D9))
+            else -> listOf(Color(0xFFF59E0B), Color(0xFFD97706))
         }
     }
 
-    val borderCol = if (isWaiting) NeonWarning.copy(alpha = 0.45f) else GlassBorder
-
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, borderCol, RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(
+            1.dp,
+            if (isWaiting) warningColor.copy(alpha = 0.5f) else cardBorder
+        ),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
         Column(
-            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
             // ── TOP ROW: AVATAR + CONTACT INFO + TIME & STATUS ──
             Row(
@@ -791,11 +1424,11 @@ private fun ThreadCard(
             ) {
                 // Avatar with presence / status badge
                 Box(
-                    modifier = Modifier.size(40.dp),
+                    modifier = Modifier.size(42.dp),
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(42.dp)
                             .clip(CircleShape)
                             .background(Brush.linearGradient(avatarGradient)),
                         contentAlignment = Alignment.Center,
@@ -821,7 +1454,7 @@ private fun ThreadCard(
                         } else {
                             Text(
                                 text = contactInitial,
-                                fontSize = 15.sp,
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = Color.White,
                             )
@@ -834,13 +1467,13 @@ private fun ThreadCard(
                                 .size(10.dp)
                                 .align(Alignment.BottomEnd)
                                 .clip(CircleShape)
-                                .background(NeonWarning)
-                                .border(1.5.dp, CosmicNavy, CircleShape),
+                                .background(warningColor)
+                                .border(1.5.dp, cardBg, CircleShape),
                         )
                     }
                 }
 
-                Spacer(Modifier.width(10.dp))
+                Spacer(Modifier.width(12.dp))
 
                 // Name + Class + Subject
                 Column(
@@ -849,9 +1482,9 @@ private fun ThreadCard(
                 ) {
                     Text(
                         text = contactName,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary,
+                        fontSize = 14.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
@@ -860,27 +1493,26 @@ private fun ThreadCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
-                        // Class/Role pill
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(CosmicSurface2)
-                                .padding(horizontal = 5.dp, vertical = 1.dp),
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = innerCardBg,
+                            border = BorderStroke(0.5.dp, innerCardBorder)
                         ) {
                             Text(
                                 text = if (isTeacherMode) thread.studentClass.ifBlank { "Siswa" } else "Guru",
-                                fontSize = 9.sp,
+                                fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextTertiary,
+                                color = textSecondary,
+                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                             )
                         }
 
-                        Text("•", fontSize = 8.sp, color = TextTertiary)
+                        Text("•", fontSize = 8.sp, color = textTertiary)
 
                         Text(
                             text = thread.subjectName.ifBlank { "Umum" },
-                            fontSize = 11.sp,
-                            color = TextTertiary,
+                            fontSize = 11.5.sp,
+                            color = textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -897,82 +1529,83 @@ private fun ThreadCard(
                     Text(
                         text = formatTimeAgo(thread.lastUpdated),
                         fontSize = 11.sp,
-                        color = TextTertiary,
+                        color = textTertiary,
                     )
 
                     if (isWaiting) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(NeonWarning.copy(alpha = 0.12f))
-                                .border(0.5.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) warningColor.copy(alpha = 0.15f) else Color(0xFFFEF3C7),
+                            border = BorderStroke(1.dp, if (isDark) warningColor.copy(alpha = 0.4f) else Color(0xFFFDE68A))
                         ) {
                             Text(
                                 text = "Menunggu Jawaban",
-                                fontSize = 9.sp,
+                                fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NeonWarning,
+                                color = if (isDark) warningColor else Color(0xFFB45309),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     } else if (isAnswered) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(NeonSuccess.copy(alpha = 0.12f))
-                                .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 6.dp, vertical = 2.dp),
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) successColor.copy(alpha = 0.15f) else Color(0xFFDCFCE7),
+                            border = BorderStroke(1.dp, if (isDark) successColor.copy(alpha = 0.4f) else Color(0xFF86EFAC))
                         ) {
                             Text(
                                 text = "Dijawab",
-                                fontSize = 9.sp,
+                                fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NeonSuccess,
+                                color = if (isDark) successColor else Color(0xFF15803D),
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                             )
                         }
                     }
                 }
             }
 
-            // ── CONTEXT CHIP (Single sleek line, no bulky box) ──
-            val refTagColor = if (isMaterial) NeonBlue else StudentNeon
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(CosmicSurface2)
-                    .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-                    .padding(horizontal = 8.dp, vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+            // ── CONTEXT CHIP (TOPIC) ──
+            val refTagColor = if (isMaterial) studentAccent else Color(0xFF8B5CF6)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(8.dp),
+                color = innerCardBg,
+                border = BorderStroke(1.dp, innerCardBorder)
             ) {
-                Icon(
-                    imageVector = if (isMaterial) Icons.AutoMirrored.Filled.MenuBook
-                    else Icons.AutoMirrored.Filled.Assignment,
-                    contentDescription = null,
-                    tint = refTagColor,
-                    modifier = Modifier.size(12.dp),
-                )
-                Text(
-                    text = if (isMaterial) "Materi" else "Tugas",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = refTagColor,
-                )
-                Text(
-                    text = "•",
-                    fontSize = 8.sp,
-                    color = TextTertiary,
-                )
-                Text(
-                    text = thread.referenceTitle.ifBlank { "Topik Diskusi" },
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = TextSecondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f),
-                )
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Icon(
+                        painter = painterResource(
+                            id = if (isMaterial) CoreR.drawable.ic_modern_book else CoreR.drawable.ic_modern_tasks
+                        ),
+                        contentDescription = null,
+                        tint = refTagColor,
+                        modifier = Modifier.size(13.dp),
+                    )
+                    Text(
+                        text = if (isMaterial) "Materi" else "Tugas",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = refTagColor,
+                    )
+                    Text(
+                        text = "•",
+                        fontSize = 8.sp,
+                        color = textTertiary,
+                    )
+                    Text(
+                        text = thread.referenceTitle.ifBlank { "Topik Diskusi" },
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
 
             // ── LATEST MESSAGE SNIPPET & FOOTER ──
@@ -997,13 +1630,13 @@ private fun ThreadCard(
                             text = senderPrefix,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (isWaiting) TextPrimary else TextTertiary,
+                            color = if (isWaiting) textPrimary else textTertiary,
                         )
                         Text(
                             text = lastMsg.content,
                             fontSize = 12.sp,
                             fontWeight = if (isWaiting) FontWeight.Medium else FontWeight.Normal,
-                            color = if (isWaiting) TextPrimary else TextSecondary,
+                            color = if (isWaiting) textPrimary else textSecondary,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -1012,7 +1645,7 @@ private fun ThreadCard(
                     Text(
                         text = "Belum ada pesan",
                         fontSize = 11.sp,
-                        color = TextTertiary,
+                        color = textTertiary,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -1025,14 +1658,14 @@ private fun ThreadCard(
                 ) {
                     Text(
                         text = "${thread.effectiveMessageCount} pesan",
-                        fontSize = 10.sp,
-                        color = TextTertiary,
+                        fontSize = 10.5.sp,
+                        color = textTertiary,
                     )
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                         contentDescription = "Buka",
-                        tint = TextTertiary,
-                        modifier = Modifier.size(12.dp),
+                        tint = textTertiary,
+                        modifier = Modifier.size(11.dp),
                     )
                 }
             }
@@ -1052,134 +1685,4 @@ private fun formatTimeAgo(timestamp: Long): String {
     if (days == 1L) return "Kemarin"
     if (days < 30) return "$days hr lalu"
     return "${days / 30} bln lalu"
-}
-
-@Composable
-private fun TanyaAiBannerCard(
-    onOpenAiChat: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color(0xFF111113))
-            .border(1.dp, Color(0xFF1F1F23), RoundedCornerShape(18.dp))
-            .clickable(onClick = onOpenAiChat)
-            .padding(14.dp)
-    ) {
-        Column {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF1E1B4B))
-                            .border(1.dp, Color(0xFF4338CA), RoundedCornerShape(10.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(text = "🤖", fontSize = 18.sp)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                            Text(
-                                text = "Tanya Guru AI",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White,
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFF047857).copy(alpha = 0.25f))
-                                    .border(0.5.dp, Color(0xFF10B981), RoundedCornerShape(6.dp))
-                                    .padding(horizontal = 5.dp, vertical = 2.dp)
-                            ) {
-                                Text(
-                                    text = "NVIDIA AI",
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF34D399),
-                                )
-                            }
-                        }
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = "Asisten belajar pintar 24 jam untuk konsultasi materi & rumus",
-                            fontSize = 11.sp,
-                            color = TextTertiary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                }
-
-                Spacer(Modifier.width(8.dp))
-
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF161618))
-                        .border(1.dp, Color(0xFF27272A), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 5.dp)
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "Tanya",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF818CF8)
-                        )
-                        Spacer(Modifier.width(3.dp))
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = Color(0xFF818CF8),
-                            modifier = Modifier.size(11.dp)
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(10.dp))
-
-            // Quick suggestion chips
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                val prompts = listOf(
-                    "💡 Konsep Materi",
-                    "📐 Rumus & Soal",
-                    "📝 Ringkas Catatan"
-                )
-                prompts.forEach { prompt ->
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF161618))
-                            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(8.dp))
-                            .clickable(onClick = onOpenAiChat)
-                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                    ) {
-                        Text(
-                            text = prompt,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextSecondary
-                        )
-                    }
-                }
-            }
-        }
-    }
 }

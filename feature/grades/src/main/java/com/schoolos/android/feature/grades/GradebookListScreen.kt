@@ -1,5 +1,8 @@
 package com.schoolos.android.feature.grades
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -7,10 +10,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Assessment
-import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +37,15 @@ fun GradebookListScreen(
     var selectedFilter by remember { mutableStateOf("Semua Mapel") }
     var selectedRowForDetail by remember { mutableStateOf<StudentGradebookRow?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
 
     val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
@@ -89,94 +99,90 @@ fun GradebookListScreen(
                 Column(modifier = Modifier.fillMaxSize()) {
                     // ── SEGMENTED TOP TABS (FOR TEACHER / PRINCIPAL) ─────────
                     if (isTeacher) {
-                        val isDark = LocalIsDarkTheme.current
-                        Row(
+                        Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 14.dp, vertical = 6.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(if (isDark) CosmicNavy else Color(0xFFF1F5F9))
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-                                .padding(4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                .padding(horizontal = 14.dp, vertical = 6.dp),
+                            shape = RoundedCornerShape(14.dp),
+                            color = cardBg,
+                            border = BorderStroke(0.5.dp, cardBorder)
                         ) {
-                            // Tab 0: Buku Nilai Siswa (Matches Web Dashboard)
-                            val isTab0 = state.activeTab == 0
-                            val tab0Bg = if (isTab0) {
-                                if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color.White
-                            } else Color.Transparent
-                            val tab0Border = if (isTab0) TeacherNeon else Color.Transparent
-
-                            Box(
+                            Row(
                                 modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(9.dp))
-                                    .background(tab0Bg)
-                                    .border(
+                                    .fillMaxWidth()
+                                    .padding(4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                // Tab 0: Buku Nilai Siswa (Matches Web Dashboard)
+                                val isTab0 = state.activeTab == 0
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.selectTab(0) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isTab0) {
+                                        if (isDark) TeacherNeon.copy(alpha = 0.22f) else TeacherContainer
+                                    } else Color.Transparent,
+                                    border = BorderStroke(
                                         if (isTab0) 1.dp else 0.dp,
-                                        tab0Border,
-                                        RoundedCornerShape(9.dp)
+                                        if (isTab0) TeacherNeon else Color.Transparent
                                     )
-                                    .clickable { viewModel.selectTab(0) }
-                                    .padding(vertical = 9.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Icon(
-                                        Icons.Default.MenuBook,
-                                        contentDescription = null,
-                                        tint = if (isTab0) TeacherNeon else TextTertiary,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Text(
-                                        "Buku Nilai Siswa (${state.totalStudentsCount})",
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isTab0) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isTab0) TeacherNeon else TextTertiary
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(vertical = 9.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_modern_book),
+                                            contentDescription = null,
+                                            tint = if (isTab0) TeacherNeon else textTertiary,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            "Buku Nilai Siswa (${state.totalStudentsCount})",
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isTab0) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isTab0) TeacherNeon else textTertiary
+                                        )
+                                    }
                                 }
-                            }
 
-                            // Tab 1: Rekap 18 Modul Overview
-                            val isTab1 = state.activeTab == 1
-                            val tab1Bg = if (isTab1) {
-                                if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color.White
-                            } else Color.Transparent
-                            val tab1Border = if (isTab1) TeacherNeon else Color.Transparent
-
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(9.dp))
-                                    .background(tab1Bg)
-                                    .border(
+                                // Tab 1: Rekap 18 Modul Overview
+                                val isTab1 = state.activeTab == 1
+                                Surface(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { viewModel.selectTab(1) },
+                                    shape = RoundedCornerShape(10.dp),
+                                    color = if (isTab1) {
+                                        if (isDark) TeacherNeon.copy(alpha = 0.22f) else TeacherContainer
+                                    } else Color.Transparent,
+                                    border = BorderStroke(
                                         if (isTab1) 1.dp else 0.dp,
-                                        tab1Border,
-                                        RoundedCornerShape(9.dp)
+                                        if (isTab1) TeacherNeon else Color.Transparent
                                     )
-                                    .clickable { viewModel.selectTab(1) }
-                                    .padding(vertical = 9.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Icon(
-                                        Icons.Default.Assessment,
-                                        contentDescription = null,
-                                        tint = if (isTab1) TeacherNeon else TextTertiary,
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                    Text(
-                                        "Rekap ${state.subjects.size} Modul",
-                                        fontSize = 12.sp,
-                                        fontWeight = if (isTab1) FontWeight.Bold else FontWeight.Medium,
-                                        color = if (isTab1) TeacherNeon else TextTertiary
-                                    )
+                                    Row(
+                                        modifier = Modifier.padding(vertical = 9.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(CoreR.drawable.ic_modern_grades),
+                                            contentDescription = null,
+                                            tint = if (isTab1) TeacherNeon else textTertiary,
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                        Spacer(Modifier.width(6.dp))
+                                        Text(
+                                            "Rekap ${state.subjects.size} Modul",
+                                            fontSize = 12.sp,
+                                            fontWeight = if (isTab1) FontWeight.Bold else FontWeight.Medium,
+                                            color = if (isTab1) TeacherNeon else textTertiary
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -202,23 +208,21 @@ fun GradebookListScreen(
                                     ) {
                                         items(dynamicCategories) { filter ->
                                             val isSelected = filter == selectedFilter
-                                            Box(
-                                                modifier = Modifier
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(if (isSelected) CosmicSurface2 else CosmicNavy)
-                                                    .border(
-                                                        0.5.dp,
-                                                        if (isSelected) GlassBorder2 else GlassBorder,
-                                                        RoundedCornerShape(8.dp),
-                                                    )
-                                                    .clickable { selectedFilter = filter }
-                                                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                                            Surface(
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = if (isSelected) innerCardBg else cardBg,
+                                                border = BorderStroke(
+                                                    0.5.dp,
+                                                    if (isSelected) StudentNeon else cardBorder
+                                                ),
+                                                modifier = Modifier.clickable { selectedFilter = filter }
                                             ) {
                                                 Text(
-                                                    filter,
+                                                    text = filter,
                                                     fontSize = 12.sp,
-                                                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                                    color = if (isSelected) TextPrimary else TextTertiary,
+                                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                    color = if (isSelected) StudentNeon else textTertiary,
+                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
                                                 )
                                             }
                                         }
@@ -315,23 +319,36 @@ fun GradebookListScreen(
 
 @Composable
 private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val gradedSubjects = subjects.filter { it.gradedComponentCount > 0 && it.finalScore > 0 }
     val avgScore = if (gradedSubjects.isEmpty()) 0.0 else gradedSubjects.map { it.finalScore }.average()
     val totalGraded = subjects.sumOf { it.gradedComponentCount }
     val totalComponents = subjects.sumOf { it.componentCount }
+    val passedCount = subjects.count { it.finalScore >= it.passingThreshold && it.finalScore > 0 }
 
     val statusText = if (gradedSubjects.isNotEmpty()) "Terdata" else "Belum Dinilai"
     val statusDesc = if (gradedSubjects.isNotEmpty()) "${gradedSubjects.size} dari ${subjects.size} Mapel Dinilai" else "Menunggu evaluasi modul"
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
-            .padding(14.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(0.5.dp, cardBorder)
     ) {
-        Column {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -339,80 +356,128 @@ private fun StudentGradeHeroHeader(subjects: List<SubjectGradeSummary>) {
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(6.dp)
+                            .clip(CircleShape)
+                            .background(StudentNeon)
+                    )
                     Text(
                         "CAPAIAN MODUL BELAJAR",
-                        color = TextSecondary,
-                        fontSize = 10.sp,
+                        color = textTertiary,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        letterSpacing = 0.6.sp
+                        letterSpacing = 0.8.sp
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(if (gradedSubjects.isNotEmpty()) StudentNeon.copy(alpha = 0.12f) else CosmicSurface2)
-                        .border(0.5.dp, if (gradedSubjects.isNotEmpty()) StudentNeon.copy(alpha = 0.25f) else GlassBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (gradedSubjects.isNotEmpty()) StudentNeon.copy(alpha = 0.12f) else innerCardBg,
+                    border = BorderStroke(0.5.dp, if (gradedSubjects.isNotEmpty()) StudentNeon.copy(alpha = 0.35f) else innerCardBorder)
                 ) {
                     Text(
                         statusText,
-                        color = if (gradedSubjects.isNotEmpty()) StudentNeon else TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold
+                        color = if (gradedSubjects.isNotEmpty()) StudentNeon else textTertiary,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
             }
 
-            Spacer(Modifier.height(10.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column {
+                    Text(
+                        text = if (gradedSubjects.isNotEmpty()) "%.1f".format(java.util.Locale.US, avgScore) else "—",
+                        color = textPrimary,
+                        fontSize = 36.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = (-1).sp,
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        text = statusDesc,
+                        color = textTertiary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Normal
+                    )
+                }
 
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    text = if (gradedSubjects.isNotEmpty()) "%.1f".format(java.util.Locale.US, avgScore) else "—",
-                    color = TextPrimary,
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    letterSpacing = (-1).sp,
-                )
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = statusDesc,
-                    color = TextTertiary,
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Normal,
-                    modifier = Modifier.padding(bottom = 4.dp)
-                )
+                if (gradedSubjects.isNotEmpty()) {
+                    Surface(
+                        shape = RoundedCornerShape(10.dp),
+                        color = NeonSuccess.copy(alpha = 0.12f),
+                        border = BorderStroke(0.5.dp, NeonSuccess.copy(alpha = 0.3f))
+                    ) {
+                        Text(
+                            text = "$passedCount Tuntas KKTP",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonSuccess,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                        )
+                    }
+                }
             }
 
-            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp)
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                GradeMetricPill("${subjects.size} Mapel", Modifier.weight(1f))
-                GradeMetricPill("$totalGraded / $totalComponents Dinilai", Modifier.weight(1.5f))
+                GradeMetricPill(
+                    label = "Total Mapel",
+                    value = "${subjects.size} Mapel",
+                    bg = innerCardBg,
+                    border = innerCardBorder,
+                    textColor = textPrimary,
+                    subColor = textTertiary,
+                    modifier = Modifier.weight(1f)
+                )
+                GradeMetricPill(
+                    label = "Capaian Asesmen",
+                    value = "$totalGraded / $totalComponents Dinilai",
+                    bg = innerCardBg,
+                    border = innerCardBorder,
+                    textColor = textPrimary,
+                    subColor = textTertiary,
+                    modifier = Modifier.weight(1.4f)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun GradeMetricPill(text: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(6.dp))
-            .background(CosmicSurface2)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-            .padding(vertical = 6.dp, horizontal = 8.dp),
-        contentAlignment = Alignment.Center
+private fun GradeMetricPill(
+    label: String,
+    value: String,
+    bg: Color,
+    border: Color,
+    textColor: Color,
+    subColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier,
+        shape = RoundedCornerShape(12.dp),
+        color = bg,
+        border = BorderStroke(0.5.dp, border)
     ) {
-        Text(text, color = TextSecondary, fontSize = 11.sp, fontWeight = FontWeight.Medium)
+        Column(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(label, color = subColor, fontSize = 10.sp, fontWeight = FontWeight.Medium)
+            Text(value, color = textColor, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+        }
     }
 }

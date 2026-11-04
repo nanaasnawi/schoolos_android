@@ -1,8 +1,11 @@
 package com.schoolos.android.feature.progress
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -40,6 +43,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -198,7 +202,7 @@ private fun ProgressContent(
                     total = progress.lessonTotal,
                     insight = lessonInsight,
                     color = StudentNeon,
-                    icon = Icons.Default.Book,
+                    iconRes = CoreR.drawable.ic_modern_book,
                 )
             }
             item {
@@ -208,7 +212,7 @@ private fun ProgressContent(
                     total = progress.assignmentTotal,
                     insight = assignmentInsight,
                     color = NeonBlue,
-                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    iconRes = CoreR.drawable.ic_modern_tasks,
                 )
             }
             item {
@@ -218,7 +222,7 @@ private fun ProgressContent(
                     total = progress.sessionTotal,
                     insight = sessionInsight,
                     color = NeonSuccess,
-                    icon = Icons.Default.CalendarMonth,
+                    iconRes = CoreR.drawable.ic_modern_calendar,
                 )
             }
 
@@ -256,7 +260,7 @@ private fun ProgressContent(
                         completed = progress.lessonCompleted,
                         total = progress.lessonTotal,
                         subtitle = lessonSub,
-                        icon = Icons.Default.Book,
+                        iconRes = CoreR.drawable.ic_modern_book,
                         color = StudentNeon,
                         onClick = onNavigateToMaterials,
                         modifier = Modifier.weight(1f),
@@ -267,7 +271,7 @@ private fun ProgressContent(
                         completed = progress.assignmentCompleted,
                         total = progress.assignmentTotal,
                         subtitle = assignmentSub,
-                        icon = Icons.AutoMirrored.Filled.Assignment,
+                        iconRes = CoreR.drawable.ic_modern_tasks,
                         color = NeonBlue,
                         onClick = onNavigateToAssignments,
                         modifier = Modifier.weight(1f),
@@ -291,7 +295,7 @@ private fun ProgressContent(
                         completed = progress.quizCompleted,
                         total = progress.quizTotal,
                         subtitle = quizSub,
-                        icon = Icons.Default.Quiz,
+                        iconRes = CoreR.drawable.ic_modern_quiz,
                         color = NeonSuccess,
                         onClick = onNavigateToQuizzes,
                         modifier = Modifier.weight(1f),
@@ -302,7 +306,7 @@ private fun ProgressContent(
                         completed = progress.sessionAttended,
                         total = progress.sessionTotal,
                         subtitle = sessionSub,
-                        icon = Icons.Default.CalendarMonth,
+                        iconRes = CoreR.drawable.ic_modern_calendar,
                         color = NeonWarning,
                         onClick = null,
                         modifier = Modifier.weight(1f),
@@ -375,6 +379,15 @@ private fun SectionHeaderLabel(
 
 @Composable
 private fun StudentProgressHeroCard(progress: Progress) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val pct = (progress.overallProgress / 100.0).toFloat().coerceIn(0f, 1f)
 
     var animTarget by remember { mutableFloatStateOf(0f) }
@@ -390,7 +403,6 @@ private fun StudentProgressHeroCard(progress: Progress) {
         else if (progress.overallProgress >= 60.0) "Baik & Konsisten"
         else "Perlu Penguatan"
 
-    val isDark = LocalIsDarkTheme.current
     val statusColor = if (progress.overallProgress >= 80.0) {
         if (isDark) NeonSuccess else Color(0xFF047857)
     } else if (progress.overallProgress >= 60.0) {
@@ -399,30 +411,23 @@ private fun StudentProgressHeroCard(progress: Progress) {
         if (isDark) NeonWarning else Color(0xFFB45309)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(
-                Brush.linearGradient(
-                    listOf(
-                        CosmicNavy,
-                        CosmicSurface2.copy(alpha = 0.85f),
-                    )
-                )
-            )
-            .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
-            .padding(18.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(0.5.dp, cardBorder)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "AKUMULASI KETUNTASAN",
-                    color = TextTertiary,
+                    color = textTertiary,
                     fontSize = 10.sp,
                     fontWeight = FontWeight.ExtraBold,
                     letterSpacing = 0.8.sp,
@@ -434,31 +439,30 @@ private fun StudentProgressHeroCard(progress: Progress) {
                     text = progress.subjectName.ifEmpty { "Kurikulum 2026" },
                     fontWeight = FontWeight.Black,
                     fontSize = 18.sp,
-                    color = TextPrimary,
+                    color = textPrimary,
                     lineHeight = 22.sp,
                 )
 
                 Text(
                     text = progress.className?.let { "Kelas $it • Semester Berjalan" } ?: "Akumulasi Akademik Siswa",
                     fontSize = 11.sp,
-                    color = TextSecondary,
+                    color = textSecondary,
                     fontWeight = FontWeight.Normal,
                 )
 
                 Spacer(Modifier.height(10.dp))
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(statusColor.copy(alpha = 0.12f))
-                        .border(1.dp, statusColor.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = statusColor.copy(alpha = 0.12f),
+                    border = BorderStroke(0.5.dp, statusColor.copy(alpha = 0.35f))
                 ) {
                     Text(
                         text = "Status: $statusText",
                         color = statusColor,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                     )
                 }
             }
@@ -466,7 +470,7 @@ private fun StudentProgressHeroCard(progress: Progress) {
             Spacer(Modifier.width(14.dp))
 
             // Animated Circular Ring with Dual Gradient
-            val trackColor = GlassBorder2
+            val trackColor = innerCardBg
             val neonBlue = NeonBlue
             val studentNeon = StudentNeon
             Box(
@@ -481,7 +485,7 @@ private fun StudentProgressHeroCard(progress: Progress) {
 
                     // Background track
                     drawArc(
-                        color = trackColor.copy(alpha = 0.45f),
+                        color = trackColor,
                         startAngle = -90f,
                         sweepAngle = 360f,
                         useCenter = false,
@@ -510,14 +514,14 @@ private fun StudentProgressHeroCard(progress: Progress) {
                         text = "${(animatedPct * 100).toInt()}%",
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Black,
-                        color = TextPrimary,
+                        color = textPrimary,
                         letterSpacing = (-0.5).sp,
                     )
                     Text(
                         text = "Tuntas",
                         fontSize = 9.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = TextTertiary,
+                        color = textTertiary,
                     )
                 }
             }
@@ -531,7 +535,8 @@ private fun StudentBentoProgressTile(
     completed: Int,
     total: Int,
     subtitle: String,
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
     color: Color,
     onClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -548,6 +553,14 @@ private fun StudentBentoProgressTile(
     LaunchedEffect(pct) { animTarget = pct }
 
     val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val badgeTextColor = when (color) {
         NeonSuccess -> if (isDark) NeonSuccess else Color(0xFF047857)
         NeonWarning -> if (isDark) NeonWarning else Color(0xFFB45309)
@@ -555,15 +568,15 @@ private fun StudentBentoProgressTile(
         else -> if (isDark) color else Color(0xFF4338CA)
     }
 
-    Box(
+    Surface(
         modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(14.dp),
+            .clip(RoundedCornerShape(20.dp))
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        shape = RoundedCornerShape(20.dp),
+        color = cardBg,
+        border = BorderStroke(0.5.dp, cardBorder)
     ) {
-        Column {
+        Column(modifier = Modifier.padding(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -571,31 +584,40 @@ private fun StudentBentoProgressTile(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(color.copy(alpha = if (isDark) 0.14f else 0.10f))
-                        .border(1.dp, color.copy(alpha = if (isDark) 0.35f else 0.22f), RoundedCornerShape(10.dp)),
+                        .size(38.dp)
+                        .clip(RoundedCornerShape(11.dp))
+                        .background(innerCardBg)
+                        .border(0.5.dp, innerCardBorder, RoundedCornerShape(11.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = icon,
-                        contentDescription = null,
-                        tint = color,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    if (iconRes != null) {
+                        Icon(
+                            painter = painterResource(iconRes),
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    } else if (icon != null) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = color,
+                            modifier = Modifier.size(19.dp)
+                        )
+                    }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(color.copy(alpha = if (isDark) 0.12f else 0.08f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = color.copy(alpha = if (isDark) 0.12f else 0.08f),
+                    border = BorderStroke(0.5.dp, color.copy(alpha = 0.25f))
                 ) {
                     Text(
                         text = "${(pct * 100).toInt()}%",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         color = badgeTextColor,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                     )
                 }
             }
@@ -606,7 +628,7 @@ private fun StudentBentoProgressTile(
                 text = title,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
             )
@@ -624,7 +646,7 @@ private fun StudentBentoProgressTile(
                     text = " / $total",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextTertiary,
+                    color = textTertiary,
                     modifier = Modifier.padding(bottom = 2.dp, start = 2.dp),
                 )
             }
@@ -637,7 +659,7 @@ private fun StudentBentoProgressTile(
                     .fillMaxWidth()
                     .height(4.dp)
                     .clip(CircleShape)
-                    .background(color.copy(alpha = 0.12f)),
+                    .background(innerCardBg),
             ) {
                 Box(
                     modifier = Modifier
@@ -653,7 +675,7 @@ private fun StudentBentoProgressTile(
             Text(
                 text = subtitle,
                 fontSize = 10.sp,
-                color = TextSecondary,
+                color = textSecondary,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -668,29 +690,35 @@ private fun StudentActionableInsightsCard(
     onNavigateToAssignments: (() -> Unit)? = null,
     onNavigateToMaterials: (() -> Unit)? = null,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val missingAssignments = (progress.assignmentTotal - progress.assignmentCompleted).coerceAtLeast(0)
     val missingLessons = (progress.lessonTotal - progress.lessonCompleted).coerceAtLeast(0)
     val sessionPct = if (progress.sessionTotal > 0) (progress.sessionAttended * 100 / progress.sessionTotal) else 100
 
-    val isDark = LocalIsDarkTheme.current
     val errorColor = if (isDark) NeonError else Color(0xFFDC2626)
     val successColor = if (isDark) NeonSuccess else Color(0xFF047857)
     val lessonColor = if (isDark) StudentNeon else Color(0xFF4338CA)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
-            .padding(16.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(0.5.dp, cardBorder)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
 
             // Item 1: Prioritas Tugas
             if (missingAssignments > 0) {
                 InsightRow(
-                    icon = Icons.AutoMirrored.Filled.Assignment,
+                    iconRes = CoreR.drawable.ic_modern_tasks,
                     iconColor = errorColor,
                     title = "$missingAssignments Tugas Perlu Diselesaikan",
                     description = "Ada tugas aktif yang belum dikumpulkan. Selesaikan sebelum tenggat untuk menjaga ketuntasan KKTP.",
@@ -708,12 +736,12 @@ private fun StudentActionableInsightsCard(
                 )
             }
 
-            HorizontalDivider(color = GlassBorder.copy(alpha = 0.4f), thickness = 0.6.dp)
+            HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp)
 
             // Item 2: Penguatan Materi
             if (missingLessons > 0) {
                 InsightRow(
-                    icon = Icons.Default.Book,
+                    iconRes = CoreR.drawable.ic_modern_book,
                     iconColor = lessonColor,
                     title = "$missingLessons Modul Materi Belum Dipelajari",
                     description = "Buka materi digital dan rangkuman modul untuk persiapan evaluasi KKTP.",
@@ -731,7 +759,7 @@ private fun StudentActionableInsightsCard(
                 )
             }
 
-            HorizontalDivider(color = GlassBorder.copy(alpha = 0.4f), thickness = 0.6.dp)
+            HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp)
 
             // Item 3: Presensi Kehadiran
             val presensiTitle = "Tingkat Presensi: $sessionPct%"
@@ -760,7 +788,8 @@ private fun StudentActionableInsightsCard(
 
 @Composable
 private fun InsightRow(
-    icon: ImageVector,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
     iconColor: Color,
     title: String,
     description: String,
@@ -768,24 +797,38 @@ private fun InsightRow(
     onAction: (() -> Unit)? = null,
 ) {
     val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.Top,
     ) {
         Box(
             modifier = Modifier
-                .size(36.dp)
-                .clip(RoundedCornerShape(10.dp))
-                .background(iconColor.copy(alpha = if (isDark) 0.14f else 0.10f))
-                .border(1.dp, iconColor.copy(alpha = if (isDark) 0.35f else 0.22f), RoundedCornerShape(10.dp)),
+                .size(38.dp)
+                .clip(RoundedCornerShape(11.dp))
+                .background(innerCardBg)
+                .border(0.5.dp, innerCardBorder, RoundedCornerShape(11.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = iconColor,
-                modifier = Modifier.size(18.dp)
-            )
+            if (iconRes != null) {
+                Icon(
+                    painter = painterResource(iconRes),
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            } else if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconColor,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
         }
 
         Spacer(Modifier.width(12.dp))
@@ -795,13 +838,13 @@ private fun InsightRow(
                 text = title,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
+                color = textPrimary,
             )
             Spacer(Modifier.height(3.dp))
             Text(
                 text = description,
                 fontSize = 11.sp,
-                color = TextSecondary,
+                color = textSecondary,
                 lineHeight = 16.sp,
             )
             if (actionText != null && onAction != null) {
@@ -820,6 +863,13 @@ private fun InsightRow(
 
 @Composable
 private fun ParentPerformanceBanner(progress: Progress, childName: String = "") {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     val statusText = progress.academicStatus
         ?: if (progress.overallProgress >= 80.0) "Sangat Baik"
         else if (progress.overallProgress >= 60.0) "Baik"
@@ -830,7 +880,6 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
         else "Anak Anda"
     val className = progress.className.orEmpty()
 
-    val isDark = LocalIsDarkTheme.current
     val statusColor = if (progress.overallProgress >= 80.0) {
         if (isDark) NeonSuccess else Color(0xFF047857)
     } else if (progress.overallProgress >= 60.0) {
@@ -839,15 +888,13 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
         if (isDark) NeonWarning else Color(0xFFB45309)
     }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .padding(16.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(0.5.dp, cardBorder)
     ) {
-        Column {
+        Column(modifier = Modifier.padding(18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -856,7 +903,7 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         "PERFORMA AKADEMIK",
-                        color = TextTertiary,
+                        color = textTertiary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Black,
                         letterSpacing = 1.sp,
@@ -866,25 +913,29 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
                         displayName,
                         fontWeight = FontWeight.Black,
                         fontSize = 19.sp,
-                        color = TextPrimary,
+                        color = textPrimary,
                         lineHeight = 24.sp,
                     )
                     Text(
                         if (className.isNotBlank()) "Kelas $className" else "Siswa Aktif",
                         fontSize = 12.sp,
-                        color = TextSecondary,
+                        color = textSecondary,
                         fontWeight = FontWeight.Medium,
                     )
                 }
                 Spacer(Modifier.width(8.dp))
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(statusColor.copy(alpha = 0.12f))
-                        .border(1.dp, statusColor.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = statusColor.copy(alpha = 0.12f),
+                    border = BorderStroke(0.5.dp, statusColor.copy(alpha = 0.35f))
                 ) {
-                    Text(statusText, color = statusColor, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = statusText,
+                        color = statusColor,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                    )
                 }
             }
 
@@ -900,26 +951,27 @@ private fun ParentPerformanceBanner(progress: Progress, childName: String = "") 
                         String.format(java.util.Locale.US, "%.1f", progress.overallProgress),
                         fontSize = 38.sp,
                         fontWeight = FontWeight.Black,
-                        color = TextPrimary,
+                        color = textPrimary,
                         letterSpacing = (-1).sp,
                     )
                     Text(
                         "/ 100",
                         fontSize = 14.sp,
-                        color = TextTertiary,
+                        color = textTertiary,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(bottom = 6.dp, start = 4.dp),
                     )
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(NeonBlue.copy(alpha = 0.12f))
-                        .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = NeonBlue.copy(alpha = 0.12f),
+                    border = BorderStroke(0.5.dp, NeonBlue.copy(alpha = 0.35f))
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Icon(Icons.Default.Download, null, tint = NeonBlue, modifier = Modifier.size(15.dp))
                         Spacer(Modifier.width(6.dp))
                         Text("PDF RAPOR", color = NeonBlue, fontSize = 11.sp, fontWeight = FontWeight.Black)
@@ -935,6 +987,11 @@ private fun CriticalMonitoringCard(
     progress: Progress,
     onNavigateToAssignments: (() -> Unit)? = null,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     val missingCount = (progress.assignmentTotal - progress.assignmentCompleted).coerceAtLeast(0)
     val absenceCount = (progress.sessionTotal - progress.sessionAttended).coerceAtLeast(0)
     val isAlert = missingCount > 0 || absenceCount > 0
@@ -942,17 +999,19 @@ private fun CriticalMonitoringCard(
     val iconBg = if (isAlert) NeonError.copy(alpha = 0.12f) else NeonSuccess.copy(alpha = 0.12f)
     val iconColor = if (isAlert) NeonError else NeonSuccess
 
-    Box(
+    Surface(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(CosmicNavy)
-            .border(1.dp, cardBorder, RoundedCornerShape(18.dp))
-            .clickable { onNavigateToAssignments?.invoke() }
-            .padding(16.dp),
+            .clip(RoundedCornerShape(22.dp))
+            .clickable { onNavigateToAssignments?.invoke() },
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(0.5.dp, cardBorder)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
@@ -965,7 +1024,7 @@ private fun CriticalMonitoringCard(
                 Icon(
                     imageVector = if (isAlert) Icons.Default.Warning else Icons.Default.CheckCircle,
                     contentDescription = null,
-                    tint = if (isAlert) NeonError else NeonSuccess,
+                    tint = iconColor,
                     modifier = Modifier.size(22.dp)
                 )
             }
@@ -975,14 +1034,14 @@ private fun CriticalMonitoringCard(
                     if (missingCount > 0) "$missingCount Tugas Belum Terkumpul" else "Semua Tugas Tuntas Dikumpulkan",
                     fontWeight = FontWeight.Bold,
                     fontSize = 14.sp,
-                    color = if (missingCount > 0) NeonError else TextPrimary,
+                    color = if (missingCount > 0) NeonError else textPrimary,
                 )
                 Spacer(Modifier.height(2.dp))
                 val sessionPct = if (progress.sessionTotal > 0) (progress.sessionAttended * 100 / progress.sessionTotal) else 100
                 Text(
                     if (missingCount > 0) "Kehadiran $sessionPct% • Ketuk untuk lihat rincian tugas →" else "Kehadiran $sessionPct% aktif mengikuti kegiatan kelas",
                     fontSize = 12.sp,
-                    color = if (missingCount > 0) NeonWarning else TextTertiary,
+                    color = if (missingCount > 0) NeonWarning else textTertiary,
                     fontWeight = if (missingCount > 0) FontWeight.Medium else FontWeight.Normal,
                 )
             }
@@ -997,19 +1056,26 @@ private fun ParentMonitoringCard(
     total: Int,
     insight: String,
     color: Color,
-    icon: ImageVector = Icons.Default.Assessment,
+    icon: ImageVector? = null,
+    iconRes: Int? = null,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val pct = (completed.toFloat() / total.coerceAtLeast(1)).coerceIn(0f, 1f)
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .padding(16.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(0.5.dp, cardBorder)
     ) {
-        Column {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -1018,35 +1084,54 @@ private fun ParentMonitoringCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(36.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(color.copy(alpha = 0.12f))
-                            .border(1.dp, color.copy(alpha = 0.28f), RoundedCornerShape(10.dp)),
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(11.dp))
+                            .background(innerCardBg)
+                            .border(0.5.dp, innerCardBorder, RoundedCornerShape(11.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = icon,
-                            contentDescription = null,
-                            tint = color,
-                            modifier = Modifier.size(18.dp)
-                        )
+                        if (iconRes != null) {
+                            Icon(
+                                painter = painterResource(iconRes),
+                                contentDescription = null,
+                                tint = color,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        } else if (icon != null) {
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = null,
+                                tint = color,
+                                modifier = Modifier.size(19.dp)
+                            )
+                        }
                     }
                     Spacer(Modifier.width(10.dp))
-                    Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = TextPrimary)
+                    Text(label, fontWeight = FontWeight.Bold, fontSize = 14.sp, color = textPrimary)
                 }
                 Text("${(pct * 100).toInt()}%", fontWeight = FontWeight.Black, fontSize = 15.sp, color = color)
             }
             Spacer(Modifier.height(10.dp))
             Box(
-                modifier = Modifier.fillMaxWidth().height(6.dp).clip(CircleShape).background(color.copy(alpha = 0.08f)),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(6.dp)
+                    .clip(CircleShape)
+                    .background(innerCardBg),
             ) {
-                Box(modifier = Modifier.fillMaxWidth(pct).height(6.dp).clip(CircleShape).background(color))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(pct)
+                        .height(6.dp)
+                        .clip(CircleShape)
+                        .background(color)
+                )
             }
             Spacer(Modifier.height(10.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.AutoMirrored.Filled.TrendingUp, null, tint = color, modifier = Modifier.size(13.dp))
                 Spacer(Modifier.width(6.dp))
-                Text(insight, fontSize = 11.sp, color = TextSecondary, fontWeight = FontWeight.Medium)
+                Text(insight, fontSize = 11.sp, color = textSecondary, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -1054,20 +1139,26 @@ private fun ParentMonitoringCard(
 
 @Composable
 private fun TeacherRemarksCard(progress: Progress) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     val teacherName = progress.teacherName?.ifBlank { null } ?: "Wali Kelas"
     val className = progress.className?.ifBlank { null } ?: "Kelas Aktif"
     val noteText = progress.teacherNotes?.ifBlank { null }
         ?: "Evaluasi perkembangan belajar siswa berjalan teratur dan sesuai rencana kurikulum. Terus pertahankan ritme belajar."
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(18.dp))
-            .background(CosmicNavy)
-            .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(18.dp))
-            .padding(14.dp),
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(0.5.dp, cardBorder)
     ) {
-        Column {
+        Column(modifier = Modifier.padding(16.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -1079,7 +1170,7 @@ private fun TeacherRemarksCard(progress: Progress) {
                             .size(38.dp)
                             .clip(CircleShape)
                             .background(NeonBlue.copy(alpha = 0.12f))
-                            .border(1.dp, NeonBlue.copy(alpha = 0.4f), CircleShape),
+                            .border(0.5.dp, NeonBlue.copy(alpha = 0.4f), CircleShape),
                         contentAlignment = Alignment.Center,
                     ) {
                         Icon(Icons.Default.Person, null, tint = NeonBlue, modifier = Modifier.size(20.dp))
@@ -1087,33 +1178,40 @@ private fun TeacherRemarksCard(progress: Progress) {
                     Spacer(Modifier.width(10.dp))
                     Column {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(teacherName, fontWeight = FontWeight.Black, fontSize = 13.sp, color = TextPrimary)
+                            Text(teacherName, fontWeight = FontWeight.Black, fontSize = 13.sp, color = textPrimary)
                             Spacer(Modifier.width(4.dp))
                             Icon(Icons.Default.CheckCircle, null, tint = NeonBlue, modifier = Modifier.size(13.dp))
                         }
-                        Text("Pengampu • $className", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Medium)
+                        Text("Pengampu • $className", fontSize = 11.sp, color = textTertiary, fontWeight = FontWeight.Medium)
                     }
                 }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(NeonBlue.copy(alpha = 0.1f))
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = NeonBlue.copy(alpha = 0.1f),
+                    border = BorderStroke(0.5.dp, NeonBlue.copy(alpha = 0.25f))
                 ) {
-                    Text("Catatan Resmi", fontSize = 10.sp, color = NeonBlue, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Catatan Resmi",
+                        fontSize = 10.sp,
+                        color = NeonBlue,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    )
                 }
             }
 
             Spacer(Modifier.height(12.dp))
 
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicBlack.copy(alpha = 0.5f))
-                    .padding(12.dp),
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = innerCardBg,
+                border = BorderStroke(0.5.dp, innerCardBorder)
             ) {
-                Row(verticalAlignment = Alignment.Top) {
+                Row(
+                    modifier = Modifier.padding(14.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
                     Icon(
                         Icons.Default.ChatBubbleOutline,
                         null,
@@ -1124,7 +1222,7 @@ private fun TeacherRemarksCard(progress: Progress) {
                     Text(
                         noteText,
                         fontSize = 12.sp,
-                        color = TextPrimary,
+                        color = textPrimary,
                         lineHeight = 18.sp,
                         fontWeight = FontWeight.Normal,
                     )
@@ -1136,7 +1234,7 @@ private fun TeacherRemarksCard(progress: Progress) {
             Text(
                 "— Sistem Informasi Akademik • Data Terverifikasi",
                 fontSize = 10.sp,
-                color = TextTertiary,
+                color = textTertiary,
                 fontStyle = androidx.compose.ui.text.font.FontStyle.Italic,
             )
         }

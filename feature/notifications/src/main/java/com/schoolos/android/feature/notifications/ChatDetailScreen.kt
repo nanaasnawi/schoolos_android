@@ -1,5 +1,7 @@
 package com.schoolos.android.feature.notifications
 
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -185,8 +187,13 @@ fun ChatDetailScreen(
     }
     val contactInitial = contactName.trim().take(1).uppercase().ifBlank { "?" }
     val statusText = if (isParticipantOnline) "Aktif" else "Tidak Aktif"
-    val contactSubtitle = if (isTeacherMode) "Siswa • ${thread?.studentClass?.ifBlank { "Rombel" } ?: "Rombel"} • $statusText"
-                          else "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • $statusText"
+    val contactSubtitle = if (isAiThread) {
+        "Asisten Pintar 24 Jam • NVIDIA NIM"
+    } else if (isTeacherMode) {
+        "Siswa • ${thread?.studentClass?.ifBlank { "Rombel" } ?: "Rombel"} • $statusText"
+    } else {
+        "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • $statusText"
+    }
     val roleNeon = if (isTeacherMode) StudentNeon else TeacherNeon
 
     val rawAvatarUrl = if (isTeacherMode) thread?.studentAvatarUrl else thread?.teacherAvatarUrl
@@ -202,6 +209,16 @@ fun ChatDetailScreen(
     }
 
     val isPermitted = isTeacherMode || thread == null || chatManager.isThreadOwnedByCurrentStudent(thread)
+
+    val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val studentAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
     if (!isPermitted) {
         Column(
             modifier = modifier
@@ -248,9 +265,9 @@ fun ChatDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CosmicNavy)
+                .background(cardBg)
                 .statusBarsPadding()
-                .border(width = 0.5.dp, color = GlassBorder, shape = RoundedCornerShape(0.dp)),
+                .border(width = 1.dp, color = cardBorder, shape = RoundedCornerShape(0.dp)),
         ) {
             Row(
                 modifier = Modifier
@@ -262,39 +279,57 @@ fun ChatDetailScreen(
                 Spacer(Modifier.width(8.dp))
 
                 // Avatar
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(CircleShape)
-                        .background(roleNeon.copy(alpha = 0.14f))
-                        .border(1.dp, roleNeon.copy(alpha = 0.30f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (!fullAvatarUrl.isNullOrBlank()) {
-                        val context = LocalContext.current
-                        val imageRequest = remember(fullAvatarUrl) {
-                            ImageRequest.Builder(context)
-                                .data(fullAvatarUrl)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .memoryCachePolicy(CachePolicy.ENABLED)
-                                .crossfade(true)
-                                .build()
+                if (isAiThread) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE))
+                            .border(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_ai),
+                            contentDescription = null,
+                            tint = studentAccent,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                } else {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(roleNeon.copy(alpha = 0.14f))
+                            .border(1.dp, roleNeon.copy(alpha = 0.30f), CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (!fullAvatarUrl.isNullOrBlank()) {
+                            val context = LocalContext.current
+                            val imageRequest = remember(fullAvatarUrl) {
+                                ImageRequest.Builder(context)
+                                    .data(fullAvatarUrl)
+                                    .diskCachePolicy(CachePolicy.ENABLED)
+                                    .memoryCachePolicy(CachePolicy.ENABLED)
+                                    .crossfade(true)
+                                    .build()
+                            }
+                            coil.compose.AsyncImage(
+                                model = imageRequest,
+                                contentDescription = contactName,
+                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                            )
+                        } else {
+                            Text(
+                                text = contactInitial,
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = roleNeon,
+                            )
                         }
-                        coil.compose.AsyncImage(
-                            model = imageRequest,
-                            contentDescription = contactName,
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .clip(CircleShape),
-                        )
-                    } else {
-                        Text(
-                            text = contactInitial,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = roleNeon,
-                        )
                     }
                 }
 
@@ -474,9 +509,9 @@ fun ChatDetailScreen(
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 4.dp))
-                                    .background(Color(0xFF1E1B4B))
-                                    .border(1.dp, Color(0xFF4338CA).copy(alpha = 0.5f), RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 4.dp))
+                                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp))
+                                    .background(if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF))
+                                    .border(1.dp, if (isDark) Color(0xFF4338CA).copy(alpha = 0.5f) else Color(0xFFC7D2FE), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp))
                                     .padding(horizontal = 14.dp, vertical = 10.dp)
                             ) {
                                 Row(
@@ -486,12 +521,12 @@ fun ChatDetailScreen(
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(14.dp),
                                         strokeWidth = 2.dp,
-                                        color = Color(0xFF818CF8)
+                                        color = if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
                                     )
                                     Text(
                                         text = "Guru AI sedang meracik penjelasan...",
                                         fontSize = 12.sp,
-                                        color = Color(0xFFA5B4FC),
+                                        color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA),
                                         fontWeight = FontWeight.Medium
                                     )
                                 }
@@ -506,15 +541,15 @@ fun ChatDetailScreen(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CosmicNavy)
+                .background(cardBg)
                 .navigationBarsPadding()
                 .imePadding(),
         ) {
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(0.5.dp)
-                    .background(GlassBorder),
+                    .height(1.dp)
+                    .background(cardBorder),
             )
 
             // Attachment preview strip above input
@@ -524,8 +559,8 @@ fun ChatDetailScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFF161618))
-                        .border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp))
+                        .background(innerCardBg)
+                        .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp))
                         .padding(8.dp)
                 ) {
                     Row(
@@ -547,12 +582,12 @@ fun ChatDetailScreen(
                                     text = "Foto Terlampir",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.SemiBold,
-                                    color = Color.White
+                                    color = textPrimary
                                 )
                                 Text(
                                     text = if (isUploadingImage) "Mengunggah berkas..." else "Siap dikirim bersama pesan",
                                     fontSize = 10.sp,
-                                    color = if (isUploadingImage) roleNeon else TextTertiary
+                                    color = if (isUploadingImage) roleNeon else textTertiary
                                 )
                             }
                         }
@@ -567,7 +602,7 @@ fun ChatDetailScreen(
                                 onClick = { selectedImageUri = null },
                                 modifier = Modifier.size(28.dp)
                             ) {
-                                Icon(Icons.Default.Clear, contentDescription = "Hapus", tint = TextSecondary, modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.Clear, contentDescription = "Hapus", tint = textSecondary, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -584,26 +619,28 @@ fun ChatDetailScreen(
                 Row(
                     modifier = Modifier
                         .weight(1f)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(CosmicSurface2)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(innerCardBg)
+                        .border(1.dp, innerCardBorder, RoundedCornerShape(14.dp))
                         .padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    IconButton(
-                        onClick = {
-                            imagePickerLauncher.launch("image/*")
-                        },
-                        modifier = Modifier.size(26.dp),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Attachment,
-                            contentDescription = "Lampiran Foto",
-                            tint = if (selectedImageUri != null) roleNeon else TextTertiary,
-                            modifier = Modifier.size(17.dp),
-                        )
+                    if (!isAiThread) {
+                        IconButton(
+                            onClick = {
+                                imagePickerLauncher.launch("image/*")
+                            },
+                            modifier = Modifier.size(26.dp),
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Attachment,
+                                contentDescription = "Lampiran Foto",
+                                tint = if (selectedImageUri != null) roleNeon else textTertiary,
+                                modifier = Modifier.size(17.dp),
+                            )
+                        }
+                        Spacer(Modifier.width(6.dp))
                     }
-                    Spacer(Modifier.width(6.dp))
                     BasicTextField(
                         value = inputText,
                         onValueChange = { inputText = it },
@@ -611,7 +648,7 @@ fun ChatDetailScreen(
                             .weight(1f)
                             .padding(vertical = 2.dp),
                         textStyle = TextStyle(
-                            color = TextPrimary,
+                            color = textPrimary,
                             fontSize = 14.sp,
                         ),
                         cursorBrush = SolidColor(roleNeon),
@@ -623,7 +660,7 @@ fun ChatDetailScreen(
                                 Text(
                                     text = if (isAiThread) "Tanya apa saja ke Guru AI..." else "Ketik pesan...",
                                     fontSize = 14.sp,
-                                    color = TextTertiary,
+                                    color = textTertiary,
                                 )
                             }
                             innerTextField()
@@ -644,12 +681,12 @@ fun ChatDetailScreen(
                     modifier = Modifier
                         .size(40.dp)
                         .scale(sendScale)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(if (canSend) roleNeon.copy(alpha = 0.18f) else CosmicSurface2)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (canSend) roleNeon else innerCardBg)
                         .border(
-                            0.5.dp,
-                            if (canSend) roleNeon.copy(alpha = 0.50f) else GlassBorder,
-                            RoundedCornerShape(10.dp),
+                            1.dp,
+                            if (canSend) roleNeon else innerCardBorder,
+                            RoundedCornerShape(12.dp),
                         )
                         .clickable(enabled = canSend) {
                             coroutineScope.launch {
@@ -703,7 +740,7 @@ fun ChatDetailScreen(
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Kirim",
-                        tint = if (canSend) roleNeon else TextTertiary,
+                        tint = if (canSend) Color.White else textTertiary,
                         modifier = Modifier.size(18.dp),
                     )
                 }
@@ -756,10 +793,16 @@ private fun TopicContextBanner(
     roleNeon: Color,
     isTeacherMode: Boolean,
 ) {
+    val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(CosmicNavy)
+            .background(cardBg)
             .padding(horizontal = 14.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -770,19 +813,21 @@ private fun TopicContextBanner(
         ) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                    .size(30.dp)
                     .clip(RoundedCornerShape(8.dp))
                     .background(roleNeon.copy(alpha = 0.12f))
-                    .border(0.5.dp, roleNeon.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
+                    .border(1.dp, roleNeon.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
-                    imageVector = if (thread.inquiryType == InquiryType.ASSIGNMENT)
-                        Icons.AutoMirrored.Filled.Assignment
-                    else Icons.AutoMirrored.Filled.MenuBook,
+                    painter = painterResource(
+                        id = if (thread.inquiryType == InquiryType.ASSIGNMENT)
+                            CoreR.drawable.ic_modern_tasks
+                        else CoreR.drawable.ic_modern_book
+                    ),
                     contentDescription = null,
                     tint = roleNeon,
-                    modifier = Modifier.size(14.dp),
+                    modifier = Modifier.size(15.dp),
                 )
             }
             Spacer(Modifier.width(10.dp))
@@ -794,16 +839,16 @@ private fun TopicContextBanner(
                 }
                 Text(
                     text = "$badgeLabel: ${thread.referenceTitle}",
-                    fontSize = 11.sp,
+                    fontSize = 11.5.sp,
                     fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
+                    color = textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
                     text = "${thread.subjectName} • ${thread.studentClass}",
                     fontSize = 10.sp,
-                    color = TextTertiary,
+                    color = textTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -813,8 +858,8 @@ private fun TopicContextBanner(
                 val effectiveLabel = when {
                     isAnswered -> if (isTeacherMode) "Selesai Dijawab" else "Jawaban Tersedia"
                     isTeacherMode -> "Perlu Ditanggapi"
-                    isTeacherRead -> "Dibaca Tutor Pamong"
-                    else -> "Menunggu Respon Tutor"
+                    isTeacherRead -> "Dibaca Guru"
+                    else -> "Menunggu Respon Guru"
                 }
                 val isSuccessColor = isAnswered || (isTeacherRead && !isTeacherMode)
                 val badgeColor = if (isSuccessColor) Color(0xFF10B981) else Color(0xFFF59E0B)
@@ -836,7 +881,7 @@ private fun TopicContextBanner(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
                     .background(roleNeon.copy(alpha = 0.12f))
-                    .border(0.5.dp, roleNeon.copy(alpha = 0.30f), RoundedCornerShape(8.dp))
+                    .border(1.dp, roleNeon.copy(alpha = 0.30f), RoundedCornerShape(8.dp))
                     .clickable { onOpenReference(thread.inquiryType, thread.referenceId) }
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
@@ -855,6 +900,11 @@ private fun TopicContextBanner(
 
 @Composable
 private fun DatePill(dateText: String) {
+    val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -864,15 +914,15 @@ private fun DatePill(dateText: String) {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(8.dp))
-                .background(CosmicNavy)
-                .border(0.5.dp, GlassBorder, RoundedCornerShape(8.dp))
+                .background(innerCardBg)
+                .border(1.dp, innerCardBorder, RoundedCornerShape(8.dp))
                 .padding(horizontal = 12.dp, vertical = 4.dp),
         ) {
             Text(
                 text = dateText,
                 fontSize = 10.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextTertiary,
+                color = textTertiary,
                 letterSpacing = 0.4.sp,
             )
         }
@@ -891,15 +941,36 @@ private fun MessageBubble(
     isReadByRecipient: Boolean = false,
     onImageClick: (String) -> Unit = {},
 ) {
+    val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     val align = if (isMe) Alignment.End else Alignment.Start
     val timeStr = remember(message.timestamp) {
         SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(message.timestamp))
     }
 
     val bubbleShape = if (isMe) {
-        RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomStart = 14.dp, bottomEnd = 4.dp)
+        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomStart = 16.dp, bottomEnd = 4.dp)
     } else {
-        RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp, bottomEnd = 14.dp, bottomStart = 4.dp)
+        RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp)
+    }
+
+    val isAi = !isMe && (message.senderRole.contains("AI", ignoreCase = true) || message.senderName.contains("AI", ignoreCase = true))
+
+    val bubbleBg = when {
+        isMe -> if (isDark) roleNeon.copy(alpha = 0.20f) else roleNeon.copy(alpha = 0.12f)
+        isAi -> if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9)
+        else -> cardBg
+    }
+    val bubbleBorder = when {
+        isMe -> roleNeon.copy(alpha = if (isDark) 0.50f else 0.35f)
+        isAi -> if (isDark) Color(0xFF27272A) else Color(0xFFCBD5E1)
+        else -> cardBorder
     }
 
     Column(
@@ -910,28 +981,20 @@ private fun MessageBubble(
             modifier = Modifier
                 .widthIn(min = 60.dp, max = 300.dp)
                 .clip(bubbleShape)
-                .background(
-                    if (isMe) roleNeon.copy(alpha = 0.14f) else CosmicNavy,
-                )
-                .border(
-                    0.5.dp,
-                    if (isMe) roleNeon.copy(alpha = 0.35f) else GlassBorder,
-                    bubbleShape,
-                )
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .background(bubbleBg)
+                .border(1.dp, bubbleBorder, bubbleShape)
+                .padding(horizontal = 12.dp, vertical = 9.dp),
         ) {
             Column {
                 // Incoming sender label
                 if (!isMe) {
-                    val isAi = message.senderRole.contains("AI", ignoreCase = true) ||
-                               message.senderName.contains("AI", ignoreCase = true)
                     val senderColor = when {
-                        isAi -> NeonWarning
-                        message.isFromTeacher -> TeacherNeon
-                        else -> StudentNeon
+                        isAi -> if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                        message.isFromTeacher -> if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+                        else -> roleNeon
                     }
                     val roleLabel = when {
-                        isAi -> "Asisten AI"
+                        isAi -> "Asisten Pintar"
                         message.isFromTeacher -> "Guru"
                         else -> "Siswa"
                     }
@@ -958,19 +1021,28 @@ private fun MessageBubble(
                     }
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 3.dp),
+                        modifier = Modifier.padding(bottom = 4.dp),
                     ) {
+                        if (isAi) {
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_ai),
+                                contentDescription = null,
+                                tint = senderColor,
+                                modifier = Modifier.size(13.dp)
+                            )
+                            Spacer(Modifier.width(4.dp))
+                        }
                         Text(
                             text = effectiveSenderName,
-                            fontSize = 11.sp,
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
                             color = senderColor,
                         )
                         Spacer(Modifier.width(5.dp))
                         Text(
                             text = "• $roleLabel",
-                            fontSize = 9.sp,
-                            color = if (isAi) NeonWarning.copy(alpha = 0.85f) else TextTertiary,
+                            fontSize = 9.5.sp,
+                            color = textTertiary,
                         )
                     }
                 }
@@ -992,7 +1064,8 @@ private fun MessageBubble(
                             .fillMaxWidth()
                             .padding(bottom = if (message.content.isNotBlank()) 6.dp else 0.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(Color(0xFF161618))
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, RoundedCornerShape(10.dp))
                             .clickable { onImageClick(fullUrl) }
                     ) {
                         AsyncImage(
@@ -1010,7 +1083,7 @@ private fun MessageBubble(
                     Text(
                         text = message.content,
                         fontSize = 13.5.sp,
-                        color = TextPrimary,
+                        color = textPrimary,
                         lineHeight = 20.sp,
                     )
                 }
