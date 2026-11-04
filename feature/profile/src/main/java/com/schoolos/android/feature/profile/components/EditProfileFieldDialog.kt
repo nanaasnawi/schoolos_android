@@ -183,14 +183,18 @@ fun EditProfileFieldBottomSheet(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Button(
+                val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
+                val cancelBg = if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9)
+                val cancelBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+                androidx.compose.material3.OutlinedButton(
                     onClick = onDismissRequest,
                     modifier = Modifier
                         .weight(1f)
                         .height(46.dp),
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = CosmicBlack,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, cancelBorder),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        containerColor = cancelBg,
                         contentColor = TextSecondary,
                     ),
                 ) {

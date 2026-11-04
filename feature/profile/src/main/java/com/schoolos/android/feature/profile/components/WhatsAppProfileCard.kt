@@ -1,7 +1,8 @@
 package com.schoolos.android.feature.profile.components
 
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
+import com.schoolos.android.core.R as CoreR
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,30 +15,20 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassBorder2
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.*
 
 @Composable
 fun WhatsAppProfileCard(
@@ -51,156 +42,167 @@ fun WhatsAppProfileCard(
     modifier: Modifier = Modifier,
     isStudent: Boolean = false,
 ) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .padding(16.dp),
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = modifier.fillMaxWidth()
     ) {
-        // 1. Nama (Read-Only)
-        ProfileInfoRow(
-            icon = Icons.Default.Person,
-            label = "Nama",
-            value = userName.ifBlank { "Pengguna Akselerasi-Edu" },
-            roleNeon = roleNeon,
-            isEditable = false,
-            footerNote = "Nama ini sinkron dengan biodata pokok resmi dan tidak dapat diubah.",
-        )
+        Column(modifier = Modifier.padding(18.dp)) {
+            // 1. Nama (Read-Only)
+            ProfileInfoRow(
+                iconRes = CoreR.drawable.ic_modern_profile,
+                label = "Nama",
+                value = userName.ifBlank { "Pengguna Akselerasi-Edu" },
+                roleNeon = roleNeon,
+                isEditable = false,
+                footerNote = "Nama ini sinkron dengan biodata pokok resmi dan tidak dapat diubah.",
+            )
 
-        ProfileDivider()
+            HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 12.dp))
 
-        // 2. Tentang / Status (Warga Belajar: Terkunci di Pangkalan Data Pokok)
-        ProfileInfoRow(
-            icon = Icons.Default.Info,
-            label = "Tentang / Domisili",
-            value = about.ifBlank { "Ada di Akselerasi-Edu" },
-            roleNeon = roleNeon,
-            isEditable = !isStudent,
-            footerNote = if (isStudent) "Alamat domisili terdaftar pada biodata pokok resmi." else null,
-            onClick = { if (!isStudent) onEditField("about") },
-        )
+            // 2. Tentang / Status
+            ProfileInfoRow(
+                iconRes = CoreR.drawable.ic_modern_location,
+                label = "Tentang / Domisili",
+                value = about.ifBlank { "Ada di Akselerasi-Edu" },
+                roleNeon = roleNeon,
+                isEditable = !isStudent,
+                footerNote = if (isStudent) "Alamat domisili terdaftar pada biodata pokok resmi." else null,
+                onClick = { if (!isStudent) onEditField("about") },
+            )
 
-        ProfileDivider()
+            HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 12.dp))
 
-        // 3. Pengguna / Username (Siswa: Terkunci di Dapodik)
-        ProfileInfoRow(
-            icon = Icons.Default.AccountCircle,
-            label = "Pengguna",
-            value = if (username.isNotBlank()) "@$username" else "@user",
-            roleNeon = roleNeon,
-            isEditable = !isStudent,
-            footerNote = if (isStudent) "Username resmi ditetapkan oleh sistem satuan pendidikan." else null,
-            onClick = { if (!isStudent) onEditField("username") },
-        )
+            // 3. Pengguna / Username
+            ProfileInfoRow(
+                iconRes = CoreR.drawable.ic_modern_profile,
+                label = "Pengguna",
+                value = if (username.isNotBlank()) "@$username" else "@user",
+                roleNeon = roleNeon,
+                isEditable = !isStudent,
+                footerNote = if (isStudent) "Username resmi ditetapkan oleh sistem satuan pendidikan." else null,
+                onClick = { if (!isStudent) onEditField("username") },
+            )
 
-        ProfileDivider()
+            HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 12.dp))
 
-        // 4. Email (Dapat diubah oleh siswa)
-        ProfileInfoRow(
-            icon = Icons.Default.Email,
-            label = "Email",
-            value = email.ifBlank { "Belum diatur" },
-            roleNeon = roleNeon,
-            isEditable = true,
-            onClick = { onEditField("email") },
-        )
+            // 4. Email
+            ProfileInfoRow(
+                iconRes = CoreR.drawable.ic_modern_chat,
+                label = "Email",
+                value = email.ifBlank { "Belum diatur" },
+                roleNeon = roleNeon,
+                isEditable = true,
+                footerNote = "Ketuk untuk memperbarui alamat email aktif Anda.",
+                onClick = { onEditField("email") },
+            )
 
-        ProfileDivider()
+            HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp, modifier = Modifier.padding(vertical = 12.dp))
 
-        // 5. Telepon (Dapat diubah oleh siswa)
-        ProfileInfoRow(
-            icon = Icons.Default.Phone,
-            label = "Telepon",
-            value = phone.ifBlank { "Belum diatur" },
-            roleNeon = roleNeon,
-            isEditable = true,
-            onClick = { onEditField("phone") },
-        )
+            // 5. Telepon / WhatsApp
+            ProfileInfoRow(
+                iconRes = CoreR.drawable.ic_modern_attendance,
+                label = "Nomor Telepon",
+                value = phone.ifBlank { "Belum diatur" },
+                roleNeon = roleNeon,
+                isEditable = true,
+                footerNote = "Ketuk untuk memperbarui nomor telepon / WhatsApp aktif.",
+                onClick = { onEditField("phone") },
+            )
+        }
     }
 }
 
 @Composable
 private fun ProfileInfoRow(
-    icon: ImageVector,
+    iconRes: Int,
     label: String,
     value: String,
     roleNeon: Color,
     isEditable: Boolean,
     footerNote: String? = null,
-    onClick: () -> Unit = {},
+    onClick: (() -> Unit)? = null,
 ) {
-    Row(
-        modifier = Modifier
+    val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
+    val rowModifier = if (isEditable && onClick != null) {
+        Modifier
             .fillMaxWidth()
-            .clickable(enabled = isEditable) { onClick() }
-            .padding(vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .clickable(onClick = onClick)
+            .padding(vertical = 4.dp)
+    } else {
+        Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+    }
+
+    Row(
+        modifier = rowModifier,
+        verticalAlignment = Alignment.Top,
     ) {
         Icon(
-            imageVector = icon,
-            contentDescription = label,
-            tint = TextTertiary,
-            modifier = Modifier.size(22.dp),
+            painter = painterResource(id = iconRes),
+            contentDescription = null,
+            tint = textTertiary,
+            modifier = Modifier
+                .size(20.dp)
+                .padding(top = 2.dp),
         )
 
-        Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(14.dp))
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = label,
                 fontSize = 11.sp,
-                color = TextTertiary,
                 fontWeight = FontWeight.Medium,
+                color = textTertiary,
             )
-
             Spacer(Modifier.height(2.dp))
-
             Text(
                 text = value,
-                fontSize = 14.sp,
-                color = TextPrimary,
+                fontSize = 14.5.sp,
                 fontWeight = FontWeight.SemiBold,
+                color = textPrimary,
             )
-
             if (!footerNote.isNullOrBlank()) {
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.height(3.dp))
                 Text(
                     text = footerNote,
-                    fontSize = 10.sp,
-                    color = TextSecondary,
-                    lineHeight = 14.sp,
+                    fontSize = 11.sp,
+                    color = textSecondary,
+                    lineHeight = 15.sp,
                 )
             }
         }
 
-        Spacer(Modifier.width(8.dp))
-
         if (isEditable) {
             Icon(
                 imageVector = Icons.Default.Edit,
-                contentDescription = "Edit $label",
+                contentDescription = "Ubah $label",
                 tint = roleNeon,
-                modifier = Modifier.size(18.dp),
+                modifier = Modifier
+                    .size(16.dp)
+                    .padding(top = 4.dp),
             )
         } else {
             Icon(
                 imageVector = Icons.Default.Lock,
                 contentDescription = "Terkunci",
-                tint = TextTertiary.copy(alpha = 0.6f),
-                modifier = Modifier.size(16.dp),
+                tint = textTertiary.copy(alpha = 0.6f),
+                modifier = Modifier
+                    .size(15.dp)
+                    .padding(top = 4.dp),
             )
         }
     }
-}
-
-@Composable
-private fun ProfileDivider() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(0.5.dp)
-            .background(GlassBorder2),
-    )
 }

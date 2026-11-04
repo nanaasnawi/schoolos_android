@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.profile
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -45,8 +46,18 @@ fun TeacherOfficialProfileScreen(
         }
     }
 
+    val isDark = LocalIsDarkTheme.current
+    val screenBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = screenBg,
         topBar = {
             ExecutiveTopBar(
                 title = "Biodata Pokok Resmi GTK",
@@ -57,8 +68,8 @@ fun TeacherOfficialProfileScreen(
                         modifier = Modifier
                             .size(36.dp)
                             .clip(RoundedCornerShape(10.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp))
+                            .background(cardBg)
+                            .border(1.dp, cardBorder, RoundedCornerShape(12.dp))
                             .clickable { viewModel.loadTeacherOfficialBiodata() },
                         contentAlignment = Alignment.Center,
                     ) {
@@ -284,33 +295,41 @@ private fun TeacherOfficialHeroCard(
     val effectiveAvatar = userAvatar?.takeIf { it.isNotBlank() }
         ?: biodata.fotoProfile?.takeIf { it.isNotBlank() }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-            .padding(18.dp)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val teacherNeon = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             UserProfileAvatar(
                 avatarUrl = effectiveAvatar,
                 modifier = Modifier
                     .size(84.dp)
-                    .border(2.dp, TeacherNeon, CircleShape),
+                    .border(2.dp, teacherNeon, CircleShape),
                 contentDescription = biodata.fullName,
-                placeholderTint = TeacherNeon
+                placeholderTint = teacherNeon
             )
 
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = biodata.fullName,
-                    style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                    color = TextPrimary,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
                     textAlign = TextAlign.Center
                 )
                 Spacer(Modifier.height(4.dp))
@@ -320,34 +339,34 @@ private fun TeacherOfficialHeroCard(
                     ?: "Pendidik Aktif"
                 Text(
                     text = "$roleSubtitle • $nuptkText",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = TextSecondary,
+                    fontSize = 13.sp,
+                    color = textSecondary,
                     textAlign = TextAlign.Center
                 )
             }
 
             // GTK Verified Badge
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(20.dp))
-                    .background(TeacherNeon.copy(alpha = 0.12f))
-                    .border(0.5.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
-                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            Surface(
+                shape = RoundedCornerShape(20.dp),
+                color = teacherNeon.copy(alpha = if (isDark) 0.15f else 0.10f),
+                border = BorderStroke(0.5.dp, teacherNeon.copy(alpha = if (isDark) 0.40f else 0.25f))
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.Verified,
                         contentDescription = null,
-                        tint = TeacherNeon,
+                        tint = teacherNeon,
                         modifier = Modifier.size(15.dp)
                     )
                     Text(
                         text = "Data Pokok GTK Terverifikasi",
-                        style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.SemiBold),
-                        color = TeacherNeon
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = teacherNeon
                     )
                 }
             }
@@ -362,17 +381,23 @@ private fun GtkSectionCard(
     accent: Color,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(14.dp))
-            .background(CosmicNavy)
-            .border(0.5.dp, GlassBorder, RoundedCornerShape(14.dp))
-            .padding(16.dp)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+    Surface(
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = Modifier.fillMaxWidth()
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -381,8 +406,8 @@ private fun GtkSectionCard(
                 Box(
                     modifier = Modifier
                         .size(32.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(accent.copy(alpha = 0.15f)),
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(accent.copy(alpha = if (isDark) 0.15f else 0.10f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -394,13 +419,14 @@ private fun GtkSectionCard(
                 }
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.Bold, fontSize = 14.sp),
-                    color = TextPrimary
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary
                 )
             }
 
             HorizontalDivider(
-                color = GlassBorder,
+                color = innerCardBorder,
                 thickness = 0.5.dp
             )
 

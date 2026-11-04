@@ -196,13 +196,18 @@ private fun StudentGreetingHeroCard(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val classBadgeBg = if (isDark) Color(0xFF0C243B) else Color(0xFFE0F2FE)
+                val classBadgeBorder = if (isDark) Color(0xFF0284C7).copy(alpha = 0.45f) else Color(0xFFBAE6FD)
+                val classBadgeText = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFE0F2FE)
+                    color = classBadgeBg,
+                    border = BorderStroke(0.5.dp, classBadgeBorder)
                 ) {
                     Text(
                         text = effectiveClass,
-                        color = Color(0xFF0284C7),
+                        color = classBadgeText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
@@ -229,7 +234,7 @@ private fun StudentGreetingHeroCard(
             Text(
                 text = buildAnnotatedString {
                     append("$greeting, ")
-                    withStyle(SpanStyle(color = Color(0xFF0284C7))) {
+                    withStyle(SpanStyle(color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7))) {
                         append(firstName)
                     }
                     append(" 👋")
@@ -249,10 +254,14 @@ private fun StudentGreetingHeroCard(
             )
 
             // Streak Pill: 🔥 Streak: 5 Hari
+            val streakBadgeBg = if (isDark) Color(0xFF311C08) else Color(0xFFFFFBEB)
+            val streakBadgeBorder = if (isDark) Color(0xFFD97706).copy(alpha = 0.45f) else Color(0xFFFDE68A)
+            val streakBadgeText = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = Color(0xFFFFFBEB),
-                border = BorderStroke(1.dp, Color(0xFFFDE68A))
+                color = streakBadgeBg,
+                border = BorderStroke(1.dp, streakBadgeBorder)
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
@@ -260,7 +269,7 @@ private fun StudentGreetingHeroCard(
                 ) {
                     Text(
                         text = "🔥 Streak: $effectiveStreak Hari",
-                        color = Color(0xFFD97706),
+                        color = streakBadgeText,
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold
                     )
