@@ -54,7 +54,7 @@ fun LearningMaterialListScreen(
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                viewModel.refresh(isPullRefresh = true)
+                viewModel.refresh(isPullRefresh = false)
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
