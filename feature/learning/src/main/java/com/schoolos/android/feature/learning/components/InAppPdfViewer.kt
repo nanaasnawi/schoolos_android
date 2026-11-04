@@ -172,46 +172,67 @@ fun InAppPdfViewer(
                 if (!downloadSuccess) {
                     for (targetUrl in candidateUrls) {
                         if (downloadSuccess) break
-                        var connection: HttpURLConnection? = null
-                        try {
-                            connection = (URL(targetUrl).openConnection() as HttpURLConnection).apply {
-                                connectTimeout = 15000
-                                readTimeout = 60000
-                                instanceFollowRedirects = true
-                                setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
-                                setRequestProperty("Accept", "application/pdf,application/octet-stream,*/*")
-                            }
-                            connection.connect()
+                        var currentTarget = targetUrl
+                        var redirectCount = 0
+                        while (redirectCount < 5) {
+                            var connection: HttpURLConnection? = null
+                            try {
+                                val urlObj = URL(currentTarget)
+                                connection = (urlObj.openConnection() as HttpURLConnection).apply {
+                                    connectTimeout = 15000
+                                    readTimeout = 60000
+                                    instanceFollowRedirects = true
+                                    setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
+                                    setRequestProperty("Accept", "application/pdf,application/octet-stream,*/*")
+                                }
+                                connection.connect()
 
-                            val code = connection.responseCode
-                            if (code in 200..299) {
-                                val tempFile = File(context.cacheDir, "${cacheFileName}.tmp")
-                                connection.inputStream.use { inputStream ->
-                                    FileOutputStream(tempFile).use { outputStream ->
-                                        val buffer = ByteArray(16384)
-                                        var bytesRead: Int
-                                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                                            outputStream.write(buffer, 0, bytesRead)
+                                val code = connection.responseCode
+                                if (code in 300..399) {
+                                    val redirectLocation = connection.getHeaderField("Location")
+                                    connection.disconnect()
+                                    if (!redirectLocation.isNullOrBlank()) {
+                                        currentTarget = if (redirectLocation.startsWith("http://") || redirectLocation.startsWith("https://")) {
+                                            redirectLocation
+                                        } else {
+                                            URL(urlObj, redirectLocation).toString()
                                         }
-                                        outputStream.flush()
+                                        redirectCount++
+                                        continue
                                     }
                                 }
 
-                                if (tempFile.length() > 200) {
-                                    if (pdfFile.exists()) pdfFile.delete()
-                                    tempFile.renameTo(pdfFile)
-                                    downloadSuccess = true
+                                if (code in 200..299) {
+                                    val tempFile = File(context.cacheDir, "${cacheFileName}.tmp")
+                                    connection.inputStream.use { inputStream ->
+                                        FileOutputStream(tempFile).use { outputStream ->
+                                            val buffer = ByteArray(16384)
+                                            var bytesRead: Int
+                                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                                outputStream.write(buffer, 0, bytesRead)
+                                            }
+                                            outputStream.flush()
+                                        }
+                                    }
+
+                                    if (tempFile.length() > 200) {
+                                        if (pdfFile.exists()) pdfFile.delete()
+                                        tempFile.renameTo(pdfFile)
+                                        downloadSuccess = true
+                                        break
+                                    }
+                                } else {
+                                    Timber.w("PDF download responded with HTTP code $code from $currentTarget")
                                     break
                                 }
-                            } else {
-                                Timber.w("PDF download responded with HTTP code $code from $targetUrl")
+                            } catch (e: Exception) {
+                                Timber.e(e, "Failed to download PDF from $currentTarget")
+                                break
+                            } finally {
+                                try {
+                                    connection?.disconnect()
+                                } catch (_: Throwable) {}
                             }
-                        } catch (e: Exception) {
-                            Timber.e(e, "Failed to download PDF from $targetUrl")
-                        } finally {
-                            try {
-                                connection?.disconnect()
-                            } catch (_: Throwable) {}
                         }
                     }
                 }
@@ -795,11 +816,13 @@ fun resolvePdfDownloadUrls(rawUrl: String): List<String> {
     if (trimmed.startsWith("http://", ignoreCase = true) || trimmed.startsWith("https://", ignoreCase = true)) {
         val urls = mutableListOf(trimmed)
         if (trimmed.contains("akselerasi-edu.id/uploads/")) {
-            urls.add(trimmed.replace("akselerasi-edu.id", "schoolosbackend-production.up.railway.app"))
+            urls.add(trimmed.replace("://akselerasi-edu.id", "://www.akselerasi-edu.id"))
+            urls.add(trimmed.replace("www.akselerasi-edu.id", "schoolosbackend-production.up.railway.app").replace("akselerasi-edu.id", "schoolosbackend-production.up.railway.app"))
         } else if (trimmed.contains("schoolosbackend-production.up.railway.app/uploads/")) {
+            urls.add(trimmed.replace("schoolosbackend-production.up.railway.app", "www.akselerasi-edu.id"))
             urls.add(trimmed.replace("schoolosbackend-production.up.railway.app", "akselerasi-edu.id"))
         }
-        return urls
+        return urls.distinct()
     }
 
     val path = when {
@@ -810,8 +833,9 @@ fun resolvePdfDownloadUrls(rawUrl: String): List<String> {
     }
 
     return listOf(
-        "https://akselerasi-edu.id$path",
-        "https://schoolosbackend-production.up.railway.app$path"
+        "https://schoolosbackend-production.up.railway.app$path",
+        "https://www.akselerasi-edu.id$path",
+        "https://akselerasi-edu.id$path"
     )
 }
 

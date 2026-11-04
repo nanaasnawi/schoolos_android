@@ -537,5 +537,5 @@ fun resolveMaterialMediaUrl(raw: String?): String? {
         trimmed.startsWith("/") -> trimmed
         else -> "/uploads/$trimmed"
     }
-    return "https://akselerasi-edu.id$path"
+    return "https://schoolosbackend-production.up.railway.app$path"
 }
