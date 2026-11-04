@@ -678,6 +678,7 @@ fun AssignmentAiGeneratorScreen(
                     val essayCount = res.questions.count { it.questionType == "ESSAY" }
 
                     Scaffold(
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
                         topBar = {
                             TopAppBar(
                                 title = {
