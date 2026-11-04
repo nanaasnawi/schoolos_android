@@ -258,10 +258,18 @@ class AuthManager @Inject constructor(
         }
     }
 
+    suspend fun updateSubject(subject: String) {
+        context.dataStore.edit { prefs ->
+            if (subject.isNotBlank()) {
+                prefs[KEY_SUBJECT] = subject
+            }
+        }
+    }
+
     suspend fun updateUserProfile(
-        name: String,
-        email: String,
-        role: String,
+        name: String = "",
+        email: String = "",
+        role: String = "",
         identifier: String? = null,
         className: String? = null,
         classId: String? = null,

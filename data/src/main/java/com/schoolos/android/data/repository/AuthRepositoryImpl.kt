@@ -375,6 +375,10 @@ class AuthRepositoryImpl @Inject constructor(
             val response = api.getMyTeacherOfficialBiodata()
             if (response.success && response.data != null) {
                 val data = response.data
+                val resolvedSubj = data.subject?.takeIf { it.isNotBlank() } ?: currentAuth.subject
+                if (!resolvedSubj.isNullOrBlank() && resolvedSubj != currentAuth.subject) {
+                    authManager.updateSubject(resolvedSubj)
+                }
                 return@runCatching OfficialTeacherBiodata(
                     id = data.id,
                     tenantId = data.tenantId,
@@ -397,7 +401,7 @@ class AuthRepositoryImpl @Inject constructor(
                     kodePos = data.kodePos,
                     noHp = data.noHp ?: currentAuth.phone,
                     email = data.email ?: currentUserEmail,
-                    subject = data.subject ?: currentAuth.subject,
+                    subject = resolvedSubj,
                     classesAssigned = data.classesAssigned ?: currentAuth.className,
                     status = data.status ?: "Active",
                     fotoProfile = data.fotoProfile ?: currentAuth.avatarUrl,
@@ -410,6 +414,10 @@ class AuthRepositoryImpl @Inject constructor(
             val response = api.getMyTeacherProfile()
             if (response.success && response.data != null) {
                 val data = response.data
+                val resolvedSubj = data.subject?.takeIf { it.isNotBlank() } ?: currentAuth.subject
+                if (!resolvedSubj.isNullOrBlank() && resolvedSubj != currentAuth.subject) {
+                    authManager.updateSubject(resolvedSubj)
+                }
                 return@runCatching OfficialTeacherBiodata(
                     id = data.id,
                     tenantId = data.tenantId,
@@ -432,7 +440,7 @@ class AuthRepositoryImpl @Inject constructor(
                     kodePos = data.kodePos,
                     noHp = data.noHp ?: currentAuth.phone,
                     email = data.email ?: currentUserEmail,
-                    subject = data.subject ?: currentAuth.subject,
+                    subject = resolvedSubj,
                     classesAssigned = data.classesAssigned ?: currentAuth.className,
                     status = data.status ?: "Active",
                     fotoProfile = data.fotoProfile ?: currentAuth.avatarUrl,
@@ -449,6 +457,10 @@ class AuthRepositoryImpl @Inject constructor(
                 (currentUserName.isNotBlank() && t.fullName.trim().equals(currentUserName.trim(), ignoreCase = true))
             }
             if (teacherRecord != null) {
+                val resolvedSubj = teacherRecord.subject?.takeIf { it.isNotBlank() } ?: currentAuth.subject
+                if (!resolvedSubj.isNullOrBlank() && resolvedSubj != currentAuth.subject) {
+                    authManager.updateSubject(resolvedSubj)
+                }
                 return@runCatching OfficialTeacherBiodata(
                     id = teacherRecord.id,
                     tenantId = teacherRecord.tenantId,
@@ -471,7 +483,7 @@ class AuthRepositoryImpl @Inject constructor(
                     kodePos = teacherRecord.kodePos,
                     noHp = teacherRecord.noHp ?: currentAuth.phone,
                     email = teacherRecord.email ?: currentUserEmail,
-                    subject = teacherRecord.subject ?: currentAuth.subject,
+                    subject = resolvedSubj,
                     classesAssigned = teacherRecord.classesAssigned ?: currentAuth.className,
                     status = teacherRecord.status ?: "Active",
                     fotoProfile = teacherRecord.fotoProfile ?: currentAuth.avatarUrl,
