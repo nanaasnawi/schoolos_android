@@ -1,13 +1,14 @@
 package com.schoolos.android.feature.sessions
 
+import com.schoolos.android.core.R as CoreR
 import androidx.compose.ui.res.painterResource
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -28,42 +28,36 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Videocam
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.schoolos.android.core.designsystem.CosmicNavy
-import com.schoolos.android.core.designsystem.GlassBorder
-import com.schoolos.android.core.designsystem.GlassOverlay
-import com.schoolos.android.core.designsystem.NeonBlue
-import com.schoolos.android.core.designsystem.NeonSuccess
-import com.schoolos.android.core.designsystem.TeacherNeon
-import com.schoolos.android.core.designsystem.TextPrimary
-import com.schoolos.android.core.designsystem.TextSecondary
-import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.subjectIcon
 import com.schoolos.android.domain.model.LearningSession
 import java.time.Instant
 import java.time.ZoneId
 import java.time.ZonedDateTime
+
+private data class TeacherStatusPillStyle(
+    val label: String,
+    val bg: Color,
+    val border: Color,
+    val textColor: Color,
+)
 
 private fun formatClassName(raw: String?, fallback: String = "Kelas"): String {
     if (raw.isNullOrBlank() || raw == "-" || (raw.length >= 32 && raw.contains("-"))) {
@@ -91,65 +85,11 @@ fun LazyListScope.teacherAgendaContent(
 ) {
     if (sessions.isEmpty()) {
         item {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp, bottom = 24.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(Color(0xFF111113))
-                    .border(1.dp, Color(0xFF1F1F23), RoundedCornerShape(18.dp))
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF161618))
-                            .border(1.dp, Color(0xFF27272A), RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = TextSecondary,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = if (selectedDayName.isNotBlank()) "Tidak Ada Agenda di $selectedDayName" else "Tidak Ada Agenda Mengajar",
-                        color = TextPrimary,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Bold,
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = "Tidak ada jadwal mengajar pada hari yang dipilih.",
-                        color = TextTertiary,
-                        fontSize = 12.sp,
-                    )
-                    if (!isToday) {
-                        Spacer(Modifier.height(14.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF161618))
-                                .border(1.dp, Color(0xFF27272A), RoundedCornerShape(10.dp))
-                                .clickable(onClick = onJumpToToday)
-                                .padding(horizontal = 14.dp, vertical = 8.dp),
-                        ) {
-                            Text(
-                                text = "Lihat Jadwal Hari Ini",
-                                color = TextPrimary,
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.SemiBold,
-                            )
-                        }
-                    }
-                }
-            }
+            TeacherAgendaEmptyCard(
+                selectedDayName = selectedDayName,
+                isToday = isToday,
+                onJumpToToday = onJumpToToday,
+            )
         }
     } else {
         itemsIndexed(sessions, key = { _, s -> s.id }) { index, session ->
@@ -163,6 +103,84 @@ fun LazyListScope.teacherAgendaContent(
     }
 }
 
+@Composable
+private fun TeacherAgendaEmptyCard(
+    selectedDayName: String,
+    isToday: Boolean,
+    onJumpToToday: () -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp, bottom = 24.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp,
+    ) {
+        Column(
+            modifier = Modifier.padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(innerCardBg)
+                    .border(1.dp, innerCardBorder, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CalendarMonth,
+                    contentDescription = null,
+                    tint = textSecondary,
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = if (selectedDayName.isNotBlank()) "Tidak Ada Agenda di $selectedDayName" else "Tidak Ada Agenda Mengajar",
+                color = textPrimary,
+                fontSize = 15.5.sp,
+                fontWeight = FontWeight.Bold,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = "Tidak ada jadwal mengajar pada hari yang dipilih.",
+                color = textTertiary,
+                fontSize = 12.sp,
+            )
+            if (!isToday) {
+                Spacer(Modifier.height(16.dp))
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(innerCardBg)
+                        .border(1.dp, innerCardBorder, RoundedCornerShape(10.dp))
+                        .clickable(onClick = onJumpToToday)
+                        .padding(horizontal = 14.dp, vertical = 8.dp),
+                ) {
+                    Text(
+                        text = "Lihat Jadwal Hari Ini",
+                        color = textPrimary,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                }
+            }
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun TeacherTimelineItem(
@@ -171,6 +189,17 @@ private fun TeacherTimelineItem(
     accentColor: Color,
     onClick: () -> Unit,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
+    val primaryBlue = if (isDark) Color(0xFF3B82F6) else Color(0xFF2563EB)
+
     val title = session.notes ?: session.subjectName ?: "Pelajaran"
     val subjectName = session.subjectName ?: title.substringBefore(" • ").substringBefore(" (Ruang").trim()
     val isActive = session.status.equals("active", ignoreCase = true)
@@ -212,7 +241,7 @@ private fun TeacherTimelineItem(
                 text = startHour,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Bold,
-                color = if (isActive) NeonSuccess else if (isCompleted) TextSecondary else Color.White,
+                color = if (isActive) successColor else if (isCompleted) textSecondary else textPrimary,
             )
 
             Spacer(Modifier.height(4.dp))
@@ -224,17 +253,17 @@ private fun TeacherTimelineItem(
                     .clip(CircleShape)
                     .background(
                         when {
-                            isActive -> NeonSuccess.copy(alpha = 0.20f)
-                            isCompleted -> NeonSuccess.copy(alpha = 0.15f)
-                            else -> Color(0xFF161618)
+                            isActive -> successColor.copy(alpha = 0.20f)
+                            isCompleted -> if (isDark) successColor.copy(alpha = 0.15f) else Color(0xFFDCFCE7)
+                            else -> if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9)
                         }
                     )
                     .border(
                         width = 1.dp,
                         color = when {
-                            isActive -> NeonSuccess.copy(alpha = pulseAlpha)
-                            isCompleted -> NeonSuccess
-                            else -> Color(0xFF27272A)
+                            isActive -> successColor.copy(alpha = pulseAlpha)
+                            isCompleted -> successColor
+                            else -> if (isDark) Color(0xFF27272A) else Color(0xFFCBD5E1)
                         },
                         shape = CircleShape,
                     ),
@@ -244,7 +273,7 @@ private fun TeacherTimelineItem(
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = NeonSuccess,
+                        tint = successColor,
                         modifier = Modifier.size(10.dp),
                     )
                 } else {
@@ -252,7 +281,7 @@ private fun TeacherTimelineItem(
                         modifier = Modifier
                             .size(5.dp)
                             .clip(CircleShape)
-                            .background(if (isActive) NeonSuccess else TextTertiary),
+                            .background(if (isActive) successColor else textTertiary),
                     )
                 }
             }
@@ -262,7 +291,7 @@ private fun TeacherTimelineItem(
             Text(
                 text = endHour,
                 fontSize = 10.sp,
-                color = TextTertiary,
+                color = textTertiary,
                 fontWeight = FontWeight.Normal,
             )
 
@@ -273,8 +302,8 @@ private fun TeacherTimelineItem(
                         .width(1.5.dp)
                         .weight(1f)
                         .background(
-                            if (isCompleted) NeonSuccess.copy(alpha = 0.35f)
-                            else Color(0xFF27272A)
+                            if (isCompleted) successColor.copy(alpha = 0.35f)
+                            else if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
                         ),
                 )
             }
@@ -282,22 +311,22 @@ private fun TeacherTimelineItem(
 
         Spacer(Modifier.width(10.dp))
 
-        // ── 2. RIGHT OBSIDIAN SESSION CARD ───────────────────────────────────────
-        Box(
+        // ── 2. RIGHT ADAPTIVE SESSION CARD ───────────────────────────────────────
+        Surface(
             modifier = Modifier
                 .weight(1f)
                 .padding(bottom = 12.dp)
-                .clip(RoundedCornerShape(18.dp))
-                .background(Color(0xFF111113))
-                .border(
-                    width = 1.dp,
-                    color = if (isActive) NeonSuccess.copy(alpha = 0.6f) else Color(0xFF1F1F23),
-                    shape = RoundedCornerShape(18.dp),
-                )
-                .clickable(onClick = onClick)
-                .padding(16.dp)
+                .clip(RoundedCornerShape(22.dp))
+                .clickable(onClick = onClick),
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(
+                width = if (isActive) 1.5.dp else 1.dp,
+                color = if (isActive) (if (isDark) successColor.copy(alpha = 0.7f) else successColor) else cardBorder
+            ),
+            shadowElevation = if (isDark) 0.dp else 1.dp,
         ) {
-            Column {
+            Column(modifier = Modifier.padding(16.dp)) {
                 // Top Row: Subject + Status Pill
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -310,17 +339,17 @@ private fun TeacherTimelineItem(
                     ) {
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF161618))
-                                .border(1.dp, Color(0xFF27272A), RoundedCornerShape(10.dp)),
+                                .size(40.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (isActive) (if (isDark) successColor.copy(alpha = 0.15f) else Color(0xFFDCFCE7)) else innerCardBg)
+                                .border(1.dp, if (isActive) (if (isDark) successColor.copy(alpha = 0.4f) else Color(0xFF86EFAC)) else innerCardBorder, RoundedCornerShape(12.dp)),
                             contentAlignment = Alignment.Center,
                         ) {
                             Icon(
                                 imageVector = if (isOnline) Icons.Default.Videocam else subjectIcon(subjectName),
                                 contentDescription = null,
-                                tint = if (isActive) NeonSuccess else TextSecondary,
-                                modifier = Modifier.size(18.dp),
+                                tint = if (isActive) successColor else primaryBlue,
+                                modifier = Modifier.size(20.dp),
                             )
                         }
 
@@ -331,7 +360,7 @@ private fun TeacherTimelineItem(
                                 text = subjectName,
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = TextPrimary,
+                                color = textPrimary,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis,
                                 lineHeight = 20.sp,
@@ -344,7 +373,7 @@ private fun TeacherTimelineItem(
                             Text(
                                 text = sessionSubtitle,
                                 fontSize = 12.sp,
-                                color = TextTertiary,
+                                color = textSecondary,
                                 fontWeight = FontWeight.Normal,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
@@ -355,21 +384,36 @@ private fun TeacherTimelineItem(
                     Spacer(Modifier.width(8.dp))
 
                     // Status Badge Pill
-                    val (statusLabel, statusColor) = when {
-                        isActive -> Pair("AKTIF", NeonSuccess)
-                        isCompleted -> Pair("SELESAI", TextTertiary)
-                        else -> Pair("MENDATANG", Color(0xFF60A5FA))
+                    val statusPill = when {
+                        isActive -> TeacherStatusPillStyle(
+                            label = "AKTIF",
+                            bg = if (isDark) successColor.copy(alpha = 0.15f) else Color(0xFFDCFCE7),
+                            border = if (isDark) successColor.copy(alpha = 0.4f) else Color(0xFF86EFAC),
+                            textColor = if (isDark) successColor else Color(0xFF15803D),
+                        )
+                        isCompleted -> TeacherStatusPillStyle(
+                            label = "SELESAI",
+                            bg = if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9),
+                            border = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0),
+                            textColor = textTertiary,
+                        )
+                        else -> TeacherStatusPillStyle(
+                            label = "MENDATANG",
+                            bg = if (isDark) Color(0xFF1E293B) else Color(0xFFEFF6FF),
+                            border = if (isDark) Color(0xFF3B82F6).copy(alpha = 0.4f) else Color(0xFFBFDBFE),
+                            textColor = primaryBlue,
+                        )
                     }
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (isActive) NeonSuccess.copy(alpha = 0.15f) else Color(0xFF161618))
-                            .border(1.dp, if (isActive) NeonSuccess.copy(alpha = 0.4f) else Color(0xFF27272A), RoundedCornerShape(6.dp))
+                            .background(statusPill.bg)
+                            .border(1.dp, statusPill.border, RoundedCornerShape(6.dp))
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                     ) {
                         Text(
-                            text = statusLabel,
-                            color = statusColor,
+                            text = statusPill.label,
+                            color = statusPill.textColor,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
@@ -377,7 +421,7 @@ private fun TeacherTimelineItem(
                     }
                 }
 
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(14.dp))
 
                 // Location & Room Row + CTA
                 Row(
@@ -393,23 +437,23 @@ private fun TeacherTimelineItem(
                             Icon(
                                 imageVector = Icons.Default.Videocam,
                                 contentDescription = null,
-                                tint = TextTertiary,
-                                modifier = Modifier.size(13.dp),
+                                tint = textSecondary,
+                                modifier = Modifier.size(14.dp),
                             )
                         } else {
                             Icon(
-                                painter = painterResource(id = com.schoolos.android.core.R.drawable.ic_modern_location),
+                                painter = painterResource(id = CoreR.drawable.ic_modern_location),
                                 contentDescription = null,
-                                tint = TextTertiary,
-                                modifier = Modifier.size(13.dp),
+                                tint = textSecondary,
+                                modifier = Modifier.size(14.dp),
                             )
                         }
-                        Spacer(Modifier.width(5.dp))
+                        Spacer(Modifier.width(6.dp))
                         Text(
                             text = room,
                             fontSize = 12.sp,
-                            color = TextSecondary,
-                            fontWeight = FontWeight.Normal,
+                            color = textSecondary,
+                            fontWeight = FontWeight.Medium,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
                         )
@@ -418,26 +462,30 @@ private fun TeacherTimelineItem(
                     Spacer(Modifier.width(8.dp))
 
                     // CTA Button
+                    val ctaBg = if (isActive) (if (isDark) successColor.copy(alpha = 0.15f) else Color(0xFFDCFCE7)) else innerCardBg
+                    val ctaBorder = if (isActive) (if (isDark) successColor.copy(alpha = 0.4f) else Color(0xFF86EFAC)) else innerCardBorder
+                    val ctaTextColor = if (isActive) (if (isDark) successColor else Color(0xFF15803D)) else textSecondary
+
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isActive) NeonSuccess.copy(alpha = 0.15f) else Color(0xFF161618))
-                            .border(1.dp, if (isActive) NeonSuccess.copy(alpha = 0.4f) else Color(0xFF27272A), RoundedCornerShape(8.dp))
+                            .background(ctaBg)
+                            .border(1.dp, ctaBorder, RoundedCornerShape(8.dp))
                             .clickable(onClick = onClick)
                             .padding(horizontal = 10.dp, vertical = 5.dp),
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 text = if (isActive) "Mulai" else "Detail",
-                                fontSize = 11.sp,
+                                fontSize = 11.5.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = if (isActive) NeonSuccess else TextSecondary,
+                                color = ctaTextColor,
                             )
                             Spacer(Modifier.width(3.dp))
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
                                 contentDescription = null,
-                                tint = if (isActive) NeonSuccess else TextSecondary,
+                                tint = ctaTextColor,
                                 modifier = Modifier.size(9.dp),
                             )
                         }
