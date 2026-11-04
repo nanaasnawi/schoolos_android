@@ -208,6 +208,69 @@ fun MaterialCreatorScreen(
     var showAiGenerateDialog by remember { mutableStateOf(false) }
 
     val clipboardManager = LocalClipboardManager.current
+    val coroutineScope = rememberCoroutineScope()
+
+    val documentPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            coroutineScope.launch {
+                try {
+                    val rawName = withContext(Dispatchers.IO) { queryFileName(context, it) }
+                        ?: "modul_ajar_${System.currentTimeMillis()}.pdf"
+                    val fileName = if (!rawName.contains(".")) "$rawName.pdf" else rawName
+                    val bytes = readMaterialUriBytes(context, it)
+                    viewModel.uploadFile(bytes, fileName, "application/pdf")
+                } catch (err: Exception) {
+                    Toast.makeText(context, err.message ?: "Gagal membaca dokumen.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        uri?.let {
+            coroutineScope.launch {
+                try {
+                    val mime = context.contentResolver.getType(it) ?: "image/jpeg"
+                    val ext = when (mime) {
+                        "image/png" -> ".png"
+                        "image/webp" -> ".webp"
+                        "image/gif" -> ".gif"
+                        else -> ".jpg"
+                    }
+                    val rawName = withContext(Dispatchers.IO) { queryFileName(context, it) }
+                        ?: "gambar_materi_${System.currentTimeMillis()}$ext"
+                    val fileName = if (!rawName.contains(".")) "$rawName$ext" else rawName
+                    val bytes = readMaterialUriBytes(context, it)
+                    viewModel.uploadFile(bytes, fileName, mime)
+                } catch (err: Exception) {
+                    Toast.makeText(context, err.message ?: "Gagal membaca gambar.", Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(state.uploadedFileUrl) {
+        state.uploadedFileUrl?.let { mediaUrl = it }
+    }
+
+    LaunchedEffect(state.success) {
+        if (state.success) {
+            Toast.makeText(context, "Materi ajar berhasil diterbitkan ke siswa!", Toast.LENGTH_SHORT).show()
+            showPrePublishDialog = false
+            onSuccess()
+            viewModel.resetState()
+        }
+    }
+
+    LaunchedEffect(state.error) {
+        state.error?.let { err ->
+            Toast.makeText(context, err, Toast.LENGTH_LONG).show()
+        }
+    }
 
     val applySelectedBook: (LibraryBook, String, String) -> Unit = { book, sPage, ePage ->
         selectedBook = book
@@ -343,62 +406,6 @@ fun MaterialCreatorScreen(
         return
     }
 
-    val coroutineScope = rememberCoroutineScope()
-
-    val documentPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            coroutineScope.launch {
-                try {
-                    val rawName = withContext(Dispatchers.IO) { queryFileName(context, it) }
-                        ?: "modul_ajar_${System.currentTimeMillis()}.pdf"
-                    val fileName = if (!rawName.contains(".")) "$rawName.pdf" else rawName
-                    val bytes = readMaterialUriBytes(context, it)
-                    viewModel.uploadFile(bytes, fileName, "application/pdf")
-                } catch (err: Exception) {
-                    Toast.makeText(context, err.message ?: "Gagal membaca dokumen.", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    val imagePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.GetContent()
-    ) { uri: Uri? ->
-        uri?.let {
-            coroutineScope.launch {
-                try {
-                    val mime = context.contentResolver.getType(it) ?: "image/jpeg"
-                    val ext = when (mime) {
-                        "image/png" -> ".png"
-                        "image/webp" -> ".webp"
-                        "image/gif" -> ".gif"
-                        else -> ".jpg"
-                    }
-                    val rawName = withContext(Dispatchers.IO) { queryFileName(context, it) }
-                        ?: "gambar_materi_${System.currentTimeMillis()}$ext"
-                    val fileName = if (!rawName.contains(".")) "$rawName$ext" else rawName
-                    val bytes = readMaterialUriBytes(context, it)
-                    viewModel.uploadFile(bytes, fileName, mime)
-                } catch (err: Exception) {
-                    Toast.makeText(context, err.message ?: "Gagal membaca gambar.", Toast.LENGTH_LONG).show()
-                }
-            }
-        }
-    }
-
-    LaunchedEffect(state.uploadedFileUrl) {
-        state.uploadedFileUrl?.let { mediaUrl = it }
-    }
-
-    LaunchedEffect(state.success) {
-        if (state.success) {
-            Toast.makeText(context, "Materi ajar berhasil diterbitkan ke siswa!", Toast.LENGTH_SHORT).show()
-            onSuccess()
-            viewModel.resetState()
-        }
-    }
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
@@ -2010,7 +2017,18 @@ private fun MaterialReviewAndPublishScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = if (isScheduled) NeonWarning else EmeraldGlow)
                     ) {
                         if (isLoading) {
-                            CircularProgressIndicator(color = Color.White, strokeWidth = 2.dp, modifier = Modifier.size(18.dp))
+                            CircularProgressIndicator(
+                                color = if (isScheduled) CosmicBlack else Color.White,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                if (isScheduled) "Menjadwalkan..." else "Menerbitkan...",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = if (isScheduled) CosmicBlack else Color.White
+                            )
                         } else {
                             Icon(
                                 if (isScheduled) Icons.Default.Schedule else Icons.Default.CloudUpload,
