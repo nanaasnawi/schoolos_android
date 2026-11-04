@@ -106,7 +106,8 @@ fun QuizListScreen(
                     contentColor = Color.White,
                     shape = RoundedCornerShape(16.dp),
                     icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("Buat Kuis", fontWeight = FontWeight.Bold) }
+                    text = { Text("Buat Kuis", fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.navigationBarsPadding()
                 )
             }
         }

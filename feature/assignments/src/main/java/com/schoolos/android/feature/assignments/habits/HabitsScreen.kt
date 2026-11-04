@@ -138,6 +138,7 @@ fun HabitsScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .navigationBarsPadding()
                             .padding(horizontal = 16.dp, vertical = 10.dp)
                     ) {
                         if (state.isParent) {

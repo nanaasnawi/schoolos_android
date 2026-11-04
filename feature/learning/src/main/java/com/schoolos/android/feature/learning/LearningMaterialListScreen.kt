@@ -84,7 +84,8 @@ fun LearningMaterialListScreen(
                     contentColor = Color.White,
                     shape = RoundedCornerShape(16.dp),
                     icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("Buat Materi", fontWeight = FontWeight.Bold) }
+                    text = { Text("Buat Materi", fontWeight = FontWeight.Bold) },
+                    modifier = Modifier.navigationBarsPadding()
                 )
             }
         }
