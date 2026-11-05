@@ -443,6 +443,10 @@ class HomeViewModel @Inject constructor(
             val activeTeacherSession = liveSession
             val activeSubj = if (activeTeacherSession != null) {
                 cleanSubjectName(activeTeacherSession.lessonId, activeTeacherSession.subjectName, activeTeacherSession.notes, subjectMap)
+            } else if (isTeacher && currentAuth.subject != null && currentAuth.subject?.isNotBlank() == true) {
+                currentAuth.subject.orEmpty()
+            } else if (_state.value.activeSessionSubject.isNotBlank() && _state.value.activeSessionSubject != "-" && !isUuid(_state.value.activeSessionSubject)) {
+                _state.value.activeSessionSubject
             } else {
                 "-"
             }
@@ -716,6 +720,25 @@ class HomeViewModel @Inject constructor(
             }
             syncPrincipalAiContext(_state.value)
         } else if (isTeacher) {
+            // Fetch official GTK / Dapodik biodata from PostgreSQL via SSOT backend
+            authRepository.getTeacherOfficialBiodata().onSuccess { biodata ->
+                val realSubject = biodata.subject?.takeIf { it.isNotBlank() }
+                val realRombel = biodata.classesAssigned?.takeIf { it.isNotBlank() }
+                _state.update { current ->
+                    val activeSubj = if (current.activeSessionSubject.isBlank() || current.activeSessionSubject == "-" || isUuid(current.activeSessionSubject)) {
+                        realSubject ?: current.activeSessionSubject
+                    } else current.activeSessionSubject
+                    val activeCls = if (current.activeSessionClass.isBlank() || current.activeSessionClass == "-" || isUuid(current.activeSessionClass)) {
+                        realRombel ?: current.activeSessionClass
+                    } else current.activeSessionClass
+                    val homeroomResolved = realRombel ?: current.homeroomClass
+                    current.copy(
+                        activeSessionSubject = activeSubj,
+                        activeSessionClass = activeCls,
+                        homeroomClass = homeroomResolved,
+                    )
+                }
+            }
             // Fetch total registered students across school from Railway PostgreSQL
             academicRepository.getClassStudents("ALL").onSuccess { students ->
                 _state.update { it.copy(totalStudentsCount = students.size.toString()) }
@@ -750,23 +773,23 @@ class HomeViewModel @Inject constructor(
                 val resolvedHomeroom = matchedHomeroomClass?.name ?: homeroom
 
                 _state.update { current ->
-                    val activeCls = resolvedHomeroom.takeIf { it.isNotBlank() && !isUuid(it) }
+                    val homeroomToUse = resolvedHomeroom.takeIf { it.isNotBlank() && !isUuid(it) }
+                        ?: current.homeroomClass.takeIf { it.isNotBlank() && !isUuid(it) }
+                        ?: ""
+                    val activeCls = homeroomToUse.takeIf { it.isNotBlank() }
                         ?: current.activeSessionClass.takeIf { it.isNotBlank() && it != "-" && !isUuid(it) }
                         ?: validClasses.firstOrNull()?.name
                         ?: "-"
                     current.copy(
                         teacherClasses = validClasses,
-                        homeroomClass = resolvedHomeroom,
+                        homeroomClass = homeroomToUse,
                         activeSessionClass = activeCls
                     )
                 }
             }
             academicRepository.getSubjects().onSuccess { subjects ->
                 _state.update { current ->
-                    val activeSubj = if (current.activeSessionSubject.isBlank() || current.activeSessionSubject == "-" || isUuid(current.activeSessionSubject)) {
-                        subjects.firstOrNull()?.name ?: current.activeSessionSubject
-                    } else current.activeSessionSubject
-                    current.copy(teacherSubjects = subjects, activeSessionSubject = activeSubj)
+                    current.copy(teacherSubjects = subjects)
                 }
             }
         } else if (isParent) {
