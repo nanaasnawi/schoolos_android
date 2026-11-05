@@ -212,31 +212,28 @@ fun TeacherSessionDetailContent(
         ) {
             ResourceActionCard(
                 label = "Beri Tugas",
-                action = "Buat tugas",
                 iconRes = CoreR.drawable.ic_modern_tasks,
                 tint = skyFg, tintBg = skyBg,
                 cardBg = cardBg, cardBorder = cardBorder,
-                textPrimary = textPrimary, textSecondary = textSecondary,
+                textPrimary = textPrimary,
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenAssignments(subjectArg) },
             )
             ResourceActionCard(
                 label = "Buat Kuis",
-                action = "Kelola kuis",
                 iconRes = CoreR.drawable.ic_modern_quiz,
                 tint = greenFg, tintBg = greenBg,
                 cardBg = cardBg, cardBorder = cardBorder,
-                textPrimary = textPrimary, textSecondary = textSecondary,
+                textPrimary = textPrimary,
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenQuizzes(subjectArg) },
             )
             ResourceActionCard(
                 label = "Unggah Materi",
-                action = "Bahan ajar",
                 iconRes = CoreR.drawable.ic_modern_book,
                 tint = purpleFg, tintBg = purpleBg,
                 cardBg = cardBg, cardBorder = cardBorder,
-                textPrimary = textPrimary, textSecondary = textSecondary,
+                textPrimary = textPrimary,
                 modifier = Modifier.weight(1f),
                 onClick = { onOpenMaterials(subjectArg) },
             )
@@ -511,14 +508,12 @@ private fun AttendanceMetricBox(
 @Composable
 private fun ResourceActionCard(
     label: String,
-    action: String,
     iconRes: Int,
     tint: Color,
     tintBg: Color,
     cardBg: Color,
     cardBorder: Color,
     textPrimary: Color,
-    textSecondary: Color,
     modifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
@@ -552,14 +547,6 @@ private fun ResourceActionCard(
                 color = textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Center,
-            )
-            Text(
-                text = "$action →",
-                fontSize = 10.5.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = tint,
-                maxLines = 1,
                 textAlign = TextAlign.Center,
             )
         }

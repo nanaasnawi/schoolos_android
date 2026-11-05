@@ -7,10 +7,13 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +23,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -45,11 +51,16 @@ import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -839,7 +850,7 @@ private fun MaterialRow(
 }
 
 // ── SUBMISSION EDITOR ─────────────────────────────────────────────────────────
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun SubmissionEditor(
     isParent: Boolean,
@@ -851,13 +862,11 @@ private fun SubmissionEditor(
     hasQuestions: Boolean = false,
     allAnswered: Boolean = true,
 ) {
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val coroutineScope = rememberCoroutineScope()
+    var showEditorSheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .bringIntoViewRequester(bringIntoViewRequester)
             .clip(RoundedCornerShape(20.dp))
             .background(CosmicNavy)
             .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
@@ -889,7 +898,7 @@ private fun SubmissionEditor(
                         color = TextPrimary
                     )
                     Text(
-                        if (!isActive) "Tugas telah ditutup" else "Tulis & kirim sebelum tenggat",
+                        if (!isActive) "Tugas telah ditutup" else "Ketuk untuk menulis & mengirim jawaban",
                         fontSize = 10.sp,
                         color = TextTertiary
                     )
@@ -929,56 +938,64 @@ private fun SubmissionEditor(
                     }
                 }
             } else {
-                // Text input
-                OutlinedTextField(
-                    value = content,
-                    onValueChange = onContentChange,
-                    placeholder = {
-                        Text(
-                            "Tulis jawabanmu di sini dengan jelas dan lengkap sebelum dikirim...",
-                            fontSize = 12.sp,
-                            color = TextTertiary
-                        )
-                    },
+                // Clickable summary box that opens ModalBottomSheet
+                Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp)
-                        .onFocusEvent { focusState ->
-                            if (focusState.isFocused) {
-                                coroutineScope.launch {
-                                    delay(200)
-                                    bringIntoViewRequester.bringIntoView()
-                                }
-                            }
-                        },
-                    maxLines = 6,
-                    shape = RoundedCornerShape(12.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = StudentNeon,
-                        unfocusedBorderColor = GlassBorder,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary,
-                        focusedContainerColor = CosmicBlack,
-                        unfocusedContainerColor = CosmicBlack,
-                    )
-                )
-
-                // Character count
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CosmicBlack)
+                        .border(
+                            1.dp,
+                            if (content.isNotBlank()) StudentNeon.copy(alpha = 0.45f) else GlassBorder,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { showEditorSheet = true }
+                        .padding(14.dp)
                 ) {
-                    Text(
-                        "${content.length} karakter",
-                        fontSize = 10.sp,
-                        color = TextTertiary
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (content.isNotBlank()) content else "Ketuk di sini untuk menulis jawaban tugasmu...",
+                                fontSize = 12.5.sp,
+                                color = if (content.isNotBlank()) TextPrimary else TextTertiary,
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis,
+                                lineHeight = 18.sp
+                            )
+                            if (content.isNotBlank()) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "${content.length} karakter tersimpan • Ketuk untuk mengedit",
+                                    fontSize = 10.sp,
+                                    color = StudentNeon,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Tulis Jawaban",
+                            tint = StudentNeon,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                 }
 
-                // Submit button
+                // Primary button: opens bottom sheet if empty, or submits/opens sheet
                 Button(
-                    onClick = onSubmitClick,
-                    enabled = (if (hasQuestions) allAnswered else content.isNotBlank()) && !isSubmitting,
+                    onClick = {
+                        if (content.isBlank() && !hasQuestions) {
+                            showEditorSheet = true
+                        } else {
+                            onSubmitClick()
+                        }
+                    },
+                    enabled = (if (hasQuestions) allAnswered else true) && !isSubmitting,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -1003,16 +1020,128 @@ private fun SubmissionEditor(
                         )
                     } else {
                         Icon(
-                            imageVector = Icons.Default.Send,
+                            imageVector = if (content.isBlank() && !hasQuestions) Icons.Default.Edit else Icons.Default.Send,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            "Kumpulkan Tugas",
+                            if (content.isBlank() && !hasQuestions) "Tulis Jawaban & Kumpulkan" else "Kumpulkan Tugas",
                             fontWeight = FontWeight.Black,
                             fontSize = 14.sp
                         )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showEditorSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showEditorSheet = false },
+            sheetState = sheetState,
+            containerColor = CosmicNavy,
+            contentColor = TextPrimary,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column {
+                        Text(
+                            text = "Lembar Jawaban Tugas",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "Tulis jawabanmu dengan jelas dan lengkap",
+                            fontSize = 11.5.sp,
+                            color = TextSecondary
+                        )
+                    }
+                    Text(
+                        text = "${content.length} karakter",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = StudentNeon
+                    )
+                }
+
+                OutlinedTextField(
+                    value = content,
+                    onValueChange = onContentChange,
+                    placeholder = {
+                        Text(
+                            "Tulis jawabanmu di sini dengan jelas dan lengkap sebelum dikirim...",
+                            fontSize = 12.5.sp,
+                            color = TextTertiary
+                        )
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .heightIn(min = 150.dp),
+                    maxLines = 8,
+                    shape = RoundedCornerShape(14.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = StudentNeon,
+                        unfocusedBorderColor = GlassBorder,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary,
+                        focusedContainerColor = CosmicBlack,
+                        unfocusedContainerColor = CosmicBlack,
+                    )
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showEditorSheet = false },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, GlassBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+                    ) {
+                        Text("Simpan Draf", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            showEditorSheet = false
+                            onSubmitClick()
+                        },
+                        enabled = (if (hasQuestions) allAnswered else content.isNotBlank()) && !isSubmitting,
+                        modifier = Modifier
+                            .weight(1.4f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StudentNeon,
+                            contentColor = Color.Black,
+                            disabledContainerColor = GlassBorder
+                        )
+                    ) {
+                        Icon(Icons.Default.Send, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Kumpulkan", fontWeight = FontWeight.Black, fontSize = 13.sp)
                     }
                 }
             }
@@ -1377,7 +1506,7 @@ private fun MultipleChoiceCard(
     }
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun EssayQuestionCard(
     index: Int,
@@ -1386,13 +1515,11 @@ private fun EssayQuestionCard(
     onAnswerChanged: (String) -> Unit,
     isParent: Boolean,
 ) {
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val coroutineScope = rememberCoroutineScope()
+    var showEssaySheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .bringIntoViewRequester(bringIntoViewRequester)
             .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
             .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
@@ -1435,25 +1562,134 @@ private fun EssayQuestionCard(
                     modifier = Modifier.padding(4.dp)
                 )
             } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CosmicBlack)
+                        .border(
+                            1.dp,
+                            if (answer.isNotBlank()) NeonInfo.copy(alpha = 0.45f) else GlassBorder,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { showEssaySheet = true }
+                        .padding(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (answer.isNotBlank()) answer else "Ketuk untuk menulis jawaban uraian soal ini...",
+                                fontSize = 12.5.sp,
+                                color = if (answer.isNotBlank()) TextPrimary else TextTertiary,
+                                maxLines = 4,
+                                overflow = TextOverflow.Ellipsis,
+                                lineHeight = 18.sp
+                            )
+                            if (answer.isNotBlank()) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = "✓ Terjawab (${answer.length} karakter) • Ketuk untuk mengedit",
+                                    fontSize = 10.sp,
+                                    color = NeonInfo,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Tulis Jawaban",
+                            tint = NeonInfo,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showEssaySheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showEssaySheet = false },
+            sheetState = sheetState,
+            containerColor = CosmicNavy,
+            contentColor = TextPrimary,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(CircleShape)
+                                .background(NeonInfo.copy(alpha = 0.15f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("$index", fontSize = 12.sp, fontWeight = FontWeight.Black, color = NeonInfo)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Jawaban Soal Uraian #$index",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Black,
+                            color = TextPrimary
+                        )
+                    }
+                    if (question.points != null) {
+                        Text(
+                            text = "${question.points} Poin",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = NeonInfo
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CosmicBlack)
+                        .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
+                        .padding(12.dp)
+                ) {
+                    Text(
+                        text = question.questionText,
+                        fontSize = 13.sp,
+                        color = TextPrimary,
+                        lineHeight = 19.sp
+                    )
+                }
+
                 OutlinedTextField(
                     value = answer,
                     onValueChange = onAnswerChanged,
                     placeholder = {
-                        Text("Tulis jawabanmu untuk soal ini...", fontSize = 12.sp, color = TextTertiary)
+                        Text("Tulis jawabanmu untuk soal ini...", fontSize = 12.5.sp, color = TextTertiary)
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp)
-                        .onFocusEvent { focusState ->
-                            if (focusState.isFocused) {
-                                coroutineScope.launch {
-                                    delay(200)
-                                    bringIntoViewRequester.bringIntoView()
-                                }
-                            }
-                        },
-                    maxLines = 5,
-                    shape = RoundedCornerShape(10.dp),
+                        .heightIn(min = 140.dp),
+                    maxLines = 7,
+                    shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = NeonInfo,
                         unfocusedBorderColor = GlassBorder,
@@ -1463,8 +1699,30 @@ private fun EssayQuestionCard(
                         unfocusedContainerColor = CosmicBlack,
                     )
                 )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    Text("${answer.length} karakter", fontSize = 10.sp, color = TextTertiary)
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("${answer.length} karakter", fontSize = 10.5.sp, color = TextTertiary)
+                }
+
+                Button(
+                    onClick = { showEssaySheet = false },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = NeonInfo,
+                        contentColor = Color.White
+                    )
+                ) {
+                    Icon(Icons.Default.CheckCircle, null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Text("Simpan Jawaban Soal #$index", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                 }
             }
         }
@@ -1890,7 +2148,7 @@ private fun SubmittedEssayCard(
 }
 
 // ── QUESTIONS SUBMISSION ACTION CARD (BEFORE SUBMISSION) ─────────────────────
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun QuestionsSubmissionCard(
     isParent: Boolean,
@@ -1903,13 +2161,11 @@ private fun QuestionsSubmissionCard(
     onContentChange: (String) -> Unit,
     onSubmitClick: () -> Unit,
 ) {
-    val bringIntoViewRequester = remember { BringIntoViewRequester() }
-    val coroutineScope = rememberCoroutineScope()
+    var showNoteAndSubmitSheet by remember { mutableStateOf(false) }
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .bringIntoViewRequester(bringIntoViewRequester)
             .clip(RoundedCornerShape(20.dp))
             .background(CosmicNavy)
             .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
@@ -1971,39 +2227,51 @@ private fun QuestionsSubmissionCard(
 
             HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
 
-            // Optional note for teacher
-            OutlinedTextField(
-                value = content,
-                onValueChange = onContentChange,
-                placeholder = {
-                    Text(
-                        "Catatan tambahan untuk guru (opsional)...",
-                        fontSize = 12.sp,
-                        color = TextTertiary
-                    )
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(80.dp)
-                    .onFocusEvent { focusState ->
-                        if (focusState.isFocused) {
-                            coroutineScope.launch {
-                                delay(200)
-                                bringIntoViewRequester.bringIntoView()
-                            }
+            if (!isParent && isActive) {
+                // Clickable note row that opens the Bottom Sheet
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CosmicBlack)
+                        .border(
+                            1.dp,
+                            if (content.isNotBlank()) StudentNeon.copy(alpha = 0.4f) else GlassBorder,
+                            RoundedCornerShape(12.dp)
+                        )
+                        .clickable { showNoteAndSubmitSheet = true }
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = if (content.isNotBlank()) "Catatan untuk Guru:" else "Tambah Catatan untuk Guru (Opsional)",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (content.isNotBlank()) StudentNeon else TextSecondary
+                            )
+                            Text(
+                                text = if (content.isNotBlank()) content else "Ketuk untuk menulis pesan atau catatan tambahan...",
+                                fontSize = 12.sp,
+                                color = if (content.isNotBlank()) TextPrimary else TextTertiary,
+                                maxLines = 2,
+                                overflow = TextOverflow.Ellipsis
+                            )
                         }
-                    },
-                maxLines = 3,
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = StudentNeon,
-                    unfocusedBorderColor = GlassBorder,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    focusedContainerColor = CosmicBlack,
-                    unfocusedContainerColor = CosmicBlack,
-                )
-            )
+                        Spacer(Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Default.Edit,
+                            contentDescription = "Tambah Catatan",
+                            tint = StudentNeon,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+            }
 
             // Submit Button
             if (isParent) {
@@ -2042,7 +2310,7 @@ private fun QuestionsSubmissionCard(
                 }
             } else {
                 Button(
-                    onClick = onSubmitClick,
+                    onClick = { showNoteAndSubmitSheet = true },
                     enabled = allAnswered && !isSubmitting,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -2074,6 +2342,139 @@ private fun QuestionsSubmissionCard(
                             text = if (allAnswered) "Kumpulkan Lembar Tugas Sekarang" else "Lengkapi Jawaban (${totalQuestions - answeredCount} soal lagi)",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showNoteAndSubmitSheet) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showNoteAndSubmitSheet = false },
+            sheetState = sheetState,
+            containerColor = CosmicNavy,
+            contentColor = TextPrimary,
+            shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState())
+                    .navigationBarsPadding()
+                    .imePadding()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            text = "Pengumpulan Lembar Tugas",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Black,
+                            color = TextPrimary
+                        )
+                        Text(
+                            text = "$answeredCount dari $totalQuestions soal telah terjawab",
+                            fontSize = 11.5.sp,
+                            color = if (allAnswered) NeonSuccess else NeonWarning
+                        )
+                    }
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (allAnswered) NeonSuccess.copy(alpha = 0.15f) else CosmicSurface2,
+                        border = BorderStroke(1.dp, if (allAnswered) NeonSuccess.copy(alpha = 0.4f) else GlassBorder)
+                    ) {
+                        Text(
+                            text = "$answeredCount / $totalQuestions",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (allAnswered) NeonSuccess else TextSecondary,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                        )
+                    }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "CATATAN TAMBAHAN UNTUK GURU (OPSIONAL)",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextTertiary,
+                        letterSpacing = 0.5.sp
+                    )
+                    OutlinedTextField(
+                        value = content,
+                        onValueChange = onContentChange,
+                        placeholder = {
+                            Text(
+                                "Tulis catatan atau pesan tambahan untuk guru...",
+                                fontSize = 12.5.sp,
+                                color = TextTertiary
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 100.dp),
+                        maxLines = 5,
+                        shape = RoundedCornerShape(14.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = StudentNeon,
+                            unfocusedBorderColor = GlassBorder,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary,
+                            focusedContainerColor = CosmicBlack,
+                            unfocusedContainerColor = CosmicBlack,
+                        )
+                    )
+                }
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = { showNoteAndSubmitSheet = false },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, GlassBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+                    ) {
+                        Text("Simpan Catatan", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            showNoteAndSubmitSheet = false
+                            onSubmitClick()
+                        },
+                        enabled = allAnswered && !isSubmitting,
+                        modifier = Modifier
+                            .weight(1.4f)
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = StudentNeon,
+                            contentColor = Color.Black,
+                            disabledContainerColor = CosmicSurface2,
+                            disabledContentColor = TextTertiary
+                        )
+                    ) {
+                        Icon(Icons.Default.Send, null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = if (allAnswered) "Kumpulkan Tugas" else "Belum Lengkap",
+                            fontWeight = FontWeight.Black,
+                            fontSize = 13.sp
                         )
                     }
                 }

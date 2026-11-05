@@ -11,10 +11,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -30,6 +34,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -40,6 +45,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.schoolos.android.core.designsystem.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -425,89 +431,170 @@ fun InAppPdfViewer(
                     }
                 }
 
-                // Lazy on-demand page rendering inside bounded LazyColumn
-                LazyColumn(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .heightIn(min = 380.dp, max = 720.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    itemsIndexed(
-                        items = pageNumbers,
-                        key = { _, pageNum -> pageNum }
-                    ) { _, pageNum ->
-                        var pageBitmap by remember(activeCtrl, pageNum) { mutableStateOf<ImageBitmap?>(null) }
-                        LaunchedEffect(activeCtrl, pageNum) {
-                            pageBitmap = activeCtrl.renderPage(pageNum)
-                        }
+                val inlineScope = rememberCoroutineScope()
+                val inlinePagerState = rememberPagerState(
+                    initialPage = 0,
+                    pageCount = { pageNumbers.size.coerceAtLeast(1) }
+                )
 
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(10.dp),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { fullscreenPageNumber = pageNum }
-                        ) {
-                            Column {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .heightIn(min = 260.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    val bmp = pageBitmap
-                                    if (bmp != null) {
-                                        Image(
-                                            bitmap = bmp,
-                                            contentDescription = "Halaman $pageNum",
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .wrapContentHeight(),
-                                            contentScale = ContentScale.FillWidth
-                                        )
-                                    } else {
-                                        CircularProgressIndicator(
-                                            color = NeonBlue,
-                                            modifier = Modifier.size(28.dp),
-                                            strokeWidth = 2.5.dp
-                                        )
-                                    }
+                // Swipeable HorizontalPager for smooth left/right page sliding
+                HorizontalPager(
+                    state = inlinePagerState,
+                    beyondViewportPageCount = 1,
+                    pageSpacing = 12.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) { pageIdx ->
+                    val pageNum = pageNumbers.getOrElse(pageIdx) { 1 }
+                    var pageBitmap by remember(activeCtrl, pageNum) { mutableStateOf<ImageBitmap?>(null) }
+                    LaunchedEffect(activeCtrl, pageNum) {
+                        pageBitmap = activeCtrl.renderPage(pageNum)
+                    }
 
-                                    Box(
+                    Card(
+                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                        shape = RoundedCornerShape(10.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { fullscreenPageNumber = pageNum }
+                    ) {
+                        Column {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 340.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val bmp = pageBitmap
+                                if (bmp != null) {
+                                    Image(
+                                        bitmap = bmp,
+                                        contentDescription = "Halaman $pageNum",
                                         modifier = Modifier
-                                            .align(Alignment.BottomEnd)
-                                            .padding(8.dp)
-                                            .clip(RoundedCornerShape(6.dp))
-                                            .background(Color.Black.copy(alpha = 0.70f))
-                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                    ) {
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Default.Fullscreen, null, tint = Color.White, modifier = Modifier.size(13.dp))
-                                            Spacer(Modifier.width(3.dp))
-                                            Text("Perbesar", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                        }
-                                    }
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(Color(0xFF000000))
-                                        .padding(vertical = 6.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = if (isPageRestricted) {
-                                            "Buku Resmi • Halaman $pageNum (Tugas Baca)"
-                                        } else {
-                                            "Buku Resmi • Halaman $pageNum${if (totalDocPages > 0) " dari $totalDocPages" else ""}"
-                                        },
-                                        color = Color.White.copy(alpha = 0.9f),
-                                        fontSize = 11.sp,
-                                        fontWeight = FontWeight.SemiBold
+                                            .fillMaxWidth()
+                                            .wrapContentHeight(),
+                                        contentScale = ContentScale.FillWidth
+                                    )
+                                } else {
+                                    CircularProgressIndicator(
+                                        color = NeonBlue,
+                                        modifier = Modifier.size(28.dp),
+                                        strokeWidth = 2.5.dp
                                     )
                                 }
+
+                                Box(
+                                    modifier = Modifier
+                                        .align(Alignment.BottomEnd)
+                                        .padding(8.dp)
+                                        .clip(RoundedCornerShape(6.dp))
+                                        .background(Color.Black.copy(alpha = 0.70f))
+                                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Default.Fullscreen, null, tint = Color.White, modifier = Modifier.size(13.dp))
+                                        Spacer(Modifier.width(3.dp))
+                                        Text("Perbesar", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                    }
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(Color(0xFF000000))
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (isPageRestricted) {
+                                        "Buku Resmi • Halaman $pageNum (Lembar ${pageIdx + 1}/${pageNumbers.size})"
+                                    } else {
+                                        "Buku Resmi • Halaman $pageNum${if (totalDocPages > 0) " dari $totalDocPages" else ""}"
+                                    },
+                                    color = Color.White.copy(alpha = 0.9f),
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Inline Page Navigation Bar (Slide + Prev/Next Buttons)
+                if (pageNumbers.size > 1) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CosmicSurface2)
+                            .border(0.5.dp, GlassBorder, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val canPrev = inlinePagerState.currentPage > 0
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (canPrev) NeonBlue else CosmicNavy)
+                                .clickable(enabled = canPrev) {
+                                    inlineScope.launch {
+                                        inlinePagerState.animateScrollToPage(inlinePagerState.currentPage - 1)
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.ChevronLeft,
+                                    contentDescription = null,
+                                    tint = if (canPrev) Color.White else TextTertiary,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(Modifier.width(2.dp))
+                                Text(
+                                    "Sebelumnya",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (canPrev) Color.White else TextTertiary
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "Lembar ${inlinePagerState.currentPage + 1} / ${pageNumbers.size}",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+
+                        val canNext = inlinePagerState.currentPage < pageNumbers.size - 1
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (canNext) NeonBlue else CosmicNavy)
+                                .clickable(enabled = canNext) {
+                                    inlineScope.launch {
+                                        inlinePagerState.animateScrollToPage(inlinePagerState.currentPage + 1)
+                                    }
+                                }
+                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    "Selanjutnya",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (canNext) Color.White else TextTertiary
+                                )
+                                Spacer(Modifier.width(2.dp))
+                                Icon(
+                                    Icons.Default.ChevronRight,
+                                    contentDescription = null,
+                                    tint = if (canNext) Color.White else TextTertiary,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                         }
                     }
@@ -571,90 +658,46 @@ fun InAppPdfViewer(
         }
     }
 
-    // ── FULLSCREEN PDF PAGE LIGHTBOX ─────────────────────────────────────────
+    // ── FULLSCREEN PDF PAGE LIGHTBOX (SWIPEABLE HORIZONTAL PAGER) ─────────────
     val fsPageNum = fullscreenPageNumber
     if (fsPageNum != null && activeCtrl != null && pageNumbers.isNotEmpty()) {
         val initialIdx = pageNumbers.indexOf(fsPageNum).coerceAtLeast(0)
-        var currentIndex by remember(fsPageNum) { mutableIntStateOf(initialIdx) }
+        val fsScope = rememberCoroutineScope()
+        val fsPagerState = rememberPagerState(
+            initialPage = initialIdx,
+            pageCount = { pageNumbers.size.coerceAtLeast(1) }
+        )
+        val currentIndex = fsPagerState.currentPage
         val activePageNum = pageNumbers.getOrElse(currentIndex) { pageNumbers.first() }
-        var fullscreenBitmap by remember(activeCtrl, activePageNum) { mutableStateOf<ImageBitmap?>(null) }
-
-        LaunchedEffect(activeCtrl, activePageNum) {
-            fullscreenBitmap = activeCtrl.renderPage(activePageNum)
-        }
 
         var scale by remember { mutableFloatStateOf(1f) }
         var offsetX by remember { mutableFloatStateOf(0f) }
         var offsetY by remember { mutableFloatStateOf(0f) }
+
+        LaunchedEffect(currentIndex) {
+            scale = 1f
+            offsetX = 0f
+            offsetY = 0f
+        }
 
         Dialog(
             onDismissRequest = { fullscreenPageNumber = null },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
                 dismissOnBackPress = true,
-                decorFitsSystemWindows = false
+                decorFitsSystemWindows = true
             )
         ) {
-            Box(
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(Color(0xFF0B0F19))
+                    .systemBarsPadding()
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .graphicsLayer(
-                            scaleX = scale,
-                            scaleY = scale,
-                            translationX = offsetX,
-                            translationY = offsetY
-                        )
-                        .pointerInput(currentIndex) {
-                            detectTransformGestures { _, pan, zoom, _ ->
-                                val newScale = (scale * zoom).coerceIn(1f, 6f)
-                                scale = newScale
-                                if (scale > 1f) {
-                                    offsetX += pan.x
-                                    offsetY += pan.y
-                                } else {
-                                    offsetX = 0f
-                                    offsetY = 0f
-                                }
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Card(
-                        shape = RoundedCornerShape(4.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color.White),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
-                        modifier = Modifier
-                            .padding(horizontal = 10.dp, vertical = 64.dp)
-                            .fillMaxSize()
-                    ) {
-                        val bmp = fullscreenBitmap
-                        if (bmp != null) {
-                            Image(
-                                bitmap = bmp,
-                                contentDescription = "Halaman $activePageNum",
-                                contentScale = ContentScale.Fit,
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.White)
-                            )
-                        } else {
-                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                CircularProgressIndicator(color = NeonBlue)
-                            }
-                        }
-                    }
-                }
-
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .align(Alignment.TopCenter)
-                        .statusBarsPadding()
+                        .background(Color(0xFF0F172A))
                         .padding(horizontal = 12.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -662,9 +705,9 @@ fun InAppPdfViewer(
                     IconButton(
                         onClick = { fullscreenPageNumber = null },
                         modifier = Modifier
-                            .size(40.dp)
+                            .size(38.dp)
                             .clip(CircleShape)
-                            .background(Color.Black.copy(alpha = 0.65f))
+                            .background(Color.White.copy(alpha = 0.1f))
                     ) {
                         Icon(Icons.Default.Close, contentDescription = "Tutup", tint = Color.White)
                     }
@@ -672,89 +715,202 @@ fun InAppPdfViewer(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(20.dp))
-                            .background(Color.Black.copy(alpha = 0.65f))
+                            .background(Color.White.copy(alpha = 0.1f))
                             .padding(horizontal = 14.dp, vertical = 6.dp)
                     ) {
                         Text(
                             "Halaman $activePageNum (Lembar ${currentIndex + 1}/${pageNumbers.size})",
                             color = Color.White,
-                            fontSize = 13.sp,
+                            fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
 
-                    if (scale > 1f) {
+                    if (scale > 1.05f) {
                         IconButton(
                             onClick = { scale = 1f; offsetX = 0f; offsetY = 0f },
                             modifier = Modifier
-                                .size(40.dp)
+                                .size(38.dp)
                                 .clip(CircleShape)
                                 .background(NeonBlue.copy(alpha = 0.7f))
                         ) {
                             Icon(Icons.Default.ZoomOut, contentDescription = "Reset Zoom", tint = Color.White)
                         }
                     } else {
-                        Spacer(Modifier.size(40.dp))
+                        Spacer(Modifier.size(38.dp))
                     }
                 }
 
-                Column(
+                Box(
                     modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .padding(end = 14.dp)
-                        .clip(RoundedCornerShape(20.dp))
-                        .background(Color.Black.copy(alpha = 0.75f))
-                        .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                        .fillMaxWidth()
+                        .weight(1f),
+                    contentAlignment = Alignment.Center
                 ) {
-                    IconButton(
-                        onClick = { scale = (scale + 0.5f).coerceAtMost(6f) },
-                        modifier = Modifier.size(36.dp)
-                    ) {
-                        Icon(Icons.Default.ZoomIn, contentDescription = "Perbesar", tint = Color.White)
+                    HorizontalPager(
+                        state = fsPagerState,
+                        userScrollEnabled = scale <= 1.05f,
+                        beyondViewportPageCount = 1,
+                        modifier = Modifier.fillMaxSize()
+                    ) { pageIdx ->
+                        val pageNum = pageNumbers.getOrElse(pageIdx) { pageNumbers.first() }
+                        var fullscreenBitmap by remember(activeCtrl, pageNum) { mutableStateOf<ImageBitmap?>(null) }
+
+                        LaunchedEffect(activeCtrl, pageNum) {
+                            fullscreenBitmap = activeCtrl.renderPage(pageNum)
+                        }
+
+                        val isCurrent = pageIdx == fsPagerState.currentPage
+                        val pageScale = if (isCurrent) scale else 1f
+                        val pageOffsetX = if (isCurrent) offsetX else 0f
+                        val pageOffsetY = if (isCurrent) offsetY else 0f
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 10.dp, vertical = 10.dp)
+                                .pointerInput(pageIdx) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            if (scale > 1.2f) {
+                                                scale = 1f; offsetX = 0f; offsetY = 0f
+                                            } else {
+                                                scale = 2.2f
+                                            }
+                                        }
+                                    )
+                                }
+                                .pointerInput(pageIdx) {
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        do {
+                                            val event = awaitPointerEvent()
+                                            val pointerCount = event.changes.count { it.pressed }
+                                            if (pointerCount >= 2) {
+                                                val zoomChange = event.calculateZoom()
+                                                val panChange = event.calculatePan()
+                                                if (zoomChange != 1f || panChange != androidx.compose.ui.geometry.Offset.Zero) {
+                                                    scale = (scale * zoomChange).coerceIn(1f, 6f)
+                                                    if (scale > 1.05f) {
+                                                        offsetX += panChange.x
+                                                        offsetY += panChange.y
+                                                    } else {
+                                                        offsetX = 0f
+                                                        offsetY = 0f
+                                                    }
+                                                    event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                                }
+                                            } else if (scale > 1.05f && pointerCount == 1) {
+                                                val panChange = event.calculatePan()
+                                                offsetX += panChange.x
+                                                offsetY += panChange.y
+                                                event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                            }
+                                        } while (event.changes.any { it.pressed })
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Card(
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight()
+                                    .graphicsLayer(
+                                        scaleX = pageScale,
+                                        scaleY = pageScale,
+                                        translationX = pageOffsetX,
+                                        translationY = pageOffsetY
+                                    )
+                            ) {
+                                val bmp = fullscreenBitmap
+                                if (bmp != null) {
+                                    Image(
+                                        bitmap = bmp,
+                                        contentDescription = "Halaman $pageNum",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color.White)
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(420.dp)
+                                            .background(Color.White),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(color = NeonBlue)
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    Text(
-                        text = "${(scale * 100).toInt()}%",
-                        color = NeonBlue,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    IconButton(
-                        onClick = { scale = (scale - 0.5f).coerceAtLeast(1f) },
-                        modifier = Modifier.size(36.dp)
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 14.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.Black.copy(alpha = 0.75f))
+                            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+                            .padding(vertical = 8.dp, horizontal = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
-                        Icon(Icons.Default.ZoomOut, contentDescription = "Perkecil", tint = Color.White)
+                        IconButton(
+                            onClick = { scale = (scale + 0.5f).coerceAtMost(6f) },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.ZoomIn, contentDescription = "Perbesar", tint = Color.White)
+                        }
+
+                        Text(
+                            text = "${(scale * 100).toInt()}%",
+                            color = NeonBlue,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        IconButton(
+                            onClick = {
+                                scale = (scale - 0.5f).coerceAtLeast(1f)
+                                if (scale <= 1.05f) {
+                                    offsetX = 0f; offsetY = 0f
+                                }
+                            },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(Icons.Default.ZoomOut, contentDescription = "Perkecil", tint = Color.White)
+                        }
                     }
                 }
 
                 Surface(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter),
-                    color = Color(0xFF0F172A).copy(alpha = 0.96f),
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF0F172A),
                     border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
                     shadowElevation = 12.dp
                 ) {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .navigationBarsPadding()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(
                             modifier = Modifier
-                                .height(44.dp)
+                                .height(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(if (currentIndex > 0) NeonBlue else Color.White.copy(alpha = 0.10f))
                                 .clickable(enabled = currentIndex > 0) {
-                                    currentIndex--
-                                    scale = 1f; offsetX = 0f; offsetY = 0f
+                                    fsScope.launch {
+                                        fsPagerState.animateScrollToPage(currentIndex - 1)
+                                    }
                                 }
                                 .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.Center
@@ -782,12 +938,13 @@ fun InAppPdfViewer(
 
                         Box(
                             modifier = Modifier
-                                .height(44.dp)
+                                .height(42.dp)
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(if (currentIndex < pageNumbers.size - 1) NeonBlue else Color.White.copy(alpha = 0.10f))
                                 .clickable(enabled = currentIndex < pageNumbers.size - 1) {
-                                    currentIndex++
-                                    scale = 1f; offsetX = 0f; offsetY = 0f
+                                    fsScope.launch {
+                                        fsPagerState.animateScrollToPage(currentIndex + 1)
+                                    }
                                 }
                                 .padding(horizontal = 16.dp),
                             contentAlignment = Alignment.Center

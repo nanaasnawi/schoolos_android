@@ -390,8 +390,11 @@ fun MaterialCreatorScreen(
         return
     }
 
+    val isImeVisible = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+
     Scaffold(
         containerColor = CosmicBlack,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
                 title = "Studio Materi Guru",
@@ -400,105 +403,107 @@ fun MaterialCreatorScreen(
             )
         },
         bottomBar = {
-            Surface(
-                color = CosmicNavy,
-                tonalElevation = 8.dp,
-                shadowElevation = 12.dp,
-                border = BorderStroke(0.5.dp, GlassBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            if (!isImeVisible) {
+                Surface(
+                    color = CosmicNavy,
+                    tonalElevation = 8.dp,
+                    shadowElevation = 12.dp,
+                    border = BorderStroke(0.5.dp, GlassBorder),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedButton(
-                        onClick = { showPreview = !showPreview },
-                        shape = RoundedCornerShape(12.dp),
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (showPreview) NeonWarning else TextPrimary
-                        ),
-                        border = BorderStroke(
-                            1.dp,
-                            if (showPreview) NeonWarning.copy(alpha = 0.5f) else GlassBorder
-                        )
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            if (showPreview) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = null,
-                            modifier = Modifier.size(17.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            if (showPreview) "Sembunyikan" else "Lihat Preview",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp
-                        )
-                    }
+                        OutlinedButton(
+                            onClick = { showPreview = !showPreview },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(48.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (showPreview) NeonWarning else TextPrimary
+                            ),
+                            border = BorderStroke(
+                                1.dp,
+                                if (showPreview) NeonWarning.copy(alpha = 0.5f) else GlassBorder
+                            )
+                        ) {
+                            Icon(
+                                if (showPreview) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = null,
+                                modifier = Modifier.size(17.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                if (showPreview) "Sembunyikan" else "Lihat Preview",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp
+                            )
+                        }
 
-                    Button(
-                        onClick = {
-                            if (selectedType == MaterialType.DOCUMENT) {
-                                if (pdfSourceMode == "SIBI") {
-                                    if (selectedBook == null) {
-                                        Toast.makeText(context, "Silakan pilih salah satu buku dari katalog SIBI!", Toast.LENGTH_SHORT).show()
+                        Button(
+                            onClick = {
+                                if (selectedType == MaterialType.DOCUMENT) {
+                                    if (pdfSourceMode == "SIBI") {
+                                        if (selectedBook == null) {
+                                            Toast.makeText(context, "Silakan pilih salah satu buku dari katalog SIBI!", Toast.LENGTH_SHORT).show()
+                                            return@Button
+                                        }
+                                        if (title.isBlank()) {
+                                            val sInt = startPageInput.toIntOrNull() ?: 1
+                                            val eInt = endPageInput.toIntOrNull() ?: minOf(sInt + 10, selectedBook!!.totalPages)
+                                            title = "Materi Bacaan: ${selectedBook!!.title} (Hal. $sInt–$eInt)"
+                                        }
+                                    } else {
+                                        if (title.isBlank()) {
+                                            Toast.makeText(context, "Judul modul PDF tidak boleh kosong!", Toast.LENGTH_SHORT).show()
+                                            return@Button
+                                        }
+                                        if (mediaUrl.isBlank() && state.uploadedFileName.isNullOrBlank()) {
+                                            Toast.makeText(context, "Silakan unggah berkas PDF dari perangkat!", Toast.LENGTH_SHORT).show()
+                                            return@Button
+                                        }
+                                    }
+                                } else if (selectedType == MaterialType.VIDEO) {
+                                    if (mediaUrl.isBlank()) {
+                                        Toast.makeText(context, "Silakan cari dan pilih video dari YouTube!", Toast.LENGTH_SHORT).show()
                                         return@Button
                                     }
                                     if (title.isBlank()) {
-                                        val sInt = startPageInput.toIntOrNull() ?: 1
-                                        val eInt = endPageInput.toIntOrNull() ?: minOf(sInt + 10, selectedBook!!.totalPages)
-                                        title = "Materi Bacaan: ${selectedBook!!.title} (Hal. $sInt–$eInt)"
+                                        Toast.makeText(context, "Judul video tidak boleh kosong!", Toast.LENGTH_SHORT).show()
+                                        return@Button
                                     }
                                 } else {
                                     if (title.isBlank()) {
-                                        Toast.makeText(context, "Judul modul PDF tidak boleh kosong!", Toast.LENGTH_SHORT).show()
-                                        return@Button
-                                    }
-                                    if (mediaUrl.isBlank() && state.uploadedFileName.isNullOrBlank()) {
-                                        Toast.makeText(context, "Silakan unggah berkas PDF dari perangkat!", Toast.LENGTH_SHORT).show()
+                                        Toast.makeText(context, "Judul materi tidak boleh kosong!", Toast.LENGTH_SHORT).show()
                                         return@Button
                                     }
                                 }
-                            } else if (selectedType == MaterialType.VIDEO) {
-                                if (mediaUrl.isBlank()) {
-                                    Toast.makeText(context, "Silakan cari dan pilih video dari YouTube!", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
-                                if (title.isBlank()) {
-                                    Toast.makeText(context, "Judul video tidak boleh kosong!", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
+                                showPrePublishDialog = true
+                            },
+                            enabled = !state.isLoading && !state.isUploadingFile,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier
+                                .weight(1.3f)
+                                .height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = EmeraldGlow,
+                                contentColor = Color.White,
+                                disabledContainerColor = EmeraldGlow.copy(alpha = 0.35f)
+                            )
+                        ) {
+                            if (state.isLoading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             } else {
-                                if (title.isBlank()) {
-                                    Toast.makeText(context, "Judul materi tidak boleh kosong!", Toast.LENGTH_SHORT).show()
-                                    return@Button
-                                }
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Lanjut Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                             }
-                            showPrePublishDialog = true
-                        },
-                        enabled = !state.isLoading && !state.isUploadingFile,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier
-                            .weight(1.3f)
-                            .height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = EmeraldGlow,
-                            contentColor = Color.White,
-                            disabledContainerColor = EmeraldGlow.copy(alpha = 0.35f)
-                        )
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
-                        } else {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(17.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("Lanjut Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                         }
                     }
                 }
@@ -508,7 +513,10 @@ fun MaterialCreatorScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    bottom = if (isImeVisible) 0.dp else padding.calculateBottomPadding()
+                )
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 16.dp),

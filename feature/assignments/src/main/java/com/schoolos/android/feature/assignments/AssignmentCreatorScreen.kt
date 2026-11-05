@@ -218,8 +218,11 @@ fun AssignmentCreatorScreen(
         return
     }
 
+    val isImeVisible = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+
     Scaffold(
         containerColor = if (LocalIsDarkTheme.current) Color(0xFF09090B) else Color(0xFFF8FAFC),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
                 title = "Studio Penugasan Guru",
@@ -228,69 +231,71 @@ fun AssignmentCreatorScreen(
             )
         },
         bottomBar = {
-            Surface(
-                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
-                tonalElevation = 8.dp,
-                shadowElevation = 12.dp,
-                border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 16.dp, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            if (!isImeVisible) {
+                Surface(
+                    color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
+                    tonalElevation = 8.dp,
+                    shadowElevation = 12.dp,
+                    border = androidx.compose.foundation.BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    OutlinedButton(
-                        onClick = { showPreview = !showPreview },
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1f).height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(
-                            contentColor = if (showPreview) NeonWarning else TextPrimary
-                        ),
-                        border = androidx.compose.foundation.BorderStroke(
-                            1.dp,
-                            if (showPreview) NeonWarning.copy(alpha = 0.5f) else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1))
-                        )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Icon(
-                            if (showPreview) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                            contentDescription = null,
-                            modifier = Modifier.size(17.dp)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            if (showPreview) "Sembunyikan" else "Lihat Preview",
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 12.sp
-                        )
-                    }
-
-                    Button(
-                        onClick = {
-                            if (title.isBlank()) {
-                                Toast.makeText(context, "Judul tugas tidak boleh kosong!", Toast.LENGTH_SHORT).show()
-                                return@Button
-                            }
-                            showPrePublishReview = true
-                        },
-                        enabled = title.isNotBlank() && !state.isLoading,
-                        shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1.3f).height(48.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = TeacherNeon,
-                            contentColor = Color.White,
-                            disabledContainerColor = TeacherNeon.copy(alpha = 0.35f)
-                        )
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
-                        } else {
-                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(17.dp))
+                        OutlinedButton(
+                            onClick = { showPreview = !showPreview },
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1f).height(48.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(
+                                contentColor = if (showPreview) NeonWarning else TextPrimary
+                            ),
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                if (showPreview) NeonWarning.copy(alpha = 0.5f) else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1))
+                            )
+                        ) {
+                            Icon(
+                                if (showPreview) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                                contentDescription = null,
+                                modifier = Modifier.size(17.dp)
+                            )
                             Spacer(Modifier.width(6.dp))
-                            Text("Lanjut Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            Text(
+                                if (showPreview) "Sembunyikan" else "Lihat Preview",
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 12.sp
+                            )
+                        }
+
+                        Button(
+                            onClick = {
+                                if (title.isBlank()) {
+                                    Toast.makeText(context, "Judul tugas tidak boleh kosong!", Toast.LENGTH_SHORT).show()
+                                    return@Button
+                                }
+                                showPrePublishReview = true
+                            },
+                            enabled = title.isNotBlank() && !state.isLoading,
+                            shape = RoundedCornerShape(12.dp),
+                            modifier = Modifier.weight(1.3f).height(48.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = TeacherNeon,
+                                contentColor = Color.White,
+                                disabledContainerColor = TeacherNeon.copy(alpha = 0.35f)
+                            )
+                        ) {
+                            if (state.isLoading) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.5.dp)
+                            } else {
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(17.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Lanjut Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                            }
                         }
                     }
                 }
@@ -300,7 +305,11 @@ fun AssignmentCreatorScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(
+                    top = padding.calculateTopPadding(),
+                    bottom = if (isImeVisible) 0.dp else padding.calculateBottomPadding()
+                )
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)

@@ -9,9 +9,18 @@ import android.util.LruCache
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroidSize
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -26,6 +35,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -35,9 +45,11 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlin.math.abs
 import timber.log.Timber
 import java.io.File
 import java.io.FileOutputStream
@@ -256,182 +268,137 @@ fun BookReaderDialog(
         }
     }
 
-    val currentPageNumber = pageNumbers.getOrElse(currentPageIndex) { 1 }
-    var currentBitmap by remember(activeSession, currentPageNumber) { mutableStateOf<ImageBitmap?>(null) }
+    val coroutineScope = rememberCoroutineScope()
+    val pagerState = rememberPagerState(
+        initialPage = currentPageIndex.coerceIn(0, (pageNumbers.size - 1).coerceAtLeast(0)),
+        pageCount = { pageNumbers.size.coerceAtLeast(1) }
+    )
 
-    LaunchedEffect(activeSession, currentPageNumber) {
-        if (activeSession != null && pageNumbers.isNotEmpty()) {
-            currentBitmap = activeSession.renderPage(currentPageNumber)
-            // Pre-warm next page in background into bounded LruCache(5)
-            val nextPageIdx = currentPageIndex + 1
-            if (nextPageIdx in pageNumbers.indices) {
-                activeSession.renderPage(pageNumbers[nextPageIdx])
+    // Keep currentPageIndex and pagerState in sync when document finishes loading
+    LaunchedEffect(pageNumbers.size, isLoading) {
+        if (!isLoading && pageNumbers.isNotEmpty()) {
+            val targetIdx = currentPageIndex.coerceIn(0, pageNumbers.size - 1)
+            if (pagerState.currentPage != targetIdx) {
+                pagerState.scrollToPage(targetIdx)
             }
         }
     }
+
+    LaunchedEffect(pagerState.currentPage, pageNumbers) {
+        if (pageNumbers.isNotEmpty() && pagerState.currentPage in pageNumbers.indices) {
+            currentPageIndex = pagerState.currentPage
+            scale = 1f
+            offsetX = 0f
+            offsetY = 0f
+            onPageChanged(pageNumbers[pagerState.currentPage])
+        }
+    }
+
+    val currentPageNumber = pageNumbers.getOrElse(currentPageIndex) { 1 }
 
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
             dismissOnBackPress = true,
-            decorFitsSystemWindows = false
+            decorFitsSystemWindows = true
         )
     ) {
-        Scaffold(
-            containerColor = Color(0xFF0B0F19),
-            topBar = {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color(0xFF0B0F19))
+                .systemBarsPadding()
+        ) {
+            // ── TOP BAR ──────────────────────────────────────────────────────
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color(0xFF0F172A))
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                IconButton(
+                    onClick = onDismiss,
+                    modifier = Modifier.size(38.dp)
                 ) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Kembali",
+                        tint = Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+
+                Spacer(Modifier.width(6.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = title,
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = if (pageNumbers.isNotEmpty()) {
+                            "$subject • Halaman $currentPageNumber dari ${totalDocPages.coerceAtLeast(pageNumbers.size)}"
+                        } else {
+                            subject
+                        },
+                        color = Color(0xFF94A3B8),
+                        fontSize = 11.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+
+                if (scale > 1.05f) {
                     IconButton(
-                        onClick = onDismiss,
+                        onClick = { scale = 1f; offsetX = 0f; offsetY = 0f },
                         modifier = Modifier.size(38.dp)
                     ) {
                         Icon(
-                            Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
+                            Icons.Default.ZoomOutMap,
+                            contentDescription = "Reset Zoom",
+                            tint = NeonBlue,
+                            modifier = Modifier.size(18.dp)
                         )
-                    }
-
-                    Spacer(Modifier.width(6.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = title,
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            text = if (pageNumbers.isNotEmpty()) {
-                                "$subject • Halaman $currentPageNumber dari ${totalDocPages.coerceAtLeast(pageNumbers.size)}"
-                            } else {
-                                subject
-                            },
-                            color = Color(0xFF94A3B8),
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    if (pdfUrl.isNotBlank()) {
-                        IconButton(
-                            onClick = {
-                                val intent = Intent(Intent.ACTION_VIEW).apply {
-                                    setDataAndType(Uri.parse(pdfUrl), "application/pdf")
-                                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
-                                }
-                                try {
-                                    context.startActivity(intent)
-                                } catch (_: Exception) {
-                                    val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
-                                    context.startActivity(webIntent)
-                                }
-                            },
-                            modifier = Modifier.size(38.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.OpenInBrowser,
-                                contentDescription = "Buka PDF Eksternal",
-                                tint = NeonBlue,
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
                     }
                 }
-            },
-            bottomBar = {
-                if (pageNumbers.isNotEmpty()) {
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = Color(0xFF0F172A).copy(alpha = 0.96f),
-                        border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
-                        shadowElevation = 12.dp
+
+                if (pdfUrl.isNotBlank()) {
+                    IconButton(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(Uri.parse(pdfUrl), "application/pdf")
+                                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                            }
+                            try {
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                val webIntent = Intent(Intent.ACTION_VIEW, Uri.parse(pdfUrl))
+                                context.startActivity(webIntent)
+                            }
+                        },
+                        modifier = Modifier.size(38.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .navigationBarsPadding()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .height(44.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (currentPageIndex > 0) NeonBlue else Color.White.copy(alpha = 0.10f))
-                                    .clickable(enabled = currentPageIndex > 0) {
-                                        if (currentPageIndex > 0) {
-                                            currentPageIndex--
-                                            scale = 1f; offsetX = 0f; offsetY = 0f
-                                            onPageChanged(pageNumbers[currentPageIndex])
-                                        }
-                                    }
-                                    .padding(horizontal = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Default.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Sebelumnya", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(Color.White.copy(alpha = 0.12f))
-                                    .padding(horizontal = 14.dp, vertical = 6.dp)
-                            ) {
-                                Text(
-                                    text = "${currentPageIndex + 1} / ${pageNumbers.size}",
-                                    color = Color.White,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .height(44.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(if (currentPageIndex < pageNumbers.size - 1) NeonBlue else Color.White.copy(alpha = 0.10f))
-                                    .clickable(enabled = currentPageIndex < pageNumbers.size - 1) {
-                                        if (currentPageIndex < pageNumbers.size - 1) {
-                                            currentPageIndex++
-                                            scale = 1f; offsetX = 0f; offsetY = 0f
-                                            onPageChanged(pageNumbers[currentPageIndex])
-                                        }
-                                    }
-                                    .padding(horizontal = 16.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Selanjutnya", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    Spacer(Modifier.width(4.dp))
-                                    Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                                }
-                            }
-                        }
+                        Icon(
+                            Icons.Default.OpenInBrowser,
+                            contentDescription = "Buka PDF Eksternal",
+                            tint = NeonBlue,
+                            modifier = Modifier.size(18.dp)
+                        )
                     }
                 }
             }
-        ) { padding ->
+
+            // ── MAIN READER BODY (SWIPEABLE HORIZONTAL PAGER) ────────────────
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding),
+                    .fillMaxWidth()
+                    .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
                 if (isLoading) {
@@ -475,56 +442,228 @@ fun BookReaderDialog(
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
-                } else if (pageNumbers.isNotEmpty()) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .graphicsLayer(
-                                scaleX = scale,
-                                scaleY = scale,
-                                translationX = offsetX,
-                                translationY = offsetY
-                            )
-                            .pointerInput(currentPageIndex) {
-                                detectTransformGestures { _, pan, zoom, _ ->
-                                    val newScale = (scale * zoom).coerceIn(1f, 5f)
-                                    scale = newScale
-                                    if (scale > 1f) {
-                                        offsetX += pan.x
-                                        offsetY += pan.y
-                                    } else {
-                                        offsetX = 0f
-                                        offsetY = 0f
-                                    }
-                                }
-                            },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Card(
-                            shape = RoundedCornerShape(4.dp),
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                } else if (activeSession != null && pageNumbers.isNotEmpty()) {
+                    HorizontalPager(
+                        state = pagerState,
+                        userScrollEnabled = scale <= 1.05f,
+                        beyondViewportPageCount = 1,
+                        modifier = Modifier.fillMaxSize()
+                    ) { pageIdx ->
+                        val pageNum = pageNumbers.getOrElse(pageIdx) { 1 }
+                        var pageBitmap by remember(activeSession, pageNum) { mutableStateOf<ImageBitmap?>(null) }
+
+                        LaunchedEffect(activeSession, pageNum) {
+                            pageBitmap = activeSession.renderPage(pageNum)
+                        }
+
+                        val isCurrentPage = pageIdx == pagerState.currentPage
+                        val pageScale = if (isCurrentPage) scale else 1f
+                        val pageOffsetX = if (isCurrentPage) offsetX else 0f
+                        val pageOffsetY = if (isCurrentPage) offsetY else 0f
+
+                        Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .padding(horizontal = 8.dp, vertical = 8.dp)
-                        ) {
-                            val bmp = currentBitmap
-                            if (bmp != null) {
-                                Image(
-                                    bitmap = bmp,
-                                    contentDescription = "Halaman $currentPageNumber",
-                                    contentScale = ContentScale.Fit,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(Color.White)
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier.fillMaxSize(),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    CircularProgressIndicator(color = NeonBlue)
+                                .padding(horizontal = 10.dp, vertical = 10.dp)
+                                .pointerInput(pageIdx) {
+                                    detectTapGestures(
+                                        onDoubleTap = {
+                                            if (scale > 1.2f) {
+                                                scale = 1f
+                                                offsetX = 0f
+                                                offsetY = 0f
+                                            } else {
+                                                scale = 2.2f
+                                            }
+                                        }
+                                    )
                                 }
+                                .pointerInput(pageIdx) {
+                                    awaitEachGesture {
+                                        awaitFirstDown(requireUnconsumed = false)
+                                        do {
+                                            val event = awaitPointerEvent()
+                                            val pointerCount = event.changes.count { it.pressed }
+                                            if (pointerCount >= 2) {
+                                                val zoomChange = event.calculateZoom()
+                                                val panChange = event.calculatePan()
+                                                if (zoomChange != 1f || panChange != androidx.compose.ui.geometry.Offset.Zero) {
+                                                    scale = (scale * zoomChange).coerceIn(1f, 5f)
+                                                    if (scale > 1.05f) {
+                                                        offsetX += panChange.x
+                                                        offsetY += panChange.y
+                                                    } else {
+                                                        offsetX = 0f
+                                                        offsetY = 0f
+                                                    }
+                                                    event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                                }
+                                            } else if (scale > 1.05f && pointerCount == 1) {
+                                                val panChange = event.calculatePan()
+                                                offsetX += panChange.x
+                                                offsetY += panChange.y
+                                                event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                            }
+                                        } while (event.changes.any { it.pressed })
+                                    }
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Card(
+                                shape = RoundedCornerShape(8.dp),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .wrapContentHeight()
+                                    .graphicsLayer(
+                                        scaleX = pageScale,
+                                        scaleY = pageScale,
+                                        translationX = pageOffsetX,
+                                        translationY = pageOffsetY
+                                    )
+                            ) {
+                                val bmp = pageBitmap
+                                if (bmp != null) {
+                                    Image(
+                                        bitmap = bmp,
+                                        contentDescription = "Halaman $pageNum",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(Color.White)
+                                    )
+                                } else {
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(420.dp)
+                                            .background(Color.White),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        CircularProgressIndicator(color = NeonBlue)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Floating Zoom Controls on Right Edge
+                    Column(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .padding(end = 14.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .background(Color.Black.copy(alpha = 0.72f))
+                            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
+                            .padding(vertical = 6.dp, horizontal = 4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                    ) {
+                        IconButton(
+                            onClick = { scale = (scale + 0.5f).coerceAtMost(5f) },
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(Icons.Default.ZoomIn, contentDescription = "Perbesar", tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                        Text(
+                            text = "${(scale * 100).toInt()}%",
+                            color = NeonBlue,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        IconButton(
+                            onClick = {
+                                scale = (scale - 0.5f).coerceAtLeast(1f)
+                                if (scale <= 1.05f) {
+                                    offsetX = 0f
+                                    offsetY = 0f
+                                }
+                            },
+                            modifier = Modifier.size(34.dp)
+                        ) {
+                            Icon(Icons.Default.ZoomOut, contentDescription = "Perkecil", tint = Color.White, modifier = Modifier.size(18.dp))
+                        }
+                    }
+                }
+            }
+
+            // ── BOTTOM PAGE NAVIGATION BAR ───────────────────────────────────
+            if (pageNumbers.isNotEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    color = Color(0xFF0F172A),
+                    border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
+                    shadowElevation = 12.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        val canGoPrev = pagerState.currentPage > 0
+                        Box(
+                            modifier = Modifier
+                                .height(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (canGoPrev) NeonBlue else Color.White.copy(alpha = 0.10f))
+                                .clickable(enabled = canGoPrev) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage - 1)
+                                    }
+                                }
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.ChevronLeft, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Sebelumnya", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(Color.White.copy(alpha = 0.12f))
+                                    .padding(horizontal = 14.dp, vertical = 4.dp)
+                            ) {
+                                Text(
+                                    text = "Hal. $currentPageNumber (${pagerState.currentPage + 1} / ${pageNumbers.size})",
+                                    color = Color.White,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Text(
+                                text = "Geser kiri/kanan untuk pindah halaman",
+                                color = Color(0xFF94A3B8),
+                                fontSize = 9.5.sp,
+                                modifier = Modifier.padding(top = 2.dp)
+                            )
+                        }
+
+                        val canGoNext = pagerState.currentPage < pageNumbers.size - 1
+                        Box(
+                            modifier = Modifier
+                                .height(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(if (canGoNext) NeonBlue else Color.White.copy(alpha = 0.10f))
+                                .clickable(enabled = canGoNext) {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(pagerState.currentPage + 1)
+                                    }
+                                }
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text("Selanjutnya", color = Color.White, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.width(4.dp))
+                                Icon(Icons.Default.ChevronRight, null, tint = Color.White, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
