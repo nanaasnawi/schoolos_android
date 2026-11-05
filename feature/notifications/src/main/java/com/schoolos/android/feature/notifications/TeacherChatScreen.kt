@@ -84,6 +84,10 @@ import com.schoolos.android.core.designsystem.ShimmerList
 import com.schoolos.android.core.designsystem.StudentNeon
 import com.schoolos.android.core.designsystem.TeacherNeon
 
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+
 enum class ChatFilter {
     ALL,
     WAITING,
@@ -509,7 +513,8 @@ fun TeacherChatScreen(
 // ── 1. WHATSAPP-STYLE TEACHER CONTACTS & CHAT LIST (Zero WhatsApp dummy) ──
 
 data class TeacherContactItem(
-    val id: String,
+    val id: String,          // teachers table ID
+    val userId: String,      // users table ID for real-time presence
     val name: String,
     val subject: String,
     val roleTitle: String = "Tutor Pengampu",
@@ -518,99 +523,122 @@ data class TeacherContactItem(
 private val OfficialTeachersList = listOf(
     TeacherContactItem(
         id = "01a096e3-cb9d-7cf1-b63e-777afa38f52c",
+        userId = "01a096e3-cb99-7063-b001-70403d24a611",
         name = "ASEP RIFAI, S.Pd",
         subject = "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
         roleTitle = "Tutor IPAS",
     ),
     TeacherContactItem(
         id = "01a096e3-cba6-7852-9278-a2cdbc71dc35",
+        userId = "01a096e3-cba1-76e2-b4a0-8ecbb3c344fe",
         name = "ASY SYIFA RAHMAH IHSANI, S.Pd",
         subject = "Bahasa Inggris",
         roleTitle = "Tutor Bahasa Inggris",
     ),
     TeacherContactItem(
         id = "01a096e3-cb94-7872-8469-769d08a68872",
+        userId = "01a096e3-cb87-7b33-83d1-778bf63b2e26",
         name = "AMIN LISANA, S.Pd",
         subject = "Bahasa Indonesia",
         roleTitle = "Tutor Bahasa Indonesia",
     ),
     TeacherContactItem(
         id = "01a096e3-cbce-7a72-86d2-aa65f1b3b273",
+        userId = "01a096e3-cbca-7040-b410-4d8e19472e31",
         name = "FITRI NAFISAH, S.Pd",
         subject = "Bahasa Cirebon & Ekonomi",
         roleTitle = "Tutor B. Cirebon & Ekonomi",
     ),
     TeacherContactItem(
         id = "01a0e6d6-2b77-7b21-ae3f-ae0d88d2ca12",
+        userId = "01a0e6d6-2b77-7b21-ae3f-ae0d88d2ca12",
         name = "Siti Muniroh, S.Pd",
         subject = "Pendidikan Pancasila & Karakter",
         roleTitle = "Kepala PKBM & Tutor Pamong",
     ),
     TeacherContactItem(
         id = "01a096e3-cc24-7fb2-9e49-b22fc9518fa3",
+        userId = "01a096e3-cc21-71c2-b1ef-0034c765d2fd",
         name = "TAUFIQ HIDAYAT, S.Pd",
         subject = "Geografi",
         roleTitle = "Tutor Geografi",
     ),
     TeacherContactItem(
         id = "4294c1b1-20a7-42a8-8c68-982abdab0bad",
+        userId = "67a051e6-5d99-4623-bc53-7a5aed4d4065",
         name = "HUSNUL CHATIM, S.Pd",
         subject = "Seni Budaya",
         roleTitle = "Tutor Seni Budaya",
     ),
     TeacherContactItem(
         id = "01a096e3-cbb8-7681-9f3c-80cd7a560152",
+        userId = "01a096e3-cbb3-7321-93ab-af835a60e728",
         name = "EHA MEIDA KARTIKA, S.Pd",
         subject = "Pendidikan Agama Islam",
         roleTitle = "Tutor PAI & Budi Pekerti",
     ),
     TeacherContactItem(
         id = "01a096e3-cbbf-77d0-af0e-6df318e9268b",
+        userId = "01a096e3-cbbb-7343-ba60-b5178c3763eb",
         name = "ESI ROKESI, S.Pd",
         subject = "Ilmu Pengetahuan Alam (IPA)",
         roleTitle = "Tutor IPA",
     ),
     TeacherContactItem(
         id = "19ae8622-11e9-4d86-ae4c-3c36a736140c",
+        userId = "a5d83020-51e8-4bdb-956f-96c887aa733c",
         name = "AMEILIANI DWI IRAFANISYAH, S.Pd",
         subject = "Matematika (Umum)",
         roleTitle = "Tutor Matematika",
     ),
     TeacherContactItem(
         id = "46ce30ba-b618-42d9-8d6d-31d698331353",
+        userId = "01a096e3-cbd9-78d3-8a4d-54e97cb12b92",
         name = "IKIN BAIHAKI, S.Kom",
         subject = "Keterampilan Komputer",
         roleTitle = "Tutor TIK & Komputer",
     ),
     TeacherContactItem(
         id = "01a096e3-cbed-74e2-b54b-0f01e51d40c7",
+        userId = "01a096e3-cbe8-7760-9580-06cc32b8ddf5",
         name = "KHAERIYAH, S.Pd",
         subject = "Bahasa Indonesia",
         roleTitle = "Tutor Bahasa Indonesia",
     ),
     TeacherContactItem(
         id = "01a096e3-cbf5-7041-a07c-720d92034dfa",
+        userId = "01a096e3-cbf1-7923-acc8-1b03dbe6e0e1",
         name = "KRISTIANTI, S.Pd",
         subject = "Pendidikan Pancasila",
         roleTitle = "Tutor Pancasila",
     ),
     TeacherContactItem(
         id = "01a096e3-cbfc-7ae0-8297-289feca8aa6b",
+        userId = "01a096e3-cbf8-7b31-9bc3-e1f21e9593c3",
         name = "KUSWANTO ADI WIJAYA, S.Pd",
         subject = "Matematika (Umum)",
         roleTitle = "Tutor Matematika",
     ),
     TeacherContactItem(
         id = "01a096e3-cc0b-7b43-8e8e-77273797f48d",
+        userId = "01a096e3-cc00-7811-9637-d963174399fd",
         name = "ROHMANA, S.Pd",
         subject = "Sosiologi",
         roleTitle = "Tutor Sosiologi",
     ),
     TeacherContactItem(
         id = "01a096e3-cc1e-76b0-a545-2c05bff9ee77",
+        userId = "01a096e3-cc1a-7723-ac00-ecc93ba92dfd",
         name = "SRI MULYANI, S.Ag",
         subject = "Pendidikan Agama Islam",
         roleTitle = "Tutor PAI",
+    ),
+    TeacherContactItem(
+        id = "edbfc3dd-258e-48ef-86dd-957beaa56b82",
+        userId = "e98287fc-cf9b-4017-b41c-dbb2a68295ed",
+        name = "SUSILAWATI, S.Pd",
+        subject = "Keterampilan Fungsional",
+        roleTitle = "Tutor Keterampilan",
     ),
 )
 
@@ -629,6 +657,8 @@ private fun StudentWhatsAppChatList(
     innerCardBorder: Color,
     modifier: Modifier = Modifier,
 ) {
+    val presences by chatManager.teacherPresences.collectAsState()
+
     val filteredTeachers = remember(teachers, searchQuery) {
         if (searchQuery.isBlank()) teachers
         else teachers.filter {
@@ -695,27 +725,28 @@ private fun StudentWhatsAppChatList(
                                 teacher.name.contains(it.teacherName.take(6), ignoreCase = true)
                             ))
                         }
-                        val lastMsg = thread?.messages?.lastOrNull()?.content
-                            ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
-                            ?: "Mata Pelajaran • Ketuk untuk mulai chat"
-                        val timeText = if (thread?.messages?.isNotEmpty() == true) {
-                            "Aktif"
-                        } else {
-                            "Online"
+                        val cleanMessages = remember(thread?.messages) {
+                            thread?.messages?.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() } ?: emptyList()
                         }
+                        val lastMsg = cleanMessages.lastOrNull()?.content
+                            ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
+                        val lastMsgTime = cleanMessages.lastOrNull()?.timestamp
+                            ?: thread?.lastUpdated?.takeIf { it > 0L && !lastMsg.isNullOrBlank() }
+
+                        // Real-time presence: ONLY online if Firebase RTDB reports active presence (< 3 min)
+                        val isTeacherOnline = presences[teacher.userId] == true || presences[teacher.id] == true
 
                         WhatsAppChatRowItem(
                             teacher = teacher,
-                            previewText = lastMsg,
-                            timeText = timeText,
-                            isOnline = true,
+                            lastMessage = lastMsg,
+                            lastMessageTime = lastMsgTime,
+                            isOnline = isTeacherOnline,
                             hasUnread = thread?.status == InquiryStatus.ANSWERED,
                             isDark = isDark,
                             textPrimary = textPrimary,
                             textSecondary = textSecondary,
                             textTertiary = textTertiary,
                             studentAccent = studentAccent,
-                            innerCardBorder = innerCardBorder,
                             onClick = {
                                 val targetThread = thread ?: chatManager.getOrCreateTeacherThread(
                                     teacherId = teacher.id,
@@ -728,7 +759,7 @@ private fun StudentWhatsAppChatList(
 
                         if (index < filteredTeachers.size - 1) {
                             HorizontalDivider(
-                                modifier = Modifier.padding(start = 74.dp, end = 16.dp),
+                                modifier = Modifier.padding(start = 78.dp, end = 16.dp),
                                 thickness = 0.5.dp,
                                 color = if (isDark) innerCardBorder else Color(0xFFF1F5F9),
                             )
@@ -743,8 +774,8 @@ private fun StudentWhatsAppChatList(
 @Composable
 private fun WhatsAppChatRowItem(
     teacher: TeacherContactItem,
-    previewText: String,
-    timeText: String,
+    lastMessage: String?,
+    lastMessageTime: Long?,
     isOnline: Boolean,
     hasUnread: Boolean,
     isDark: Boolean,
@@ -752,17 +783,30 @@ private fun WhatsAppChatRowItem(
     textSecondary: Color,
     textTertiary: Color,
     studentAccent: Color,
-    innerCardBorder: Color,
     onClick: () -> Unit,
 ) {
+    val formattedTime = remember(lastMessageTime) {
+        if (lastMessageTime != null && lastMessageTime > 0L) {
+            val now = System.currentTimeMillis()
+            val fDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+            val msgDay = fDay.format(Date(lastMessageTime))
+            val today = fDay.format(Date(now))
+            when {
+                msgDay == today -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(lastMessageTime))
+                now - lastMessageTime < 86400000L * 2 -> "Kemarin"
+                else -> SimpleDateFormat("dd/MM/yy", Locale.getDefault()).format(Date(lastMessageTime))
+            }
+        } else ""
+    }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        // Avatar with Online Dot
+        // ── 1. AVATAR with Real-time Online Indicator (dot hijau kecil di profile) ──
         Box(
             modifier = Modifier.size(50.dp),
         ) {
@@ -770,8 +814,9 @@ private fun WhatsAppChatRowItem(
                 modifier = Modifier
                     .size(48.dp)
                     .clip(CircleShape)
-                    .background(studentAccent.copy(alpha = if (isDark) 0.20f else 0.12f))
-                    .border(1.dp, studentAccent.copy(alpha = if (isDark) 0.45f else 0.30f), CircleShape),
+                    .background(studentAccent.copy(alpha = if (isDark) 0.18f else 0.10f))
+                    .border(1.dp, studentAccent.copy(alpha = if (isDark) 0.35f else 0.22f), CircleShape)
+                    .align(Alignment.Center),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -782,24 +827,27 @@ private fun WhatsAppChatRowItem(
                 )
             }
 
+            // Realtime Online Dot: ONLY shown if teacher is actively online in Firebase RTDB
             if (isOnline) {
                 Box(
                     modifier = Modifier
-                        .size(12.dp)
+                        .size(13.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF10B981))
-                        .border(2.dp, if (isDark) Color(0xFF111113) else Color.White, CircleShape)
+                        .border(2.dp, if (isDark) Color(0xFF09090B) else Color.White, CircleShape)
                         .align(Alignment.BottomEnd),
                 )
             }
         }
 
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(14.dp))
 
-        // Center: Teacher Name, Subject Badge, and Last Message
+        // ── 2. TEXT COLUMN: Clean WhatsApp Layout ──
         Column(
             modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
         ) {
+            // Top Row: Teacher Name + Time (NO "Online" text, NO "Aktif" text)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -807,57 +855,53 @@ private fun WhatsAppChatRowItem(
             ) {
                 Text(
                     text = teacher.name,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.SemiBold,
                     color = textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false),
                 )
 
-                Spacer(Modifier.width(8.dp))
-
-                Text(
-                    text = timeText,
-                    fontSize = 10.5.sp,
-                    color = if (timeText == "Online") Color(0xFF10B981) else textTertiary,
-                    fontWeight = if (timeText == "Online") FontWeight.Bold else FontWeight.Normal,
-                )
+                if (formattedTime.isNotBlank()) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = formattedTime,
+                        fontSize = 11.sp,
+                        color = if (hasUnread) Color(0xFF10B981) else textTertiary,
+                        fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal,
+                    )
+                }
             }
 
             Spacer(Modifier.height(3.dp))
 
+            // Bottom Row: Subject / Last Message (NO wrapper, NO badge, plain typography) + Unread Indicator
             Row(
                 modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // Compact Subject Tag
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = studentAccent.copy(alpha = if (isDark) 0.18f else 0.10f),
-                    border = BorderStroke(0.5.dp, studentAccent.copy(alpha = 0.35f)),
-                    modifier = Modifier.padding(end = 6.dp),
-                ) {
-                    Text(
-                        text = teacher.subject.take(22) + if (teacher.subject.length > 22) "..." else "",
-                        fontSize = 9.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = studentAccent,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
-                    )
+                val subtitleText = remember(lastMessage, teacher.subject) {
+                    if (!lastMessage.isNullOrBlank()) {
+                        "${teacher.subject} • $lastMessage"
+                    } else {
+                        teacher.subject
+                    }
                 }
 
                 Text(
-                    text = previewText,
-                    fontSize = 11.5.sp,
-                    color = textSecondary,
+                    text = subtitleText,
+                    fontSize = 12.5.sp,
+                    color = if (hasUnread) textPrimary else textSecondary,
+                    fontWeight = if (hasUnread) FontWeight.Medium else FontWeight.Normal,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f),
                 )
 
                 if (hasUnread) {
-                    Spacer(Modifier.width(6.dp))
+                    Spacer(Modifier.width(8.dp))
                     Box(
                         modifier = Modifier
                             .size(8.dp)

@@ -1186,33 +1186,6 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
                         )
                     }
                 }
-
-                // Real-time Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(emerald.copy(alpha = 0.12f))
-                        .border(0.5.dp, emerald.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(5.dp)
-                                .clip(CircleShape)
-                                .background(emerald)
-                        )
-                        Text(
-                            text = "REAL-TIME",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black,
-                            color = emerald,
-                        )
-                    }
-                }
             }
 
             // Stat Summary Strip
@@ -1444,33 +1417,6 @@ private fun PrincipalStudentWeeklyActivityCard(
                             text = "Kehadiran tutorial, submisi tugas & asesmen CBT",
                             fontSize = 11.sp,
                             color = textTertiary,
-                        )
-                    }
-                }
-
-                // Real-time Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(skyBlue.copy(alpha = 0.12f))
-                        .border(0.5.dp, skyBlue.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(5.dp)
-                                .clip(CircleShape)
-                                .background(skyBlue)
-                        )
-                        Text(
-                            text = "REAL-TIME",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black,
-                            color = skyBlue,
                         )
                     }
                 }

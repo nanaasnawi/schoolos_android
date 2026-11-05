@@ -179,7 +179,13 @@ internal fun StudentGreetingHeroCard(
     // Format Class and NISN with real user data
     val isUuidLike = studentClass.contains("-") && studentClass.length >= 32
     val effectiveClass = if (studentClass.isNotBlank() && !isUuidLike) studentClass.uppercase() else "WARGA BELAJAR"
-    val effectiveNisn = if (studentNisn.isNotBlank()) "NISN: $studentNisn" else null
+    val effectiveNisn = if (studentNisn.isNotBlank()) {
+        if (studentNisn.startsWith("NISN:", ignoreCase = true) || studentNisn.contains(" ") || studentNisn.any { it.isLetter() }) {
+            studentNisn
+        } else {
+            "NISN: $studentNisn"
+        }
+    } else null
     val effectiveStreak = streakDays
 
     Surface(

@@ -119,6 +119,10 @@ class ChatManager @Inject constructor(
 
     val isRealtimeConnected: StateFlow<Boolean> = firebaseRtdbManager.isConnected
 
+    val teacherPresences: StateFlow<Map<String, Boolean>> = firebaseRtdbManager
+        .observeAllPresences()
+        .stateIn(scope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
     private var cachedAuth: AuthState? = null
     val currentAuth: AuthState? get() = cachedAuth
 
@@ -491,23 +495,24 @@ class ChatManager @Inject constructor(
             activeDetailThreadId = threadId
             threadDetailJob = scope.launch {
                 firebaseRtdbManager.observeThreadMessages(threadId).collect { rtdbMsgs ->
+                    val cleanMsgs = rtdbMsgs.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() }
                     _threads.value = _threads.value.map { th ->
                         if (th.id == threadId) {
-                            val lastMsg = rtdbMsgs.lastOrNull()
+                            val lastMsg = cleanMsgs.lastOrNull()
                             val updatedStatus = if (lastMsg?.isFromTeacher == true) {
                                 InquiryStatus.ANSWERED
-                            } else if (rtdbMsgs.isNotEmpty()) {
+                            } else if (cleanMsgs.isNotEmpty()) {
                                 InquiryStatus.WAITING_REPLY
                             } else {
                                 th.status
                             }
                             th.copy(
-                                messages = rtdbMsgs,
+                                messages = cleanMsgs,
                                 status = updatedStatus,
                                 lastUpdated = lastMsg?.timestamp ?: th.lastUpdated,
                                 lastMessageContent = lastMsg?.content ?: th.lastMessageContent,
                                 lastSenderName = lastMsg?.senderName ?: th.lastSenderName,
-                                messageCount = rtdbMsgs.size,
+                                messageCount = cleanMsgs.size,
                             )
                         } else th
                     }
@@ -544,7 +549,9 @@ class ChatManager @Inject constructor(
                             } else {
                                 existing.teacherName
                             }
-                            val apiMessages = detail.messages.map { m ->
+                            val apiMessages = detail.messages
+                                .filter { it.content.isNotBlank() }
+                                .map { m ->
                                 ChatMessage(
                                     id = m.id,
                                     threadId = m.threadId,

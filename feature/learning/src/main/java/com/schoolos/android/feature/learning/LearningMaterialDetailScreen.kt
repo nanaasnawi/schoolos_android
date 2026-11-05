@@ -59,8 +59,10 @@ fun LearningMaterialDetailScreen(
     val detailError by viewModel.materialDetailError.collectAsState()
 
     if (materialState == null) {
+        val isDark = LocalIsDarkTheme.current
+        val screenBg = if (isDark) CosmicBlack else Color(0xFFF8FAFC)
         Scaffold(
-            containerColor = CosmicBlack,
+            containerColor = screenBg,
             topBar = {
                 ExecutiveTopBar(
                     title = if (detailError != null) "Materi Pembelajaran" else "Memuat Modul...",
@@ -68,22 +70,22 @@ fun LearningMaterialDetailScreen(
                 )
             }
         ) { padding ->
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(padding)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                if (detailError != null) {
+            if (detailError != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(18.dp))
-                            .background(CosmicNavy)
-                            .border(1.dp, GlassBorder, RoundedCornerShape(18.dp))
+                            .background(if (isDark) CosmicNavy else Color.White)
+                            .border(1.dp, if (isDark) GlassBorder else Color(0xFFE2E8F0), RoundedCornerShape(18.dp))
                             .padding(24.dp)
                     ) {
                         Box(
@@ -102,7 +104,7 @@ fun LearningMaterialDetailScreen(
                         }
                         Text(
                             text = "Akses Materi Dibatasi",
-                            color = Color.White,
+                            color = if (isDark) Color.White else Color(0xFF0F172A),
                             fontSize = 17.sp,
                             fontWeight = FontWeight.Bold,
                         )
@@ -122,9 +124,13 @@ fun LearningMaterialDetailScreen(
                             Text("Kembali", color = Color.White, fontWeight = FontWeight.SemiBold)
                         }
                     }
-                } else {
-                    LoadingState()
                 }
+            } else {
+                MaterialDetailShimmerSkeleton(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding)
+                )
             }
         }
         return
@@ -1480,6 +1486,114 @@ fun calculateEstimatedReadingMinutes(material: LearningMaterial): Int {
         }
         MaterialType.VIDEO -> 4
         MaterialType.IMAGE, MaterialType.INFOGRAPHIC -> 2
+    }
+}
+
+/**
+ * Dedicated high-precision skeleton loader for Learning Material Detail Screen.
+ * Perfectly mirrors the actual reading layout (Header, Cover Media, Content Blocks).
+ */
+@Composable
+private fun MaterialDetailShimmerSkeleton(
+    modifier: Modifier = Modifier,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) CosmicNavy else Color.White
+    val cardBorder = if (isDark) GlassBorder else Color(0xFFE2E8F0)
+
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        // 1. Header Card (Tags, Title, Teacher & Date Meta)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(cardBg)
+                .border(1.dp, cardBorder, RoundedCornerShape(16.dp))
+                .padding(18.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Top Tag Badges Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    ShimmerBox(modifier = Modifier.width(96.dp).height(24.dp), shape = RoundedCornerShape(6.dp))
+                    ShimmerBox(modifier = Modifier.width(72.dp).height(24.dp), shape = RoundedCornerShape(6.dp))
+                }
+
+                Spacer(Modifier.height(2.dp))
+
+                // Module Title (2 Lines)
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.92f).height(20.dp), shape = RoundedCornerShape(5.dp))
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.68f).height(18.dp), shape = RoundedCornerShape(5.dp))
+
+                Spacer(Modifier.height(4.dp))
+
+                // Teacher Avatar + Name + Reading Time Info Row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    ShimmerBox(modifier = Modifier.size(36.dp), shape = CircleShape)
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        ShimmerBox(modifier = Modifier.width(130.dp).height(12.dp), shape = RoundedCornerShape(4.dp))
+                        ShimmerBox(modifier = Modifier.width(90.dp).height(10.dp), shape = RoundedCornerShape(4.dp))
+                    }
+                }
+            }
+        }
+
+        // 2. Featured Image / Hero Media Skeleton Block
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(175.dp)
+                .clip(RoundedCornerShape(16.dp))
+                .background(cardBg)
+                .border(1.dp, cardBorder, RoundedCornerShape(16.dp)),
+            contentAlignment = Alignment.Center,
+        ) {
+            ShimmerBox(
+                modifier = Modifier.fillMaxSize(),
+                shape = RoundedCornerShape(16.dp),
+            )
+        }
+
+        // 3. Module Reading Content Paragraphs (Simulating Book / Article text)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(cardBg)
+                .border(1.dp, cardBorder, RoundedCornerShape(16.dp))
+                .padding(18.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                // Section Subtitle
+                ShimmerBox(modifier = Modifier.width(150.dp).height(15.dp), shape = RoundedCornerShape(4.dp))
+                Spacer(Modifier.height(2.dp))
+
+                // Paragraph 1
+                ShimmerBox(modifier = Modifier.fillMaxWidth().height(11.dp), shape = RoundedCornerShape(4.dp))
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.96f).height(11.dp), shape = RoundedCornerShape(4.dp))
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.88f).height(11.dp), shape = RoundedCornerShape(4.dp))
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.72f).height(11.dp), shape = RoundedCornerShape(4.dp))
+
+                Spacer(Modifier.height(6.dp))
+
+                // Paragraph 2
+                ShimmerBox(modifier = Modifier.fillMaxWidth().height(11.dp), shape = RoundedCornerShape(4.dp))
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.92f).height(11.dp), shape = RoundedCornerShape(4.dp))
+                ShimmerBox(modifier = Modifier.fillMaxWidth(0.55f).height(11.dp), shape = RoundedCornerShape(4.dp))
+            }
+        }
     }
 }
 

@@ -455,7 +455,10 @@ fun ChatDetailScreen(
         }
 
         // ── 2. CHAT CANVAS ────────────────────────────────────────────────
-        val messages = thread?.messages ?: emptyList()
+        val rawMessages = thread?.messages ?: emptyList()
+        val messages = remember(rawMessages) {
+            rawMessages.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() }
+        }
 
         if (messages.isEmpty()) {
             Box(
