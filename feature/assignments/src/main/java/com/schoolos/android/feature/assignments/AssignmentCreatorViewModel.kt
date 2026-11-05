@@ -8,6 +8,8 @@ import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.AssignmentChoice
 import com.schoolos.android.domain.model.AssignmentQuestion
+import com.schoolos.android.domain.model.findClass
+import com.schoolos.android.domain.model.groupParallelClasses
 import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.AssignmentRepository
 import com.schoolos.android.domain.repository.AuthRepository
@@ -372,13 +374,43 @@ class AssignmentCreatorViewModel @Inject constructor(
                 else -> "QUIZ"
             }
 
-            val targetList = if (classIds.isNotEmpty()) classIds else listOfNotNull(classId?.ifBlank { null })
-            val effectiveClasses = if (targetList.isNotEmpty()) targetList else listOf("")
+            val classes = _state.value.availableClasses.ifEmpty {
+                academicRepository.getClasses().getOrDefault(emptyList())
+            }
+            val unified = classes.groupParallelClasses()
+            val targetList = if (classIds.isNotEmpty()) {
+                classIds.filter { it.isNotBlank() }
+            } else {
+                listOfNotNull(classId?.ifBlank { null })
+            }
+            val expandedClasses = if (targetList.size == 1) {
+                val single = targetList.first()
+                val matchedGroup = unified.findClass(single)
+                val mentionsParallelInDesc = description.contains("Kelas A & B", ignoreCase = true)
+                if (matchedGroup != null && matchedGroup.memberClassIds.size > 1 &&
+                    (mentionsParallelInDesc || single.equals(matchedGroup.displayName, ignoreCase = true) || matchedGroup.memberClassIds.contains(single))
+                ) {
+                    matchedGroup.memberClassIds
+                } else {
+                    targetList
+                }
+            } else {
+                targetList.distinct()
+            }
+            val effectiveClasses = if (expandedClasses.isNotEmpty()) expandedClasses else listOf("")
+            val parallelLabelRegex = Regex("PAKET\\s+[ABC]\\s+\\d+\\s*\\(Kelas\\s+A\\s*&\\s*B\\)", RegexOption.IGNORE_CASE)
 
             var successCount = 0
             var lastError: Throwable? = null
 
             for (cid in effectiveClasses) {
+                val targetClassName = classes.find { it.id == cid || it.name.equals(cid, ignoreCase = true) }?.name
+                val classSpecificDesc = if (!targetClassName.isNullOrBlank()) {
+                    description.replace(parallelLabelRegex, targetClassName)
+                } else {
+                    description
+                }
+
                 // Generate fresh UUIDs for questions and choices per class to avoid DB PK collisions
                 val classQuestions = validQuestions.map { q ->
                     q.copy(
@@ -391,7 +423,7 @@ class AssignmentCreatorViewModel @Inject constructor(
 
                 val res = repository.createAssignment(
                     title = title,
-                    description = description,
+                    description = classSpecificDesc,
                     instructions = instructions,
                     maxScore = computedMaxScore,
                     dueAt = dueAt,

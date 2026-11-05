@@ -294,149 +294,7 @@ fun LazyListScope.teacherContent(
         }
     }
 
-    // ── 2. CLASS COMMAND HERO (WALI KELAS / KELAS PENGAMPU) ─────────────────────
-    item {
-        val isDark = LocalIsDarkTheme.current
-        val cardBg = if (isDark) Color(0xFF111113) else Color.White
-        val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
-        val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
-        val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
-        val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
-        val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
-
-        val heroBadge = if (isHomeroom) "WALI KELAS" else "KELAS PENGAMPU"
-        val heroTitle = if (rawClass != "-") formatClassName(rawClass) else if (isHomeroom) "Wali Kelas" else "Kelas Pengampu"
-        val heroSubtitle = if (isHomeroom && heroTitle != "Wali Kelas") {
-            "Wali Kelas $heroTitle • Rekap data siswa, kehadiran presensi harian, dan pantauan kelas"
-        } else {
-            "Rekap data siswa, kehadiran presensi harian, dan pantauan kelas"
-        }
-
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(22.dp))
-                .clickable {
-                    onNavigateToRombelStudents(if (teacherClasses.size > 1) "ALL" else rawClass)
-                },
-            shape = RoundedCornerShape(22.dp),
-            color = cardBg,
-            border = BorderStroke(1.dp, cardBorder),
-            shadowElevation = if (isDark) 0.dp else 1.dp,
-        ) {
-            Column(
-                modifier = Modifier.padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
-            ) {
-                // Top Row: Role badge & quick action
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    val badgeBg = if (isHomeroom) TeacherNeon.copy(alpha = 0.12f) else NeonBlue.copy(alpha = 0.12f)
-                    val badgeFg = if (isHomeroom) TeacherNeon else NeonBlue
-                    val badgeBorder = if (isHomeroom) TeacherNeon.copy(alpha = 0.35f) else NeonBlue.copy(alpha = 0.35f)
-
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(badgeBg)
-                            .border(0.5.dp, badgeBorder, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp),
-                    ) {
-                        Text(
-                            text = heroBadge,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = badgeFg,
-                            letterSpacing = 0.5.sp,
-                        )
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            text = "Presensi & Siswa",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TeacherNeon,
-                        )
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = null,
-                            tint = TeacherNeon,
-                            modifier = Modifier.size(12.dp),
-                        )
-                    }
-                }
-
-                // Middle: Class Title & Detail
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(innerCardBg)
-                            .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Group,
-                            contentDescription = null,
-                            tint = textPrimary,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-
-                    Spacer(Modifier.width(12.dp))
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = heroTitle,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textPrimary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = heroSubtitle,
-                            fontSize = 11.5.sp,
-                            color = textSecondary,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-            }
-        }
-    }
-
-    // ── 3. STUDIO AKSI PENGAJAR (Executive Console Hub) ─────────────────────────
-    item {
-        TeacherSectionHeader(
-            title = "Studio & Aksi Pengajar",
-            subtitle = "Pusat pembuatan penugasan, asesmen kuis, dan modul ajar",
-        )
-    }
-
-    item {
-        TeacherStudioConsole(
-            onCreateAssignment = onNavigateToAssignmentCreator,
-            onCreateQuiz = onNavigateToQuizBuilder,
-            onNavigateToLearning = onNavigateToLearning,
-            onNavigateToGrades = onNavigateToGrades,
-        )
-    }
-
-    // ── 4. JADWAL MENGAJAR HARI INI ──────────────────────────────────────────────
+    // ── 2. JADWAL MENGAJAR HARI INI ──────────────────────────────────────────────
     item {
         TeacherSectionHeader(
             title = "Jadwal Mengajar Hari Ini",
@@ -605,6 +463,148 @@ fun LazyListScope.teacherContent(
                 }
             }
         }
+    }
+
+    // ── 3. CLASS COMMAND HERO (WALI KELAS / KELAS PENGAMPU) ─────────────────────
+    item {
+        val isDark = LocalIsDarkTheme.current
+        val cardBg = if (isDark) Color(0xFF111113) else Color.White
+        val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+        val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+        val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+        val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
+        val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+        val heroBadge = if (isHomeroom) "WALI KELAS" else "KELAS PENGAMPU"
+        val heroTitle = if (rawClass != "-") formatClassName(rawClass) else if (isHomeroom) "Wali Kelas" else "Kelas Pengampu"
+        val heroSubtitle = if (isHomeroom && heroTitle != "Wali Kelas") {
+            "Wali Kelas $heroTitle • Rekap data siswa, kehadiran presensi harian, dan pantauan kelas"
+        } else {
+            "Rekap data siswa, kehadiran presensi harian, dan pantauan kelas"
+        }
+
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .clickable {
+                    onNavigateToRombelStudents(if (teacherClasses.size > 1) "ALL" else rawClass)
+                },
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            shadowElevation = if (isDark) 0.dp else 1.dp,
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                // Top Row: Role badge & quick action
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    val badgeBg = if (isHomeroom) TeacherNeon.copy(alpha = 0.12f) else NeonBlue.copy(alpha = 0.12f)
+                    val badgeFg = if (isHomeroom) TeacherNeon else NeonBlue
+                    val badgeBorder = if (isHomeroom) TeacherNeon.copy(alpha = 0.35f) else NeonBlue.copy(alpha = 0.35f)
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(badgeBg)
+                            .border(0.5.dp, badgeBorder, RoundedCornerShape(8.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            text = heroBadge,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = badgeFg,
+                            letterSpacing = 0.5.sp,
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        Text(
+                            text = "Presensi & Siswa",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TeacherNeon,
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = TeacherNeon,
+                            modifier = Modifier.size(12.dp),
+                        )
+                    }
+                }
+
+                // Middle: Class Title & Detail
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Group,
+                            contentDescription = null,
+                            tint = textPrimary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = heroTitle,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = heroSubtitle,
+                            fontSize = 11.5.sp,
+                            color = textSecondary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // ── 4. STUDIO AKSI PENGAJAR (Executive Console Hub) ─────────────────────────
+    item {
+        TeacherSectionHeader(
+            title = "Studio & Aksi Pengajar",
+            subtitle = "Pusat pembuatan penugasan, asesmen kuis, dan modul ajar",
+        )
+    }
+
+    item {
+        TeacherStudioConsole(
+            onCreateAssignment = onNavigateToAssignmentCreator,
+            onCreateQuiz = onNavigateToQuizBuilder,
+            onNavigateToLearning = onNavigateToLearning,
+            onNavigateToGrades = onNavigateToGrades,
+        )
     }
 
     // ── 5. PENUGASAN BERJALAN & ANTREAN KOREKSI ──────────────────────────────────

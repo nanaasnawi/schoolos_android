@@ -339,9 +339,14 @@ fun MaterialCreatorScreen(
     }
 
     if (showPrePublishDialog) {
-        val targetClassId = unifiedClasses.findClass(selectedClass)?.primaryId
-            ?: state.availableClasses.find { it.name == selectedClass }?.id
-            ?: selectedClass
+        val matchedUnified = unifiedClasses.findClass(selectedClass)
+        val targetClassIds = if (matchedUnified != null && matchedUnified.memberClassIds.isNotEmpty()) {
+            matchedUnified.memberClassIds
+        } else {
+            val singleId = state.availableClasses.find { it.name == selectedClass }?.id ?: selectedClass
+            listOf(singleId)
+        }
+        val targetClassId = targetClassIds.firstOrNull() ?: selectedClass
         val targetSubjectId = state.availableSubjects.find { it.name == selectedSubject }?.id
         val startP = startPageInput.toIntOrNull() ?: 1
         val endP = endPageInput.toIntOrNull() ?: minOf(startP + 10, selectedBook?.totalPages ?: 100)
@@ -367,6 +372,7 @@ fun MaterialCreatorScreen(
                         endPage = endP,
                         instructions = description.trim().ifBlank { null },
                         classId = targetClassId,
+                        classIds = targetClassIds,
                         subjectId = targetSubjectId,
                         releaseAt = releaseAtIso,
                         visibility = if (isScheduled) "draft" else "published",
@@ -380,6 +386,7 @@ fun MaterialCreatorScreen(
                         mediaUrl = mediaUrl.trim().ifBlank { null },
                         subject = selectedSubject,
                         classId = targetClassId,
+                        classIds = targetClassIds,
                         subjectId = targetSubjectId,
                         visibility = if (isScheduled) "draft" else "published",
                         releaseAt = releaseAtIso,
