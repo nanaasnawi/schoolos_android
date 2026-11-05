@@ -351,18 +351,21 @@ fun MaterialCreatorScreen(
         val startP = startPageInput.toIntOrNull() ?: 1
         val endP = endPageInput.toIntOrNull() ?: minOf(startP + 10, selectedBook?.totalPages ?: 100)
 
+        val currentBlocks by viewModel.contentBlocks.collectAsState()
         MaterialReviewAndPublishScreen(
             title = title.trim(),
             description = description.trim(),
             selectedType = selectedType,
             mediaUrl = mediaUrl.trim(),
             contentBody = contentBody.trim(),
+            contentBlocks = currentBlocks,
             selectedClass = selectedClass,
             selectedSubject = selectedSubject,
             selectedBook = selectedBook,
             startPage = startP.toString(),
             endPage = endP.toString(),
             isLoading = state.isLoading,
+            onOpenBookPreview = { previewingSelectedBook = true },
             onBackToEdit = { showPrePublishDialog = false },
             onConfirmPublish = { isScheduled, releaseAtIso ->
                 if (selectedType == MaterialType.DOCUMENT && pdfSourceMode == "SIBI" && selectedBook != null) {
@@ -398,9 +401,18 @@ fun MaterialCreatorScreen(
     }
 
     val isImeVisible = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    val isDark = LocalIsDarkTheme.current
+    val pageBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val surfaceBg = if (isDark) Color(0xFF111113) else Color.White
+    val surfaceBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val subSurfaceBg = if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9)
+    val subSurfaceBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val emeraldAccent = if (isDark) Color(0xFF34D399) else Color(0xFF059669)
+    val emeraldSoftBg = if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5)
+    val emeraldSoftBorder = if (isDark) Color(0xFF059669).copy(alpha = 0.45f) else Color(0xFFA7F3D0)
 
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = pageBg,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
@@ -412,10 +424,10 @@ fun MaterialCreatorScreen(
         bottomBar = {
             if (!isImeVisible) {
                 Surface(
-                    color = CosmicNavy,
-                    tonalElevation = 8.dp,
+                    color = surfaceBg,
+                    tonalElevation = 0.dp,
                     shadowElevation = 12.dp,
-                    border = BorderStroke(0.5.dp, GlassBorder),
+                    border = BorderStroke(1.dp, surfaceBorder),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Row(
@@ -426,33 +438,6 @@ fun MaterialCreatorScreen(
                         horizontalArrangement = Arrangement.spacedBy(10.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        OutlinedButton(
-                            onClick = { showPreview = !showPreview },
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier
-                                .weight(1f)
-                                .height(48.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(
-                                contentColor = if (showPreview) NeonWarning else TextPrimary
-                            ),
-                            border = BorderStroke(
-                                1.dp,
-                                if (showPreview) NeonWarning.copy(alpha = 0.5f) else GlassBorder
-                            )
-                        ) {
-                            Icon(
-                                if (showPreview) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                                contentDescription = null,
-                                modifier = Modifier.size(17.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                if (showPreview) "Sembunyikan" else "Lihat Preview",
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 12.sp
-                            )
-                        }
-
                         Button(
                             onClick = {
                                 if (selectedType == MaterialType.DOCUMENT) {
@@ -494,10 +479,10 @@ fun MaterialCreatorScreen(
                                 showPrePublishDialog = true
                             },
                             enabled = !state.isLoading && !state.isUploadingFile,
-                            shape = RoundedCornerShape(12.dp),
+                            shape = RoundedCornerShape(14.dp),
                             modifier = Modifier
-                                .weight(1.3f)
-                                .height(48.dp),
+                                .fillMaxWidth()
+                                .height(50.dp),
                             colors = ButtonDefaults.buttonColors(
                                 containerColor = EmeraldGlow,
                                 contentColor = Color.White,
@@ -507,9 +492,9 @@ fun MaterialCreatorScreen(
                             if (state.isLoading) {
                                 CircularProgressIndicator(color = Color.White, modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
                             } else {
-                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(17.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text("Lanjut Terbitkan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                Text("Pratinjau & Terbitkan Materi", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                Spacer(Modifier.width(8.dp))
+                                Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, modifier = Modifier.size(18.dp))
                             }
                         }
                     }
@@ -526,404 +511,319 @@ fun MaterialCreatorScreen(
                 )
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 16.dp),
+                .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // ── LIVE STUDENT FEED PREVIEW CARD ──
-            AnimatedVisibility(visible = showPreview) {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(14.dp),
-                    color = CosmicNavy,
-                    border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.4f))
+            // ── 1. SLEEK AI MATERIAL GENERATOR BAR ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(emeraldSoftBg)
+                    .border(1.dp, emeraldSoftBorder, RoundedCornerShape(16.dp))
+                    .clickable { showAiGenerateDialog = true }
+                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Column(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(EmeraldGlow),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Susun Materi Otomatis (AI)",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = TextPrimary
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(5.dp))
+                                    .background(EmeraldGlow)
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
                             ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(7.dp)
-                                        .clip(CircleShape)
-                                        .background(NeonSuccess)
+                                Text(
+                                    "Asisten Guru",
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
                                 )
-                                Text("Pratinjau Modul Siswa", color = NeonSuccess, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                             }
-                            Text("In-App Reader", color = TextTertiary, fontSize = 10.sp)
                         }
                         Text(
-                            text = title.ifBlank { "Judul Modul Materi Pembelajaran" },
-                            color = TextPrimary,
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = description.ifBlank { "Deskripsi pengantar dan capaian kompetensi materi..." },
+                            text = "Sintesis infografis visual & artikel pembelajaran otomatis",
+                            fontSize = 11.sp,
                             color = TextSecondary,
-                            fontSize = 12.sp,
-                            lineHeight = 16.sp,
-                            maxLines = 2,
+                            maxLines = 1,
                             overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
                         )
+                    }
+                }
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    contentDescription = null,
+                    tint = emeraldAccent,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+
+            // ── 2. UNIFIED STUDIO WORKSPACE (SASARAN, FORMAT, DAN KONTEN AKTIF) ──
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = surfaceBg,
+                border = BorderStroke(1.dp, surfaceBorder)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // A. Sasaran Rombel & Mapel (BottomSheet Pickers — Zero Vanilla Dropdown!)
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        Text(
+                            text = "SASARAN ROMBEL & MATA PELAJARAN",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = emeraldAccent,
+                            letterSpacing = 0.6.sp
+                        )
+
+                        ExecutiveBottomSheetSelector(
+                            value = selectedClass,
+                            label = "Rombel / Kelas Target *",
+                            icon = Icons.Default.Group,
+                            options = classOptions,
+                            onSelect = { selectedClass = it },
+                            sheetTitle = "Pilih Rombel Target",
+                            sheetSubtitle = "Modul pembelajaran akan dibagikan ke rombel ini",
+                            accentColor = emeraldAccent
+                        )
+
+                        val isSubLocked = state.isSubjectLocked && subjectOptions.size <= 1
+                        ExecutiveBottomSheetSelector(
+                            value = selectedSubject,
+                            label = "Mata Pelajaran *",
+                            icon = Icons.Default.School,
+                            options = subjectOptions,
+                            onSelect = { selectedSubject = it },
+                            sheetTitle = "Pilih Mata Pelajaran",
+                            sheetSubtitle = "Pilih mata pelajaran yang Anda ampu",
+                            accentColor = emeraldAccent,
+                            isLocked = isSubLocked,
+                            lockedBadgeText = "Guru Pengampu",
+                            onLockedClick = {
+                                Toast.makeText(context, "Mata pelajaran dikunci untuk guru pengampu: $selectedSubject", Toast.LENGTH_SHORT).show()
+                            }
+                        )
+                    }
+
+                    HorizontalDivider(color = surfaceBorder)
+
+                    // B. Segmented Format Selector
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            text = "FORMAT MODUL PEMBELAJARAN",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = TextSecondary,
+                            letterSpacing = 0.6.sp
+                        )
+
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .horizontalScroll(rememberScrollState()),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(subSurfaceBg)
+                                .padding(4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
-                            Chip(label = selectedSubject.ifBlank { "Mata Pelajaran" }, color = EmeraldGlow)
-                            Chip(label = selectedType.name, color = TealAccent)
-                            if (selectedClass.isNotBlank()) {
-                                Chip(label = selectedClass, color = NeonBlue)
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── AI MATERIAL GENERATOR CALLOUT CARD (ZERO GRADIENT, SLEEK EXECUTIVE) ──
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showAiGenerateDialog = true },
-                shape = RoundedCornerShape(14.dp),
-                color = CosmicNavy,
-                border = BorderStroke(0.5.dp, GlassBorder)
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(38.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(CosmicSurface2)
-                                .border(0.5.dp, GlassBorder, RoundedCornerShape(10.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.AutoAwesome,
-                                contentDescription = null,
-                                tint = EmeraldGlow,
-                                modifier = Modifier.size(19.dp)
-                            )
-                        }
-                        Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text(
-                                    text = "Generate Materi (AI)",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = TextPrimary
-                                )
+                            listOf(
+                                Triple(MaterialType.DOCUMENT, "PDF / Buku", Icons.Default.PictureAsPdf),
+                                Triple(MaterialType.VIDEO, "Video", Icons.Default.PlayCircle),
+                                Triple(MaterialType.IMAGE, "Infografis", Icons.Default.Image),
+                                Triple(MaterialType.ARTICLE, "Artikel", Icons.Default.Article)
+                            ).forEach { (type, label, icon) ->
+                                val isSelected = selectedType == type
                                 Box(
                                     modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(EmeraldGlow.copy(alpha = 0.12f))
-                                        .padding(horizontal = 5.dp, vertical = 2.dp)
+                                        .weight(1f)
+                                        .clip(RoundedCornerShape(9.dp))
+                                        .background(if (isSelected) surfaceBg else Color.Transparent)
+                                        .border(
+                                            width = if (isSelected) 1.dp else 0.dp,
+                                            color = if (isSelected) emeraldSoftBorder else Color.Transparent,
+                                            shape = RoundedCornerShape(9.dp)
+                                        )
+                                        .clickable {
+                                            selectedType = type
+                                            if (type != MaterialType.DOCUMENT) {
+                                                selectedBook = null
+                                            }
+                                        }
+                                        .padding(vertical = 10.dp, horizontal = 4.dp),
+                                    contentAlignment = Alignment.Center
                                 ) {
-                                    Text(
-                                        "Asisten Guru",
-                                        color = EmeraldGlow,
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Column(
+                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = label,
+                                            tint = if (isSelected) emeraldAccent else TextTertiary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = label,
+                                            color = if (isSelected) emeraldAccent else TextSecondary,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 10.5.sp,
+                                            textAlign = TextAlign.Center,
+                                            maxLines = 1
+                                        )
+                                    }
                                 }
                             }
-                            Text(
-                                text = "Sintesis infografis & artikel pembelajaran terstruktur otomatis",
-                                fontSize = 11.sp,
-                                color = TextSecondary,
-                                maxLines = 1,
-                                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
-                            )
                         }
                     }
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                        contentDescription = null,
-                        tint = TextTertiary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
-            }
 
-            // ── SECTION 1: SASARAN ROMBEL & MAPEL ──
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = CosmicNavy,
-                border = BorderStroke(0.5.dp, GlassBorder)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    SectionHeader(
-                        number = 1,
-                        title = "Sasaran Rombel & Mapel",
-                        subtitle = "Tentukan kelas dan mata pelajaran target penerima modul",
-                        accentColor = EmeraldGlow
-                    )
+                    HorizontalDivider(color = surfaceBorder)
 
-                    ModernDropdown(
-                        value = selectedClass,
-                        label = "Rombel Target",
-                        icon = Icons.Default.Group,
-                        expanded = isClassMenuExpanded,
-                        accentColor = EmeraldGlow,
-                        onExpand = { isClassMenuExpanded = true },
-                        onDismiss = { isClassMenuExpanded = false },
-                        options = classOptions,
-                        onSelect = { selectedClass = it }
-                    )
-
-                    ModernDropdown(
-                        value = selectedSubject,
-                        label = if (state.isSubjectLocked && subjectOptions.size <= 1) "Mata Pelajaran (Terkunci)" else "Mata Pelajaran",
-                        icon = if (state.isSubjectLocked && subjectOptions.size <= 1) Icons.Default.Lock else Icons.Default.School,
-                        expanded = if (state.isSubjectLocked && subjectOptions.size <= 1) false else isSubjectMenuExpanded,
-                        accentColor = EmeraldGlow,
-                        onExpand = {
-                            if (state.isSubjectLocked && subjectOptions.size <= 1) {
-                                Toast.makeText(context, "Mata pelajaran dikunci untuk guru pengampu: $selectedSubject", Toast.LENGTH_SHORT).show()
-                            } else {
-                                isSubjectMenuExpanded = true
-                            }
-                        },
-                        onDismiss = { isSubjectMenuExpanded = false },
-                        options = subjectOptions,
-                        onSelect = { selectedSubject = it }
-                    )
-                }
-            }
-
-            // ── SECTION 2: FORMAT MODUL PEMBELAJARAN ──
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                color = CosmicNavy,
-                border = BorderStroke(0.5.dp, GlassBorder)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    SectionHeader(
-                        number = 2,
-                        title = "Format Modul Pembelajaran",
-                        subtitle = "Pilih jenis konten media yang akan diunggah",
-                        accentColor = EmeraldGlow
-                    )
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(IntrinsicSize.Min),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        listOf(
-                            Triple(MaterialType.DOCUMENT, "PDF", Icons.Default.PictureAsPdf),
-                            Triple(MaterialType.VIDEO, "Video", Icons.Default.PlayCircle),
-                            Triple(MaterialType.IMAGE, "Infografis", Icons.Default.Image),
-                            Triple(MaterialType.ARTICLE, "Artikel", Icons.Default.Article)
-                        ).forEach { (type, label, icon) ->
-                            val isSelected = selectedType == type
-                            Surface(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxHeight()
-                                    .clickable {
-                                        selectedType = type
-                                        if (type != MaterialType.DOCUMENT) {
-                                            selectedBook = null
-                                        }
-                                    },
-                                shape = RoundedCornerShape(12.dp),
-                                color = if (isSelected) EmeraldGlow.copy(alpha = 0.12f) else CosmicSurface2,
-                                border = BorderStroke(
-                                    width = if (isSelected) 1.dp else 0.5.dp,
-                                    color = if (isSelected) EmeraldGlow else GlassBorder
+                    // C. Active Format Workspace (Flat inside unified container — Zero Extra Outer Box!)
+                    when (selectedType) {
+                        MaterialType.DOCUMENT -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Text(
+                                    text = "SUMBER DOKUMEN MODUL",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = TextSecondary,
+                                    letterSpacing = 0.6.sp
                                 )
-                            ) {
-                                Column(
-                                    modifier = Modifier.padding(vertical = 12.dp, horizontal = 4.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally,
-                                    verticalArrangement = Arrangement.Center
+
+                                // Sub-mode Switcher: SIBI vs Upload Mandiri
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Icon(
-                                        imageVector = icon,
-                                        contentDescription = label,
-                                        tint = if (isSelected) EmeraldGlow else TextTertiary,
-                                        modifier = Modifier.size(22.dp)
-                                    )
-                                    Spacer(Modifier.height(6.dp))
-                                    Text(
-                                        text = label,
-                                        color = if (isSelected) EmeraldGlow else TextPrimary,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        fontSize = 11.sp,
-                                        textAlign = TextAlign.Center,
-                                        maxLines = 1
-                                    )
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // ── SECTION 3: KONTEN SESUAI FORMAT MATERI (DYNAMIC & CONDITIONALLY FILTERED) ──
-            when (selectedType) {
-                MaterialType.DOCUMENT -> {
-                    // ── 1. MODUL DOKUMEN / PDF ──
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                            .padding(16.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            SectionHeader(
-                                number = 3,
-                                title = "Sumber Modul Dokumen (PDF)",
-                                subtitle = "Pilih antara Buku Teks Kurikulum SIBI atau Unggah Berkas PDF Mandiri",
-                                accentColor = EmeraldGlow
-                            )
-
-                            // Sub-mode Switcher: SIBI vs Upload Mandiri
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                val isSibiMode = pdfSourceMode == "SIBI"
-                                Surface(
-                                    color = if (isSibiMode) EmeraldGlow.copy(alpha = 0.18f) else CosmicSurface2,
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(if (isSibiMode) 1.5.dp else 0.5.dp, if (isSibiMode) EmeraldGlow else GlassBorder),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable {
-                                            pdfSourceMode = "SIBI"
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(Icons.Default.MenuBook, contentDescription = null, tint = if (isSibiMode) EmeraldGlow else TextPrimary, modifier = Modifier.size(18.dp))
-                                        Column {
-                                            Text(
-                                                "Katalog Buku SIBI",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (isSibiMode) EmeraldGlow else TextPrimary
-                                            )
-                                            Text(
-                                                "Kemdikdasmen Resmi",
-                                                fontSize = 9.sp,
-                                                color = if (isSibiMode) EmeraldGlow.copy(alpha = 0.8f) else TextSecondary
-                                            )
-                                        }
-                                    }
-                                }
-
-                                val isUploadMode = pdfSourceMode == "UPLOAD"
-                                Surface(
-                                    color = if (isUploadMode) TealAccent.copy(alpha = 0.18f) else CosmicSurface2,
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(if (isUploadMode) 1.5.dp else 0.5.dp, if (isUploadMode) TealAccent else GlassBorder),
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable {
-                                            pdfSourceMode = "UPLOAD"
-                                            selectedBook = null
-                                        }
-                                ) {
-                                    Row(
-                                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                    ) {
-                                        Icon(Icons.Default.UploadFile, contentDescription = null, tint = if (isUploadMode) TealAccent else TextPrimary, modifier = Modifier.size(18.dp))
-                                        Column {
-                                            Text(
-                                                "Upload Berkas PDF",
-                                                fontSize = 11.sp,
-                                                fontWeight = FontWeight.Bold,
-                                                color = if (isUploadMode) TealAccent else TextPrimary
-                                            )
-                                            Text(
-                                                "Dokumen Guru Mandiri",
-                                                fontSize = 9.sp,
-                                                color = if (isUploadMode) TealAccent.copy(alpha = 0.8f) else TextSecondary
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-
-                            if (pdfSourceMode == "SIBI") {
-                                // ── SIBI BOOK CATALOG MODE ──
-                                // Upload Berkas PDF HIDDEN. Judul & Deskripsi terisi otomatis.
-                                if (selectedBook != null) {
+                                    val isSibiMode = pdfSourceMode == "SIBI"
                                     Surface(
-                                        color = CosmicSurface2,
+                                        color = if (isSibiMode) emeraldSoftBg else subSurfaceBg,
                                         shape = RoundedCornerShape(12.dp),
-                                        border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.5f)),
-                                        modifier = Modifier.fillMaxWidth()
+                                        border = BorderStroke(if (isSibiMode) 1.5.dp else 1.dp, if (isSibiMode) emeraldAccent else subSurfaceBorder),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable { pdfSourceMode = "SIBI" }
                                     ) {
-                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Row(
+                                            modifier = Modifier.padding(vertical = 11.dp, horizontal = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.MenuBook, contentDescription = null, tint = if (isSibiMode) emeraldAccent else TextSecondary, modifier = Modifier.size(18.dp))
+                                            Column {
+                                                Text(
+                                                    "Katalog Buku SIBI",
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isSibiMode) emeraldAccent else TextPrimary
+                                                )
+                                                Text(
+                                                    "Kemdikdasmen Resmi",
+                                                    fontSize = 9.5.sp,
+                                                    color = TextSecondary
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    val isUploadMode = pdfSourceMode == "UPLOAD"
+                                    Surface(
+                                        color = if (isUploadMode) TealAccent.copy(alpha = 0.14f) else subSurfaceBg,
+                                        shape = RoundedCornerShape(12.dp),
+                                        border = BorderStroke(if (isUploadMode) 1.5.dp else 1.dp, if (isUploadMode) TealAccent else subSurfaceBorder),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .clickable {
+                                                pdfSourceMode = "UPLOAD"
+                                                selectedBook = null
+                                            }
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(vertical = 11.dp, horizontal = 12.dp),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            Icon(Icons.Default.UploadFile, contentDescription = null, tint = if (isUploadMode) TealAccent else TextSecondary, modifier = Modifier.size(18.dp))
+                                            Column {
+                                                Text(
+                                                    "Upload PDF Mandiri",
+                                                    fontSize = 11.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isUploadMode) TealAccent else TextPrimary
+                                                )
+                                                Text(
+                                                    "Dokumen Guru",
+                                                    fontSize = 9.5.sp,
+                                                    color = TextSecondary
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                if (pdfSourceMode == "SIBI") {
+                                    if (selectedBook != null) {
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(subSurfaceBg)
+                                                .border(1.dp, emeraldSoftBorder, RoundedCornerShape(14.dp))
+                                                .padding(14.dp),
+                                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
                                                 Box(
                                                     modifier = Modifier
-                                                        .size(36.dp)
-                                                        .clip(RoundedCornerShape(8.dp))
-                                                        .background(EmeraldGlow.copy(alpha = 0.15f)),
+                                                        .size(38.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(emeraldSoftBg),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(20.dp))
+                                                    Icon(Icons.Default.MenuBook, contentDescription = null, tint = emeraldAccent, modifier = Modifier.size(20.dp))
                                                 }
                                                 Spacer(Modifier.width(10.dp))
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
                                                         text = selectedBook!!.title,
                                                         fontWeight = FontWeight.Bold,
-                                                        fontSize = 12.sp,
-                                                        color = EmeraldGlow,
-                                                        maxLines = 1
+                                                        fontSize = 13.sp,
+                                                        color = TextPrimary,
+                                                        maxLines = 2
                                                     )
                                                     Text(
                                                         text = "${selectedBook!!.publisher ?: "Kemendikdasmen"} • Total ${selectedBook!!.totalPages} Hal.",
-                                                        fontSize = 10.sp,
+                                                        fontSize = 10.5.sp,
                                                         color = TextSecondary
                                                     )
                                                 }
@@ -931,13 +831,11 @@ fun MaterialCreatorScreen(
                                                     OutlinedButton(
                                                         onClick = { previewingSelectedBook = true },
                                                         shape = RoundedCornerShape(8.dp),
-                                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                                        modifier = Modifier.height(28.dp),
-                                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldGlow),
-                                                        border = BorderStroke(1.dp, EmeraldGlow.copy(alpha = 0.6f))
+                                                        contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                                        modifier = Modifier.height(30.dp),
+                                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = emeraldAccent),
+                                                        border = BorderStroke(1.dp, emeraldSoftBorder)
                                                     ) {
-                                                        Icon(Icons.Default.Visibility, null, modifier = Modifier.size(12.dp))
-                                                        Spacer(Modifier.width(4.dp))
                                                         Text("Baca", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                                     }
                                                     Spacer(Modifier.width(4.dp))
@@ -963,14 +861,14 @@ fun MaterialCreatorScreen(
                                                             applySelectedBook(b, startPageInput, endPageInput)
                                                         }
                                                     },
-                                                    label = { Text("Hal. Mulai", fontSize = 10.sp) },
+                                                    label = { Text("Hal. Mulai", fontSize = 10.5.sp) },
                                                     modifier = Modifier.weight(1f),
                                                     singleLine = true,
                                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                                     shape = RoundedCornerShape(10.dp),
                                                     colors = OutlinedTextFieldDefaults.colors(
-                                                        focusedBorderColor = EmeraldGlow,
-                                                        unfocusedBorderColor = GlassBorder,
+                                                        focusedBorderColor = emeraldAccent,
+                                                        unfocusedBorderColor = subSurfaceBorder,
                                                         focusedTextColor = TextPrimary,
                                                         unfocusedTextColor = TextPrimary
                                                     )
@@ -983,327 +881,209 @@ fun MaterialCreatorScreen(
                                                             applySelectedBook(b, startPageInput, endPageInput)
                                                         }
                                                     },
-                                                    label = { Text("Hal. Selesai", fontSize = 10.sp) },
+                                                    label = { Text("Hal. Selesai", fontSize = 10.5.sp) },
                                                     modifier = Modifier.weight(1f),
                                                     singleLine = true,
                                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                                     shape = RoundedCornerShape(10.dp),
                                                     colors = OutlinedTextFieldDefaults.colors(
-                                                        focusedBorderColor = EmeraldGlow,
-                                                        unfocusedBorderColor = GlassBorder,
+                                                        focusedBorderColor = emeraldAccent,
+                                                        unfocusedBorderColor = subSurfaceBorder,
                                                         focusedTextColor = TextPrimary,
                                                         unfocusedTextColor = TextPrimary
                                                     )
                                                 )
                                             }
-
-                                            // Auto-fill confirmation card
-                                            Surface(
-                                                color = EmeraldGlow.copy(alpha = 0.12f),
-                                                shape = RoundedCornerShape(8.dp),
-                                                border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.3f))
-                                            ) {
-                                                Row(
-                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                                ) {
-                                                    Icon(Icons.Default.CheckCircle, null, tint = EmeraldGlow, modifier = Modifier.size(14.dp))
-                                                    Text(
-                                                        "Judul & Deskripsi terisi otomatis dari buku SIBI. Tidak perlu upload PDF manual.",
-                                                        color = EmeraldGlow,
-                                                        fontSize = 10.sp,
-                                                        fontWeight = FontWeight.Medium
-                                                    )
-                                                }
-                                            }
                                         }
-                                    }
-                                } else if (state.recommendedBooks.isNotEmpty()) {
-                                    val primaryBook = state.recommendedBooks.first()
-                                    val otherBooks = state.recommendedBooks.drop(1).take(3)
-
-                                    Surface(
-                                        color = CosmicSurface2,
-                                        shape = RoundedCornerShape(12.dp),
-                                        border = BorderStroke(0.5.dp, GlassBorder),
-                                        modifier = Modifier.fillMaxWidth()
-                                    ) {
-                                        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    } else if (state.recommendedBooks.isNotEmpty()) {
+                                        val primaryBook = state.recommendedBooks.first()
+                                        Column(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(14.dp))
+                                                .background(subSurfaceBg)
+                                                .border(1.dp, subSurfaceBorder, RoundedCornerShape(14.dp))
+                                                .padding(14.dp),
+                                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
                                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                                Icon(Icons.Default.Lightbulb, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(16.dp))
+                                                Icon(Icons.Default.AutoStories, contentDescription = null, tint = emeraldAccent, modifier = Modifier.size(16.dp))
                                                 Spacer(Modifier.width(6.dp))
                                                 Text(
-                                                    text = "Rekomendasi Buku SIBI Resmi:",
+                                                    text = "Rekomendasi Buku SIBI Sesuai Mapel",
                                                     fontWeight = FontWeight.Bold,
-                                                    fontSize = 11.sp,
-                                                    color = EmeraldGlow
+                                                    fontSize = 11.5.sp,
+                                                    color = emeraldAccent
                                                 )
                                             }
                                             Text(
                                                 text = primaryBook.title,
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 12.sp,
+                                                fontSize = 13.sp,
                                                 color = TextPrimary
                                             )
                                             Text(
                                                 text = "${primaryBook.publisher ?: "Kemendikdasmen"} • ${primaryBook.totalPages} Halaman",
-                                                fontSize = 10.sp,
+                                                fontSize = 11.sp,
                                                 color = TextSecondary
                                             )
                                             Button(
                                                 onClick = {
                                                     applySelectedBook(primaryBook, "1", minOf(20, primaryBook.totalPages).toString())
                                                 },
-                                                modifier = Modifier.fillMaxWidth().height(36.dp),
-                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier.fillMaxWidth().height(38.dp),
+                                                shape = RoundedCornerShape(10.dp),
                                                 colors = ButtonDefaults.buttonColors(containerColor = EmeraldGlow)
                                             ) {
-                                                Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(14.dp))
-                                                Spacer(Modifier.width(6.dp))
-                                                Text("Gunakan Buku SIBI Ini", fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                                            }
-
-                                            if (otherBooks.isNotEmpty()) {
-                                                Spacer(Modifier.height(2.dp))
-                                                Text(
-                                                    text = "Pilihan Terkait Lainnya:",
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.SemiBold,
-                                                    color = TextTertiary
-                                                )
-                                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                                    otherBooks.forEach { altBook ->
-                                                        Surface(
-                                                            color = CosmicNavy,
-                                                            shape = RoundedCornerShape(8.dp),
-                                                            border = BorderStroke(0.5.dp, GlassBorder),
-                                                            modifier = Modifier
-                                                                .fillMaxWidth()
-                                                                .clickable {
-                                                                    applySelectedBook(altBook, "1", minOf(20, altBook.totalPages).toString())
-                                                                }
-                                                        ) {
-                                                            Row(
-                                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                                                                verticalAlignment = Alignment.CenterVertically
-                                                            ) {
-                                                                Text(
-                                                                    text = altBook.title,
-                                                                    fontSize = 10.sp,
-                                                                    fontWeight = FontWeight.Medium,
-                                                                    modifier = Modifier.weight(1f),
-                                                                    maxLines = 1,
-                                                                    color = TextPrimary
-                                                                )
-                                                                Text("Pilih →", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = EmeraldGlow)
-                                                            }
-                                                        }
-                                                    }
-                                                }
+                                                Text("Gunakan Buku SIBI Ini", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
                                             }
                                         }
                                     }
-                                }
 
-                                OutlinedButton(
-                                    onClick = { showBookCatalogSheet = true },
-                                    modifier = Modifier.fillMaxWidth().height(42.dp),
-                                    shape = RoundedCornerShape(10.dp),
-                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldGlow),
-                                    border = BorderStroke(0.5.dp, EmeraldGlow.copy(alpha = 0.5f))
-                                ) {
-                                    Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        text = if (selectedBook != null) "Ganti Buku dari Katalog SIBI" else "Jelajahi Katalog Lengkap (${state.availableBooks.size} Buku)",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 12.sp
-                                    )
-                                }
-                            } else {
-                                // ── UPLOAD BERKAS PDF MANDIRI MODE ──
-                                // Katalog Buku SIBI HIDDEN! Tampilkan upload PDF & input manual judul & deskripsi
-                                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    Text(
-                                        "Unggah Berkas PDF Mandiri",
-                                        color = TextPrimary,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-
-                                    if (state.isUploadingFile) {
-                                        UploadingIndicator("Mengunggah dokumen PDF ke server...", EmeraldGlow)
-                                    } else if (!state.uploadedFileName.isNullOrBlank() || mediaUrl.isNotBlank()) {
-                                        val displayName = state.uploadedFileName ?: mediaUrl.substringAfterLast("/")
-                                        FileUploadedCard(
-                                            fileName = displayName,
-                                            statusText = "Berkas PDF siap diterbitkan",
-                                            icon = Icons.Default.PictureAsPdf,
-                                            iconTint = Color(0xFFEF4444),
-                                            accentColor = NeonSuccess,
-                                            onReplace = { documentPickerLauncher.launch("application/pdf") }
-                                        )
-                                    } else {
-                                        FileDropzone(
-                                            label = "Pilih Dokumen PDF dari Perangkat",
-                                            hint = "Format PDF (Modul Ajar, Lembar Kerja, Handout)",
-                                            icon = Icons.Default.UploadFile,
-                                            accentColor = TealAccent,
-                                            onClick = { documentPickerLauncher.launch("application/pdf") }
+                                    OutlinedButton(
+                                        onClick = { showBookCatalogSheet = true },
+                                        modifier = Modifier.fillMaxWidth().height(44.dp),
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = emeraldAccent),
+                                        border = BorderStroke(1.dp, emeraldSoftBorder)
+                                    ) {
+                                        Icon(Icons.Default.MenuBook, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = if (selectedBook != null) "Ganti Buku dari Katalog SIBI" else "Buka Katalog Buku SIBI (${state.availableBooks.size} Buku)",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.5.sp
                                         )
                                     }
+                                } else {
+                                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                        if (state.isUploadingFile) {
+                                            UploadingIndicator("Mengunggah dokumen PDF ke server...", emeraldAccent)
+                                        } else if (!state.uploadedFileName.isNullOrBlank() || mediaUrl.isNotBlank()) {
+                                            val displayName = state.uploadedFileName ?: mediaUrl.substringAfterLast("/")
+                                            FileUploadedCard(
+                                                fileName = displayName,
+                                                statusText = "Berkas PDF siap diterbitkan",
+                                                icon = Icons.Default.PictureAsPdf,
+                                                iconTint = Color(0xFFEF4444),
+                                                accentColor = NeonSuccess,
+                                                onReplace = { documentPickerLauncher.launch("application/pdf") }
+                                            )
+                                        } else {
+                                            FileDropzone(
+                                                label = "Pilih Dokumen PDF dari Perangkat",
+                                                hint = "Format PDF (Maks. 25 MB)",
+                                                icon = Icons.Default.UploadFile,
+                                                accentColor = TealAccent,
+                                                onClick = { documentPickerLauncher.launch("application/pdf") }
+                                            )
+                                        }
 
-                                    Spacer(Modifier.height(4.dp))
+                                        StudioTextField(
+                                            value = title,
+                                            onValueChange = { title = it },
+                                            label = "Judul Modul PDF *",
+                                            placeholder = "Contoh: Modul Ajar Bab 2: Hukum Newton",
+                                            icon = Icons.Default.Title,
+                                            accentColor = emeraldAccent
+                                        )
 
-                                    StudioTextField(
-                                        value = title,
-                                        onValueChange = { title = it },
-                                        label = "Judul Modul PDF *",
-                                        placeholder = "Contoh: Modul Ajar Bab 2: Hukum Newton & Penerapannya",
-                                        icon = Icons.Default.Title,
-                                        accentColor = TealAccent
-                                    )
-
-                                    StudioTextField(
-                                        value = description,
-                                        onValueChange = { description = it },
-                                        label = "Deskripsi & Panduan Belajar *",
-                                        placeholder = "Tuliskan panduan atau ringkasan capaian materi untuk siswa...",
-                                        icon = Icons.Default.Notes,
-                                        accentColor = TealAccent,
-                                        minHeight = 90.dp
-                                    )
+                                        StudioTextField(
+                                            value = description,
+                                            onValueChange = { description = it },
+                                            label = "Deskripsi & Panduan Belajar *",
+                                            placeholder = "Tuliskan panduan atau ringkasan capaian materi untuk siswa...",
+                                            icon = Icons.Default.Notes,
+                                            accentColor = emeraldAccent,
+                                            minHeight = 84.dp
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
-                }
 
-                MaterialType.VIDEO -> {
-                    // ── 2. VIDEO YOUTUBE (KATALOG BUKU TIDAK DITAMPILKAN!) ──
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                            .padding(16.dp)
-                    ) {
-                        YoutubeSearchSection(
-                            viewModel = viewModel,
-                            state = state,
-                            currentMediaUrl = mediaUrl,
-                            currentTitle = title,
-                            currentDescription = description,
-                            defaultSubject = selectedSubject,
-                            onVideoSelected = { video ->
-                                title = video.title
-                                description = video.description
-                                mediaUrl = "https://www.youtube.com/watch?v=${video.videoId}"
-                                isChangingYoutubeVideo = false
-                                Toast.makeText(context, "Video dipilih! Judul dan deskripsi otomatis terisi.", Toast.LENGTH_SHORT).show()
-                            },
-                            onPreviewVideo = { video ->
-                                previewingYoutubeVideo = video
-                            },
-                            onChangeVideo = {
-                                isChangingYoutubeVideo = true
-                            }
-                        )
-                    }
-                }
-
-                MaterialType.IMAGE, MaterialType.INFOGRAPHIC -> {
-                    // ── 3. INFOGRAFIS (KATALOG BUKU TIDAK DITAMPILKAN!) ──
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                            .padding(16.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            SectionHeader(
-                                number = 3,
-                                title = "Studio Infografis Interaktif",
-                                subtitle = "Susun infografis dengan gambar dan teks yang dapat dipratinjau secara langsung",
-                                accentColor = EmeraldGlow
-                            )
-
-                            StudioTextField(
-                                value = title,
-                                onValueChange = { title = it },
-                                label = "Judul Infografis *",
-                                placeholder = "Contoh: Infografis Anatomi & Siklus Hidup Tumbuhan",
-                                icon = Icons.Default.Title,
-                                accentColor = EmeraldGlow
-                            )
-
-                            val contentBlocks by viewModel.contentBlocks.collectAsState()
-
-                            RichBlockEditorSection(
-                                blocks = contentBlocks,
-                                onAddBlock = viewModel::addBlock,
-                                onAddBlockWithContent = viewModel::addBlockWithContent,
-                                onUpdateBlock = viewModel::updateBlock,
-                                onRemoveBlock = viewModel::removeBlock,
-                                onMoveUp = viewModel::moveBlockUp,
-                                onMoveDown = viewModel::moveBlockDown,
+                        MaterialType.VIDEO -> {
+                            YoutubeSearchSection(
                                 viewModel = viewModel,
-                                materialType = MaterialType.IMAGE,
+                                state = state,
+                                currentMediaUrl = mediaUrl,
                                 currentTitle = title,
-                                viewMode = infographicViewMode,
-                                onToggleViewMode = { infographicViewMode = if (infographicViewMode == "EDIT") "CANVAS" else "EDIT" }
+                                currentDescription = description,
+                                defaultSubject = selectedSubject,
+                                onVideoSelected = { video ->
+                                    title = video.title
+                                    description = video.description
+                                    mediaUrl = "https://www.youtube.com/watch?v=${video.videoId}"
+                                    isChangingYoutubeVideo = false
+                                    Toast.makeText(context, "Video dipilih! Judul dan deskripsi otomatis terisi.", Toast.LENGTH_SHORT).show()
+                                },
+                                onPreviewVideo = { video ->
+                                    previewingYoutubeVideo = video
+                                },
+                                onChangeVideo = {
+                                    isChangingYoutubeVideo = true
+                                }
                             )
                         }
-                    }
-                }
 
-                MaterialType.ARTICLE -> {
-                    // ── 4. ARTIKEL (KATALOG BUKU TIDAK DITAMPILKAN!) ──
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(CosmicNavy)
-                            .border(0.5.dp, GlassBorder, RoundedCornerShape(16.dp))
-                            .padding(16.dp)
-                    ) {
-                        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            SectionHeader(
-                                number = 3,
-                                title = "Studio Artikel Pembelajaran",
-                                subtitle = "Tulis materi artikel dengan paragraf terstruktur dan opsi salin-tempel teks",
-                                accentColor = TealAccent
-                            )
+                        MaterialType.IMAGE, MaterialType.INFOGRAPHIC -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                StudioTextField(
+                                    value = title,
+                                    onValueChange = { title = it },
+                                    label = "Judul Infografis *",
+                                    placeholder = "Contoh: Infografis Anatomi & Siklus Hidup Tumbuhan",
+                                    icon = Icons.Default.Title,
+                                    accentColor = emeraldAccent
+                                )
 
-                            StudioTextField(
-                                value = title,
-                                onValueChange = { title = it },
-                                label = "Judul Artikel *",
-                                placeholder = "Contoh: Artikel: Sejarah & Dampak Revolusi Industri 4.0",
-                                icon = Icons.Default.Title,
-                                accentColor = TealAccent
-                            )
+                                val contentBlocks by viewModel.contentBlocks.collectAsState()
 
-                            val contentBlocks by viewModel.contentBlocks.collectAsState()
+                                RichBlockEditorSection(
+                                    blocks = contentBlocks,
+                                    onAddBlock = viewModel::addBlock,
+                                    onAddBlockWithContent = viewModel::addBlockWithContent,
+                                    onUpdateBlock = viewModel::updateBlock,
+                                    onRemoveBlock = viewModel::removeBlock,
+                                    onMoveUp = viewModel::moveBlockUp,
+                                    onMoveDown = viewModel::moveBlockDown,
+                                    viewModel = viewModel,
+                                    materialType = MaterialType.IMAGE,
+                                    currentTitle = title,
+                                    viewMode = infographicViewMode,
+                                    onToggleViewMode = { infographicViewMode = if (infographicViewMode == "EDIT") "CANVAS" else "EDIT" }
+                                )
+                            }
+                        }
 
-                            RichBlockEditorSection(
-                                blocks = contentBlocks,
-                                onAddBlock = viewModel::addBlock,
-                                onAddBlockWithContent = viewModel::addBlockWithContent,
-                                onUpdateBlock = viewModel::updateBlock,
-                                onRemoveBlock = viewModel::removeBlock,
-                                onMoveUp = viewModel::moveBlockUp,
-                                onMoveDown = viewModel::moveBlockDown,
-                                viewModel = viewModel,
-                                materialType = MaterialType.ARTICLE,
-                                currentTitle = title,
-                                viewMode = articleViewMode,
-                                onToggleViewMode = { articleViewMode = if (articleViewMode == "EDIT") "CANVAS" else "EDIT" }
-                            )
+                        MaterialType.ARTICLE -> {
+                            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                StudioTextField(
+                                    value = title,
+                                    onValueChange = { title = it },
+                                    label = "Judul Artikel *",
+                                    placeholder = "Contoh: Artikel: Sejarah & Dampak Revolusi Industri 4.0",
+                                    icon = Icons.Default.Title,
+                                    accentColor = emeraldAccent
+                                )
+
+                                val contentBlocks by viewModel.contentBlocks.collectAsState()
+
+                                RichBlockEditorSection(
+                                    blocks = contentBlocks,
+                                    onAddBlock = viewModel::addBlock,
+                                    onAddBlockWithContent = viewModel::addBlockWithContent,
+                                    onUpdateBlock = viewModel::updateBlock,
+                                    onRemoveBlock = viewModel::removeBlock,
+                                    onMoveUp = viewModel::moveBlockUp,
+                                    onMoveDown = viewModel::moveBlockDown,
+                                    viewModel = viewModel,
+                                    materialType = MaterialType.ARTICLE,
+                                    currentTitle = title,
+                                    viewMode = articleViewMode,
+                                    onToggleViewMode = { articleViewMode = if (articleViewMode == "EDIT") "CANVAS" else "EDIT" }
+                                )
+                            }
                         }
                     }
                 }
@@ -1325,7 +1105,7 @@ fun MaterialCreatorScreen(
                 }
             }
 
-            Spacer(Modifier.height(40.dp))
+            Spacer(Modifier.height(32.dp))
         }
     }
 
@@ -1408,130 +1188,6 @@ private fun Chip(label: String, color: Color) {
             .padding(horizontal = 8.dp, vertical = 4.dp)
     ) {
         Text(label, color = color, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, softWrap = false)
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ModernDropdown(
-    value: String,
-    label: String,
-    icon: ImageVector,
-    expanded: Boolean,
-    accentColor: Color,
-    onExpand: () -> Unit,
-    onDismiss: () -> Unit,
-    options: List<String>,
-    onSelect: (String) -> Unit
-) {
-    val isLocked = label.contains("Terkunci") && options.size <= 1
-    if (isLocked) {
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            color = CosmicSurface2,
-            border = BorderStroke(0.5.dp, GlassBorder)
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Lock,
-                        contentDescription = null,
-                        tint = TextTertiary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Column {
-                        Text(
-                            text = "Mata Pelajaran (Terkunci)",
-                            fontSize = 11.sp,
-                            color = TextTertiary,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = value.ifBlank { "Mata Pelajaran Guru" },
-                            fontSize = 14.sp,
-                            color = TextPrimary,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(CosmicNavy)
-                        .border(0.5.dp, GlassBorder, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 7.dp, vertical = 3.dp)
-                ) {
-                    Text(
-                        "Guru Pengampu",
-                        color = TextTertiary,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
-            }
-        }
-    } else {
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { if (!expanded) onExpand() else onDismiss() }
-        ) {
-            OutlinedTextField(
-                value = value,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(label, fontSize = 12.sp) },
-                leadingIcon = {
-                    Icon(icon, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(18.dp))
-                },
-                trailingIcon = {
-                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-                },
-                modifier = Modifier.fillMaxWidth().menuAnchor(),
-                shape = RoundedCornerShape(12.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = EmeraldGlow,
-                    unfocusedBorderColor = GlassBorder,
-                    focusedLabelColor = EmeraldGlow,
-                    focusedLeadingIconColor = EmeraldGlow,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary,
-                    unfocusedLabelColor = TextTertiary
-                )
-            )
-            ExposedDropdownMenu(
-                expanded = expanded,
-                onDismissRequest = onDismiss,
-                modifier = Modifier.background(CosmicNavy)
-            ) {
-                options.forEach { option ->
-                    val isSelected = option == value
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                option,
-                                color = if (isSelected) EmeraldGlow else TextPrimary,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
-                        },
-                        onClick = { onSelect(option); onDismiss() },
-                        leadingIcon = if (isSelected) ({
-                            Icon(Icons.Default.Check, null, tint = EmeraldGlow, modifier = Modifier.size(16.dp))
-                        }) else null
-                    )
-                }
-            }
-        }
     }
 }
 
@@ -1946,6 +1602,7 @@ private fun MaterialReviewAndPublishScreen(
     selectedType: MaterialType,
     mediaUrl: String,
     contentBody: String,
+    contentBlocks: List<ContentBlock> = emptyList(),
     selectedClass: String,
     selectedSubject: String,
     selectedBook: LibraryBook?,
@@ -1953,20 +1610,27 @@ private fun MaterialReviewAndPublishScreen(
     endPage: String,
     isLoading: Boolean,
     onBackToEdit: () -> Unit,
+    onOpenBookPreview: () -> Unit = {},
     onConfirmPublish: (isScheduled: Boolean, releaseAtIso: String?) -> Unit,
 ) {
     androidx.activity.compose.BackHandler(onBack = onBackToEdit)
     val isDark = LocalIsDarkTheme.current
-    val cardBg = if (isDark) CosmicNavy else MaterialTheme.colorScheme.surface
-    val cardBorder = if (isDark) GlassBorder else MaterialTheme.colorScheme.outlineVariant
-    val itemBg = if (isDark) CosmicSurface2 else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+    val pageBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val itemBg = if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9)
+    val textPrimary = if (isDark) Color(0xFFFAFAFA) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF475569)
+    val textMuted = if (isDark) Color(0xFF71717A) else Color(0xFF64748B)
+    val emerald = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val blue = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
 
     var isScheduled by remember { mutableStateOf(false) }
     var scheduledDate by remember { mutableStateOf(java.time.LocalDate.now().plusDays(1)) }
     var scheduledTime by remember { mutableStateOf(java.time.LocalTime.of(7, 0)) }
 
     Scaffold(
-        containerColor = if (isDark) CosmicBlack else MaterialTheme.colorScheme.background,
+        containerColor = pageBg,
         topBar = {
             ExecutiveTopBar(
                 title = "Pratinjau Materi & Modul",
@@ -1979,7 +1643,7 @@ private fun MaterialReviewAndPublishScreen(
                 color = cardBg,
                 tonalElevation = 8.dp,
                 shadowElevation = 12.dp,
-                border = BorderStroke(0.5.dp, cardBorder),
+                border = BorderStroke(1.dp, cardBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
@@ -1995,7 +1659,7 @@ private fun MaterialReviewAndPublishScreen(
                         enabled = !isLoading,
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier.weight(1f).height(48.dp),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = textPrimary),
                         border = BorderStroke(1.dp, cardBorder)
                     ) {
                         Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.size(16.dp))
@@ -2012,12 +1676,15 @@ private fun MaterialReviewAndPublishScreen(
                         },
                         enabled = !isLoading,
                         shape = RoundedCornerShape(12.dp),
-                        modifier = Modifier.weight(1.3f).height(48.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = if (isScheduled) NeonWarning else EmeraldGlow)
+                        modifier = Modifier.weight(1.4f).height(48.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (isScheduled) Color(0xFFF59E0B) else emerald,
+                            contentColor = Color.White
+                        )
                     ) {
                         if (isLoading) {
                             CircularProgressIndicator(
-                                color = if (isScheduled) CosmicBlack else Color.White,
+                                color = Color.White,
                                 strokeWidth = 2.dp,
                                 modifier = Modifier.size(18.dp)
                             )
@@ -2026,21 +1693,21 @@ private fun MaterialReviewAndPublishScreen(
                                 if (isScheduled) "Menjadwalkan..." else "Menerbitkan...",
                                 fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
-                                color = if (isScheduled) CosmicBlack else Color.White
+                                color = Color.White
                             )
                         } else {
                             Icon(
                                 if (isScheduled) Icons.Default.Schedule else Icons.Default.CloudUpload,
                                 contentDescription = null,
-                                tint = if (isScheduled) CosmicBlack else Color.White,
+                                tint = Color.White,
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(Modifier.width(6.dp))
                             Text(
                                 if (isScheduled) "Jadwalkan Materi" else "Terbitkan Sekarang",
-                                fontWeight = FontWeight.Black,
+                                fontWeight = FontWeight.ExtraBold,
                                 fontSize = 12.sp,
-                                color = if (isScheduled) CosmicBlack else Color.White
+                                color = Color.White
                             )
                         }
                     }
@@ -2056,170 +1723,231 @@ private fun MaterialReviewAndPublishScreen(
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            // Target Rombel & Subject Banner
+            // ── UNIFIED MASTER PREVIEW & SCHEDULE WORKSPACE ─────────────────────
             Surface(
                 color = cardBg,
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, cardBorder),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(Icons.Default.School, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(22.dp))
-                    Column {
-                        Text("Akan Diterbitkan Untuk:", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
-                        Text(
-                            text = "Kelas $selectedClass • $selectedSubject",
-                            color = EmeraldGlow,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
-                }
-            }
-
-            // ── JADWAL TAYANG / SCHEDULING SELECTOR ─────────────────────
-            PublishingScheduleSelector(
-                isScheduled = isScheduled,
-                onScheduleModeChange = { isScheduled = it },
-                scheduledDate = scheduledDate,
-                onDateChange = { scheduledDate = it },
-                scheduledTime = scheduledTime,
-                onTimeChange = { scheduledTime = it },
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            // Student Material Card Simulator
-            Surface(
-                color = cardBg,
-                shape = RoundedCornerShape(18.dp),
+                shape = RoundedCornerShape(20.dp),
                 border = BorderStroke(1.dp, cardBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // Badge Row
+                    // Metadata Pills Row
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Surface(
+                                color = emerald.copy(alpha = 0.14f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = selectedClass,
+                                    color = emerald,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                            Surface(
+                                color = blue.copy(alpha = 0.14f),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = selectedSubject,
+                                    color = blue,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+
                         Surface(
-                            color = EmeraldGlow.copy(alpha = 0.15f),
+                            color = if (isScheduled) Color(0xFFF59E0B).copy(alpha = 0.14f) else emerald.copy(alpha = 0.14f),
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = when (selectedType) {
-                                    MaterialType.VIDEO -> "VIDEO PEMBELAJARAN"
-                                    MaterialType.DOCUMENT -> if (selectedBook != null) "BUKU SIBI KEMENDIKDASMEN" else "MODUL PDF"
-                                    MaterialType.IMAGE, MaterialType.INFOGRAPHIC -> "INFOGRAFIS / GAMBAR"
-                                    MaterialType.ARTICLE -> "ARTIKEL BACAAN"
-                                },
-                                color = EmeraldGlow,
+                                text = if (isScheduled) "Terjadwal" else "Siap Terbit",
+                                color = if (isScheduled) Color(0xFFF59E0B) else emerald,
                                 fontSize = 10.sp,
-                                fontWeight = FontWeight.Black,
+                                fontWeight = FontWeight.Bold,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
                         }
+                    }
 
+                    // Format Sub-label + Title
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = if (isScheduled) "Status: Terjadwal (Draft)" else "Status: Siap Terbit",
-                            color = if (isScheduled) AccentNeonAmber else NeonSuccess,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
+                            text = when (selectedType) {
+                                MaterialType.VIDEO -> "VIDEO PEMBELAJARAN INTERAKTIF"
+                                MaterialType.DOCUMENT -> if (selectedBook != null) "BUKU TEKS KURIKULUM SIBI" else "MODUL DOKUMEN PDF"
+                                MaterialType.IMAGE, MaterialType.INFOGRAPHIC -> "INFOGRAFIS & VISUAL"
+                                MaterialType.ARTICLE -> "ARTIKEL & MODUL BACAAN"
+                            },
+                            color = textMuted,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            letterSpacing = 0.6.sp
+                        )
+                        Text(
+                            text = title.ifBlank { "(Tanpa Judul Materi)" },
+                            color = textPrimary,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            lineHeight = 24.sp
                         )
                     }
 
-                    // Title & Description
-                    Text(
-                        text = title.ifBlank { "(Tanpa Judul)" },
-                        color = TextPrimary,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        lineHeight = 24.sp
-                    )
-
-                    if (description.isNotBlank()) {
-                        Surface(
-                            color = itemBg,
-                            shape = RoundedCornerShape(10.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Deskripsi / Petunjuk Belajar:", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = description,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp
-                                )
-                            }
-                        }
-                    }
-
-                    // Media preview (hanya jika ada video atau infografis eksternal)
+                    // Live Interactive Media Preview
                     if (selectedType == MaterialType.VIDEO && mediaUrl.isNotBlank()) {
-                        HorizontalDivider(color = cardBorder)
-                        Surface(
-                            color = itemBg,
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(0.5.dp, cardBorder),
-                            modifier = Modifier.fillMaxWidth()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(16f / 9f)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color.Black)
+                                .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
                         ) {
-                            Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    Icon(Icons.Default.PlayCircle, contentDescription = null, tint = NeonBlue, modifier = Modifier.size(18.dp))
-                                    Text("Tautan Video Pembelajaran:", fontSize = 11.sp, color = TextTertiary, fontWeight = FontWeight.Bold)
+                            InAppVideoPlayer(
+                                videoUrl = mediaUrl,
+                                modifier = Modifier.fillMaxSize()
+                            )
+                        }
+                    } else if (selectedType == MaterialType.DOCUMENT && selectedBook != null) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(emerald.copy(alpha = 0.08f))
+                                .border(1.dp, emerald.copy(alpha = 0.3f), RoundedCornerShape(14.dp))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(42.dp)
+                                    .clip(RoundedCornerShape(10.dp))
+                                    .background(emerald.copy(alpha = 0.16f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(Icons.Default.MenuBook, contentDescription = null, tint = emerald, modifier = Modifier.size(22.dp))
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(selectedBook.title, color = textPrimary, fontWeight = FontWeight.Bold, fontSize = 12.sp, maxLines = 2)
+                                Text(
+                                    "Bacaan: Halaman $startPage – $endPage (Total ${selectedBook.totalPages} Hal)",
+                                    color = emerald,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                            if (!selectedBook.fileUrl.isNullOrBlank()) {
+                                OutlinedButton(
+                                    onClick = onOpenBookPreview,
+                                    shape = RoundedCornerShape(10.dp),
+                                    contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp),
+                                    border = BorderStroke(1.dp, emerald.copy(alpha = 0.5f)),
+                                    colors = ButtonDefaults.outlinedButtonColors(contentColor = emerald)
+                                ) {
+                                    Icon(Icons.Default.Visibility, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(Modifier.width(4.dp))
+                                    Text("Baca", fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                 }
-                                Text(mediaUrl, color = NeonBlue, fontSize = 11.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             }
                         }
-                    } else if (selectedType == MaterialType.ARTICLE && contentBody.isNotBlank()) {
-                        Surface(
-                            color = itemBg,
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(0.5.dp, cardBorder),
-                            modifier = Modifier.fillMaxWidth()
+                    } else if ((selectedType == MaterialType.INFOGRAPHIC || selectedType == MaterialType.ARTICLE || selectedType == MaterialType.IMAGE) && contentBlocks.isNotEmpty()) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(itemBg)
+                                .border(1.dp, cardBorder, RoundedCornerShape(14.dp))
+                                .padding(12.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Column(modifier = Modifier.padding(12.dp)) {
-                                Text("Isi Konten Artikel:", color = TextTertiary, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    contentBody,
-                                    color = TextSecondary,
-                                    fontSize = 12.sp,
-                                    lineHeight = 18.sp
-                                )
+                            contentBlocks.forEach { block ->
+                                if (block.type == ContentBlockType.IMAGE && block.content.isNotBlank()) {
+                                    SubcomposeAsyncImage(
+                                        model = block.content,
+                                        contentDescription = "Visual Materi",
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .heightIn(min = 140.dp, max = 260.dp)
+                                            .clip(RoundedCornerShape(10.dp)),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else if (block.type == ContentBlockType.TEXT && block.content.isNotBlank()) {
+                                    Text(
+                                        text = block.content,
+                                        color = textPrimary,
+                                        fontSize = 13.sp,
+                                        lineHeight = 20.sp
+                                    )
+                                }
                             }
                         }
                     } else if (mediaUrl.isNotBlank()) {
-                        Surface(
-                            color = itemBg,
-                            shape = RoundedCornerShape(12.dp),
-                            border = BorderStroke(0.5.dp, cardBorder),
-                            modifier = Modifier.fillMaxWidth()
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(itemBg)
+                                .border(1.dp, cardBorder, RoundedCornerShape(12.dp))
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
                         ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Icon(Icons.Default.AttachFile, contentDescription = null, tint = EmeraldGlow, modifier = Modifier.size(20.dp))
-                                Column {
-                                    Text("Berkas Lampiran Digital Tersedia", color = TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                    Text(mediaUrl, color = TextTertiary, fontSize = 10.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                }
+                            Icon(Icons.Default.PictureAsPdf, contentDescription = null, tint = emerald, modifier = Modifier.size(20.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Berkas Dokumen Siap Diterbitkan", color = textPrimary, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                Text(mediaUrl, color = textMuted, fontSize = 10.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             }
                         }
                     }
+
+                    // Clean Description / Learning Guide (no ugly gray inner box)
+                    if (description.isNotBlank()) {
+                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(
+                                text = "Ringkasan & Petunjuk Belajar",
+                                color = textMuted,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = description,
+                                color = textSecondary,
+                                fontSize = 13.sp,
+                                lineHeight = 20.sp
+                            )
+                        }
+                    }
+
+                    HorizontalDivider(color = cardBorder)
+
+                    // Embedded Publishing Schedule Selector
+                    PublishingScheduleSelector(
+                        isScheduled = isScheduled,
+                        onScheduleModeChange = { isScheduled = it },
+                        scheduledDate = scheduledDate,
+                        onDateChange = { scheduledDate = it },
+                        scheduledTime = scheduledTime,
+                        onTimeChange = { scheduledTime = it },
+                        modifier = Modifier.fillMaxWidth()
+                    )
                 }
             }
 

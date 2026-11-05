@@ -7,38 +7,36 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import coil.compose.SubcomposeAsyncImage
-import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.SubcomposeAsyncImage
 import com.schoolos.android.core.common.toHumanReadableError
-import com.schoolos.android.core.designsystem.AiGenerationLoadingOverlay
-import com.schoolos.android.core.designsystem.AiGenerationType
+import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.GeneratedMaterialResult
-import com.schoolos.android.domain.model.UnifiedAcademicClass
-import com.schoolos.android.domain.model.groupParallelClasses
 import com.schoolos.android.domain.model.findClass
+import com.schoolos.android.domain.model.groupParallelClasses
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -48,10 +46,6 @@ private enum class MaterialGenStep {
     VERIFY
 }
 
-private val EmeraldPrimary = Color(0xFF16A34A)
-private val CyanPrimary = Color(0xFF0284C7)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MaterialAiGeneratorScreen(
     availableSubjects: List<AcademicSubject>,
@@ -68,19 +62,32 @@ fun MaterialAiGeneratorScreen(
         gradeLevel: String,
     ) -> Result<GeneratedMaterialResult>,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    val isDark = isSystemInDarkTheme()
+    val isDark = LocalIsDarkTheme.current
 
-    val primaryHighlightBg = if (isDark) colorScheme.primaryContainer.copy(alpha = 0.35f) else Color(0xFFF0FDF4)
-    val secondaryHighlightBg = if (isDark) colorScheme.secondaryContainer.copy(alpha = 0.35f) else Color(0xFFF0F9FF)
+    val pageBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val subSurfaceBg = if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9)
+    val subSurfaceBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+    val emeraldAccent = if (isDark) Color(0xFF34D399) else Color(0xFF059669)
+    val emeraldButton = Color(0xFF059669)
+    val emeraldSoftBg = if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5)
+    val emeraldSoftBorder = if (isDark) Color(0xFF059669).copy(alpha = 0.45f) else Color(0xFFA7F3D0)
+
+    val cyanAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val cyanSoftBg = if (isDark) Color(0xFF0C243B).copy(alpha = 0.45f) else Color(0xFFE0F2FE)
+    val cyanSoftBorder = if (isDark) Color(0xFF0284C7).copy(alpha = 0.45f) else Color(0xFFBAE6FD)
 
     var currentStep by remember { mutableStateOf(MaterialGenStep.CONFIGURE) }
     var generatedResult by remember { mutableStateOf<GeneratedMaterialResult?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Configuration States
     var selectedMode by remember { mutableStateOf("INFOGRAPHIC") } // "INFOGRAPHIC" | "ARTICLE"
     var customTopic by remember { mutableStateOf("") }
 
@@ -98,13 +105,9 @@ fun MaterialAiGeneratorScreen(
         mutableStateOf(matched ?: unifiedClasses.firstOrNull())
     }
 
-    var isSubjectDropdownOpen by remember { mutableStateOf(false) }
-    var isClassDropdownOpen by remember { mutableStateOf(false) }
-
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
     var currentGenJob by remember { mutableStateOf<Job?>(null) }
 
-    // BackHandler: Double back press confirmation during AI generation
     BackHandler(enabled = currentStep == MaterialGenStep.GENERATING) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastBackPressTime < 2000L) {
@@ -142,7 +145,7 @@ fun MaterialAiGeneratorScreen(
                     generatedResult = result
                     currentStep = MaterialGenStep.VERIFY
                 }.onFailure { err ->
-                    if (err !is kotlinx.coroutines.CancellationException) {
+                    if (err !is CancellationException) {
                         errorMessage = err.toHumanReadableError(fallback = "Gagal menyusun materi pembelajaran dengan AI. Silakan periksa koneksi dan coba lagi.")
                         currentStep = MaterialGenStep.CONFIGURE
                     }
@@ -151,51 +154,28 @@ fun MaterialAiGeneratorScreen(
         }
     }
 
-    val isImeVisible = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+    val isImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(pageBg)) {
         when (currentStep) {
             MaterialGenStep.CONFIGURE -> {
                 Scaffold(
+                    containerColor = pageBg,
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     topBar = {
-                        TopAppBar(
-                            title = {
-                                Column {
-                                    Text(
-                                        "Studio AI Materi & Modul Ajar",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 17.sp,
-                                        color = colorScheme.onSurface
-                                    )
-                                    Text(
-                                        "Kurikulum Merdeka • Sintesis Materi Terstruktur",
-                                        fontSize = 11.sp,
-                                        color = EmeraldPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = onBack) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Kembali",
-                                        tint = colorScheme.onSurface
-                                    )
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = colorScheme.surface
-                            )
+                        ExecutiveTopBar(
+                            title = "Studio AI Materi & Modul",
+                            subtitle = "Kurikulum Merdeka • Sintesis Infografis & Naskah",
+                            onBack = onBack
                         )
                     },
                     bottomBar = {
                         if (!isImeVisible) {
                             Surface(
-                                tonalElevation = 8.dp,
-                                shadowElevation = 8.dp,
-                                color = colorScheme.surface,
+                                color = cardBg,
+                                tonalElevation = 0.dp,
+                                shadowElevation = 12.dp,
+                                border = BorderStroke(1.dp, cardBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Box(
@@ -211,14 +191,14 @@ fun MaterialAiGeneratorScreen(
                                             .height(50.dp),
                                         shape = RoundedCornerShape(14.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = EmeraldPrimary,
+                                            containerColor = emeraldButton,
                                             contentColor = Color.White
                                         )
                                     ) {
                                         Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
                                         Text(
-                                            "Generate Materi Modul Sekarang",
+                                            "Mulai Susun Modul Otomatis",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -237,240 +217,264 @@ fun MaterialAiGeneratorScreen(
                             )
                             .imePadding()
                             .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        item {
-                            Spacer(Modifier.height(4.dp))
-                            if (errorMessage != null) {
+                        if (errorMessage != null) {
+                            item {
                                 Surface(
-                                    color = colorScheme.errorContainer,
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = BorderStroke(1.dp, colorScheme.error.copy(alpha = 0.5f)),
+                                    color = NeonError.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = BorderStroke(1.dp, NeonError.copy(alpha = 0.4f)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = colorScheme.error, modifier = Modifier.size(20.dp))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(errorMessage ?: "", color = colorScheme.onErrorContainer, fontSize = 12.sp)
+                                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = NeonError, modifier = Modifier.size(18.dp))
+                                        Text(errorMessage ?: "", color = NeonError, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                                     }
                                 }
-                                Spacer(Modifier.height(10.dp))
                             }
+                        }
 
-                            // 1. FORMAT SELECTION
-                            Text("Format Materi Pembelajaran", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        // ── 1. FORMAT MATERI PEMBELAJARAN ──
+                        item {
+                            Surface(
+                                color = cardBg,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                // Infografis Majalah
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { selectedMode = "INFOGRAPHIC" },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (selectedMode == "INFOGRAPHIC") primaryHighlightBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = BorderStroke(1.5.dp, if (selectedMode == "INFOGRAPHIC") EmeraldPrimary else colorScheme.outlineVariant)
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("Infografis Majalah", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedMode == "INFOGRAPHIC") EmeraldPrimary else colorScheme.onSurface)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text("Visual dinamis, card intisari & ilustrasi kontekstual.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant, lineHeight = 14.sp)
-                                    }
-                                }
-
-                                // Artikel Berita
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { selectedMode = "ARTICLE" },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (selectedMode == "ARTICLE") secondaryHighlightBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = BorderStroke(1.5.dp, if (selectedMode == "ARTICLE") CyanPrimary else colorScheme.outlineVariant)
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("Naskah Berita / Modul", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedMode == "ARTICLE") CyanPrimary else colorScheme.onSurface)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text("Sub-bab rinci, penjelasan ilmiah & rangkuman.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant, lineHeight = 14.sp)
-                                    }
-                                }
-                            }
-                        }
-
-                        // 2. MATA PELAJARAN
-                        item {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Mata Pelajaran", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                if (isSubjectLocked) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Surface(
-                                        color = EmeraldPrimary.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Text(
-                                            "Terkunci (Tutor Pengampu)",
-                                            fontSize = 10.sp,
-                                            color = EmeraldPrimary,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            Spacer(Modifier.height(8.dp))
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                val effectiveSubjectLocked = isSubjectLocked && availableSubjects.size <= 1
-                                OutlinedCard(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable(enabled = !effectiveSubjectLocked) { isSubjectDropdownOpen = true },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.outlinedCardColors(containerColor = colorScheme.surface)
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     Row(
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                                     ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(emeraldAccent)
+                                        )
                                         Text(
-                                            text = selectedSubject?.name ?: currentSubjectName.ifBlank { "Pilih Mata Pelajaran..." },
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = if (selectedSubject != null || currentSubjectName.isNotBlank()) colorScheme.onSurface else colorScheme.onSurfaceVariant
-                                        )
-                                        Icon(
-                                            if (effectiveSubjectLocked) Icons.Default.Lock else Icons.Default.ArrowDropDown,
-                                            contentDescription = null,
-                                            tint = colorScheme.onSurfaceVariant
+                                            "FORMAT MODUL DIGITAL",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = emeraldAccent,
+                                            letterSpacing = 0.6.sp
                                         )
                                     }
-                                }
-                                if (!effectiveSubjectLocked) {
-                                    DropdownMenu(
-                                        expanded = isSubjectDropdownOpen,
-                                        onDismissRequest = { isSubjectDropdownOpen = false },
-                                        modifier = Modifier.fillMaxWidth(0.9f)
-                                    ) {
-                                        availableSubjects.forEach { sub ->
-                                            DropdownMenuItem(
-                                                text = { Text(sub.name, fontSize = 13.sp) },
-                                                onClick = {
-                                                    selectedSubject = sub
-                                                    isSubjectDropdownOpen = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
 
-                            // Quick subject chips with smooth horizontal scroll and non-wrapping typography
-                            if (!isSubjectLocked && availableSubjects.isNotEmpty()) {
-                                Spacer(Modifier.height(8.dp))
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .horizontalScroll(rememberScrollState())
-                                ) {
-                                    availableSubjects.forEach { sub ->
-                                        val isSel = selectedSubject?.id == sub.id
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        val isInfo = selectedMode == "INFOGRAPHIC"
                                         Surface(
-                                            modifier = Modifier.clickable { selectedSubject = sub },
-                                            shape = RoundedCornerShape(8.dp),
-                                            color = if (isSel) EmeraldPrimary else colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                                            border = BorderStroke(1.dp, if (isSel) EmeraldPrimary else colorScheme.outlineVariant)
-                                        ) {
-                                            Text(
-                                                text = sub.name,
-                                                fontSize = 11.sp,
-                                                fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
-                                                color = if (isSel) Color.White else colorScheme.onSurface,
-                                                maxLines = 1,
-                                                softWrap = false,
-                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp)
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(13.dp))
+                                                .clickable { selectedMode = "INFOGRAPHIC" },
+                                            shape = RoundedCornerShape(13.dp),
+                                            color = if (isInfo) emeraldSoftBg else subSurfaceBg,
+                                            border = BorderStroke(
+                                                width = if (isInfo) 1.5.dp else 1.dp,
+                                                color = if (isInfo) emeraldAccent else subSurfaceBorder
                                             )
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        "Infografis Visual",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp,
+                                                        color = if (isInfo) emeraldAccent else textPrimary
+                                                    )
+                                                    if (isInfo) {
+                                                        Icon(Icons.Default.CheckCircle, null, tint = emeraldAccent, modifier = Modifier.size(15.dp))
+                                                    }
+                                                }
+                                                Text(
+                                                    "Visual dinamis, poin intisari & diagram kontekstual.",
+                                                    fontSize = 10.5.sp,
+                                                    color = textSecondary,
+                                                    lineHeight = 14.sp
+                                                )
+                                            }
+                                        }
+
+                                        val isArticle = selectedMode == "ARTICLE"
+                                        Surface(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clip(RoundedCornerShape(13.dp))
+                                                .clickable { selectedMode = "ARTICLE" },
+                                            shape = RoundedCornerShape(13.dp),
+                                            color = if (isArticle) cyanSoftBg else subSurfaceBg,
+                                            border = BorderStroke(
+                                                width = if (isArticle) 1.5.dp else 1.dp,
+                                                color = if (isArticle) cyanAccent else subSurfaceBorder
+                                            )
+                                        ) {
+                                            Column(
+                                                modifier = Modifier.padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Text(
+                                                        "Artikel Naskah",
+                                                        fontWeight = FontWeight.Bold,
+                                                        fontSize = 12.sp,
+                                                        color = if (isArticle) cyanAccent else textPrimary
+                                                    )
+                                                    if (isArticle) {
+                                                        Icon(Icons.Default.CheckCircle, null, tint = cyanAccent, modifier = Modifier.size(15.dp))
+                                                    }
+                                                }
+                                                Text(
+                                                    "Sub-bab terstruktur, uraian konsep & kesimpulan.",
+                                                    fontSize = 10.5.sp,
+                                                    color = textSecondary,
+                                                    lineHeight = 14.sp
+                                                )
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
 
-                        // 3. TARGET ROMBEL
+                        // ── 2. SASARAN ROMBEL & MATA PELAJARAN (BOTTOM SHEET PICKER) ──
                         item {
-                            Text("Target Rombel *", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Box(modifier = Modifier.fillMaxWidth()) {
-                                OutlinedCard(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable { isClassDropdownOpen = true },
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = CardDefaults.outlinedCardColors(containerColor = colorScheme.surface)
+                            Surface(
+                                color = cardBg,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
-                                    Row(
-                                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Text(
-                                            text = selectedClass?.displayName ?: currentClassName.ifBlank { "Pilih Rombel / Kelas" },
-                                            fontSize = 13.sp,
-                                            fontWeight = FontWeight.Medium,
-                                            color = colorScheme.onSurface,
-                                            maxLines = 1
-                                        )
-                                        Icon(Icons.Default.ArrowDropDown, contentDescription = null, tint = colorScheme.onSurfaceVariant)
+                                    Text(
+                                        "Sasaran Kelas & Mata Pelajaran",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.5.sp,
+                                        color = textPrimary
+                                    )
+
+                                    val classNames = remember(unifiedClasses, currentClassName) {
+                                        val list = unifiedClasses.map { it.displayName }
+                                        if (list.isEmpty() && currentClassName.isNotBlank()) listOf(currentClassName) else list
                                     }
-                                }
-                                DropdownMenu(
-                                    expanded = isClassDropdownOpen,
-                                    onDismissRequest = { isClassDropdownOpen = false }
-                                ) {
-                                    unifiedClasses.forEach { cls ->
-                                        DropdownMenuItem(
-                                            text = { Text(cls.displayName, fontSize = 13.sp) },
-                                            onClick = {
-                                                selectedClass = cls
-                                                isClassDropdownOpen = false
-                                            }
-                                        )
+
+                                    ExecutiveBottomSheetSelector(
+                                        value = selectedClass?.displayName ?: currentClassName.ifBlank { "Pilih Rombel" },
+                                        label = "Rombel / Kelas Target",
+                                        icon = Icons.Default.Group,
+                                        options = classNames,
+                                        onSelect = { chosen ->
+                                            selectedClass = unifiedClasses.findClass(chosen)
+                                        },
+                                        sheetTitle = "Pilih Rombel Target",
+                                        sheetSubtitle = "Kedalaman materi akan disesuaikan dengan jenjang kelas ini",
+                                        accentColor = emeraldAccent
+                                    )
+
+                                    val effectiveSubjectLocked = isSubjectLocked && availableSubjects.size <= 1
+                                    val subNames = remember(availableSubjects, currentSubjectName) {
+                                        val list = availableSubjects.map { it.name }
+                                        if (list.isEmpty() && currentSubjectName.isNotBlank()) listOf(currentSubjectName) else list
                                     }
+
+                                    ExecutiveBottomSheetSelector(
+                                        value = selectedSubject?.name ?: currentSubjectName.ifBlank { "Pilih Mata Pelajaran" },
+                                        label = "Mata Pelajaran",
+                                        icon = Icons.Default.School,
+                                        options = subNames,
+                                        onSelect = { chosen ->
+                                            selectedSubject = availableSubjects.find { it.name.equals(chosen, ignoreCase = true) }
+                                        },
+                                        sheetTitle = "Pilih Mata Pelajaran",
+                                        sheetSubtitle = "Pilih mata pelajaran yang sesuai dengan modul ajar",
+                                        accentColor = emeraldAccent,
+                                        isLocked = effectiveSubjectLocked,
+                                        lockedBadgeText = "Tutor Pengampu",
+                                        onLockedClick = {
+                                            Toast.makeText(context, "Mata pelajaran dikunci sesuai penugasan tutor", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
                                 }
                             }
                         }
 
-                        // 4. TOPIK / KONSEP MATERI
+                        // ── 3. TOPIK / KONSEP MATERI ──
                         item {
-                            Text("Topik / Konsep Materi *", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Spacer(Modifier.height(8.dp))
-                            OutlinedTextField(
-                                value = customTopic,
-                                onValueChange = { customTopic = it },
-                                placeholder = {
+                            Surface(
+                                color = cardBg,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
                                     Text(
-                                        "Contoh: Siklus Air & Hidrologi, Struktur Sel Tumbuhan, Sejarah Kemerdekaan...",
-                                        fontSize = 12.sp,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                                        "Topik / Konsep Materi *",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.5.sp,
+                                        color = textPrimary
                                     )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                minLines = 3,
-                                maxLines = 5
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            Text(
-                                "AI akan menyusun judul, intisari, poin penting, analogi, serta ilustrasi sesuai silabus Kurikulum Merdeka.",
-                                fontSize = 11.sp,
-                                color = colorScheme.onSurfaceVariant,
-                                lineHeight = 15.sp
-                            )
-                            Spacer(Modifier.height(24.dp))
+
+                                    OutlinedTextField(
+                                        value = customTopic,
+                                        onValueChange = { customTopic = it },
+                                        placeholder = {
+                                            Text(
+                                                "Contoh: Siklus Air & Hidrologi, Struktur Sel Tumbuhan, Pergerakan Nasional...",
+                                                fontSize = 12.sp,
+                                                color = textTertiary
+                                            )
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        minLines = 3,
+                                        maxLines = 5,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = emeraldAccent,
+                                            unfocusedBorderColor = subSurfaceBorder,
+                                            focusedTextColor = textPrimary,
+                                            unfocusedTextColor = textPrimary,
+                                            cursorColor = emeraldAccent
+                                        )
+                                    )
+
+                                    Text(
+                                        "AI akan menyusun judul, intisari materi, analogi kontekstual, serta ilustrasi visual yang siap diterbitkan.",
+                                        fontSize = 11.sp,
+                                        color = textSecondary,
+                                        lineHeight = 15.sp
+                                    )
+                                }
+                            }
                         }
                     }
                 }
@@ -480,7 +484,7 @@ fun MaterialAiGeneratorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(colorScheme.background),
+                        .background(pageBg),
                     contentAlignment = Alignment.Center
                 ) {
                     AiGenerationLoadingOverlay(
@@ -497,37 +501,21 @@ fun MaterialAiGeneratorScreen(
                 val res = generatedResult
                 if (res != null) {
                     Scaffold(
+                        containerColor = pageBg,
+                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
                         topBar = {
-                            TopAppBar(
-                                title = {
-                                    Column {
-                                        Text(
-                                            "Verifikasi Modul Materi Ajar",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 17.sp,
-                                            color = colorScheme.onSurface
-                                        )
-                                        Text(
-                                            "Periksa konten modul sebelum diterapkan ke editor",
-                                            fontSize = 11.sp,
-                                            color = EmeraldPrimary,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                },
-                                navigationIcon = {
-                                    IconButton(onClick = { currentStep = MaterialGenStep.CONFIGURE }) {
-                                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali ke Konfigurasi", tint = colorScheme.onSurface)
-                                    }
-                                },
-                                colors = TopAppBarDefaults.topAppBarColors(containerColor = colorScheme.surface)
+                            ExecutiveTopBar(
+                                title = "Verifikasi Modul AI",
+                                subtitle = "Tinjau hasil sintesis sebelum diterapkan ke Studio Materi",
+                                onBack = { currentStep = MaterialGenStep.CONFIGURE }
                             )
                         },
                         bottomBar = {
                             Surface(
-                                tonalElevation = 8.dp,
-                                shadowElevation = 8.dp,
-                                color = colorScheme.surface,
+                                color = cardBg,
+                                tonalElevation = 0.dp,
+                                shadowElevation = 12.dp,
+                                border = BorderStroke(1.dp, cardBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -535,33 +523,35 @@ fun MaterialAiGeneratorScreen(
                                         .fillMaxWidth()
                                         .navigationBarsPadding()
                                         .padding(horizontal = 16.dp, vertical = 12.dp),
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                                 ) {
                                     OutlinedButton(
                                         onClick = { currentStep = MaterialGenStep.CONFIGURE },
                                         modifier = Modifier
                                             .weight(1f)
                                             .height(48.dp),
-                                        shape = RoundedCornerShape(12.dp)
+                                        shape = RoundedCornerShape(12.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = textPrimary),
+                                        border = BorderStroke(1.dp, cardBorder)
                                     ) {
                                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Susun Ulang", fontSize = 12.sp)
+                                        Text("Susun Ulang", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                     Button(
                                         onClick = { onApply(res) },
                                         modifier = Modifier
-                                            .weight(1.6f)
+                                            .weight(1.4f)
                                             .height(48.dp),
                                         shape = RoundedCornerShape(12.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = EmeraldPrimary,
+                                            containerColor = emeraldButton,
                                             contentColor = Color.White
                                         )
                                     ) {
-                                        Icon(Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Terapkan ke Editor", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                        Text("Terapkan ke Studio", fontWeight = FontWeight.Bold, fontSize = 13.sp)
                                     }
                                 }
                             }
@@ -572,45 +562,51 @@ fun MaterialAiGeneratorScreen(
                                 .fillMaxSize()
                                 .padding(padding)
                                 .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                            contentPadding = PaddingValues(vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             item {
-                                Spacer(Modifier.height(4.dp))
-                                // SUMMARY HERO CARD
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = primaryHighlightBg,
-                                    border = BorderStroke(1.dp, EmeraldPrimary.copy(alpha = 0.4f)),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = cardBg,
+                                    border = BorderStroke(1.dp, cardBorder),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Column(
+                                        modifier = Modifier.padding(16.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Surface(
-                                                color = EmeraldPrimary,
-                                                shape = RoundedCornerShape(6.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(emeraldSoftBg)
+                                                    .border(0.5.dp, emeraldSoftBorder, RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 9.dp, vertical = 4.dp)
                                             ) {
                                                 Text(
-                                                    if (res.mode == "INFOGRAPHIC") "INFOGRAFIS MAJALAH" else "ARTIKEL BERITA",
-                                                    color = Color.White,
-                                                    fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    if (res.mode == "INFOGRAPHIC") "INFOGRAFIS VISUAL" else "ARTIKEL NASKAH",
+                                                    color = emeraldAccent,
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.Bold
                                                 )
                                             }
-                                            Surface(
-                                                color = colorScheme.surfaceVariant,
-                                                shape = RoundedCornerShape(6.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(subSurfaceBg)
+                                                    .border(0.5.dp, subSurfaceBorder, RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
                                             ) {
                                                 Text(
-                                                    "${res.blocks.size} Blok Konten",
+                                                    "${res.blocks.size} Bagian Konten",
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Bold,
-                                                    color = colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    color = textSecondary
                                                 )
                                             }
                                         }
@@ -618,15 +614,16 @@ fun MaterialAiGeneratorScreen(
                                         Text(
                                             text = res.title,
                                             fontSize = 16.sp,
-                                            fontWeight = FontWeight.Black,
-                                            color = colorScheme.onSurface
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = textPrimary,
+                                            lineHeight = 22.sp
                                         )
 
                                         if (res.description.isNotBlank()) {
                                             Text(
                                                 text = res.description,
                                                 fontSize = 12.sp,
-                                                color = colorScheme.onSurfaceVariant,
+                                                color = textSecondary,
                                                 lineHeight = 17.sp
                                             )
                                         }
@@ -636,44 +633,50 @@ fun MaterialAiGeneratorScreen(
 
                             item {
                                 Text(
-                                    "Pratinjau Butir Blok Konten (${res.blocks.size})",
+                                    "Pratinjau Isi Modul (${res.blocks.size} Bagian)",
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = colorScheme.onSurface
+                                    fontSize = 13.5.sp,
+                                    color = textPrimary,
+                                    modifier = Modifier.padding(top = 4.dp)
                                 )
                             }
 
                             itemsIndexed(res.blocks) { idx, block ->
                                 val isImg = block.type.equals("IMAGE", ignoreCase = true)
                                 Surface(
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = colorScheme.surface,
-                                    border = BorderStroke(1.dp, colorScheme.outlineVariant),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = cardBg,
+                                    border = BorderStroke(1.dp, cardBorder),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    Column(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
+                                    ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Surface(
-                                                color = if (isImg) CyanPrimary.copy(alpha = 0.12f) else EmeraldPrimary.copy(alpha = 0.12f),
-                                                shape = RoundedCornerShape(6.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .background(if (isImg) cyanSoftBg else emeraldSoftBg)
+                                                    .border(0.5.dp, if (isImg) cyanSoftBorder else emeraldSoftBorder, RoundedCornerShape(6.dp))
+                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
                                             ) {
                                                 Text(
-                                                    text = if (isImg) "GAMBAR / DIAGRAM" else "TEKS / NARASI",
-                                                    color = if (isImg) CyanPrimary else EmeraldPrimary,
+                                                    text = if (isImg) "ILUSTRASI / DIAGRAM" else "TEKS / PENJELASAN",
+                                                    color = if (isImg) cyanAccent else emeraldAccent,
                                                     fontSize = 10.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                                                    fontWeight = FontWeight.Bold
                                                 )
                                             }
                                             Text(
-                                                text = "Blok #${idx + 1}",
+                                                text = "Bagian #${idx + 1}",
                                                 fontSize = 11.sp,
-                                                color = colorScheme.onSurfaceVariant,
-                                                fontWeight = FontWeight.Medium
+                                                color = textTertiary,
+                                                fontWeight = FontWeight.Bold
                                             )
                                         }
 
@@ -681,65 +684,44 @@ fun MaterialAiGeneratorScreen(
                                             Box(
                                                 modifier = Modifier
                                                     .fillMaxWidth()
-                                                    .height(180.dp)
-                                                    .clip(RoundedCornerShape(8.dp))
-                                                    .background(colorScheme.surfaceVariant.copy(alpha = 0.35f)),
+                                                    .height(190.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(subSurfaceBg),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 SubcomposeAsyncImage(
                                                     model = block.content.trim(),
-                                                    contentDescription = "Visual Blok #${idx + 1}",
+                                                    contentDescription = "Visual #${idx + 1}",
                                                     contentScale = ContentScale.Crop,
                                                     modifier = Modifier.fillMaxSize(),
                                                     loading = {
-                                                        Box(
-                                                            modifier = Modifier.fillMaxSize(),
-                                                            contentAlignment = Alignment.Center
-                                                        ) {
+                                                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                                             CircularProgressIndicator(
                                                                 modifier = Modifier.size(24.dp),
                                                                 strokeWidth = 2.dp,
-                                                                color = CyanPrimary
+                                                                color = cyanAccent
                                                             )
                                                         }
                                                     },
                                                     error = {
                                                         Column(
-                                                            modifier = Modifier
-                                                                .fillMaxSize()
-                                                                .padding(12.dp),
+                                                            modifier = Modifier.fillMaxSize().padding(12.dp),
                                                             horizontalAlignment = Alignment.CenterHorizontally,
                                                             verticalArrangement = Arrangement.Center
                                                         ) {
-                                                            Icon(
-                                                                imageVector = Icons.Default.BrokenImage,
-                                                                contentDescription = null,
-                                                                tint = colorScheme.onSurfaceVariant,
-                                                                modifier = Modifier.size(28.dp)
-                                                            )
+                                                            Icon(Icons.Default.BrokenImage, null, tint = textTertiary, modifier = Modifier.size(26.dp))
                                                             Spacer(Modifier.height(4.dp))
-                                                            Text(
-                                                                text = "Gambar tidak dapat dimuat langsung",
-                                                                fontSize = 11.sp,
-                                                                color = colorScheme.onSurfaceVariant
-                                                            )
+                                                            Text("Visual belum dapat dimuat", fontSize = 11.sp, color = textSecondary)
                                                         }
                                                     }
                                                 )
                                             }
-                                            Text(
-                                                text = block.content,
-                                                fontSize = 10.sp,
-                                                color = colorScheme.onSurfaceVariant,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
-                                            )
                                         } else {
                                             Text(
                                                 text = block.content,
-                                                fontSize = 12.sp,
-                                                lineHeight = 18.sp,
-                                                color = colorScheme.onSurface
+                                                fontSize = 12.5.sp,
+                                                color = textPrimary,
+                                                lineHeight = 19.sp
                                             )
                                         }
                                     }
@@ -747,7 +729,7 @@ fun MaterialAiGeneratorScreen(
                             }
 
                             item {
-                                Spacer(Modifier.height(16.dp))
+                                Spacer(Modifier.height(12.dp))
                             }
                         }
                     }

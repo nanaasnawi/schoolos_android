@@ -1,6 +1,6 @@
 package com.schoolos.android.feature.quizzes
 
-import androidx.compose.animation.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -11,7 +11,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,6 +28,7 @@ import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.GeneratedCurriculumQuestion
 import com.schoolos.android.domain.model.GeneratedCurriculumResult
+import com.schoolos.android.domain.model.groupParallelClasses
 import kotlinx.coroutines.launch
 
 private enum class QuizGenStep {
@@ -36,16 +36,6 @@ private enum class QuizGenStep {
     GENERATING,
     VERIFY
 }
-
-private val CyanPrimary = Color(0xFF0284C7)
-private val CyanBg = Color(0xFFF0F9FF)
-private val CyanBorder = Color(0xFFBAE6FD)
-private val EmeraldPrimary = Color(0xFF16A34A)
-private val EmeraldBg = Color(0xFFF0FDF4)
-private val EmeraldBorder = Color(0xFFBBF7D0)
-private val PurplePrimary = Color(0xFF9333EA)
-private val PurpleBg = Color(0xFFFAF5FF)
-private val PurpleBorder = Color(0xFFE9D5FF)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -71,27 +61,45 @@ fun QuizAiGeneratorScreen(
         includeImages: Boolean,
     ) -> Result<GeneratedCurriculumResult>,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
+    val isDark = LocalIsDarkTheme.current
     val scope = rememberCoroutineScope()
+
+    val pageBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val surfaceMuted = if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9)
+    val textPrimary = if (isDark) Color(0xFFFAFAFA) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF475569)
+    val textMuted = if (isDark) Color(0xFF71717A) else Color(0xFF64748B)
+    val cyan = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val emerald = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val purple = if (isDark) Color(0xFFA855F7) else Color(0xFF7C3AED)
+    val amber = if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706)
 
     var currentStep by remember { mutableStateOf(QuizGenStep.CONFIGURE) }
     var generatedResult by remember { mutableStateOf<GeneratedCurriculumResult?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Configuration States
-    val gradeOptions = remember {
-        listOf(
-            "Kelas 1 SD", "Kelas 2 SD", "Kelas 3 SD", "Kelas 4 SD", "Kelas 5 SD", "Kelas 6 SD",
-            "Kelas 7 SMP", "Kelas 8 SMP", "Kelas 9 SMP",
-            "Kelas 10 SMA", "Kelas 11 SMA", "Kelas 12 SMA",
-            "Paket A (Setara SD)", "Paket B (Setara SMP)", "Paket C (Setara SMA)"
-        )
+    val groupedClasses = remember(availableClasses) { availableClasses.groupParallelClasses() }
+    val gradeOptions = remember(groupedClasses) {
+        if (groupedClasses.isNotEmpty()) {
+            groupedClasses.map { it.displayName }
+        } else {
+            listOf(
+                "PAKET A 4", "PAKET A 5", "PAKET A 6",
+                "PAKET B 7", "PAKET B 8", "PAKET B 9",
+                "PAKET C 10", "PAKET C 11", "PAKET C 12"
+            )
+        }
     }
 
     var selectedFormat by remember { mutableStateOf("MIXED") } // "MCQ_ONLY" | "MIXED"
     var examScope by remember { mutableStateOf("TOPIC_QUIZ") } // "TOPIC_QUIZ" | "MONTHLY_EXAM"
     var customTopic by remember { mutableStateOf("") }
-    var selectedGrade by remember { mutableStateOf("Kelas 5 SD") }
+    var selectedGrade by remember(currentClassName, gradeOptions) {
+        val matched = gradeOptions.firstOrNull { it.equals(currentClassName, ignoreCase = true) || it.startsWith(currentClassName, ignoreCase = true) }
+        mutableStateOf(matched ?: gradeOptions.firstOrNull() ?: "PAKET A 4")
+    }
     var selectedDifficulty by remember { mutableStateOf("Sedang") }
 
     var numMcq by remember { mutableIntStateOf(10) }
@@ -110,10 +118,6 @@ fun QuizAiGeneratorScreen(
         mutableStateOf(matched ?: availableClasses.firstOrNull())
     }
 
-    var isSubjectDropdownOpen by remember { mutableStateOf(false) }
-    var isGradeDropdownOpen by remember { mutableStateOf(false) }
-
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
     val context = androidx.compose.ui.platform.LocalContext.current
 
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
@@ -151,7 +155,7 @@ fun QuizAiGeneratorScreen(
                     subject.id,
                     subject.name,
                     selectedClass?.id,
-                    selectedClass?.name ?: selectedGrade,
+                    selectedGrade,
                     effectiveTopic,
                     totalQ,
                     finalMcq,
@@ -172,47 +176,24 @@ fun QuizAiGeneratorScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    Box(modifier = Modifier.fillMaxSize().background(pageBg)) {
         when (currentStep) {
             QuizGenStep.CONFIGURE -> {
                 Scaffold(
+                    containerColor = pageBg,
                     topBar = {
-                        TopAppBar(
-                            title = {
-                                Column {
-                                    Text(
-                                        "Studio AI Kuis & Ujian CBT",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 17.sp,
-                                        color = colorScheme.onSurface
-                                    )
-                                    Text(
-                                        "Kurikulum Merdeka • Sintesis Bank Soal Otomatis",
-                                        fontSize = 11.sp,
-                                        color = CyanPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = onBack) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Kembali",
-                                        tint = colorScheme.onSurface
-                                    )
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = colorScheme.surface
-                            )
+                        ExecutiveTopBar(
+                            title = "Studio AI Kuis & Ujian CBT",
+                            subtitle = "Kurikulum Merdeka • Sintesis Bank Soal Otomatis",
+                            onBack = onBack
                         )
                     },
                     bottomBar = {
                         Surface(
                             tonalElevation = 8.dp,
-                            shadowElevation = 8.dp,
-                            color = colorScheme.surface,
+                            shadowElevation = 12.dp,
+                            color = cardBg,
+                            border = BorderStroke(1.dp, cardBorder),
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Box(
@@ -228,7 +209,7 @@ fun QuizAiGeneratorScreen(
                                         .height(50.dp),
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
-                                        containerColor = CyanPrimary,
+                                        containerColor = cyan,
                                         contentColor = Color.White
                                     )
                                 ) {
@@ -237,7 +218,7 @@ fun QuizAiGeneratorScreen(
                                     Text(
                                         "Generate Paket Kuis CBT Sekarang",
                                         fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
+                                        fontWeight = FontWeight.ExtraBold
                                     )
                                 }
                             }
@@ -249,257 +230,211 @@ fun QuizAiGeneratorScreen(
                             .fillMaxSize()
                             .padding(padding)
                             .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        item {
-                            Spacer(Modifier.height(4.dp))
-                            if (errorMessage != null) {
+                        if (errorMessage != null) {
+                            item {
                                 Surface(
-                                    color = Color(0xFFFEF2F2),
+                                    color = Color(0xFFEF4444).copy(alpha = 0.12f),
                                     shape = RoundedCornerShape(12.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5)),
+                                    border = BorderStroke(1.dp, Color(0xFFEF4444).copy(alpha = 0.35f)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(12.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = Color(0xFFDC2626))
+                                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = Color(0xFFEF4444))
                                         Spacer(Modifier.width(8.dp))
-                                        Text(errorMessage ?: "", color = Color(0xFF991B1B), fontSize = 12.sp)
+                                        Text(errorMessage ?: "", color = textPrimary, fontSize = 12.sp)
                                     }
                                 }
                             }
                         }
 
-                        // 1. Mapel
+                        // Unified Configuration Container
                         item {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text("Mata Pelajaran (Mapel)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                if (isSubjectLocked) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Surface(
-                                        color = CyanPrimary.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Text(
-                                            "Terkunci (Tutor Pengampu)",
-                                            fontSize = 10.sp,
-                                            color = CyanPrimary,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            val effectiveSubjectLocked = isSubjectLocked && availableSubjects.size <= 1
-                            ExposedDropdownMenuBox(
-                                expanded = if (effectiveSubjectLocked) false else isSubjectDropdownOpen,
-                                onExpandedChange = { if (!effectiveSubjectLocked) isSubjectDropdownOpen = it }
+                            Surface(
+                                color = cardBg,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                OutlinedTextField(
-                                    value = selectedSubject?.name ?: "Pilih Mapel",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = {
-                                        if (effectiveSubjectLocked) {
-                                            Icon(Icons.Default.Lock, contentDescription = null, tint = CyanPrimary)
-                                        } else {
-                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownOpen)
-                                        }
-                                    },
-                                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanPrimary)
-                                )
-                                if (!effectiveSubjectLocked) {
-                                    ExposedDropdownMenu(
-                                        expanded = isSubjectDropdownOpen,
-                                        onDismissRequest = { isSubjectDropdownOpen = false }
-                                    ) {
-                                        availableSubjects.forEach { sub ->
-                                            DropdownMenuItem(
-                                                text = { Text(sub.name, fontSize = 12.sp) },
-                                                onClick = {
-                                                    selectedSubject = sub
-                                                    isSubjectDropdownOpen = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // 2. Topik / Materi Spesifik
-                        item {
-                            Text(
-                                "Topik / Materi Spesifik Soal (Opsional)",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = colorScheme.onSurface
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            OutlinedTextField(
-                                value = customTopic,
-                                onValueChange = { customTopic = it },
-                                placeholder = {
-                                    Text(
-                                        "Contoh: Dinamika Gerak Lurus, Peredaran Darah, Rukun Iman",
-                                        fontSize = 12.sp,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanPrimary)
-                            )
-                        }
-
-                        // 3. Jenjang & Tingkat Kesulitan
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Jenjang / Tingkat", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Spacer(Modifier.height(6.dp))
-                                    ExposedDropdownMenuBox(
-                                        expanded = isGradeDropdownOpen,
-                                        onExpandedChange = { isGradeDropdownOpen = it }
-                                    ) {
-                                        OutlinedTextField(
-                                            value = selectedGrade,
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isGradeDropdownOpen) },
-                                            modifier = Modifier.fillMaxWidth().menuAnchor(),
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = CyanPrimary)
-                                        )
-                                        ExposedDropdownMenu(
-                                            expanded = isGradeDropdownOpen,
-                                            onDismissRequest = { isGradeDropdownOpen = false }
-                                        ) {
-                                            gradeOptions.forEach { g ->
-                                                DropdownMenuItem(
-                                                    text = { Text(g, fontSize = 12.sp) },
-                                                    onClick = {
-                                                        selectedGrade = g
-                                                        isGradeDropdownOpen = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-
-                                Column(modifier = Modifier.weight(1.2f)) {
-                                    Text("Tingkat Kesulitan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Spacer(Modifier.height(6.dp))
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    val effectiveSubjectLocked = isSubjectLocked && availableSubjects.size <= 1
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        listOf("Mudah", "Sedang", "HOTS").forEach { diff ->
-                                            val isSel = selectedDifficulty == diff
-                                            Surface(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .height(48.dp)
-                                                    .clickable { selectedDifficulty = diff },
-                                                shape = RoundedCornerShape(10.dp),
-                                                color = if (isSel) CyanBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                                border = androidx.compose.foundation.BorderStroke(
-                                                    if (isSel) 1.5.dp else 1.dp,
-                                                    if (isSel) CyanPrimary else colorScheme.outlineVariant
+                                        ExecutiveBottomSheetSelector(
+                                            value = selectedGrade,
+                                            label = "Rombel / Jenjang",
+                                            icon = Icons.Default.Groups,
+                                            options = gradeOptions,
+                                            onSelect = { selected ->
+                                                selectedGrade = selected
+                                                val foundGroup = groupedClasses.find { it.displayName == selected }
+                                                if (foundGroup != null) {
+                                                    selectedClass = AcademicClass(
+                                                        id = foundGroup.primaryId,
+                                                        name = foundGroup.baseName,
+                                                        gradeLevel = foundGroup.gradeLevel
+                                                    )
+                                                }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            accentColor = cyan
+                                        )
+
+                                        ExecutiveBottomSheetSelector(
+                                            value = selectedSubject?.name ?: currentSubjectName.ifBlank { "Pilih Mapel" },
+                                            label = "Mata Pelajaran",
+                                            icon = Icons.Default.MenuBook,
+                                            options = availableSubjects.map { it.name },
+                                            onSelect = { name ->
+                                                selectedSubject = availableSubjects.find { it.name == name }
+                                            },
+                                            modifier = Modifier.weight(1f),
+                                            accentColor = cyan,
+                                            isLocked = effectiveSubjectLocked,
+                                            lockedBadgeText = "Terkunci"
+                                        )
+                                    }
+
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(
+                                            "Topik / Materi Spesifik Soal (Opsional)",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = textSecondary
+                                        )
+                                        OutlinedTextField(
+                                            value = customTopic,
+                                            onValueChange = { customTopic = it },
+                                            placeholder = {
+                                                Text(
+                                                    "Contoh: Dinamika Gerak Lurus, Peredaran Darah...",
+                                                    fontSize = 12.sp,
+                                                    color = textMuted
                                                 )
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
+                                            },
+                                            modifier = Modifier.fillMaxWidth(),
+                                            shape = RoundedCornerShape(12.dp),
+                                            singleLine = true,
+                                            colors = OutlinedTextFieldDefaults.colors(
+                                                focusedBorderColor = cyan,
+                                                unfocusedBorderColor = cardBorder,
+                                                focusedTextColor = textPrimary,
+                                                unfocusedTextColor = textPrimary,
+                                                focusedContainerColor = surfaceMuted.copy(alpha = 0.45f),
+                                                unfocusedContainerColor = surfaceMuted.copy(alpha = 0.45f)
+                                            )
+                                        )
+                                    }
+
+                                    // Difficulty Segmented Selector
+                                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text("Tingkat Kesulitan Soal", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = textSecondary)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(surfaceMuted)
+                                                .border(1.dp, cardBorder, RoundedCornerShape(12.dp))
+                                                .padding(4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            listOf("Mudah", "Sedang", "HOTS").forEach { diff ->
+                                                val isSel = selectedDifficulty == diff
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(38.dp)
+                                                        .clip(RoundedCornerShape(9.dp))
+                                                        .background(if (isSel) cyan else Color.Transparent)
+                                                        .clickable { selectedDifficulty = diff },
+                                                    contentAlignment = Alignment.Center
+                                                ) {
                                                     Text(
                                                         diff,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (isSel) CyanPrimary else colorScheme.onSurface
+                                                        fontSize = 12.sp,
+                                                        fontWeight = if (isSel) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                                        color = if (isSel) Color.White else textSecondary
                                                     )
                                                 }
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
 
-                        // 4. Komposisi Format Ujian (Full PG vs Campuran)
-                        item {
-                            Text("Komposisi Format Ujian", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { selectedFormat = "MCQ_ONLY" },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (selectedFormat == "MCQ_ONLY") CyanBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = androidx.compose.foundation.BorderStroke(
-                                        if (selectedFormat == "MCQ_ONLY") 1.5.dp else 1.dp,
-                                        if (selectedFormat == "MCQ_ONLY") CyanPrimary else colorScheme.outlineVariant
-                                    )
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("Pilihan Ganda (Full PG)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "MCQ_ONLY") CyanPrimary else colorScheme.onSurface)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text("100% butir soal objektif pilihan ganda otomatis.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
+                                    HorizontalDivider(color = cardBorder)
+
+                                    // Format Ujian Segmented Selector
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text("Komposisi Format Ujian", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = textSecondary)
+                                        Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(surfaceMuted)
+                                                .border(1.dp, cardBorder, RoundedCornerShape(12.dp))
+                                                .padding(4.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            listOf(
+                                                "MCQ_ONLY" to "Full Pilihan Ganda",
+                                                "MIXED" to "PG + Uraian (Campuran)"
+                                            ).forEach { (key, label) ->
+                                                val isSel = selectedFormat == key
+                                                Box(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .clip(RoundedCornerShape(9.dp))
+                                                        .background(if (isSel) cardBg else Color.Transparent)
+                                                        .border(
+                                                            width = if (isSel) 1.dp else 0.dp,
+                                                            color = if (isSel) cyan.copy(alpha = 0.5f) else Color.Transparent,
+                                                            shape = RoundedCornerShape(9.dp)
+                                                        )
+                                                        .clickable { selectedFormat = key }
+                                                        .padding(vertical = 10.dp),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        label,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = if (isSel) FontWeight.ExtraBold else FontWeight.Medium,
+                                                        color = if (isSel) cyan else textSecondary
+                                                    )
+                                                }
+                                            }
+                                        }
                                     }
-                                }
 
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { selectedFormat = "MIXED" },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (selectedFormat == "MIXED") EmeraldBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = androidx.compose.foundation.BorderStroke(
-                                        if (selectedFormat == "MIXED") 1.5.dp else 1.dp,
-                                        if (selectedFormat == "MIXED") EmeraldPrimary else colorScheme.outlineVariant
-                                    )
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("PG + Uraian (Campuran)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "MIXED") EmeraldPrimary else colorScheme.onSurface)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text("Kombinasi soal PG objektif dan soal uraian analitis.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
-                        }
-
-                        // 5. Jumlah Soal PG & Essay
-                        item {
-                            Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                    // PG selector
-                                    Column {
+                                    // Jumlah Soal PG & Essay
+                                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Text("Jumlah Soal Pilihan Ganda (PG)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                            Surface(color = EmeraldPrimary, shape = RoundedCornerShape(6.dp)) {
-                                                Text("$numMcq PG", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                            Text("Jumlah Soal Pilihan Ganda (PG)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = textPrimary)
+                                            Surface(
+                                                color = emerald.copy(alpha = 0.15f),
+                                                shape = RoundedCornerShape(6.dp)
+                                            ) {
+                                                Text(
+                                                    "$numMcq PG",
+                                                    color = emerald,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                )
                                             }
                                         }
-                                        Spacer(Modifier.height(6.dp))
                                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                             listOf(5, 10, 15, 20).forEach { count ->
                                                 val isSel = numMcq == count
@@ -509,15 +444,15 @@ fun QuizAiGeneratorScreen(
                                                         customMcqInput = count.toString()
                                                     },
                                                     shape = RoundedCornerShape(8.dp),
-                                                    color = if (isSel) EmeraldPrimary else colorScheme.surface,
-                                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSel) EmeraldPrimary else colorScheme.outlineVariant)
+                                                    color = if (isSel) emerald else surfaceMuted,
+                                                    border = BorderStroke(1.dp, if (isSel) emerald else cardBorder)
                                                 ) {
                                                     Text(
                                                         "$count PG",
                                                         fontSize = 11.sp,
-                                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (isSel) Color.White else colorScheme.onSurface,
-                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isSel) Color.White else textSecondary,
+                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
                                                     )
                                                 }
                                             }
@@ -525,8 +460,8 @@ fun QuizAiGeneratorScreen(
                                                 modifier = Modifier
                                                     .width(54.dp)
                                                     .height(34.dp)
-                                                    .background(colorScheme.surface, RoundedCornerShape(8.dp))
-                                                    .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                                    .background(surfaceMuted, RoundedCornerShape(8.dp))
+                                                    .border(1.dp, cardBorder, RoundedCornerShape(8.dp)),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 androidx.compose.foundation.text.BasicTextField(
@@ -541,29 +476,34 @@ fun QuizAiGeneratorScreen(
                                                         fontSize = 13.sp,
                                                         fontWeight = FontWeight.Bold,
                                                         textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                                        color = colorScheme.onSurface
+                                                        color = textPrimary
                                                     ),
                                                     modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
                                                 )
                                             }
                                         }
-                                    }
 
-                                    // Essay selector (if mixed)
-                                    if (selectedFormat == "MIXED") {
-                                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.5f))
-                                        Column {
+                                        if (selectedFormat == "MIXED") {
+                                            HorizontalDivider(color = cardBorder)
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text("Jumlah Soal Uraian / Essay", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                Surface(color = PurplePrimary, shape = RoundedCornerShape(6.dp)) {
-                                                    Text("$numEssay Essay", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                                Text("Jumlah Soal Uraian / Essay", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = textPrimary)
+                                                Surface(
+                                                    color = purple.copy(alpha = 0.15f),
+                                                    shape = RoundedCornerShape(6.dp)
+                                                ) {
+                                                    Text(
+                                                        "$numEssay Essay",
+                                                        color = purple,
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                                    )
                                                 }
                                             }
-                                            Spacer(Modifier.height(6.dp))
                                             Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                                                 listOf(2, 3, 5, 10).forEach { count ->
                                                     val isSel = numEssay == count
@@ -573,15 +513,15 @@ fun QuizAiGeneratorScreen(
                                                             customEssayInput = count.toString()
                                                         },
                                                         shape = RoundedCornerShape(8.dp),
-                                                        color = if (isSel) PurplePrimary else colorScheme.surface,
-                                                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isSel) PurplePrimary else colorScheme.outlineVariant)
+                                                        color = if (isSel) purple else surfaceMuted,
+                                                        border = BorderStroke(1.dp, if (isSel) purple else cardBorder)
                                                     ) {
                                                         Text(
                                                             "$count Essay",
                                                             fontSize = 11.sp,
-                                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                            color = if (isSel) Color.White else colorScheme.onSurface,
-                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = if (isSel) Color.White else textSecondary,
+                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp)
                                                         )
                                                     }
                                                 }
@@ -589,8 +529,8 @@ fun QuizAiGeneratorScreen(
                                                     modifier = Modifier
                                                         .width(54.dp)
                                                         .height(34.dp)
-                                                        .background(colorScheme.surface, RoundedCornerShape(8.dp))
-                                                        .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                                        .background(surfaceMuted, RoundedCornerShape(8.dp))
+                                                        .border(1.dp, cardBorder, RoundedCornerShape(8.dp)),
                                                     contentAlignment = Alignment.Center
                                                 ) {
                                                     androidx.compose.foundation.text.BasicTextField(
@@ -605,7 +545,7 @@ fun QuizAiGeneratorScreen(
                                                             fontSize = 13.sp,
                                                             fontWeight = FontWeight.Bold,
                                                             textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                                            color = colorScheme.onSurface
+                                                            color = textPrimary
                                                         ),
                                                         modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
                                                     )
@@ -613,72 +553,57 @@ fun QuizAiGeneratorScreen(
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
 
-                        // 6. Cakupan Evaluasi & Diagram
-                        item {
-                            Text("Cakupan Evaluasi Ujian", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { examScope = "TOPIC_QUIZ" },
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (examScope == "TOPIC_QUIZ") CyanBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (examScope == "TOPIC_QUIZ") CyanPrimary else colorScheme.outlineVariant)
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Text("Kuis Topik Terpilih", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = if (examScope == "TOPIC_QUIZ") CyanPrimary else colorScheme.onSurface)
-                                        Text("Menyusun kuis cepat berbasis topik spesifik.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { examScope = "MONTHLY_EXAM" },
-                                    shape = RoundedCornerShape(12.dp),
-                                    color = if (examScope == "MONTHLY_EXAM") EmeraldBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (examScope == "MONTHLY_EXAM") EmeraldPrimary else colorScheme.outlineVariant)
-                                ) {
-                                    Column(modifier = Modifier.padding(10.dp)) {
-                                        Text("Ujian Bulanan", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = if (examScope == "MONTHLY_EXAM") EmeraldPrimary else colorScheme.onSurface)
-                                        Text("Merangkum materi 30 hari komprehensif.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
+                                    HorizontalDivider(color = cardBorder)
 
-                            Spacer(Modifier.height(10.dp))
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { includeImages = !includeImages }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = includeImages,
-                                        onCheckedChange = { includeImages = it },
-                                        colors = CheckboxDefaults.colors(checkedColor = CyanPrimary)
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Column {
-                                        Text("Sertakan Soal Bergambar / Diagram", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                        Text("Diagram sains, siklus, geometri, grafik edukatif", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
+                                    // Diagram toggle
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(surfaceMuted.copy(alpha = 0.5f))
+                                            .border(1.dp, cardBorder, RoundedCornerShape(12.dp))
+                                            .clickable { includeImages = !includeImages }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Image,
+                                                contentDescription = null,
+                                                tint = if (includeImages) cyan else textMuted,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Column {
+                                                Text(
+                                                    "Sertakan Soal Bergambar / Diagram",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.sp,
+                                                    color = textPrimary
+                                                )
+                                                Text(
+                                                    "Ilustrasi sains, geometri & grafik edukatif",
+                                                    fontSize = 10.sp,
+                                                    color = textMuted
+                                                )
+                                            }
+                                        }
+                                        Switch(
+                                            checked = includeImages,
+                                            onCheckedChange = { includeImages = it },
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = Color.White,
+                                                checkedTrackColor = cyan
+                                            )
+                                        )
                                     }
                                 }
                             }
-                            Spacer(Modifier.height(24.dp))
                         }
                     }
                 }
@@ -688,7 +613,7 @@ fun QuizAiGeneratorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(colorScheme.background),
+                        .background(pageBg),
                     contentAlignment = Alignment.Center
                 ) {
                     AiGenerationLoadingOverlay(
@@ -708,43 +633,20 @@ fun QuizAiGeneratorScreen(
                     val essayCount = res.questions.count { it.questionType == "ESSAY" }
 
                     Scaffold(
+                        containerColor = pageBg,
                         topBar = {
-                            TopAppBar(
-                                title = {
-                                    Column {
-                                        Text(
-                                            "Verifikasi Paket Soal CBT",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 17.sp,
-                                            color = colorScheme.onSurface
-                                        )
-                                        Text(
-                                            "Periksa butir soal & kunci sebelum diterapkan",
-                                            fontSize = 11.sp,
-                                            color = CyanPrimary,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                },
-                                navigationIcon = {
-                                    IconButton(onClick = { currentStep = QuizGenStep.CONFIGURE }) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.ArrowBack,
-                                            contentDescription = "Kembali ke Pengaturan",
-                                            tint = colorScheme.onSurface
-                                        )
-                                    }
-                                },
-                                colors = TopAppBarDefaults.topAppBarColors(
-                                    containerColor = colorScheme.surface
-                                )
+                            ExecutiveTopBar(
+                                title = "Verifikasi Paket Soal CBT",
+                                subtitle = "Periksa butir soal & kunci sebelum diterapkan",
+                                onBack = { currentStep = QuizGenStep.CONFIGURE }
                             )
                         },
                         bottomBar = {
                             Surface(
                                 tonalElevation = 8.dp,
-                                shadowElevation = 8.dp,
-                                color = colorScheme.surface,
+                                shadowElevation = 12.dp,
+                                color = cardBg,
+                                border = BorderStroke(1.dp, cardBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -758,8 +660,8 @@ fun QuizAiGeneratorScreen(
                                         onClick = { currentStep = QuizGenStep.CONFIGURE },
                                         modifier = Modifier.weight(1f).height(48.dp),
                                         shape = RoundedCornerShape(12.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = CyanPrimary),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, CyanPrimary)
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = textPrimary),
+                                        border = BorderStroke(1.dp, cardBorder)
                                     ) {
                                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(6.dp))
@@ -770,13 +672,13 @@ fun QuizAiGeneratorScreen(
                                         modifier = Modifier.weight(1.4f).height(48.dp),
                                         shape = RoundedCornerShape(12.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = CyanPrimary,
+                                            containerColor = cyan,
                                             contentColor = Color.White
                                         )
                                     ) {
                                         Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Terapkan ke Kuis", fontSize = 13.sp, fontWeight = FontWeight.Black)
+                                        Text("Terapkan ke Kuis", fontSize = 13.sp, fontWeight = FontWeight.ExtraBold)
                                     }
                                 }
                             }
@@ -787,19 +689,19 @@ fun QuizAiGeneratorScreen(
                                 .fillMaxSize()
                                 .padding(padding)
                                 .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                            contentPadding = PaddingValues(vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             item {
-                                Spacer(Modifier.height(4.dp))
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = CyanBg,
-                                    border = androidx.compose.foundation.BorderStroke(1.5.dp, CyanBorder),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = cardBg,
+                                    border = BorderStroke(1.dp, cyan.copy(alpha = 0.45f)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        verticalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
@@ -807,27 +709,33 @@ fun QuizAiGeneratorScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                Icon(Icons.Default.Verified, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(18.dp))
+                                                Icon(Icons.Default.Verified, contentDescription = null, tint = cyan, modifier = Modifier.size(18.dp))
                                                 Text(
                                                     "Paket Soal CBT Siap Pakai",
-                                                    fontWeight = FontWeight.Bold,
-                                                    fontSize = 13.sp,
-                                                    color = CyanPrimary
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 12.sp,
+                                                    color = cyan
                                                 )
                                             }
-                                            Text(
-                                                "${res.questions.size} Butir Soal",
-                                                fontWeight = FontWeight.Black,
-                                                fontSize = 12.sp,
-                                                color = CyanPrimary
-                                            )
+                                            Surface(
+                                                color = cyan.copy(alpha = 0.14f),
+                                                shape = RoundedCornerShape(8.dp)
+                                            ) {
+                                                Text(
+                                                    "${res.questions.size} Butir Soal",
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    fontSize = 11.sp,
+                                                    color = cyan,
+                                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                )
+                                            }
                                         }
 
                                         Text(
                                             res.title,
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 15.sp,
-                                            color = colorScheme.onSurface
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 16.sp,
+                                            color = textPrimary
                                         )
 
                                         Row(
@@ -835,50 +743,49 @@ fun QuizAiGeneratorScreen(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             if (mcqCount > 0) {
-                                                Surface(color = EmeraldPrimary, shape = RoundedCornerShape(6.dp)) {
-                                                    Text("$mcqCount Butir PG", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                                Surface(color = emerald.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
+                                                    Text("$mcqCount PG", color = emerald, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                                                 }
                                             }
                                             if (essayCount > 0) {
-                                                Surface(color = PurplePrimary, shape = RoundedCornerShape(6.dp)) {
-                                                    Text("$essayCount Butir Essay", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                                Surface(color = purple.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
+                                                    Text("$essayCount Essay", color = purple, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                                                 }
                                             }
-                                            Surface(color = NeonWarning, shape = RoundedCornerShape(6.dp)) {
-                                                Text("KKTP: ${res.passingScore}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                            Surface(color = amber.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
+                                                Text("KKTP: ${res.passingScore}", color = amber, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                                             }
-                                            Surface(color = CyanPrimary, shape = RoundedCornerShape(6.dp)) {
-                                                Text("${res.timeLimitMinutes} Menit", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                            Surface(color = cyan.copy(alpha = 0.15f), shape = RoundedCornerShape(6.dp)) {
+                                                Text("${res.timeLimitMinutes} Menit", color = cyan, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
                                             }
                                         }
 
                                         if (!res.description.isNullOrBlank()) {
                                             Text(
                                                 res.description ?: "",
-                                                fontSize = 11.sp,
-                                                color = colorScheme.onSurfaceVariant,
-                                                lineHeight = 15.sp
+                                                fontSize = 12.sp,
+                                                color = textSecondary,
+                                                lineHeight = 18.sp
                                             )
                                         }
                                     }
                                 }
                             }
 
-                            item {
-                                Text(
-                                    "Rincian Butir Soal & Kunci Jawaban:",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = colorScheme.onSurface
-                                )
-                            }
-
                             itemsIndexed(res.questions) { idx, q ->
-                                QuizQuestionVerificationCard(index = idx + 1, question = q)
-                            }
-
-                            item {
-                                Spacer(Modifier.height(16.dp))
+                                QuizQuestionVerificationCard(
+                                    index = idx + 1,
+                                    question = q,
+                                    isDark = isDark,
+                                    cardBg = cardBg,
+                                    cardBorder = cardBorder,
+                                    surfaceMuted = surfaceMuted,
+                                    textPrimary = textPrimary,
+                                    textSecondary = textSecondary,
+                                    cyan = cyan,
+                                    emerald = emerald,
+                                    purple = purple
+                                )
                             }
                         }
                     }
@@ -891,49 +798,55 @@ fun QuizAiGeneratorScreen(
 @Composable
 private fun QuizQuestionVerificationCard(
     index: Int,
-    question: GeneratedCurriculumQuestion
+    question: GeneratedCurriculumQuestion,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    surfaceMuted: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    cyan: Color,
+    emerald: Color,
+    purple: Color
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val isMcq = question.questionType == "MULTIPLE_CHOICE"
+    val accent = if (isMcq) cyan else purple
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
-        shadowElevation = 1.dp,
+        shape = RoundedCornerShape(16.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header Row
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
                         modifier = Modifier
                             .size(24.dp)
                             .clip(CircleShape)
-                            .background(if (isMcq) CyanPrimary else PurplePrimary),
+                            .background(accent),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(index.toString(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                     }
                     Surface(
-                        color = if (isMcq) CyanBg else PurpleBg,
-                        shape = RoundedCornerShape(6.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isMcq) CyanBorder else PurpleBorder)
+                        color = accent.copy(alpha = 0.14f),
+                        shape = RoundedCornerShape(6.dp)
                     ) {
                         Text(
                             if (isMcq) "Pilihan Ganda" else "Uraian / Essay",
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isMcq) CyanPrimary else PurplePrimary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            color = accent,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
                     }
                 }
@@ -941,102 +854,84 @@ private fun QuizQuestionVerificationCard(
                     "${question.points} Poin",
                     fontWeight = FontWeight.Bold,
                     fontSize = 11.sp,
-                    color = colorScheme.onSurfaceVariant
+                    color = textSecondary
                 )
             }
 
-            // Question Text
             Text(
                 question.questionText,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
-                color = colorScheme.onSurface,
-                lineHeight = 18.sp
+                color = textPrimary,
+                lineHeight = 19.sp
             )
 
-            // Choices for MCQ
             if (isMcq && question.choices.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     question.choices.forEachIndexed { cIdx, choice ->
                         val letter = ('A' + cIdx).toString()
                         val isCorrect = choice.isCorrect
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isCorrect) EmeraldBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                            border = androidx.compose.foundation.BorderStroke(
-                                if (isCorrect) 1.5.dp else 1.dp,
-                                if (isCorrect) EmeraldPrimary else colorScheme.outlineVariant
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isCorrect) EmeraldPrimary else colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(letter, color = if (isCorrect) Color.White else colorScheme.onSurface, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    choice.choiceText,
-                                    fontSize = 12.sp,
-                                    color = if (isCorrect) EmeraldPrimary else colorScheme.onSurface,
-                                    fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
-                                    modifier = Modifier.weight(1f)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(
+                                    if (isCorrect) emerald.copy(alpha = if (isDark) 0.14f else 0.10f)
+                                    else surfaceMuted.copy(alpha = 0.55f)
                                 )
-                                if (isCorrect) {
-                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(16.dp))
-                                }
+                                .border(
+                                    width = 1.dp,
+                                    color = if (isCorrect) emerald.copy(alpha = 0.55f) else cardBorder,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .padding(horizontal = 10.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isCorrect) emerald else cardBorder),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    letter,
+                                    color = if (isCorrect) Color.White else textSecondary,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                choice.choiceText,
+                                fontSize = 12.sp,
+                                color = if (isCorrect) emerald else textPrimary,
+                                fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.weight(1f)
+                            )
+                            if (isCorrect) {
+                                Icon(Icons.Default.CheckCircle, contentDescription = null, tint = emerald, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
                 }
-            } else if (!isMcq) {
-                // Essay Rubric Box
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = PurpleBg,
-                    border = androidx.compose.foundation.BorderStroke(1.dp, PurpleBorder),
-                    modifier = Modifier.fillMaxWidth()
+            } else if (!isMcq && !question.explanation.isNullOrBlank()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(purple.copy(alpha = 0.10f))
+                        .border(1.dp, purple.copy(alpha = 0.30f), RoundedCornerShape(10.dp))
+                        .padding(10.dp),
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Text("Panduan Jawaban & Rubrik Penskoran:", fontWeight = FontWeight.Bold, fontSize = 11.sp, color = PurplePrimary)
-                        Text(
-                            question.explanation ?: "Jawaban uraian dinilai berdasarkan kedalaman konsep dan kelengkapan analisis materi.",
-                            fontSize = 11.sp,
-                            color = colorScheme.onSurface,
-                            lineHeight = 15.sp
-                        )
-                    }
-                }
-            }
-
-            // Explanation box for MCQ
-            if (isMcq && !question.explanation.isNullOrBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Row(
-                        modifier = Modifier.padding(8.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = CyanPrimary, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            question.explanation ?: "",
-                            fontSize = 11.sp,
-                            color = colorScheme.onSurfaceVariant,
-                            lineHeight = 14.sp
-                        )
-                    }
+                    Text("Panduan Jawaban & Rubrik:", fontWeight = FontWeight.Bold, fontSize = 10.sp, color = purple)
+                    Text(
+                        question.explanation ?: "",
+                        fontSize = 11.sp,
+                        color = textSecondary,
+                        lineHeight = 16.sp
+                    )
                 }
             }
         }
