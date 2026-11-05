@@ -23,8 +23,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import android.widget.Toast
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.ui.platform.LocalContext
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.AssignmentSubmission
@@ -56,10 +57,9 @@ fun TeacherAssignmentDetailContent(
     // Filter: ALL, PENDING, GRADED, UNSUBMITTED
     var submissionFilter by remember { mutableStateOf("ALL") }
 
-    // Track which submission is open in the grading dialog
+    val context = LocalContext.current
+    // Track which submission is actively open in the inline grading workspace
     var gradingSubmission by remember { mutableStateOf<AssignmentSubmission?>(null) }
-    // Track if teacher clicked an unsubmitted student to show dialog
-    var unsubmittedStudentDialog by remember { mutableStateOf<AssignmentSubmission?>(null) }
 
     // Grade success snackbar
     LaunchedEffect(gradeSuccess) {
@@ -470,7 +470,19 @@ fun TeacherAssignmentDetailContent(
         // TAB 1: PENGUMPULAN & KOREKSI SISWA
         // ════════════════════════════════════════════════════════════════════════
         if (selectedTab == 1) {
-            // ── REKAP PENILAIAN ──
+            if (gradingSubmission != null) {
+                TeacherInlineGradingCard(
+                    submission = gradingSubmission!!,
+                    maxScore = assignment.maxScore,
+                    isGrading = isGrading,
+                    onDismiss = { gradingSubmission = null },
+                    onGrade = { score, feedback ->
+                        onGrade(gradingSubmission!!.id, score, feedback)
+                        gradingSubmission = null
+                    }
+                )
+            } else {
+                // ── REKAP PENILAIAN ──
             if (totalStudents > 0) {
                 val progress = if (totalStudents > 0) gradedCount.toFloat() / totalStudents else 0f
 
@@ -654,7 +666,7 @@ fun TeacherAssignmentDetailContent(
                         maxScore = assignment.maxScore,
                         onClick = {
                             if (submission.status == "unsubmitted") {
-                                unsubmittedStudentDialog = submission
+                                Toast.makeText(context, "${submission.studentName ?: "Siswa"} belum mengumpulkan tugas ini.", Toast.LENGTH_SHORT).show()
                             } else {
                                 gradingSubmission = submission
                             }
@@ -662,58 +674,8 @@ fun TeacherAssignmentDetailContent(
                     )
                 }
             }
-        }
-    }
-
-    // ── GRADING DIALOG FOR SUBMITTED STUDENTS ──
-    gradingSubmission?.let { sub ->
-        GradingDialog(
-            submission = sub,
-            maxScore = assignment.maxScore,
-            isGrading = isGrading,
-            onDismiss = { gradingSubmission = null },
-            onGrade = { score, feedback ->
-                onGrade(sub.id, score, feedback)
-                gradingSubmission = null
             }
-        )
-    }
-
-    // ── DIALOG FOR UNSUBMITTED STUDENTS ──
-    unsubmittedStudentDialog?.let { sub ->
-        AlertDialog(
-            onDismissRequest = { unsubmittedStudentDialog = null },
-            title = {
-                Text(
-                    sub.studentName ?: "Informasi Siswa",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textPrimary
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        "NISN: ${sub.studentNisn ?: "-"}",
-                        fontSize = 12.sp,
-                        color = textSecondary
-                    )
-                    Text(
-                        "Siswa ini belum mengumpulkan tugas. Siswa dapat mengerjakan tugas ini melalui aplikasi Akselerasi-Edu Siswa.",
-                        fontSize = 12.sp,
-                        color = textSecondary,
-                        lineHeight = 17.sp
-                    )
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { unsubmittedStudentDialog = null }) {
-                    Text("Tutup", color = NeonBlue, fontWeight = FontWeight.Bold)
-                }
-            },
-            containerColor = cardBg,
-            shape = RoundedCornerShape(22.dp)
-        )
+        }
     }
 }
 
@@ -931,7 +893,7 @@ private fun TeacherSubmissionRow(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun GradingDialog(
+private fun TeacherInlineGradingCard(
     submission: AssignmentSubmission,
     maxScore: Int,
     isGrading: Boolean,
@@ -948,60 +910,91 @@ private fun GradingDialog(
     val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
     val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
 
-    var scoreInput by remember { mutableStateOf((submission.score ?: maxScore).toFloat()) }
-    var feedbackInput by remember { mutableStateOf(submission.feedback ?: "") }
+    var scoreInput by remember(submission.id) { mutableStateOf((submission.score ?: maxScore).toFloat()) }
+    var feedbackInput by remember(submission.id) { mutableStateOf(submission.feedback ?: "") }
 
-    Dialog(
-        onDismissRequest = { if (!isGrading) onDismiss() },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = dialogBg,
+        border = BorderStroke(1.dp, dialogBorder),
+        shadowElevation = if (isDark) 0.dp else 2.dp
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp),
-            shape = RoundedCornerShape(22.dp),
-            color = dialogBg,
-            border = BorderStroke(1.dp, dialogBorder),
-            shadowElevation = if (isDark) 0.dp else 4.dp
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Column(
-                modifier = Modifier
-                    .verticalScroll(rememberScrollState())
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            // Header: Return Navigation Pill & Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                // Header
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable(enabled = !isGrading, onClick = onDismiss)
+                        .padding(vertical = 4.dp, horizontal = 4.dp)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .clip(CircleShape)
-                                .background(NeonBlue.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Grade, null, tint = NeonBlue, modifier = Modifier.size(20.dp))
-                        }
-                        Spacer(Modifier.width(12.dp))
-                        Column {
-                            Text(
-                                "Lembar Koreksi Siswa",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary
-                            )
-                            val displayName = submission.studentName ?: "ID: ${submission.studentId.take(8)}"
-                            Text("$displayName (${submission.studentNisn ?: "-"})", fontSize = 11.5.sp, color = textTertiary)
-                        }
-                    }
-                    IconButton(onClick = { if (!isGrading) onDismiss() }) {
-                        Icon(Icons.Default.Close, null, tint = textTertiary)
-                    }
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Kembali ke Daftar",
+                        tint = NeonBlue,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Kembali ke Daftar",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonBlue
+                    )
                 }
+
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(NeonBlue.copy(alpha = 0.12f))
+                        .border(0.5.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        text = "LEMBAR KOREKSI",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonBlue
+                    )
+                }
+            }
+
+            // Student Identity Info
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(NeonBlue.copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.Grade, null, tint = NeonBlue, modifier = Modifier.size(20.dp))
+                }
+                Spacer(Modifier.width(12.dp))
+                Column {
+                    Text(
+                        submission.studentName ?: "ID: ${submission.studentId.take(8)}",
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary
+                    )
+                    val nisnText = if (!submission.studentNisn.isNullOrBlank()) "NISN: ${submission.studentNisn}" else "NISN: -"
+                    val dateText = if (submission.submittedAt.isNotBlank()) " • Kumpul: ${submission.submittedAt.take(16)}" else ""
+                    Text("$nisnText$dateText", fontSize = 11.5.sp, color = textTertiary)
+                }
+            }
 
                 HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp)
 
@@ -1329,5 +1322,4 @@ private fun GradingDialog(
                 }
             }
         }
-    }
 }

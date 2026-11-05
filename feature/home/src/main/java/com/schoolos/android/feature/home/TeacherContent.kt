@@ -25,6 +25,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Assignment
+import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.AccessTime
+import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Book
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
@@ -121,6 +124,7 @@ private fun formatTimeAgo(timestampStr: String?): String {
 }
 
 fun LazyListScope.teacherContent(
+    teacherName: String = "",
     onNavigateToSessions: () -> Unit,
     onNavigateToSessionDetail: (String) -> Unit = {},
     onNavigateToAssignments: () -> Unit,
@@ -166,56 +170,125 @@ fun LazyListScope.teacherContent(
         }
     }
 
-    // ── 1. EXECUTIVE METRICS COCKPIT (2x2 Grid) ──────────────────────────────────
+    // ── 0. KARTU SAPAAN GURU (GREETING HERO CARD SAMA DENGAN PORTAL SISWA & KEPALA SEKOLAH) ──
     item {
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val effectiveClassLabel = if (rawClass != "-") formatClassName(rawClass).uppercase() else "TUTOR PENGAMPU"
+        val effectiveSubjectLabel = if (activeSubject.isNotBlank() && activeSubject != "-") activeSubject.uppercase() else "PENDIDIK & GTK"
+        StudentGreetingHeroCard(
+            studentName = teacherName.ifBlank { "Tutor Pengampu" },
+            studentClass = effectiveClassLabel,
+            studentNisn = effectiveSubjectLabel,
+            streakDays = 0,
+            subtitle = "Siap mengampu sesi belajar hari ini? Pantau pengumpulan tugas siswa dan agenda kelas di bawah.",
+            showStreak = false,
+        )
+    }
+
+    // ── HEADER AKSES UTAMA ──
+    item {
+        HomeAksesUtamaSectionHeader()
+    }
+
+    // ── 1. AKSES UTAMA (2x2 GRID MODERN ROUNDED IDENTIK SISWA & KEPALA SEKOLAH) ──
+    item {
+        val isDark = LocalIsDarkTheme.current
+        val cardBg = if (isDark) Color(0xFF111113) else Color.White
+        val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+        val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+        val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+        val tugasBadgeBg = if (isDark) Color(0xFF0C243B) else Color(0xFFE0F2FE)
+        val tugasColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+        val kuisBadgeBg = if (isDark) Color(0xFF0A2B1D) else Color(0xFFDCFCE7)
+        val kuisColor = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+        val materiBadgeBg = if (isDark) Color(0xFF261447) else Color(0xFFF3E8FF)
+        val materiColor = if (isDark) Color(0xFFA78BFA) else Color(0xFF9333EA)
+        val nilaiBadgeBg = if (isDark) Color(0xFF31220A) else Color(0xFFFEF3C7)
+        val nilaiColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+
+        val assBadge = if (pendingAssignmentsCount.isNotBlank() && pendingAssignmentsCount != "0") "$pendingAssignmentsCount Tugas" else "Aktif"
+        val quizBadge = if (quizzesCount.isNotBlank() && quizzesCount != "0") "$quizzesCount Ujian" else "CBT Online"
+        val materiBadge = if (materialsCount.isNotBlank() && materialsCount != "0") "$materialsCount Modul" else "Bahan Ajar"
+
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Row 1: Tugas Siswa & Kuis CBT
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                TeacherKpiCard(
-                    title = "Tugas Aktif",
-                    value = if (pendingAssignmentsCount.isNotBlank()) "$pendingAssignmentsCount Tugas" else "0 Tugas",
-                    subtitle = "Perlu diperiksa",
+                HomeMenuGridCard(
+                    modifier = Modifier.weight(1f),
+                    title = "Tugas Siswa",
+                    subtitle = "Periksa pengumpulan & koreksi tugas mandiri",
+                    badgeText = assBadge,
+                    badgeBg = tugasBadgeBg,
+                    badgeColor = tugasColor,
                     icon = Icons.AutoMirrored.Filled.Assignment,
-                    accentColor = TeacherNeon,
+                    iconCircleBg = tugasBadgeBg,
+                    iconTint = tugasColor,
+                    actionText = "Koreksi Tugas",
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
                     onClick = onNavigateToAssignments,
-                    modifier = Modifier.weight(1f),
                 )
-
-                TeacherKpiCard(
-                    title = "List Ujian & CBT",
-                    value = if (quizzesCount.isNotBlank()) "$quizzesCount Ujian" else "0 Ujian",
-                    subtitle = "Daftar kuis & evaluasi",
-                    icon = Icons.AutoMirrored.Filled.Assignment,
-                    accentColor = NeonSuccess,
-                    onClick = onNavigateToQuizzes,
+                HomeMenuGridCard(
                     modifier = Modifier.weight(1f),
+                    title = "Kuis & Ujian",
+                    subtitle = "Kelola asesmen CBT online & bank butir soal",
+                    badgeText = quizBadge,
+                    badgeBg = kuisBadgeBg,
+                    badgeColor = kuisColor,
+                    icon = Icons.Default.AccessTime,
+                    iconCircleBg = kuisBadgeBg,
+                    iconTint = kuisColor,
+                    actionText = "Kelola Ujian",
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    onClick = onNavigateToQuizzes,
                 )
             }
-
+            // Row 2: Bahan Ajar & Buku Nilai
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                TeacherKpiCard(
-                    title = "Sesi Mengajar",
-                    value = if (todaySessions.isNotEmpty()) "${todaySessions.size} Sesi" else if (scheduleCount.isNotBlank()) "$scheduleCount Sesi" else "0 Sesi",
-                    subtitle = "Agenda hari ini",
-                    icon = Icons.Default.CalendarMonth,
-                    accentColor = NeonBlue,
-                    onClick = onNavigateToSessions,
+                HomeMenuGridCard(
                     modifier = Modifier.weight(1f),
-                )
-
-                TeacherKpiCard(
                     title = "Bahan Ajar",
-                    value = if (materialsCount.isNotBlank()) "$materialsCount Modul" else "0 Modul",
-                    subtitle = "Materi & dokumen",
-                    icon = Icons.Default.Book,
-                    accentColor = NeonWarning,
+                    subtitle = "Unggah & bagikan modul digital serta materi",
+                    badgeText = materiBadge,
+                    badgeBg = materiBadgeBg,
+                    badgeColor = materiColor,
+                    icon = Icons.AutoMirrored.Filled.MenuBook,
+                    iconCircleBg = materiBadgeBg,
+                    iconTint = materiColor,
+                    actionText = "Kelola Modul",
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
                     onClick = onNavigateToLearning,
+                )
+                HomeMenuGridCard(
                     modifier = Modifier.weight(1f),
+                    title = "Buku Nilai",
+                    subtitle = "Rekapitulasi nilai, transkrip & capaian siswa",
+                    badgeText = "Buku Nilai",
+                    badgeBg = nilaiBadgeBg,
+                    badgeColor = nilaiColor,
+                    icon = Icons.Default.EmojiEvents,
+                    iconCircleBg = nilaiBadgeBg,
+                    iconTint = nilaiColor,
+                    actionText = "Lihat Nilai",
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    onClick = onNavigateToGrades,
                 )
             }
         }

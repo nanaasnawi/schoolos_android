@@ -781,14 +781,25 @@ class ChatManager @Inject constructor(
             val isPrincipalMode = threadId.startsWith("ai-principal") ||
                 (cachedAuth?.isPrincipal == true) ||
                 com.schoolos.android.core.auth.isPrincipalRole(cachedAuth?.role ?: "")
+            val isTeacherMode = (threadId.startsWith("ai-teacher") || cachedAuth?.isTeacher == true) && !isPrincipalMode
 
-            val finalSubject = if (isPrincipalMode) "Supervisi & Analitik PKBM" else (subjectName ?: "Umum")
-            val finalGrade = if (isPrincipalMode) "KEPALA_SEKOLAH" else (gradeLevel ?: "Siswa")
+            val finalSubject = when {
+                isPrincipalMode -> "Supervisi & Analitik PKBM"
+                isTeacherMode -> "Pedagogik & Administrasi Guru"
+                else -> (subjectName ?: "Umum")
+            }
+            val finalGrade = when {
+                isPrincipalMode -> "KEPALA_SEKOLAH"
+                isTeacherMode -> "GURU_PENGAJAR"
+                else -> (gradeLevel ?: "Siswa")
+            }
 
-            val finalQuestion = if (isPrincipalMode && !principalContextSummary.isNullOrBlank()) {
-                "[KONTEKS DATA REAL-TIME SEKOLAH (PORTAL KEPALA SEKOLAH)]:\n$principalContextSummary\n\n[PERTANYAAN / INSTRUKSI KEPALA SEKOLAH]:\n$question"
-            } else {
-                question
+            val finalQuestion = when {
+                isPrincipalMode && !principalContextSummary.isNullOrBlank() ->
+                    "[KONTEKS DATA REAL-TIME SEKOLAH (PORTAL KEPALA SEKOLAH)]:\n$principalContextSummary\n\n[PERTANYAAN / INSTRUKSI KEPALA SEKOLAH]:\n$question"
+                isTeacherMode ->
+                    "[PERAN AI: ASISTEN PEDAGOGIK DAN ADMINISTRASI GURU / TUTOR PKBM]\nBantu guru/tutor dalam merancang pembelajaran Kurikulum Merdeka (Paket A/B/C), modul ajar, bank soal kuis/tugas HOTS & asesmen CBT, rubrik skor penilaian, catatan feedback koreksi tugas siswa, atau strategi pembelajaran diferensiasi dan remedial.\n\n[PERTANYAAN / INSTRUKSI GURU]:\n$question"
+                else -> question
             }
 
             val historyDtos = history.takeLast(6).map {
@@ -808,8 +819,16 @@ class ChatManager @Inject constructor(
             if (resp.success && resp.data != null) {
                 val replyText = resp.data.reply
                 val now = System.currentTimeMillis()
-                val senderTitle = if (isPrincipalMode) "AI Analitik Kepala Sekolah" else "Guru AI"
-                val senderIdVal = if (isPrincipalMode) "ai-principal" else "ai-tutor"
+                val senderTitle = when {
+                    isPrincipalMode -> "AI Analitik Kepala Sekolah"
+                    isTeacherMode -> "AI Copilot Guru"
+                    else -> "Guru AI"
+                }
+                val senderIdVal = when {
+                    isPrincipalMode -> "ai-principal"
+                    isTeacherMode -> "ai-teacher"
+                    else -> "ai-tutor"
+                }
                 val aiMsg = ChatMessage(
                     id = UUID.randomUUID().toString(),
                     threadId = threadId,
@@ -856,25 +875,54 @@ class ChatManager @Inject constructor(
     fun getOrCreateAiThread(): ChatThread {
         val auth = cachedAuth
         val isPrincipal = auth?.isPrincipal == true || com.schoolos.android.core.auth.isPrincipalRole(auth?.role ?: "")
-        val studentId = auth?.userId ?: if (isPrincipal) "principal-default" else "student-default"
-        val studentName = auth?.name ?: if (isPrincipal) "Kepala PKBM" else "Siswa"
-        val studentClass = auth?.className ?: if (isPrincipal) "Manajerial" else "Kelas"
-        val aiThreadId = if (isPrincipal) "ai-principal-$studentId" else "ai-tutor-$studentId"
+        val isTeacher = (auth?.isTeacher == true) && !isPrincipal
+        val studentId = auth?.userId ?: when {
+            isPrincipal -> "principal-default"
+            isTeacher -> "teacher-default"
+            else -> "student-default"
+        }
+        val studentName = auth?.name ?: when {
+            isPrincipal -> "Kepala PKBM"
+            isTeacher -> "Guru Pengampu"
+            else -> "Siswa"
+        }
+        val studentClass = auth?.className ?: when {
+            isPrincipal -> "Manajerial"
+            isTeacher -> "Dewan Guru"
+            else -> "Kelas"
+        }
+        val aiThreadId = when {
+            isPrincipal -> "ai-principal-$studentId"
+            isTeacher -> "ai-teacher-$studentId"
+            else -> "ai-tutor-$studentId"
+        }
 
         val existing = _threads.value.find { it.id == aiThreadId }
         if (existing != null) return existing
 
-        val senderTitle = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Guru AI"
-        val initialContent = if (isPrincipal) {
-            "Halo Bapak/Ibu Kepala PKBM! 🏛️\n\nSaya **AI Analitik Kepala Sekolah** didukung komputasi cerdas NVIDIA AI.\n\nSaya siap menganalisis data operasional dan mutu akademik PKBM secara real-time:\n• **Keaktifan Guru/Tutor**: Pengunggahan materi/modul pembelajaran, penugasan mandiri warga belajar, & kuis asesmen CBT.\n• **Keterlaksanaan Pembelajaran**: Kehadiran warga belajar pada sesi tutorial & pemantauan jalannya rombel.\n• **Kualitas & Mutu Akademik**: Analisis ketercapaian KKTP rombel serta deteksi dini warga belajar butuh intervensi (Early Warning System).\n\nSilakan ajukan telaah analitik atau gunakan tombol pintasan di bawah ini!"
-        } else {
-            "Halo ${studentName.substringBefore(" ")}! 👋 Saya Guru AI (Asisten Belajar Pintar didukung NVIDIA AI).\n\nAda materi, rumus, konsep, atau tugas yang ingin kamu tanyakan hari ini? Ketik pertanyaanmu atau kirimkan foto soal/materi ya!"
+        val senderTitle = when {
+            isPrincipal -> "AI Analitik Kepala Sekolah"
+            isTeacher -> "AI Copilot Guru"
+            else -> "Guru AI"
+        }
+        val initialContent = when {
+            isPrincipal -> "Halo Bapak/Ibu Kepala PKBM! 🏛️\n\nSaya **AI Analitik Kepala Sekolah** didukung komputasi cerdas NVIDIA AI.\n\nSaya siap menganalisis data operasional dan mutu akademik PKBM secara real-time:\n• **Keaktifan Guru/Tutor**: Pengunggahan materi/modul pembelajaran, penugasan mandiri warga belajar, & kuis asesmen CBT.\n• **Keterlaksanaan Pembelajaran**: Kehadiran warga belajar pada sesi tutorial & pemantauan jalannya rombel.\n• **Kualitas & Mutu Akademik**: Analisis ketercapaian KKTP rombel serta deteksi dini warga belajar butuh intervensi (Early Warning System).\n\nSilakan ajukan telaah analitik atau gunakan tombol pintasan di bawah ini!"
+            isTeacher -> "Halo Bapak/Ibu Guru ${studentName.substringBefore(" ")}! 🎓\n\nSaya **AI Copilot Guru** (Asisten Pedagogik & Administrasi Guru didukung NVIDIA NIM).\n\nSaya siap membantu mempermudah tugas mengajar dan administrasi Kurikulum Merdeka PKBM:\n• 📝 **Penyusunan Modul Ajar**: Bantuan merancang Modul Ajar & RPP tematik (Paket A, B, C).\n• 🎯 **Bank Soal & Asesmen CBT**: Pembuatan butir soal PG & essay HOTS lengkap kunci jawaban & rubrik skor.\n• 💬 **Saran Koreksi Tugas**: Rekomendasi feedback evaluatif yang membangun bagi warga belajar.\n• 🧩 **Strategi Pembelajaran & Remedial**: Solusi diferensiasi belajar dan penanganan siswa yang memerlukan perhatian khusus.\n\nSilakan ketik pertanyaan Anda atau gunakan tombol pintasan cepat di bawah!"
+            else -> "Halo ${studentName.substringBefore(" ")}! 👋 Saya Guru AI (Asisten Belajar Pintar didukung NVIDIA AI).\n\nAda materi, rumus, konsep, atau tugas yang ingin kamu tanyakan hari ini? Ketik pertanyaanmu atau kirimkan foto soal/materi ya!"
         }
 
         val initialAiMessage = ChatMessage(
-            id = if (isPrincipal) "ai-welcome-principal-$studentId" else "ai-welcome-$studentId",
+            id = when {
+                isPrincipal -> "ai-welcome-principal-$studentId"
+                isTeacher -> "ai-welcome-teacher-$studentId"
+                else -> "ai-welcome-$studentId"
+            },
             threadId = aiThreadId,
-            senderId = if (isPrincipal) "ai-principal" else "ai-tutor",
+            senderId = when {
+                isPrincipal -> "ai-principal"
+                isTeacher -> "ai-teacher"
+                else -> "ai-tutor"
+            },
             senderName = senderTitle,
             senderRole = "TEACHER",
             content = initialContent,
@@ -888,11 +936,27 @@ class ChatManager @Inject constructor(
             studentId = studentId,
             studentName = studentName,
             studentClass = studentClass,
-            teacherId = if (isPrincipal) "ai-principal" else "ai-tutor",
-            teacherName = if (isPrincipal) "AI Analitik Kepala Sekolah (NVIDIA NIM)" else "Guru AI (NVIDIA NIM)",
-            subjectName = if (isPrincipal) "Supervisi & Analitik PKBM" else "Tanya AI",
+            teacherId = when {
+                isPrincipal -> "ai-principal"
+                isTeacher -> "ai-teacher"
+                else -> "ai-tutor"
+            },
+            teacherName = when {
+                isPrincipal -> "AI Analitik Kepala Sekolah (NVIDIA NIM)"
+                isTeacher -> "AI Copilot Guru (NVIDIA NIM)"
+                else -> "Guru AI (NVIDIA NIM)"
+            },
+            subjectName = when {
+                isPrincipal -> "Supervisi & Analitik PKBM"
+                isTeacher -> "Pedagogik & Modul Ajar"
+                else -> "Tanya AI"
+            },
             inquiryType = InquiryType.GENERAL,
-            referenceTitle = if (isPrincipal) "Asisten Eksekutif Supervisi & Analitik Real-Time" else "Asisten Belajar Pintar 24 Jam",
+            referenceTitle = when {
+                isPrincipal -> "Asisten Eksekutif Supervisi & Analitik Real-Time"
+                isTeacher -> "Asisten Pedagogik & Administrasi Guru"
+                else -> "Asisten Belajar Pintar 24 Jam"
+            },
             referenceId = null,
             messages = listOf(initialAiMessage),
             status = InquiryStatus.ANSWERED,
@@ -900,7 +964,11 @@ class ChatManager @Inject constructor(
             lastMessageContent = initialAiMessage.content,
             lastSenderName = senderTitle,
             messageCount = 1,
-            readStatusLabel = if (isPrincipal) "Siap Menganalisis Real-Time" else "Siap Menjawab 24 Jam",
+            readStatusLabel = when {
+                isPrincipal -> "Siap Menganalisis Real-Time"
+                isTeacher -> "Siap Membantu Mengajar & Modul"
+                else -> "Siap Menjawab 24 Jam"
+            },
             teacherLastReadAt = System.currentTimeMillis(),
         )
 
