@@ -329,18 +329,19 @@ private fun StudentQuizHeroBanner(
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = if (allDone) "Semua kuis telah tuntas diselesaikan" else "Uji Pemahaman Materi & CBT",
                     color = textPrimary,
-                    fontSize = 17.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = if (activeCount > 0) "$activeCount kuis siap untuk dikerjakan hari ini" else "Pantau hasil evaluasi dan ulas materi pembelajaranmu.",
                     color = textSecondary,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp
                 )
             }
 
@@ -472,18 +473,19 @@ private fun TeacherQuizHeroBanner(activeCount: Int, totalCount: Int) {
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = "Evaluasi & Kuis CBT Siswa",
                     color = textPrimary,
-                    fontSize = 17.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
                     text = "Pantau pengerjaan siswa, berikan koreksi dan distribusi nilai secara realtime.",
                     color = textSecondary,
-                    fontSize = 12.sp,
-                    lineHeight = 16.sp
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp
                 )
             }
 

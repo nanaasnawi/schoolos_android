@@ -721,7 +721,10 @@ private fun PrincipalSectionHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f, fill = false)) {
+        Column(
+            modifier = Modifier.weight(1f, fill = false),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -729,7 +732,8 @@ private fun PrincipalSectionHeader(
                 Text(
                     text = title,
                     fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Bold,
                     color = textPrimary,
                 )
                 if (count != null && count > 0) {
@@ -750,10 +754,10 @@ private fun PrincipalSectionHeader(
                 }
             }
             if (subtitle.isNotBlank()) {
-                Spacer(Modifier.height(2.dp))
                 Text(
                     text = subtitle,
                     fontSize = 11.sp,
+                    lineHeight = 14.sp,
                     color = textTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

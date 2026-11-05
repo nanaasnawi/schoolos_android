@@ -359,23 +359,26 @@ private fun StudentAssignmentHeroHeader(
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
                     val child = if (childName.isNotBlank()) childName else "Anak"
                     Text(
                         text = if (isParent) "Status Tugas $child" else "Daftar Tugas Mandiri",
-                        fontSize = 18.sp,
+                        fontSize = 15.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary,
-                        letterSpacing = (-0.3).sp,
+                        letterSpacing = (-0.2).sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(1.dp))
                     Text(
                         text = "Pantau tenggat waktu dan kumpulkan tepat waktu.",
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = textSecondary,
-                        lineHeight = 15.sp
+                        lineHeight = 14.sp
                     )
                 }
             }
@@ -564,22 +567,25 @@ private fun TeacherAssignmentHeroHeader(
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
                     Text(
                         text = "Penugasan & Evaluasi Siswa",
-                        fontSize = 18.sp,
+                        fontSize = 15.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary,
-                        letterSpacing = (-0.3).sp,
+                        letterSpacing = (-0.2).sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(1.dp))
                     Text(
                         text = "Kelola penugasan, kuis, dan review hasil kerja siswa.",
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = textSecondary,
-                        lineHeight = 15.sp
+                        lineHeight = 14.sp
                     )
                 }
             }

@@ -79,7 +79,7 @@ fun ExecutiveTopBar(
                         text = title,
                         fontSize = 15.sp,
                         lineHeight = 18.sp,
-                        fontWeight = FontWeight.SemiBold,
+                        fontWeight = FontWeight.Bold,
                         color = TextPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

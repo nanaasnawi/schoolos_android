@@ -238,28 +238,29 @@ internal fun StudentGreetingHeroCard(
                 }
             }
 
-            // Greeting: Selamat Siang, [NAMA] 👋
-            Text(
-                text = buildAnnotatedString {
-                    append("$greeting, ")
-                    withStyle(SpanStyle(color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7))) {
-                        append(firstName)
-                    }
-                    append(" 👋")
-                },
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold,
-                color = textPrimary,
-                letterSpacing = (-0.3).sp
-            )
-
-            // Subtitle
-            Text(
-                text = subtitle,
-                fontSize = 12.sp,
-                color = textSecondary,
-                lineHeight = 16.sp
-            )
+            // Greeting: Selamat Siang, [NAMA] 👋 & Subtitle
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                Text(
+                    text = buildAnnotatedString {
+                        append("$greeting, ")
+                        withStyle(SpanStyle(color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7))) {
+                            append(firstName)
+                        }
+                        append(" 👋")
+                    },
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
+                    letterSpacing = (-0.2).sp
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = textSecondary,
+                    lineHeight = 14.sp
+                )
+            }
 
             // Streak Pill: 🔥 Streak: 5 Hari
             val streakBadgeBg = if (isDark) Color(0xFF311C08) else Color(0xFFFFFBEB)
