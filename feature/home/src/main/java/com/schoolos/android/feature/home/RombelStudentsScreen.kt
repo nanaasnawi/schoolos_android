@@ -383,6 +383,13 @@ fun RombelStudentsScreen(
 
             // ── 1. FILTER TABS KELAS DIAMPU ───────────────────────────────────────
         if (uiState.availableClasses.isNotEmpty()) {
+            val isDark = LocalIsDarkTheme.current
+            val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+            val classAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+            val inactiveBg = if (isDark) Color(0xFF141417) else Color.White
+            val inactiveBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+            val inactiveText = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+
             LazyRow(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -395,21 +402,21 @@ fun RombelStudentsScreen(
                     val isAllSelected = selectedFilter == "ALL" || selectedFilter.isBlank()
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isAllSelected) TeacherNeon.copy(alpha = 0.18f) else innerCardBg)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isAllSelected) teacherAccent.copy(alpha = if (isDark) 0.16f else 0.10f) else inactiveBg)
                             .border(
                                 width = 1.dp,
-                                color = if (isAllSelected) TeacherNeon else innerCardBorder,
+                                color = if (isAllSelected) teacherAccent.copy(alpha = if (isDark) 0.55f else 0.45f) else inactiveBorder,
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { viewModel.selectClassFilter("ALL") }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Text(
                             text = "Semua Kelas (${students.size})",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isAllSelected) TeacherNeon else TextSecondary
+                            color = if (isAllSelected) teacherAccent else inactiveText
                         )
                     }
                 }
@@ -420,21 +427,21 @@ fun RombelStudentsScreen(
                     val countForClass = students.count { it.className.equals(cls.name, ignoreCase = true) }
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(if (isSelected) NeonBlue.copy(alpha = 0.18f) else innerCardBg)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) classAccent.copy(alpha = if (isDark) 0.16f else 0.10f) else inactiveBg)
                             .border(
                                 width = 1.dp,
-                                color = if (isSelected) NeonBlue else innerCardBorder,
+                                color = if (isSelected) classAccent.copy(alpha = if (isDark) 0.55f else 0.45f) else inactiveBorder,
                                 shape = RoundedCornerShape(12.dp)
                             )
                             .clickable { viewModel.selectClassFilter(cls.name) }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Text(
                             text = "${formatClassName(cls.name)} ($countForClass)",
-                            fontSize = 11.sp,
+                            fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) NeonBlue else TextSecondary
+                            color = if (isSelected) classAccent else inactiveText
                         )
                     }
                 }

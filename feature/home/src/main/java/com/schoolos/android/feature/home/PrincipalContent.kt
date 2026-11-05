@@ -584,24 +584,19 @@ fun LazyListScope.principalContent(
         }
     }
 
-    // ── 4. JADWAL PEMBELAJARAN / TUTORIAL HARI INI ────────────────────────────
+    // ── 4. JADWAL MENGAJAR / PELAJARAN HARI INI (UNIFIED DESIGN SAMA DENGAN PORTAL SISWA) ──
     item {
-        PrincipalSectionHeader(
-            title = "Jadwal Tutorial & Sesi Hari Ini",
-            subtitle = "Monitoring jalannya sesi tutorial seluruh rombel",
-            count = todaySessions.size,
-            actionLabel = "Lihat Semua",
-            onActionClick = onNavigateToSessions,
+        HomeTodayScheduleCard(
+            todaySessions = todaySessions,
+            onNavigateToSessions = onNavigateToSessions,
+            onNavigateToSessionDetail = onNavigateToSessionDetail,
+            cardTitle = "Jadwal Mengajar Hari Ini",
+            subtitleBuilder = { session ->
+                val sessionClass = formatClassName(session.className ?: session.room)
+                val tutor = session.teacherName?.trim().orEmpty()
+                if (tutor.isNotBlank()) "$sessionClass • $tutor" else sessionClass
+            },
         )
-    }
-
-    if (todaySessions.isNotEmpty()) {
-        items(todaySessions.take(3), key = { it.id }) { session ->
-            PrincipalSessionItemCard(
-                session = session,
-                onClick = { onNavigateToSessionDetail(session.id) }
-            )
-        }
     }
 
     // ── 5. MONITORING PENUGASAN WARGA BELAJAR ──────────────────────────────────

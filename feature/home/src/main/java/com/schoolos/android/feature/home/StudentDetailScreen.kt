@@ -521,6 +521,12 @@ private fun StudentTabRow(
     onTabSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isDark = LocalIsDarkTheme.current
+    val accentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val inactiveBg = if (isDark) Color(0xFF141417) else Color.White
+    val inactiveBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val inactiveText = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -541,29 +547,29 @@ private fun StudentTabRow(
             }
             Surface(
                 onClick = { onTabSelected(index) },
-                shape = RoundedCornerShape(10.dp),
-                color = if (isSelected) CosmicSurface2 else CosmicNavy,
+                shape = RoundedCornerShape(12.dp),
+                color = if (isSelected) accentColor.copy(alpha = if (isDark) 0.16f else 0.10f) else inactiveBg,
                 border = BorderStroke(
-                    width = if (isSelected) 1.dp else 0.5.dp,
-                    color = if (isSelected) StudentNeon else GlassBorder
+                    width = 1.dp,
+                    color = if (isSelected) accentColor.copy(alpha = if (isDark) 0.55f else 0.45f) else inactiveBorder
                 ),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
                         imageVector = tabIcon,
                         contentDescription = null,
-                        tint = if (isSelected) StudentNeon else TextTertiary,
+                        tint = if (isSelected) accentColor else inactiveText,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(
                         text = title,
-                        fontSize = 12.sp,
+                        fontSize = 12.5.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSelected) TextPrimary else TextSecondary,
+                        color = if (isSelected) accentColor else inactiveText,
                         maxLines = 1,
                     )
                 }

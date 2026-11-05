@@ -62,6 +62,7 @@ fun TeacherAnalyticsHubScreen(
 
     Scaffold(
         containerColor = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC),
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             ExecutiveTopBar(
@@ -74,7 +75,7 @@ fun TeacherAnalyticsHubScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(top = padding.calculateTopPadding())
         ) {
             // ── TOP SEGMENTED SWITCHER BAR (MINIMALIST, ZERO EMOJI, ZERO GRADIENT) ──
             SegmentedHubTabs(

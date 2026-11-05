@@ -57,6 +57,7 @@ fun AtRiskMonitoringScreen(
     if (showHeader) {
         Scaffold(
             containerColor = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC),
+            contentWindowInsets = WindowInsets(0, 0, 0, 0),
             snackbarHost = { SnackbarHost(snackbarHostState) },
             topBar = {
                 AtRiskTopHeader(
@@ -75,7 +76,7 @@ fun AtRiskMonitoringScreen(
                 onNavigateToStudentDetail = onNavigateToStudentDetail,
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(top = padding.calculateTopPadding())
             )
         }
     } else {

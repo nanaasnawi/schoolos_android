@@ -73,11 +73,12 @@ fun ExecutiveTopBar(
                 }
 
                 Column(
-                    verticalArrangement = Arrangement.Center,
+                    verticalArrangement = Arrangement.spacedBy(1.dp),
                 ) {
                     Text(
                         text = title,
                         fontSize = 15.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
                         maxLines = 1,
@@ -87,6 +88,7 @@ fun ExecutiveTopBar(
                         Text(
                             text = subtitle,
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
                             fontWeight = FontWeight.Normal,
                             color = TextTertiary,
                             maxLines = 1,

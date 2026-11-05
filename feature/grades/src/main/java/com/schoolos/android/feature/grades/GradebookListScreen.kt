@@ -70,6 +70,7 @@ fun GradebookListScreen(
 
     Scaffold(
         containerColor = CosmicBlack,
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             if (showHeader) {
@@ -89,7 +90,7 @@ fun GradebookListScreen(
             onRefresh = viewModel::refresh,
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding),
+                .padding(top = padding.calculateTopPadding()),
         ) {
             if (state.isLoading) {
                 LoadingState()
@@ -202,27 +203,30 @@ fun GradebookListScreen(
                             val dynamicCategories = (listOf("Semua Mapel") + state.subjects.map { it.category }.filter { it.isNotBlank() && it != "Wajib" }).distinct()
                             if (dynamicCategories.size > 1) {
                                 item {
+                                    val studentAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
                                     LazyRow(
                                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                                         modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                                     ) {
                                         items(dynamicCategories) { filter ->
                                             val isSelected = filter == selectedFilter
+                                            val chipBg = if (isSelected) studentAccent.copy(alpha = if (isDark) 0.16f else 0.10f) else (if (isDark) Color(0xFF141417) else Color.White)
+                                            val chipBorder = if (isSelected) studentAccent.copy(alpha = if (isDark) 0.55f else 0.45f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0))
+                                            val chipTextColor = if (isSelected) studentAccent else (if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B))
                                             Surface(
                                                 shape = RoundedCornerShape(12.dp),
-                                                color = if (isSelected) innerCardBg else cardBg,
-                                                border = BorderStroke(
-                                                    0.5.dp,
-                                                    if (isSelected) StudentNeon else cardBorder
-                                                ),
-                                                modifier = Modifier.clickable { selectedFilter = filter }
+                                                color = chipBg,
+                                                border = BorderStroke(1.dp, chipBorder),
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clickable { selectedFilter = filter }
                                             ) {
                                                 Text(
                                                     text = filter,
-                                                    fontSize = 12.sp,
+                                                    fontSize = 12.5.sp,
                                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                    color = if (isSelected) StudentNeon else textTertiary,
-                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp)
+                                                    color = chipTextColor,
+                                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp)
                                                 )
                                             }
                                         }

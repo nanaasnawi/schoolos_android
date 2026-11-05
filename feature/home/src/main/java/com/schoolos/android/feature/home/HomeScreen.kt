@@ -170,6 +170,7 @@ fun HomeScreen(
 
     Scaffold(
         containerColor = CosmicBlack,
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
             Image(
                 painter = painterResource(id = CoreR.drawable.mascot_akselerasi_edu),
