@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.assignments
 
+import java.util.UUID
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.common.toHumanReadableError

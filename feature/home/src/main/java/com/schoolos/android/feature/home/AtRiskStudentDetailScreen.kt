@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.home
 
+import com.schoolos.android.core.R as CoreR
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -15,15 +16,15 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.automirrored.filled.Assignment
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.Assignment
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -47,6 +48,15 @@ fun AtRiskStudentDetailScreen(
     val state by viewModel.state.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
     LaunchedEffect(state.toastMessage) {
         state.toastMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -55,92 +65,68 @@ fun AtRiskStudentDetailScreen(
     }
 
     Scaffold(
-        containerColor = if (LocalIsDarkTheme.current) Color(0xFF09090B) else Color(0xFFF8FAFC),
+        containerColor = CosmicBlack,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
-            Surface(
-                color = if (LocalIsDarkTheme.current) Color(0xFF09090B) else Color(0xFFF8FAFC),
-                border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 8.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    IconButton(onClick = onBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Kembali",
-                            tint = TextPrimary
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Detail Kendala Belajar",
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Early Warning & Rekomendasi Intervensi",
-                            fontSize = 11.sp,
-                            color = TextTertiary
-                        )
-                    }
+            ExecutiveTopBar(
+                title = "Detail Kendala Belajar",
+                subtitle = "Early Warning System & Intervensi Warga Belajar",
+                onBack = onBack,
+                actions = {
                     IconButton(onClick = { viewModel.loadDetails(isRefresh = true) }) {
                         Icon(
-                            imageVector = Icons.Default.Refresh,
+                            imageVector = Icons.Outlined.Refresh,
                             contentDescription = "Muat Ulang",
-                            tint = TextTertiary
+                            tint = textSecondary,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
-            }
+            )
         },
         bottomBar = {
             if (state.items.isNotEmpty()) {
                 Surface(
-                    color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
-                    border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
+                    color = cardBg,
+                    border = BorderStroke(1.dp, cardBorder),
                     modifier = Modifier.navigationBarsPadding()
                 ) {
-                    Row(
+                    Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            .padding(horizontal = 16.dp, vertical = 12.dp)
                     ) {
                         Button(
                             onClick = { viewModel.sendAllReminders() },
                             enabled = !state.isSendingAll,
-                            modifier = Modifier.fillMaxWidth().height(46.dp),
-                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(14.dp),
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = NeonError,
+                                containerColor = if (isDark) Color(0xFFDC2626) else Color(0xFFE11D48),
                                 contentColor = Color.White
-                            )
+                            ),
+                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
                         ) {
                             if (state.isSendingAll) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(16.dp),
+                                    modifier = Modifier.size(18.dp),
                                     strokeWidth = 2.dp,
                                     color = Color.White
                                 )
-                                Spacer(Modifier.width(8.dp))
-                                Text("Mengirim Notifikasi...", fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                Spacer(Modifier.width(10.dp))
+                                Text("Mengirimkan Notifikasi...", fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
                             } else {
                                 Icon(
-                                    imageVector = Icons.Default.NotificationsActive,
+                                    imageVector = Icons.Outlined.NotificationsActive,
                                     contentDescription = null,
-                                    modifier = Modifier.size(16.dp)
+                                    modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(Modifier.width(8.dp))
                                 Text(
                                     text = "Kirim Pengingat Terpadu (${state.totalIssues} Kendala)",
-                                    fontSize = 13.sp,
+                                    fontSize = 13.5.sp,
                                     fontWeight = FontWeight.Bold
                                 )
                             }
@@ -157,7 +143,7 @@ fun AtRiskStudentDetailScreen(
         ) {
             if (state.isLoading && !state.isRefreshing) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = NeonBlue)
+                    CircularProgressIndicator(color = Color(0xFF38BDF8))
                 }
             } else {
                 LazyColumn(
@@ -172,6 +158,14 @@ fun AtRiskStudentDetailScreen(
                             nisn = state.nisn,
                             className = state.className,
                             totalIssues = state.totalIssues,
+                            isDark = isDark,
+                            cardBg = cardBg,
+                            cardBorder = cardBorder,
+                            innerCardBg = innerCardBg,
+                            innerCardBorder = innerCardBorder,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            textTertiary = textTertiary,
                             onOpenFullProfile = {
                                 onNavigateToFullProfile(
                                     state.studentId,
@@ -190,7 +184,13 @@ fun AtRiskStudentDetailScreen(
                             unreadMaterials = state.unreadMaterialsCount,
                             overdueAssignments = state.overdueAssignmentsCount,
                             lowScores = state.lowScoresCount,
-                            quizAlerts = state.quizAlertsCount
+                            quizAlerts = state.quizAlertsCount,
+                            isDark = isDark,
+                            cardBg = cardBg,
+                            cardBorder = cardBorder,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            textTertiary = textTertiary,
                         )
                     }
 
@@ -202,6 +202,13 @@ fun AtRiskStudentDetailScreen(
                             unreadMaterials = state.unreadMaterialsCount,
                             overdueAssignments = state.overdueAssignmentsCount,
                             scoresAndQuizzes = state.lowScoresCount + state.quizAlertsCount,
+                            isDark = isDark,
+                            cardBg = cardBg,
+                            cardBorder = cardBorder,
+                            innerCardBg = innerCardBg,
+                            innerCardBorder = innerCardBorder,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
                             onSelect = viewModel::onSelectCategoryFilter
                         )
                     }
@@ -211,34 +218,42 @@ fun AtRiskStudentDetailScreen(
                         item {
                             Surface(
                                 shape = RoundedCornerShape(22.dp),
-                                color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
-                                border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
+                                color = cardBg,
+                                border = BorderStroke(1.dp, cardBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .padding(24.dp),
+                                        .padding(28.dp),
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
-                                    Icon(
-                                        imageVector = Icons.Default.CheckCircle,
-                                        contentDescription = null,
-                                        tint = NeonSuccess,
-                                        modifier = Modifier.size(36.dp)
-                                    )
-                                    Spacer(Modifier.height(10.dp))
+                                    Box(
+                                        modifier = Modifier
+                                            .size(54.dp)
+                                            .clip(CircleShape)
+                                            .background(Color(0xFF10B981).copy(alpha = 0.12f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Outlined.CheckCircle,
+                                            contentDescription = null,
+                                            tint = Color(0xFF10B981),
+                                            modifier = Modifier.size(32.dp)
+                                        )
+                                    }
+                                    Spacer(Modifier.height(12.dp))
                                     Text(
                                         text = "Tidak Ada Kendala Pada Kategori Ini",
-                                        fontSize = 14.sp,
+                                        fontSize = 15.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = TextPrimary
+                                        color = textPrimary
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = "Siswa terpantau tidak memiliki masalah belajar pada filter yang dipilih.",
+                                        text = "Warga belajar terpantau aktif dan tidak memiliki masalah belajar pada filter yang dipilih.",
                                         fontSize = 12.sp,
-                                        color = TextSecondary,
+                                        color = textSecondary,
                                         textAlign = TextAlign.Center
                                     )
                                 }
@@ -253,6 +268,14 @@ fun AtRiskStudentDetailScreen(
                             AtRiskDetailItemCard(
                                 item = item,
                                 isSending = isSending,
+                                isDark = isDark,
+                                cardBg = cardBg,
+                                cardBorder = cardBorder,
+                                innerCardBg = innerCardBg,
+                                innerCardBorder = innerCardBorder,
+                                textPrimary = textPrimary,
+                                textSecondary = textSecondary,
+                                textTertiary = textTertiary,
                                 onSendReminder = { viewModel.sendSingleReminder(item) },
                                 onOpenItem = {
                                     val matId = item.materialId
@@ -270,7 +293,20 @@ fun AtRiskStudentDetailScreen(
 
                     // 5. Pedagogical Intervention Guidelines
                     item {
-                        PedagogicalInterventionCard()
+                        PedagogicalInterventionCard(
+                            isDark = isDark,
+                            cardBg = cardBg,
+                            cardBorder = cardBorder,
+                            innerCardBg = innerCardBg,
+                            innerCardBorder = innerCardBorder,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            textTertiary = textTertiary,
+                        )
+                    }
+
+                    item {
+                        Spacer(Modifier.height(16.dp))
                     }
                 }
             }
@@ -278,7 +314,9 @@ fun AtRiskStudentDetailScreen(
     }
 }
 
-// ─── Sub-Composables ────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// SUB-COMPOSABLES
+// ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
 private fun StudentIdentityHeroCard(
@@ -286,124 +324,199 @@ private fun StudentIdentityHeroCard(
     nisn: String,
     className: String,
     totalIssues: Int,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
     onOpenFullProfile: () -> Unit,
 ) {
-    val initial = studentName.firstOrNull()?.uppercase() ?: "S"
+    val initial = studentName.firstOrNull()?.uppercase() ?: "W"
+    val hasIssues = totalIssues > 0
 
-    Surface(
-        shape = RoundedCornerShape(22.dp),
-        color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
-        border = BorderStroke(1.dp, if (totalIssues > 0) NeonError.copy(alpha = 0.35f) else (if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))),
-        modifier = Modifier.fillMaxWidth()
+    val heroGradient = if (isDark) {
+        if (hasIssues) {
+            Brush.linearGradient(
+                listOf(
+                    Color(0xFF4C0519).copy(alpha = 0.45f),
+                    Color(0xFF1E1118),
+                    Color(0xFF111113)
+                )
+            )
+        } else {
+            Brush.linearGradient(
+                listOf(
+                    Color(0xFF064E3B).copy(alpha = 0.35f),
+                    Color(0xFF111815),
+                    Color(0xFF111113)
+                )
+            )
+        }
+    } else {
+        if (hasIssues) {
+            Brush.linearGradient(
+                listOf(
+                    Color(0xFFFFE4E6),
+                    Color(0xFFFFF1F2),
+                    Color(0xFFFFFFFF)
+                )
+            )
+        } else {
+            Brush.linearGradient(
+                listOf(
+                    Color(0xFFECFDF5),
+                    Color(0xFFF0FDF4),
+                    Color(0xFFFFFFFF)
+                )
+            )
+        }
+    }
+
+    val alertAccent = if (hasIssues) Color(0xFFEF4444) else Color(0xFF10B981)
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(heroGradient)
+            .border(
+                1.dp,
+                if (hasIssues) alertAccent.copy(alpha = 0.35f) else cardBorder,
+                RoundedCornerShape(22.dp)
+            )
+            .padding(16.dp)
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(16.dp)
-        ) {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Avatar Box
                 Box(
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
-                        .border(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(14.dp)),
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            Brush.linearGradient(
+                                if (hasIssues) listOf(Color(0xFFEF4444), Color(0xFFB91C1C))
+                                else listOf(Color(0xFF10B981), Color(0xFF059669))
+                            )
+                        )
+                        .border(1.5.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = initial,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = TextPrimary
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Black,
+                        color = Color.White
                     )
                 }
-
-                Spacer(Modifier.width(12.dp))
 
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = studentName.ifBlank { "Peserta Didik" },
-                        fontSize = 16.sp,
+                        text = studentName.ifBlank { "Warga Belajar" },
+                        fontSize = 17.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
+                        color = textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(2.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(
-                            text = "NISN: ${nisn.ifBlank { "-" }}",
-                            fontSize = 12.sp,
-                            color = TextTertiary
-                        )
-                        Spacer(Modifier.width(8.dp))
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9),
-                            border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
+                    Spacer(Modifier.height(4.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
                         ) {
                             Text(
                                 text = className.ifBlank { "Rombel" },
-                                fontSize = 10.sp,
+                                fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = NeonBlue,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5),
                             )
                         }
+
+                        Text(
+                            text = "NISN: ${nisn.ifBlank { "-" }}",
+                            fontSize = 11.5.sp,
+                            color = textSecondary
+                        )
                     }
                 }
 
-                // Alert Badge
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (totalIssues > 0) NeonError.copy(alpha = 0.15f) else NeonSuccess.copy(alpha = 0.15f),
-                    border = BorderStroke(0.5.dp, if (totalIssues > 0) NeonError.copy(alpha = 0.4f) else NeonSuccess.copy(alpha = 0.4f))
+                // Alert Status Badge
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(alertAccent.copy(alpha = 0.14f))
+                        .border(0.5.dp, alertAccent.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 9.dp, vertical = 5.dp)
                 ) {
-                    Text(
-                        text = if (totalIssues > 0) "$totalIssues Kendala" else "Aman",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = if (totalIssues > 0) NeonError else NeonSuccess,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(alertAccent)
+                        )
+                        Text(
+                            text = if (hasIssues) "$totalIssues Kendala" else "Aman",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = alertAccent
+                        )
+                    }
                 }
             }
 
-            Spacer(Modifier.height(14.dp))
-            HorizontalDivider(thickness = 1.dp, color = if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0))
-            Spacer(Modifier.height(12.dp))
+            HorizontalDivider(
+                thickness = 0.5.dp,
+                color = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+            )
 
-            // Link to Full Dapodik Biodata
+            // Direct link to student's profile & portfolio
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onOpenFullProfile),
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(onClick = onOpenFullProfile)
+                    .padding(vertical = 4.dp, horizontal = 2.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Icon(
-                        imageVector = Icons.Default.Badge,
+                        imageVector = Icons.Outlined.Badge,
                         contentDescription = null,
-                        tint = TextSecondary,
-                        modifier = Modifier.size(15.dp)
+                        tint = textSecondary,
+                        modifier = Modifier.size(16.dp)
                     )
-                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = "Lihat Profil & Biodata Lengkap Warga Belajar",
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = TextSecondary
+                        color = textSecondary
                     )
                 }
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                    imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                     contentDescription = null,
-                    tint = TextTertiary,
+                    tint = textTertiary,
                     modifier = Modifier.size(14.dp)
                 )
             }
@@ -418,6 +531,12 @@ private fun FourPillarStatStrip(
     overdueAssignments: Int,
     lowScores: Int,
     quizAlerts: Int,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -427,29 +546,49 @@ private fun FourPillarStatStrip(
             modifier = Modifier.weight(1f),
             label = "Total Kendala",
             count = total,
-            icon = Icons.Default.WarningAmber,
-            color = if (total > 0) NeonError else NeonSuccess
+            icon = Icons.Outlined.WarningAmber,
+            accentColor = if (total > 0) Color(0xFFEF4444) else Color(0xFF10B981),
+            isDark = isDark,
+            cardBg = cardBg,
+            cardBorder = cardBorder,
+            textPrimary = textPrimary,
+            textTertiary = textTertiary,
         )
         PillarStatBox(
             modifier = Modifier.weight(1f),
-            label = "Materi",
+            label = "Modul",
             count = unreadMaterials,
-            icon = Icons.Default.MenuBook,
-            color = AccentNeonAmber
+            icon = Icons.Outlined.MenuBook,
+            accentColor = Color(0xFFF59E0B),
+            isDark = isDark,
+            cardBg = cardBg,
+            cardBorder = cardBorder,
+            textPrimary = textPrimary,
+            textTertiary = textTertiary,
         )
         PillarStatBox(
             modifier = Modifier.weight(1f),
             label = "Tugas",
             count = overdueAssignments,
-            icon = Icons.AutoMirrored.Filled.Assignment,
-            color = NeonWarning
+            icon = Icons.AutoMirrored.Outlined.Assignment,
+            accentColor = Color(0xFF38BDF8),
+            isDark = isDark,
+            cardBg = cardBg,
+            cardBorder = cardBorder,
+            textPrimary = textPrimary,
+            textTertiary = textTertiary,
         )
         PillarStatBox(
             modifier = Modifier.weight(1f),
             label = "Nilai / Kuis",
             count = lowScores + quizAlerts,
-            icon = Icons.Default.TrendingDown,
-            color = Color(0xFFA855F7)
+            icon = Icons.Outlined.TrendingDown,
+            accentColor = Color(0xFFA855F7),
+            isDark = isDark,
+            cardBg = cardBg,
+            cardBorder = cardBorder,
+            textPrimary = textPrimary,
+            textTertiary = textTertiary,
         )
     }
 }
@@ -460,38 +599,51 @@ private fun PillarStatBox(
     label: String,
     count: Int,
     icon: androidx.compose.ui.graphics.vector.ImageVector,
-    color: Color,
+    accentColor: Color,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    textPrimary: Color,
+    textTertiary: Color,
 ) {
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
-        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
+        shape = RoundedCornerShape(16.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
         modifier = modifier
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 10.dp, horizontal = 6.dp),
+                .padding(vertical = 12.dp, horizontal = 6.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                tint = color,
-                modifier = Modifier.size(18.dp)
-            )
-            Spacer(Modifier.height(4.dp))
+            Box(
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(CircleShape)
+                    .background(accentColor.copy(alpha = 0.14f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = accentColor,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+            Spacer(Modifier.height(6.dp))
             Text(
                 text = "$count",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = TextPrimary
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Black,
+                color = textPrimary
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 text = label,
-                fontSize = 9.sp,
-                color = TextTertiary,
+                fontSize = 10.sp,
+                color = textTertiary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -506,6 +658,13 @@ private fun AtRiskCategoryFilterRow(
     unreadMaterials: Int,
     overdueAssignments: Int,
     scoresAndQuizzes: Int,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
     onSelect: (String) -> Unit,
 ) {
     Row(
@@ -517,21 +676,25 @@ private fun AtRiskCategoryFilterRow(
         CategoryFilterChip(
             label = "Semua ($total)",
             isSelected = selected == "ALL",
+            isDark = isDark,
             onClick = { onSelect("ALL") }
         )
         CategoryFilterChip(
-            label = "Materi ($unreadMaterials)",
+            label = "Modul Belajar ($unreadMaterials)",
             isSelected = selected == "UNREAD_MATERIAL",
+            isDark = isDark,
             onClick = { onSelect("UNREAD_MATERIAL") }
         )
         CategoryFilterChip(
-            label = "Tugas ($overdueAssignments)",
+            label = "Tugas Tertunda ($overdueAssignments)",
             isSelected = selected == "OVERDUE_ASSIGNMENT",
+            isDark = isDark,
             onClick = { onSelect("OVERDUE_ASSIGNMENT") }
         )
         CategoryFilterChip(
             label = "Nilai & Kuis ($scoresAndQuizzes)",
             isSelected = selected == "LOW_SCORE" || selected == "QUIZ_ALERT",
+            isDark = isDark,
             onClick = { onSelect("LOW_SCORE") }
         )
     }
@@ -541,20 +704,26 @@ private fun AtRiskCategoryFilterRow(
 private fun CategoryFilterChip(
     label: String,
     isSelected: Boolean,
+    isDark: Boolean,
     onClick: () -> Unit,
 ) {
+    val activeColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val inactiveBg = if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9)
+    val inactiveBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val inactiveText = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (isSelected) (if (LocalIsDarkTheme.current) Color(0xFF10B981).copy(alpha = 0.18f) else Color(0xFFD1FAE5)) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)),
-        border = BorderStroke(1.dp, if (isSelected) (if (LocalIsDarkTheme.current) Color(0xFF10B981) else Color(0xFF059669)) else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))),
+        color = if (isSelected) activeColor.copy(alpha = 0.15f) else inactiveBg,
+        border = BorderStroke(1.dp, if (isSelected) activeColor else inactiveBorder),
         modifier = Modifier.clickable(onClick = onClick)
     ) {
         Text(
             text = label,
             fontSize = 11.5.sp,
             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-            color = if (isSelected) (if (LocalIsDarkTheme.current) Color(0xFF10B981) else Color(0xFF059669)) else (if (LocalIsDarkTheme.current) Color(0xFF94A3B8) else Color(0xFF64748B)),
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            color = if (isSelected) activeColor else inactiveText,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp)
         )
     }
 }
@@ -563,19 +732,27 @@ private fun CategoryFilterChip(
 private fun AtRiskDetailItemCard(
     item: AtRiskStudent,
     isSending: Boolean,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
     onSendReminder: () -> Unit,
     onOpenItem: () -> Unit,
 ) {
-    val (badgeText, badgeColor) = when (item.category) {
-        "UNREAD_MATERIAL" -> "Materi Literasi Tertinggal" to AccentNeonAmber
-        "OVERDUE_ASSIGNMENT" -> "Tugas Belum Dikumpulkan" to NeonWarning
-        "LOW_SCORE" -> "Nilai di Bawah KKTP (< 70)" to NeonError
-        "QUIZ_ALERT" -> "Kuis & Ujian CBT Terlewat" to Color(0xFFA855F7)
-        else -> "Perlu Perhatian" to NeonError
+    val (badgeText, badgeColor, categoryIcon) = when (item.category) {
+        "UNREAD_MATERIAL" -> Triple("Modul Literasi Tertinggal", Color(0xFFF59E0B), Icons.Outlined.MenuBook)
+        "OVERDUE_ASSIGNMENT" -> Triple("Tugas Belum Dikumpulkan", Color(0xFFEF4444), Icons.AutoMirrored.Outlined.Assignment)
+        "LOW_SCORE" -> Triple("Nilai di Bawah KKTP (< 70)", Color(0xFFE11D48), Icons.Outlined.TrendingDown)
+        "QUIZ_ALERT" -> Triple("Kuis & Ujian CBT Terlewat", Color(0xFFA855F7), Icons.Outlined.Timer)
+        else -> Triple("Perlu Perhatian", Color(0xFFEF4444), Icons.Outlined.WarningAmber)
     }
 
     val actionButtonText = when {
-        item.materialId != null -> "Buka Materi"
+        item.materialId != null -> "Buka Modul"
         item.assignmentId != null -> "Buka Tugas"
         item.quizId != null -> "Buka Kuis"
         else -> null
@@ -583,14 +760,15 @@ private fun AtRiskDetailItemCard(
 
     Surface(
         shape = RoundedCornerShape(22.dp),
-        color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
-        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Header Row: Category Badge + Risk Level
             Row(
@@ -598,76 +776,92 @@ private fun AtRiskDetailItemCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = badgeColor.copy(alpha = 0.12f),
-                    border = BorderStroke(0.5.dp, badgeColor.copy(alpha = 0.35f))
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CircleShape)
+                            .background(badgeColor.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = categoryIcon,
+                            contentDescription = null,
+                            tint = badgeColor,
+                            modifier = Modifier.size(13.dp)
+                        )
+                    }
+
                     Text(
                         text = badgeText,
-                        fontSize = 10.5.sp,
+                        fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
                         color = badgeColor,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(4.dp),
-                    color = if (item.riskLevel == "HIGH") NeonError.copy(alpha = 0.15f) else NeonWarning.copy(alpha = 0.15f),
-                    border = BorderStroke(0.5.dp, if (item.riskLevel == "HIGH") NeonError.copy(alpha = 0.4f) else NeonWarning.copy(alpha = 0.4f))
+                val isHighRisk = item.riskLevel.equals("HIGH", ignoreCase = true)
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(if (isHighRisk) Color(0xFFEF4444).copy(alpha = 0.14f) else Color(0xFFF59E0B).copy(alpha = 0.14f))
+                        .border(
+                            0.5.dp,
+                            if (isHighRisk) Color(0xFFEF4444).copy(alpha = 0.45f) else Color(0xFFF59E0B).copy(alpha = 0.45f),
+                            RoundedCornerShape(6.dp)
+                        )
+                        .padding(horizontal = 7.dp, vertical = 2.dp)
                 ) {
                     Text(
-                        text = if (item.riskLevel == "HIGH") "Prioritas Tinggi" else "Perhatian Sedang",
+                        text = if (isHighRisk) "Prioritas Tinggi" else "Perhatian Sedang",
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (item.riskLevel == "HIGH") NeonError else NeonWarning,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        color = if (isHighRisk) Color(0xFFEF4444) else Color(0xFFF59E0B),
                     )
                 }
             }
-
-            Spacer(Modifier.height(10.dp))
 
             // Title
             Text(
                 text = item.title,
-                fontSize = 14.sp,
+                fontSize = 14.5.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                lineHeight = 18.sp
+                color = textPrimary,
+                lineHeight = 19.sp
             )
 
-            Spacer(Modifier.height(8.dp))
-
-            // Explanation box
+            // Diagnostic Explanation Box
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC),
-                border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
+                color = innerCardBg,
+                border = BorderStroke(0.5.dp, innerCardBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
-                    modifier = Modifier.padding(10.dp),
-                    verticalAlignment = Alignment.Top
+                    modifier = Modifier.padding(12.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Info,
+                        imageVector = Icons.Outlined.Info,
                         contentDescription = null,
                         tint = badgeColor,
-                        modifier = Modifier.size(15.dp).padding(top = 1.dp)
+                        modifier = Modifier
+                            .size(16.dp)
+                            .padding(top = 1.dp)
                     )
-                    Spacer(Modifier.width(8.dp))
                     Text(
                         text = item.description,
                         fontSize = 12.sp,
-                        color = TextPrimary,
-                        lineHeight = 16.sp
+                        color = textPrimary,
+                        lineHeight = 17.sp,
+                        modifier = Modifier.weight(1f)
                     )
                 }
             }
-
-            Spacer(Modifier.height(12.dp))
 
             // Bottom Actions Row
             Row(
@@ -675,20 +869,19 @@ private fun AtRiskDetailItemCard(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Open Item Button (if ID exists)
                 if (actionButtonText != null) {
                     OutlinedButton(
                         onClick = onOpenItem,
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(0.5.dp, NeonBlue.copy(alpha = 0.5f)),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonBlue),
-                        modifier = Modifier.height(34.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        border = BorderStroke(0.75.dp, Color(0xFF38BDF8).copy(alpha = 0.6f)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF38BDF8)),
+                        modifier = Modifier.height(36.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Visibility,
+                            imageVector = Icons.Outlined.Visibility,
                             contentDescription = null,
-                            modifier = Modifier.size(13.dp)
+                            modifier = Modifier.size(14.dp)
                         )
                         Spacer(Modifier.width(6.dp))
                         Text(actionButtonText, fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
@@ -698,62 +891,37 @@ private fun AtRiskDetailItemCard(
                 }
 
                 // Send Single Reminder Button
-                Surface(
+                Button(
                     onClick = onSendReminder,
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (item.isReminded) NeonSuccess.copy(alpha = 0.12f) else NeonError.copy(alpha = 0.12f),
-                    border = BorderStroke(
-                        0.5.dp,
-                        if (item.isReminded) NeonSuccess.copy(alpha = 0.4f) else NeonError.copy(alpha = 0.4f)
+                    enabled = !isSending,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF),
+                        contentColor = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5)
                     ),
-                    modifier = Modifier.height(34.dp)
+                    modifier = Modifier.height(36.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 0.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (isSending) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(12.dp),
-                                strokeWidth = 1.5.dp,
-                                color = NeonError
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "Mengirim...",
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonError
-                            )
-                        } else if (item.isReminded) {
-                            Icon(
-                                imageVector = Icons.Default.Check,
-                                contentDescription = null,
-                                tint = NeonSuccess,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "Terkirim",
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonSuccess
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Default.Notifications,
-                                contentDescription = null,
-                                tint = NeonError,
-                                modifier = Modifier.size(13.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                text = "Ingatkan",
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonError
-                            )
-                        }
+                    if (isSending) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(14.dp),
+                            strokeWidth = 2.dp,
+                            color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text("Mengirim...", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.Notifications,
+                            contentDescription = null,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = "Kirim Pengingat",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
                 }
             }
@@ -762,47 +930,79 @@ private fun AtRiskDetailItemCard(
 }
 
 @Composable
-private fun PedagogicalInterventionCard() {
+private fun PedagogicalInterventionCard(
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
+) {
     Surface(
         shape = RoundedCornerShape(22.dp),
-        color = if (LocalIsDarkTheme.current) Color(0xFF111113) else Color.White,
-        border = BorderStroke(1.dp, if (LocalIsDarkTheme.current) Color(0xFF232326) else Color(0xFFE2E8F0)),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Default.Lightbulb,
-                    contentDescription = null,
-                    tint = AccentNeonAmber,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(Modifier.width(8.dp))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF59E0B).copy(alpha = 0.15f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Lightbulb,
+                        contentDescription = null,
+                        tint = Color(0xFFF59E0B),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
                 Text(
-                    text = "Panduan Tindakan Pedagogis Guru",
-                    fontSize = 13.sp,
+                    text = "Panduan Tindakan Pedagogis Tutor / Kepala PKBM",
+                    fontSize = 13.5.sp,
                     fontWeight = FontWeight.Bold,
-                    color = TextPrimary
+                    color = textPrimary
                 )
             }
-            Spacer(Modifier.height(10.dp))
+
+            Spacer(Modifier.height(2.dp))
+
             InterventionStepItem(
                 step = "1",
-                text = "Kirim notifikasi pengingat terpadu agar siswa menerima peringatan instan pada smartphone."
+                title = "Notifikasi & Pengingat Instan",
+                text = "Kirimkan pengingat terpadu agar warga belajar menerima peringatan langsung pada perangkat smartphone.",
+                isDark = isDark,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
             )
-            Spacer(Modifier.height(6.dp))
             InterventionStepItem(
                 step = "2",
-                text = "Berikan penugasan remedial atau materi pengayaan bagi topik evaluasi yang belum mencapai KKTP 70."
+                title = "Penugasan Remedial & Pengayaan",
+                text = "Berikan penugasan remedial fleksibel bagi materi atau topik kuis yang belum melampaui kriteria KKTP 70.",
+                isDark = isDark,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
             )
-            Spacer(Modifier.height(6.dp))
             InterventionStepItem(
                 step = "3",
-                text = "Lakukan kontak langsung dengan orang tua/wali murid apabila kendala berlanjut lebih dari 3 hari."
+                title = "Konseling Personal & Bimbingan Tutor",
+                text = "Lakukan koordinasi bimbingan belajar dengan tutor pengampu atau wali apabila kendala berlanjut lebih dari 3 hari.",
+                isDark = isDark,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
             )
         }
     }
@@ -811,34 +1011,45 @@ private fun PedagogicalInterventionCard() {
 @Composable
 private fun InterventionStepItem(
     step: String,
+    title: String,
     text: String,
+    isDark: Boolean,
+    textPrimary: Color,
+    textSecondary: Color,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Top
+        verticalAlignment = Alignment.Top,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Box(
             modifier = Modifier
-                .size(18.dp)
+                .size(22.dp)
                 .clip(CircleShape)
-                .background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF1F5F9)),
+                .background(if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF)),
             contentAlignment = Alignment.Center
         ) {
             Text(
                 text = step,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = NeonBlue
+                color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5)
             )
         }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = text,
-            fontSize = 11.5.sp,
-            color = TextSecondary,
-            lineHeight = 15.sp,
-            modifier = Modifier.weight(1f)
-        )
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = text,
+                fontSize = 11.5.sp,
+                color = textSecondary,
+                lineHeight = 16.sp,
+            )
+        }
     }
 }
-

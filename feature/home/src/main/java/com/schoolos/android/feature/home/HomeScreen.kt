@@ -171,34 +171,18 @@ fun HomeScreen(
     Scaffold(
         containerColor = CosmicBlack,
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToAiChat,
-                shape = CircleShape,
-                containerColor = if (isDark) Color(0xFF161618) else Color.White,
-                contentColor = Color.Unspecified,
-                elevation = FloatingActionButtonDefaults.elevation(
-                    defaultElevation = 6.dp,
-                    pressedElevation = 10.dp
-                ),
+            Image(
+                painter = painterResource(id = CoreR.drawable.mascot_akselerasi_edu),
+                contentDescription = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Tanya Guru AI",
                 modifier = Modifier
-                    .size(62.dp)
-                    .border(
-                        width = 1.5.dp,
-                        color = if (isPrincipal) {
-                            if (isDark) Color(0xFF8B5CF6).copy(alpha = 0.65f) else Color(0xFF8B5CF6).copy(alpha = 0.45f)
-                        } else {
-                            if (isDark) Color(0xFF38BDF8).copy(alpha = 0.55f) else Color(0xFF0284C7).copy(alpha = 0.35f)
-                        },
-                        shape = CircleShape
-                    )
-            ) {
-                Image(
-                    painter = painterResource(id = CoreR.drawable.mascot_akselerasi_edu),
-                    contentDescription = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Tanya Guru AI",
-                    modifier = Modifier.size(46.dp),
-                    contentScale = androidx.compose.ui.layout.ContentScale.Fit
-                )
-            }
+                    .size(72.dp)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = onNavigateToAiChat,
+                    ),
+                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+            )
         }
     ) { padding ->
         PullRefreshContainer(
@@ -570,6 +554,7 @@ fun HomeScreen(
                             onNavigateToLearning        = onNavigateToLearning,
                             onNavigateToRombelStudents  = onNavigateToRombelStudents,
                             onNavigateToAiChat          = onNavigateToAiChat,
+                            principalName               = userName,
                             schoolClasses               = state.teacherClasses,
                             totalStudentsCount          = state.totalStudentsCount,
                             todaySessions               = state.todaySessions,

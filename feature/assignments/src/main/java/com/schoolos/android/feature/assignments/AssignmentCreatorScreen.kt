@@ -100,6 +100,20 @@ fun AssignmentCreatorScreen(
         }
     }
 
+    LaunchedEffect(selectedClass, subjectOptions) {
+        if (subjectOptions.size > 1 && selectedClass.isNotBlank()) {
+            val upper = selectedClass.uppercase()
+            val autoSubject = if (upper.contains("PAKET C") || upper.contains(" 10") || upper.contains(" 11") || upper.contains(" 12")) {
+                subjectOptions.firstOrNull { it.contains("ekonomi", ignoreCase = true) || it.contains("geografi", ignoreCase = true) || it.contains("sosiologi", ignoreCase = true) }
+            } else if (upper.contains("PAKET B") || upper.contains(" 7") || upper.contains(" 8") || upper.contains(" 9")) {
+                subjectOptions.firstOrNull { it.contains("cirebon", ignoreCase = true) || it.contains("ipa", ignoreCase = true) || it.contains("ips", ignoreCase = true) }
+            } else null
+            if (autoSubject != null && autoSubject != selectedSubject) {
+                selectedSubject = autoSubject
+            }
+        }
+    }
+
     var title by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var instructions by remember { mutableStateOf("") }
@@ -164,9 +178,14 @@ fun AssignmentCreatorScreen(
 
     if (showPrePublishReview) {
         val calculatedDueDate = Instant.now().plus(selectedDueDays.toLong(), ChronoUnit.DAYS).toString()
-        val targetClassId = unifiedClasses.findClass(selectedClass)?.primaryId
-            ?: state.availableClasses.find { it.name == selectedClass }?.id
-            ?: selectedClass
+        val matchedUnified = unifiedClasses.findClass(selectedClass)
+        val targetClassIds = if (matchedUnified != null && matchedUnified.memberClassIds.isNotEmpty()) {
+            matchedUnified.memberClassIds
+        } else {
+            val singleId = state.availableClasses.find { it.name == selectedClass }?.id ?: selectedClass
+            listOf(singleId)
+        }
+        val targetClassId = targetClassIds.firstOrNull() ?: selectedClass
         val parsedScore = customMaxScore.toIntOrNull() ?: 100
         val fullDesc = "$selectedSubject • $selectedClass • $description"
 
@@ -190,6 +209,7 @@ fun AssignmentCreatorScreen(
                     customMaxScore = parsedScore,
                     dueAt = calculatedDueDate,
                     classId = targetClassId,
+                    classIds = targetClassIds,
                     status = if (isScheduled) "draft" else "published",
                     releaseAt = releaseAtIso,
                 )
