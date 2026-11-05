@@ -281,8 +281,7 @@ fun QuizAiGeneratorScreen(
                                                 if (foundGroup != null) {
                                                     selectedClass = AcademicClass(
                                                         id = foundGroup.primaryId,
-                                                        name = foundGroup.baseName,
-                                                        gradeLevel = foundGroup.gradeLevel
+                                                        name = foundGroup.displayName
                                                     )
                                                 }
                                             },
