@@ -521,6 +521,27 @@ class AuthRepositoryImpl @Inject constructor(
         )
     }
 
+    override suspend fun getTeacherDirectory(): Result<List<OfficialTeacherBiodata>> = runCatching {
+        val resp = api.getTeachers(pageSize = 100)
+        val rows = resp.data ?: emptyList()
+        rows.filter { it.isActive && it.fullName.isNotBlank() }.map { t ->
+            OfficialTeacherBiodata(
+                id = t.id,
+                tenantId = t.tenantId,
+                userId = t.userId,
+                nip = t.nip,
+                fullName = t.fullName,
+                nuptk = t.nuptk,
+                jk = t.jk,
+                email = t.email,
+                subject = t.subject,
+                classesAssigned = t.classesAssigned,
+                status = t.status ?: "Active",
+                fotoProfile = t.fotoProfile,
+            )
+        }
+    }
+
     override suspend fun getStudentDossier(): Result<StudentDossier> = runCatching {
         val response = api.getMyStudentDossier()
         val data = response.data ?: throw Exception(response.error?.message ?: "Data berkas tidak ditemukan")

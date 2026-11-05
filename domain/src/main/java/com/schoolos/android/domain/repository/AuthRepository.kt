@@ -28,6 +28,7 @@ interface AuthRepository {
     suspend fun getMyQrBadge(): Result<String>
     suspend fun getOfficialBiodata(): Result<OfficialStudentBiodata>
     suspend fun getTeacherOfficialBiodata(): Result<OfficialTeacherBiodata>
+    suspend fun getTeacherDirectory(): Result<List<OfficialTeacherBiodata>>
     suspend fun getStudentDossier(): Result<StudentDossier>
     suspend fun uploadStudentDocument(
         documentType: String,
