@@ -872,6 +872,8 @@ fun ChatDetailScreen(
                                     attachmentUrl = imgToSend,
                                     attachmentType = if (imgToSend != null) "image" else null,
                                     thread = thread,
+                                    threadId = threadId,
+                                    initialRecipientName = contactName,
                                     isTeacherMode = isTeacherMode,
                                     chatManager = chatManager,
                                     onSuccess = {}
@@ -1291,24 +1293,31 @@ private fun sendMessage(
     attachmentUrl: String? = null,
     attachmentType: String? = null,
     thread: ChatThread?,
+    threadId: String,
+    initialRecipientName: String,
     isTeacherMode: Boolean,
     chatManager: ChatManager,
     onSuccess: () -> Unit,
 ) {
-    if ((text.isNotBlank() || !attachmentUrl.isNullOrBlank()) && thread != null) {
+    if (text.isNotBlank() || !attachmentUrl.isNullOrBlank()) {
         val auth = chatManager.currentAuth
+        val targetThread = thread ?: chatManager.getOrCreateTeacherThread(
+            teacherId = threadId,
+            teacherName = initialRecipientName.ifBlank { "Guru Mata Pelajaran" },
+            subjectName = "Umum",
+        )
         val isTeacher = isTeacherMode || auth?.isTeacher == true
         val senderRole = if (isTeacher) "TEACHER" else "STUDENT"
         val senderName = when {
-            isTeacher -> auth?.name?.takeIf { it.isNotBlank() } ?: thread.teacherName
-            else -> auth?.name?.takeIf { it.isNotBlank() } ?: thread.studentName
+            isTeacher -> auth?.name?.takeIf { it.isNotBlank() } ?: targetThread.teacherName
+            else -> auth?.name?.takeIf { it.isNotBlank() } ?: targetThread.studentName
         }
         val senderId = when {
-            isTeacher -> auth?.userId?.takeIf { it.isNotBlank() } ?: thread.teacherId
-            else -> auth?.userId?.takeIf { it.isNotBlank() } ?: thread.studentId
+            isTeacher -> auth?.userId?.takeIf { it.isNotBlank() } ?: targetThread.teacherId
+            else -> auth?.userId?.takeIf { it.isNotBlank() } ?: targetThread.studentId
         }
         chatManager.sendMessage(
-            threadId = thread.id,
+            threadId = targetThread.id,
             senderId = senderId,
             senderName = senderName,
             senderRole = senderRole,

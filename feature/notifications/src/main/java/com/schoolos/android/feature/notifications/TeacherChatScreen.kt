@@ -297,15 +297,13 @@ fun TeacherChatScreen(
                         teachers = OfficialTeachersList,
                         threads = threads,
                         searchQuery = searchQuery,
+                        chatManager = chatManager,
                         onOpenThread = onOpenThread,
                         isDark = isDark,
                         textPrimary = textPrimary,
                         textSecondary = textSecondary,
                         textTertiary = textTertiary,
                         studentAccent = studentAccent,
-                        cardBg = cardBg,
-                        cardBorder = cardBorder,
-                        innerCardBg = innerCardBg,
                         innerCardBorder = innerCardBorder,
                         modifier = Modifier
                             .weight(1f)
@@ -519,64 +517,100 @@ data class TeacherContactItem(
 
 private val OfficialTeachersList = listOf(
     TeacherContactItem(
-        id = "teacher-asep-rifai",
+        id = "01a096e3-cb9d-7cf1-b63e-777afa38f52c",
         name = "ASEP RIFAI, S.Pd",
         subject = "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
         roleTitle = "Tutor IPAS",
     ),
     TeacherContactItem(
-        id = "teacher-asy-syifa",
+        id = "01a096e3-cba6-7852-9278-a2cdbc71dc35",
         name = "ASY SYIFA RAHMAH IHSANI, S.Pd",
         subject = "Bahasa Inggris",
         roleTitle = "Tutor Bahasa Inggris",
     ),
     TeacherContactItem(
-        id = "teacher-amin-lisana",
+        id = "01a096e3-cb94-7872-8469-769d08a68872",
         name = "AMIN LISANA, S.Pd",
         subject = "Bahasa Indonesia",
         roleTitle = "Tutor Bahasa Indonesia",
     ),
     TeacherContactItem(
-        id = "teacher-fitri-nafisah",
+        id = "01a096e3-cbce-7a72-86d2-aa65f1b3b273",
         name = "FITRI NAFISAH, S.Pd",
         subject = "Bahasa Cirebon & Ekonomi",
         roleTitle = "Tutor B. Cirebon & Ekonomi",
     ),
     TeacherContactItem(
-        id = "teacher-siti-muniroh",
+        id = "01a0e6d6-2b77-7b21-ae3f-ae0d88d2ca12",
         name = "Siti Muniroh, S.Pd",
         subject = "Pendidikan Pancasila & Karakter",
-        roleTitle = "Tutor Pancasila & Karakter",
+        roleTitle = "Kepala PKBM & Tutor Pamong",
     ),
     TeacherContactItem(
-        id = "teacher-taufiq-hidayat",
+        id = "01a096e3-cc24-7fb2-9e49-b22fc9518fa3",
         name = "TAUFIQ HIDAYAT, S.Pd",
         subject = "Geografi",
         roleTitle = "Tutor Geografi",
     ),
     TeacherContactItem(
-        id = "teacher-husnul-chatim",
+        id = "4294c1b1-20a7-42a8-8c68-982abdab0bad",
         name = "HUSNUL CHATIM, S.Pd",
         subject = "Seni Budaya",
         roleTitle = "Tutor Seni Budaya",
     ),
     TeacherContactItem(
-        id = "teacher-eha-meida",
+        id = "01a096e3-cbb8-7681-9f3c-80cd7a560152",
         name = "EHA MEIDA KARTIKA, S.Pd",
         subject = "Pendidikan Agama Islam",
         roleTitle = "Tutor PAI & Budi Pekerti",
     ),
     TeacherContactItem(
-        id = "teacher-ikin-baihaki",
+        id = "01a096e3-cbbf-77d0-af0e-6df318e9268b",
+        name = "ESI ROKESI, S.Pd",
+        subject = "Ilmu Pengetahuan Alam (IPA)",
+        roleTitle = "Tutor IPA",
+    ),
+    TeacherContactItem(
+        id = "19ae8622-11e9-4d86-ae4c-3c36a736140c",
+        name = "AMEILIANI DWI IRAFANISYAH, S.Pd",
+        subject = "Matematika (Umum)",
+        roleTitle = "Tutor Matematika",
+    ),
+    TeacherContactItem(
+        id = "46ce30ba-b618-42d9-8d6d-31d698331353",
         name = "IKIN BAIHAKI, S.Kom",
         subject = "Keterampilan Komputer",
         roleTitle = "Tutor TIK & Komputer",
     ),
     TeacherContactItem(
-        id = "teacher-eulis-komala",
-        name = "Dra. Hj. Eulis Komala, M.Pd",
-        subject = "Bimbingan & Konseling (BK)",
-        roleTitle = "Kepala PKBM / Pembina BK",
+        id = "01a096e3-cbed-74e2-b54b-0f01e51d40c7",
+        name = "KHAERIYAH, S.Pd",
+        subject = "Bahasa Indonesia",
+        roleTitle = "Tutor Bahasa Indonesia",
+    ),
+    TeacherContactItem(
+        id = "01a096e3-cbf5-7041-a07c-720d92034dfa",
+        name = "KRISTIANTI, S.Pd",
+        subject = "Pendidikan Pancasila",
+        roleTitle = "Tutor Pancasila",
+    ),
+    TeacherContactItem(
+        id = "01a096e3-cbfc-7ae0-8297-289feca8aa6b",
+        name = "KUSWANTO ADI WIJAYA, S.Pd",
+        subject = "Matematika (Umum)",
+        roleTitle = "Tutor Matematika",
+    ),
+    TeacherContactItem(
+        id = "01a096e3-cc0b-7b43-8e8e-77273797f48d",
+        name = "ROHMANA, S.Pd",
+        subject = "Sosiologi",
+        roleTitle = "Tutor Sosiologi",
+    ),
+    TeacherContactItem(
+        id = "01a096e3-cc1e-76b0-a545-2c05bff9ee77",
+        name = "SRI MULYANI, S.Ag",
+        subject = "Pendidikan Agama Islam",
+        roleTitle = "Tutor PAI",
     ),
 )
 
@@ -585,15 +619,13 @@ private fun StudentWhatsAppChatList(
     teachers: List<TeacherContactItem>,
     threads: List<ChatThread>,
     searchQuery: String,
+    chatManager: ChatManager,
     onOpenThread: (threadId: String, recipientName: String) -> Unit,
     isDark: Boolean,
     textPrimary: Color,
     textSecondary: Color,
     textTertiary: Color,
     studentAccent: Color,
-    cardBg: Color,
-    cardBorder: Color,
-    innerCardBg: Color,
     innerCardBorder: Color,
     modifier: Modifier = Modifier,
 ) {
@@ -631,12 +663,11 @@ private fun StudentWhatsAppChatList(
             )
         }
 
-        Surface(
-            modifier = Modifier.fillMaxWidth().weight(1f),
-            shape = RoundedCornerShape(22.dp),
-            color = cardBg,
-            border = BorderStroke(1.dp, cardBorder),
-            shadowElevation = if (isDark) 0.dp else 1.dp,
+        // WhatsApp-style flat list (no card wrapper per user design specification)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
         ) {
             if (filteredTeachers.isEmpty()) {
                 Box(
@@ -658,8 +689,11 @@ private fun StudentWhatsAppChatList(
                 ) {
                     itemsIndexed(filteredTeachers, key = { _, it -> it.id }) { index, teacher ->
                         val thread = threads.firstOrNull {
-                            it.teacherName.contains(teacher.name.take(6), ignoreCase = true) ||
-                            it.subjectName.contains(teacher.subject.take(5), ignoreCase = true)
+                            (it.teacherId.isNotBlank() && it.teacherId.equals(teacher.id, ignoreCase = true)) ||
+                            (it.teacherName.isNotBlank() && teacher.name.isNotBlank() && (
+                                it.teacherName.contains(teacher.name.take(6), ignoreCase = true) ||
+                                teacher.name.contains(it.teacherName.take(6), ignoreCase = true)
+                            ))
                         }
                         val lastMsg = thread?.messages?.lastOrNull()?.content
                             ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
@@ -683,8 +717,12 @@ private fun StudentWhatsAppChatList(
                             studentAccent = studentAccent,
                             innerCardBorder = innerCardBorder,
                             onClick = {
-                                val targetId = thread?.id ?: "teacher-${teacher.name.filter { it.isLetter() }.lowercase()}"
-                                onOpenThread(targetId, teacher.name)
+                                val targetThread = thread ?: chatManager.getOrCreateTeacherThread(
+                                    teacherId = teacher.id,
+                                    teacherName = teacher.name,
+                                    subjectName = teacher.subject,
+                                )
+                                onOpenThread(targetThread.id, targetThread.teacherName)
                             },
                         )
 
