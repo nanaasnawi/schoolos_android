@@ -154,16 +154,37 @@ fun RombelStudentsScreen(
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
     val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
 
+    val rombelCount = uiState.availableClasses.size
     val titleText = if (isSupervisionMode) {
-        if (supervisionTab == 0) "Supervisi 13 Rombel PKBM"
-        else if (selectedFilter == "ALL" || selectedFilter.isBlank()) "Pengawasan Seluruh Warga Belajar"
-        else "Warga Belajar ${formatClassName(selectedFilter)}"
+        if (supervisionTab == 0) {
+            if (isPrincipal) {
+                "Supervisi ${rombelCount.takeIf { it > 0 } ?: 13} Rombel PKBM"
+            } else {
+                if (rombelCount > 0) "Supervisi $rombelCount Rombel Diampu" else "Supervisi Rombel Diampu"
+            }
+        } else if (selectedFilter == "ALL" || selectedFilter.isBlank()) {
+            if (isPrincipal) "Pengawasan Seluruh Warga Belajar" else "Warga Belajar Rombel Diampu"
+        } else {
+            "Warga Belajar ${formatClassName(selectedFilter)}"
+        }
     } else "Rekap Warga Belajar & Presensi"
 
     val subtitleText = if (isSupervisionMode) {
-        if (supervisionTab == 0) "${uiState.availableClasses.size} Rombel Belajar • ${students.size} Warga Belajar Terdaftar"
-        else if (selectedFilter == "ALL" || selectedFilter.isBlank()) "${students.size} Warga Belajar Terdaftar • PKBM As-Salafiyah"
-        else "${filteredStudents.size} WB ($maleCount L • $femaleCount P) • ${formatClassName(selectedFilter)}"
+        if (supervisionTab == 0) {
+            if (isPrincipal) {
+                "$rombelCount Rombel Belajar • ${students.size} Warga Belajar Terdaftar"
+            } else {
+                "$rombelCount Rombel Diampu • ${students.size} Warga Belajar Terdaftar"
+            }
+        } else if (selectedFilter == "ALL" || selectedFilter.isBlank()) {
+            if (isPrincipal) {
+                "${students.size} Warga Belajar Terdaftar • PKBM As-Salafiyah"
+            } else {
+                "${students.size} Warga Belajar • $rombelCount Rombel Diampu"
+            }
+        } else {
+            "${filteredStudents.size} WB ($maleCount L • $femaleCount P) • ${formatClassName(selectedFilter)}"
+        }
     } else if (selectedFilter == "ALL" || selectedFilter.isBlank()) {
         if (filteredStudents.isNotEmpty()) "Semua Rombel Diampu • ${filteredStudents.size} WB ($maleCount L • $femaleCount P)"
         else "Semua Rombel Diampu"
@@ -226,7 +247,11 @@ fun RombelStudentsScreen(
                                 modifier = Modifier.size(15.dp)
                             )
                             Text(
-                                text = "Supervisi 13 Rombel",
+                                text = if (isPrincipal) {
+                                    "Supervisi ${rombelCount.takeIf { it > 0 } ?: 13} Rombel"
+                                } else {
+                                    if (rombelCount > 0) "Supervisi $rombelCount Rombel" else "Rombel Diampu"
+                                },
                                 fontSize = 11.5.sp,
                                 fontWeight = if (tab0Selected) FontWeight.Bold else FontWeight.Medium,
                                 color = if (tab0Selected) TeacherNeon else textSecondary
@@ -283,6 +308,7 @@ fun RombelStudentsScreen(
                     classes = uiState.availableClasses,
                     students = students,
                     isLoading = isLoading,
+                    isPrincipal = isPrincipal,
                     onRombelClick = { rombelName ->
                         viewModel.selectClassFilter(rombelName)
                         supervisionTab = 1
@@ -332,7 +358,11 @@ fun RombelStudentsScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             Text(
-                                text = "Ke 13 Rombel",
+                                text = if (isPrincipal) {
+                                    "Ke ${rombelCount.takeIf { it > 0 } ?: 13} Rombel"
+                                } else {
+                                    if (rombelCount > 0) "Ke $rombelCount Rombel" else "Ke Rombel"
+                                },
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = NeonBlue,
@@ -920,6 +950,7 @@ private fun RombelSupervisionView(
     classes: List<com.schoolos.android.domain.model.AcademicClass>,
     students: List<ClassStudent>,
     isLoading: Boolean,
+    isPrincipal: Boolean = false,
     onRombelClick: (String) -> Unit,
 ) {
     if (isLoading && classes.isEmpty()) {
@@ -977,7 +1008,7 @@ private fun RombelSupervisionView(
                                 .padding(horizontal = 8.dp, vertical = 3.dp),
                         ) {
                             Text(
-                                text = "DIREKTORI SUPERVISI ROMBEL",
+                                text = if (isPrincipal) "DIREKTORI SUPERVISI ROMBEL" else "DIREKTORI ROMBEL DIAMPU",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = TeacherNeon,
@@ -986,7 +1017,7 @@ private fun RombelSupervisionView(
                         }
 
                         Text(
-                            text = "${classes.size} Rombel Terdaftar",
+                            text = if (isPrincipal) "${classes.size} Rombel Terdaftar" else "${classes.size} Rombel Diampu",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextSecondary,
