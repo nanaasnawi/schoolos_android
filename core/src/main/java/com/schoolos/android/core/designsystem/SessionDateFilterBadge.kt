@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import java.time.LocalDate
@@ -75,8 +76,9 @@ fun SessionDateFilterBadge(
                         modifier = Modifier.size(16.dp)
                     )
                 }
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Row(
+                        modifier = Modifier.fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
@@ -84,7 +86,10 @@ fun SessionDateFilterBadge(
                             text = formattedDate,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
+                            color = TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false)
                         )
                         Surface(
                             shape = RoundedCornerShape(4.dp),
@@ -96,6 +101,8 @@ fun SessionDateFilterBadge(
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = NeonSuccess,
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 2.dp)
                             )
                         }
@@ -103,7 +110,9 @@ fun SessionDateFilterBadge(
                     Text(
                         text = "Hanya materi/tugas yang tayang pada jadwal sesi ini",
                         fontSize = 11.sp,
-                        color = TextTertiary
+                        color = TextTertiary,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -119,6 +128,8 @@ fun SessionDateFilterBadge(
                     fontSize = 11.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = NeonBlue,
+                    maxLines = 1,
+                    softWrap = false,
                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                 )
             }
