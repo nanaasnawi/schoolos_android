@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.grades
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -645,59 +646,94 @@ private fun StudentGradebookItemCard(
 ) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
-    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
-    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
-    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
-    val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
-    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+
+    val initial = row.name.firstOrNull()?.uppercase() ?: "S"
+    val isPassed = row.finalScore >= 75
 
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
+            .clip(RoundedCornerShape(20.dp))
             .background(cardBg)
-            .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
+            .border(1.dp, cardBorder, RoundedCornerShape(20.dp))
             .padding(14.dp)
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            // Top Row: Student Name, NISN, Rombel Pill, and Status Chip
+            // Top Row: Avatar + Student Name + NISN + Rombel + Status Pill
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                    Text(
-                        text = row.name,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                Row(
+                    modifier = Modifier.weight(1f).padding(end = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Avatar Box
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(
+                                if (isPassed) {
+                                    if (isDark) Color(0xFF064E3B) else Color(0xFFD1FAE5)
+                                } else {
+                                    if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF)
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "NISN: ${row.nisn}",
-                            fontSize = 11.sp,
-                            color = TextTertiary
+                            text = initial,
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = if (isPassed) {
+                                if (isDark) Color(0xFF34D399) else Color(0xFF059669)
+                            } else {
+                                if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5)
+                            }
                         )
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(4.dp))
-                                .background(NeonBlue.copy(alpha = if (isDark) 0.12f else 0.15f))
-                                .border(0.5.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(4.dp))
-                                .padding(horizontal = 6.dp, vertical = 1.dp)
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = row.name,
+                            fontSize = 14.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             Text(
-                                text = row.className,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = NeonBlue
+                                text = "NISN: ${row.nisn}",
+                                fontSize = 11.sp,
+                                color = textTertiary
                             )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .background(if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF))
+                                    .padding(horizontal = 6.dp, vertical = 1.dp)
+                            ) {
+                                Text(
+                                    text = row.className,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5)
+                                )
+                            }
                         }
                     }
                 }
@@ -710,35 +746,30 @@ private fun StudentGradebookItemCard(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isDark) Color(0xFF18181B) else Color(0xFFF8FAFC))
-                    .border(0.5.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
-                    .padding(10.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(innerCardBg)
+                    .border(0.5.dp, innerCardBorder, RoundedCornerShape(12.dp))
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (activeScheme == "B") {
                         // ── SKEMA B (MURNI MODUL KESETARAAN PKBM) ────────────
-                        // Row 1: Sumatif Modul (M1, M2, M3, M4)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            ScoreCell(label = "MODUL 1", value = row.sumatifM1.toInt().toString())
-                            ScoreCell(label = "MODUL 2", value = row.sumatifM2.toInt().toString())
-                            ScoreCell(label = "MODUL 3", value = row.sumatifM3.toInt().toString())
-                            ScoreCell(label = "MODUL 4", value = row.sumatifM4.toInt().toString())
+                            ScoreCell(label = "MODUL 1", value = row.sumatifM1.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
+                            ScoreCell(label = "MODUL 2", value = row.sumatifM2.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
+                            ScoreCell(label = "MODUL 3", value = row.sumatifM3.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
+                            ScoreCell(label = "MODUL 4", value = row.sumatifM4.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
                         }
 
-                        // Divider
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(0.5.dp)
-                                .background(if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = innerCardBorder
                         )
 
-                        // Row 2: Rerata Modul (100%), Nilai Akhir, Predikat, KKTP
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -747,70 +778,83 @@ private fun StudentGradebookItemCard(
                             ScoreCell(
                                 label = "RERATA (100%)",
                                 value = if (row.avgSumatif > 0) String.format(Locale.US, "%.1f", row.avgSumatif) else "-",
-                                isHighlight = true
+                                isHighlight = true,
+                                highlightColor = if (isDark) TeacherNeon else Color(0xFF059669),
+                                textPrimary = textPrimary,
+                                textTertiary = textTertiary,
                             )
                             ScoreCell(
                                 label = "N. AKHIR",
                                 value = if (row.finalScore > 0) row.finalScore.toInt().toString() else "-",
                                 isHighlight = true,
-                                highlightColor = if (row.finalScore >= 75) NeonSuccess else if (row.finalScore > 0) NeonError else TextTertiary
+                                highlightColor = if (row.finalScore >= 75) (if (isDark) NeonSuccess else Color(0xFF16A34A)) else if (row.finalScore > 0) NeonError else textTertiary,
+                                textPrimary = textPrimary,
+                                textTertiary = textTertiary,
                             )
                             ScoreCell(
                                 label = "PREDIKAT",
-                                value = row.letterGrade,
-                                isHighlight = true
+                                value = row.letterGrade.ifBlank { "-" },
+                                isHighlight = true,
+                                highlightColor = if (row.finalScore >= 75) (if (isDark) NeonSuccess else Color(0xFF16A34A)) else textTertiary,
+                                textPrimary = textPrimary,
+                                textTertiary = textTertiary,
                             )
                             ScoreCell(
                                 label = "STATUS KKTP",
                                 value = if (row.finalScore >= 75) "TUNTAS" else if (row.finalScore > 0) "REMEDIAL" else "-",
                                 isHighlight = true,
-                                highlightColor = if (row.finalScore >= 75) NeonSuccess else if (row.finalScore > 0) NeonError else TextTertiary
+                                highlightColor = if (row.finalScore >= 75) (if (isDark) NeonSuccess else Color(0xFF16A34A)) else if (row.finalScore > 0) NeonError else textTertiary,
+                                textPrimary = textPrimary,
+                                textTertiary = textTertiary,
                             )
                         }
                     } else {
                         // ── SKEMA A (STANDAR MERDEKA: 60/20/20) ──────────────
-                        // Row 1: Sumatif Modul (M1, M2, M3, Rerata)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            ScoreCell(label = "M1", value = row.sumatifM1.toInt().toString())
-                            ScoreCell(label = "M2", value = row.sumatifM2.toInt().toString())
-                            ScoreCell(label = "M3", value = row.sumatifM3.toInt().toString())
+                            ScoreCell(label = "M1", value = row.sumatifM1.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
+                            ScoreCell(label = "M2", value = row.sumatifM2.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
+                            ScoreCell(label = "M3", value = row.sumatifM3.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
                             ScoreCell(
-                                label = "RERATA",
+                                label = "RERATA (60%)",
                                 value = if (row.avgSumatif > 0) String.format(Locale.US, "%.1f", row.avgSumatif) else "-",
-                                isHighlight = true
+                                isHighlight = true,
+                                highlightColor = if (isDark) TeacherNeon else Color(0xFF059669),
+                                textPrimary = textPrimary,
+                                textTertiary = textTertiary,
                             )
                         }
 
-                        // Divider
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(0.5.dp)
-                                .background(if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0))
+                        HorizontalDivider(
+                            thickness = 0.5.dp,
+                            color = innerCardBorder
                         )
 
-                        // Row 2: Ujian & Evaluasi Akhir (ATS, SAS, N. Akhir, Predikat)
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            ScoreCell(label = "ATS (20%)", value = row.ats.toInt().toString())
-                            ScoreCell(label = "SAS (20%)", value = row.sas.toInt().toString())
+                            ScoreCell(label = "ATS (20%)", value = row.ats.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
+                            ScoreCell(label = "SAS (20%)", value = row.sas.toInt().toString(), textPrimary = textPrimary, textTertiary = textTertiary)
                             ScoreCell(
                                 label = "N. AKHIR",
                                 value = if (row.finalScore > 0) row.finalScore.toInt().toString() else "-",
                                 isHighlight = true,
-                                highlightColor = if (row.finalScore >= 75) NeonSuccess else if (row.finalScore > 0) NeonError else TextTertiary
+                                highlightColor = if (row.finalScore >= 75) (if (isDark) NeonSuccess else Color(0xFF16A34A)) else if (row.finalScore > 0) NeonError else textTertiary,
+                                textPrimary = textPrimary,
+                                textTertiary = textTertiary,
                             )
                             ScoreCell(
                                 label = "PRED",
-                                value = row.letterGrade,
-                                isHighlight = true
+                                value = row.letterGrade.ifBlank { "-" },
+                                isHighlight = true,
+                                highlightColor = if (row.finalScore >= 75) (if (isDark) NeonSuccess else Color(0xFF16A34A)) else textTertiary,
+                                textPrimary = textPrimary,
+                                textTertiary = textTertiary,
                             )
                         }
                     }
@@ -822,33 +866,31 @@ private fun StudentGradebookItemCard(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.End
             ) {
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isDark) TeacherNeon.copy(alpha = 0.12f) else Color(0xFFD1FAE5))
-                        .border(
-                            0.5.dp,
-                            if (isDark) TeacherNeon.copy(alpha = 0.4f) else Color(0xFF6EE7B7),
-                            RoundedCornerShape(8.dp)
-                        )
-                        .clickable(onClick = onClickDetail)
-                        .padding(horizontal = 12.dp, vertical = 6.dp)
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isDark) TeacherNeon.copy(alpha = 0.14f) else Color(0xFFD1FAE5),
+                    border = BorderStroke(
+                        0.5.dp,
+                        if (isDark) TeacherNeon.copy(alpha = 0.45f) else Color(0xFF6EE7B7)
+                    ),
+                    modifier = Modifier.clickable(onClick = onClickDetail)
                 ) {
                     Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = null,
-                            tint = TeacherNeon,
-                            modifier = Modifier.size(12.dp)
+                            tint = if (isDark) TeacherNeon else Color(0xFF059669),
+                            modifier = Modifier.size(13.dp)
                         )
                         Text(
-                            text = if (activeScheme == "B") "Input Modul & Capaian" else "Detail Capaian",
-                            fontSize = 11.sp,
+                            text = if (activeScheme == "B") "Input Modul & Capaian" else "Detail Capaian & Nilai",
+                            fontSize = 11.5.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TeacherNeon
+                            color = if (isDark) TeacherNeon else Color(0xFF059669)
                         )
                     }
                 }
@@ -862,21 +904,23 @@ private fun ScoreCell(
     label: String,
     value: String,
     isHighlight: Boolean = false,
-    highlightColor: Color = TeacherNeon,
+    highlightColor: Color = Color.Unspecified,
+    textPrimary: Color = Color.Unspecified,
+    textTertiary: Color = Color.Unspecified,
 ) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(
             text = label,
-            fontSize = 9.sp,
+            fontSize = 9.5.sp,
             fontWeight = FontWeight.Medium,
-            color = TextTertiary
+            color = textTertiary
         )
         Spacer(Modifier.height(2.dp))
         Text(
             text = value,
-            fontSize = 12.sp,
+            fontSize = 12.5.sp,
             fontWeight = if (isHighlight) FontWeight.Black else FontWeight.Bold,
-            color = if (isHighlight) highlightColor else TextPrimary
+            color = if (isHighlight) highlightColor else textPrimary
         )
     }
 }
@@ -886,21 +930,21 @@ private fun GradeStatusPill(status: String) {
     val isDark = LocalIsDarkTheme.current
     val (bg, border, text, label) = when (status) {
         "Tuntas KKTP" -> Quad(
-            NeonSuccess.copy(alpha = if (isDark) 0.12f else 0.15f),
-            NeonSuccess.copy(alpha = if (isDark) 0.4f else 0.5f),
-            NeonSuccess,
+            if (isDark) Color(0xFF064E3B).copy(alpha = 0.4f) else Color(0xFFDCFCE7),
+            if (isDark) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFF86EFAC),
+            if (isDark) Color(0xFF34D399) else Color(0xFF16A34A),
             "Tuntas KKTP"
         )
         "Perlu Remedial" -> Quad(
-            NeonError.copy(alpha = if (isDark) 0.12f else 0.15f),
-            NeonError.copy(alpha = if (isDark) 0.4f else 0.5f),
-            NeonError,
+            if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.4f) else Color(0xFFFFE4E6),
+            if (isDark) Color(0xFFEF4444).copy(alpha = 0.5f) else Color(0xFFFDA4AF),
+            if (isDark) Color(0xFFF87171) else Color(0xFFE11D48),
             "Perlu Remedial"
         )
         else -> Quad(
-            if (isDark) Color(0xFF334155).copy(alpha = 0.4f) else Color(0xFFF1F5F9),
-            if (isDark) Color(0xFF64748B).copy(alpha = 0.4f) else Color(0xFFCBD5E1),
-            if (isDark) Color(0xFFCBD5E1) else Color(0xFF475569),
+            if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9),
+            if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0),
+            if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B),
             "Belum Diinput"
         )
     }

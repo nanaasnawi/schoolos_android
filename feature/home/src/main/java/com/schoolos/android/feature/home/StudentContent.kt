@@ -147,11 +147,13 @@ fun LazyListScope.studentContent(
 // ── 0. KARTU SAPAAN PERSONAL (GREETING HERO CARD) ────────────────────────────
 
 @Composable
-private fun StudentGreetingHeroCard(
+internal fun StudentGreetingHeroCard(
     studentName: String,
     studentClass: String,
     studentNisn: String,
     streakDays: Int,
+    subtitle: String = "Siap melanjutkan pembelajaran hari ini? Cek tugas dan jadwal di bawah.",
+    showStreak: Boolean = true,
 ) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -247,7 +249,7 @@ private fun StudentGreetingHeroCard(
 
             // Subtitle
             Text(
-                text = "Siap melanjutkan pembelajaran hari ini? Cek tugas dan jadwal di bawah.",
+                text = subtitle,
                 fontSize = 12.sp,
                 color = textSecondary,
                 lineHeight = 16.sp
@@ -258,21 +260,23 @@ private fun StudentGreetingHeroCard(
             val streakBadgeBorder = if (isDark) Color(0xFFD97706).copy(alpha = 0.45f) else Color(0xFFFDE68A)
             val streakBadgeText = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
 
-            Surface(
-                shape = RoundedCornerShape(12.dp),
-                color = streakBadgeBg,
-                border = BorderStroke(1.dp, streakBadgeBorder)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            if (showStreak) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = streakBadgeBg,
+                    border = BorderStroke(1.dp, streakBadgeBorder)
                 ) {
-                    Text(
-                        text = "🔥 Streak: $effectiveStreak Hari",
-                        color = streakBadgeText,
-                        fontSize = 11.5.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "🔥 Streak: $effectiveStreak Hari",
+                            color = streakBadgeText,
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
         }
@@ -282,7 +286,7 @@ private fun StudentGreetingHeroCard(
 // ── HEADER AKSES UTAMA ────────────────────────────────────────────────────────
 
 @Composable
-private fun HomeAksesUtamaSectionHeader() {
+internal fun HomeAksesUtamaSectionHeader() {
     val isDark = LocalIsDarkTheme.current
     Row(
         modifier = Modifier
@@ -422,7 +426,7 @@ private fun HomeAksesUtamaGrid(
 }
 
 @Composable
-private fun HomeMenuGridCard(
+internal fun HomeMenuGridCard(
     modifier: Modifier = Modifier,
     title: String,
     subtitle: String,
