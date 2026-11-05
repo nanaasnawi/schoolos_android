@@ -213,6 +213,7 @@ fun ProfileScreen(
 
     Scaffold(
         containerColor = screenBg,
+        contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
                 title = "Profil Saya",
@@ -223,10 +224,10 @@ fun ProfileScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(innerPadding)
+                .padding(top = innerPadding.calculateTopPadding())
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 6.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             Spacer(Modifier.height(2.dp))
 
@@ -316,7 +317,7 @@ fun ProfileScreen(
                 onLogoutClick = { showLogoutDialog = true },
             )
 
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(4.dp))
         }
 
         // Fullscreen Avatar Preview Dialog with Floating Camera Button

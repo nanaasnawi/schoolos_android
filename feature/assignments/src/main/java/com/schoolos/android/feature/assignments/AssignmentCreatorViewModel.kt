@@ -334,7 +334,8 @@ class AssignmentCreatorViewModel @Inject constructor(
         instructions: String,
         customMaxScore: Int,
         dueAt: String,
-        classId: String?,
+        classId: String? = null,
+        classIds: List<String> = emptyList(),
         status: String? = null,
         releaseAt: String? = null,
     ) {
@@ -371,23 +372,48 @@ class AssignmentCreatorViewModel @Inject constructor(
                 else -> "QUIZ"
             }
 
-            repository.createAssignment(
-                title = title,
-                description = description,
-                instructions = instructions,
-                maxScore = computedMaxScore,
-                dueAt = dueAt,
-                classId = classId ?: "",
-                assignmentType = assignmentType,
-                questions = validQuestions,
-                status = status,
-                releaseAt = releaseAt,
-            ).onSuccess {
+            val targetList = if (classIds.isNotEmpty()) classIds else listOfNotNull(classId?.ifBlank { null })
+            val effectiveClasses = if (targetList.isNotEmpty()) targetList else listOf("")
+
+            var successCount = 0
+            var lastError: Throwable? = null
+
+            for (cid in effectiveClasses) {
+                // Generate fresh UUIDs for questions and choices per class to avoid DB PK collisions
+                val classQuestions = validQuestions.map { q ->
+                    q.copy(
+                        id = UUID.randomUUID().toString(),
+                        choices = q.choices.map { c ->
+                            c.copy(id = UUID.randomUUID().toString())
+                        }
+                    )
+                }
+
+                val res = repository.createAssignment(
+                    title = title,
+                    description = description,
+                    instructions = instructions,
+                    maxScore = computedMaxScore,
+                    dueAt = dueAt,
+                    classId = cid,
+                    assignmentType = assignmentType,
+                    questions = classQuestions,
+                    status = status,
+                    releaseAt = releaseAt,
+                )
+                if (res.isSuccess) {
+                    successCount++
+                } else {
+                    lastError = res.exceptionOrNull()
+                }
+            }
+
+            if (successCount > 0) {
                 _state.value = _state.value.copy(isLoading = false, success = true)
-            }.onFailure { e ->
+            } else {
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = e.toHumanReadableError("Gagal membuat penugasan baru. Periksa koneksi internet Anda.")
+                    error = lastError?.toHumanReadableError("Gagal membuat penugasan baru. Periksa koneksi internet Anda.")
                 )
             }
         }

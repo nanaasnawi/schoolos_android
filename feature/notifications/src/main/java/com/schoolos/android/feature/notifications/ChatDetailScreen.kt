@@ -125,7 +125,8 @@ fun ChatDetailScreen(
     val thread = threads.find { it.id == threadId }
 
     val isPrincipalAi = threadId.startsWith("ai-principal") || thread?.teacherName?.contains("Kepala Sekolah") == true || initialRecipientName.contains("Kepala Sekolah")
-    val isAiThread = threadId.startsWith("ai-tutor") || threadId.startsWith("ai-principal") || thread?.teacherName?.contains("Guru AI") == true || isPrincipalAi
+    val isTeacherAi = threadId.startsWith("ai-teacher") || (isTeacherMode && (threadId.startsWith("ai-tutor") || threadId.startsWith("ai-teacher") || initialRecipientName.contains("Copilot") || initialRecipientName.contains("AI Copilot")))
+    val isAiThread = threadId.startsWith("ai-tutor") || threadId.startsWith("ai-principal") || threadId.startsWith("ai-teacher") || thread?.teacherName?.contains("Guru AI") == true || isPrincipalAi || isTeacherAi
     var isAiThinking by remember { mutableStateOf(false) }
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
     var isUploadingImage by remember { mutableStateOf(false) }
@@ -179,6 +180,8 @@ fun ChatDetailScreen(
 
     val contactName = if (isPrincipalAi) {
         "AI Analitik Kepala Sekolah"
+    } else if (isTeacherAi) {
+        "AI Copilot Guru"
     } else if (isTeacherMode) {
         thread?.studentName?.ifBlank { null } ?: initialRecipientName.ifBlank { null } ?: "Siswa"
     } else {
@@ -195,6 +198,8 @@ fun ChatDetailScreen(
     val statusText = if (isParticipantOnline) "Aktif" else "Tidak Aktif"
     val contactSubtitle = if (isPrincipalAi) {
         "Asisten Eksekutif Supervisi & Analitik Real-Time • NVIDIA NIM"
+    } else if (isTeacherAi) {
+        "Asisten Pedagogik & Administrasi Guru • Kurikulum Merdeka"
     } else if (isAiThread) {
         "Asisten Pintar 24 Jam • NVIDIA NIM"
     } else if (isTeacherMode) {
@@ -202,7 +207,7 @@ fun ChatDetailScreen(
     } else {
         "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • $statusText"
     }
-    val roleNeon = if (isPrincipalAi) Color(0xFF8B5CF6) else if (isTeacherMode) StudentNeon else TeacherNeon
+    val roleNeon = if (isPrincipalAi) Color(0xFF8B5CF6) else if (isTeacherAi) TeacherNeon else if (isTeacherMode) StudentNeon else TeacherNeon
 
     val rawAvatarUrl = if (isTeacherMode) thread?.studentAvatarUrl else thread?.teacherAvatarUrl
     val fullAvatarUrl = remember(rawAvatarUrl) {
@@ -576,7 +581,7 @@ fun ChatDetailScreen(
                                         color = if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
                                     )
                                     Text(
-                                        text = if (isPrincipalAi) "AI Analitik sedang menganalisis data PKBM..." else "Guru AI sedang meracik penjelasan...",
+                                        text = if (isPrincipalAi) "AI Analitik sedang menganalisis data PKBM..." else if (isTeacherAi) "AI Copilot sedang menyusun saran pembelajaran..." else "Guru AI sedang meracik penjelasan...",
                                         fontSize = 12.sp,
                                         color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA),
                                         fontWeight = FontWeight.Medium
@@ -649,6 +654,47 @@ fun ChatDetailScreen(
                                 label = "💡 Rekomendasi Supervisi Guru",
                                 onClick = {
                                     inputText = "Berikan rekomendasi taktis manajerial kepala sekolah untuk meningkatkan keterlaksanaan sesi belajar dan efektivitas tutor."
+                                }
+                            )
+                        }
+                    } else if (isTeacherAi) {
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "📘 Buat Draf Modul Ajar",
+                                onClick = {
+                                    inputText = "Bantu susunkan draf modul ajar ringkas dan menarik sesuai Kurikulum Merdeka Paket Kesetaraan untuk materi saya."
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "✍️ Buatkan 5 Soal Kuis CBT",
+                                onClick = {
+                                    inputText = "Buatkan 5 butir soal pilihan ganda (PG) beserta kunci jawaban dan pembahasannya yang kontekstual dan berbobot."
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "💬 Ide Feedback Koreksi Tugas",
+                                onClick = {
+                                    inputText = "Berikan inspirasi feedback konstruktif dan memotivasi untuk mengoreksi tugas esai warga belajar yang masih kurang mendalam."
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "🎯 Strategi Remedial Siswa",
+                                onClick = {
+                                    inputText = "Bagaimana strategi remedial dan pendekatan diferensiasi yang efektif bagi siswa yang belum tuntas mencapai KKTP?"
+                                }
+                            )
+                        }
+                        item {
+                            PrincipalChatSuggestionChip(
+                                label = "📋 Rubrik Penilaian Soal Esai",
+                                onClick = {
+                                    inputText = "Bantu buatkan rubrik penilaian holistik berskala 100 untuk penilaian tugas esai reflektif siswa."
                                 }
                             )
                         }
@@ -795,7 +841,7 @@ fun ChatDetailScreen(
                         decorationBox = { innerTextField ->
                             if (inputText.isEmpty()) {
                                 Text(
-                                    text = if (isPrincipalAi) "Tanya AI Analitik Kepala Sekolah..." else if (isAiThread) "Tanya apa saja ke Guru AI..." else "Ketik pesan...",
+                                    text = if (isPrincipalAi) "Tanya AI Analitik Kepala Sekolah..." else if (isTeacherAi) "Tanya AI Copilot Guru seputar modul, kuis, atau evaluasi..." else if (isAiThread) "Tanya apa saja ke Guru AI..." else "Ketik pesan...",
                                     fontSize = 14.sp,
                                     color = textTertiary,
                                 )

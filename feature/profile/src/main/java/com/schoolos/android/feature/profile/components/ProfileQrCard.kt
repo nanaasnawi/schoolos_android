@@ -74,7 +74,7 @@ fun ProfileQrCard(
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(20.dp)
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp)
         ) {
             // Header Row: Title & Role Badge
             Row(
