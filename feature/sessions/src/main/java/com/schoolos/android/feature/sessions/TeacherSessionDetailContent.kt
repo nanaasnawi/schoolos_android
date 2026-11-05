@@ -10,16 +10,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.*
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -30,6 +27,10 @@ import com.schoolos.android.domain.model.LearningSession
 import com.schoolos.android.domain.model.MaterialType
 import com.schoolos.android.domain.model.SessionAttendance
 
+/**
+ * Detail Jadwal (portal guru) — gaya identik dengan beranda siswa & kepala sekolah:
+ * kartu rounded 22dp, pill pastel, header seksi kapital kecil, tanpa gradien.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TeacherSessionDetailContent(
@@ -51,15 +52,27 @@ fun TeacherSessionDetailContent(
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
     val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
-    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
     val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
-    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
-    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val innerBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+    // Pastel palette identik beranda
+    val skyBg = if (isDark) Color(0xFF0C243B) else Color(0xFFE0F2FE)
+    val skyFg = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val greenBg = if (isDark) Color(0xFF0A2B1D) else Color(0xFFDCFCE7)
+    val greenFg = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+    val purpleBg = if (isDark) Color(0xFF261447) else Color(0xFFF3E8FF)
+    val purpleFg = if (isDark) Color(0xFFA78BFA) else Color(0xFF9333EA)
+    val amberBg = if (isDark) Color(0xFF31220A) else Color(0xFFFEF3C7)
+    val amberFg = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+    val redBg = if (isDark) Color(0xFF3A0F14) else Color(0xFFFEE2E2)
+    val redFg = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
 
     val effectiveStudents = if (students.isNotEmpty()) {
         students
     } else {
-        attendance.mapIndexed { idx, it ->
+        attendance.map {
             StudentAttendanceUiItem(
                 studentId = it.studentId,
                 studentName = "Peserta Didik",
@@ -71,590 +84,333 @@ fun TeacherSessionDetailContent(
         }
     }
     val presentCount = effectiveStudents.count { it.status.lowercase() == "present" }
-    val absentCount = effectiveStudents.count {
-        it.status.lowercase() in listOf("absent", "sick", "excused")
-    }
+    val absentCount = effectiveStudents.count { it.status.lowercase() in listOf("absent", "sick", "excused") }
     val totalCount = effectiveStudents.size
     val attendanceRate = if (totalCount > 0) (presentCount * 100 / totalCount) else 0
     val sessionPeriod = formatSessionPeriod(session.scheduledAt)
 
     val rawSubject = session.subjectName ?: session.notes ?: "Pelajaran"
     val subject = rawSubject.substringBefore(" • ").substringBefore(" (Ruang").trim()
-    val roomText = listOfNotNull(session.room ?: "Ruang Kelas", session.className).joinToString(" • ")
+    val roomText = session.room?.takeIf { it.isNotBlank() } ?: "Ruang Kelas"
+    val className = session.className?.trim().orEmpty()
     val icon = subjectIcon(subject)
 
     val timeText = session.scheduledAt?.let {
         try {
-            val instant = java.time.Instant.parse(it)
-            val zdt = instant.atZone(java.time.ZoneId.of("Asia/Jakarta"))
-            val endTimeStr = session.endedAt?.let { end ->
-                val eZdt = java.time.Instant.parse(end).atZone(java.time.ZoneId.of("Asia/Jakarta"))
-                String.format(java.util.Locale.US, "%02d.%02d", eZdt.hour, eZdt.minute)
-            } ?: ""
-            if (endTimeStr.isNotBlank()) {
-                String.format(java.util.Locale.US, "%02d.%02d — %s WIB", zdt.hour, zdt.minute, endTimeStr)
+            val zone = java.time.ZoneId.of("Asia/Jakarta")
+            val zdt = java.time.Instant.parse(it).atZone(zone)
+            val endStr = session.endedAt?.let { end ->
+                val e = java.time.Instant.parse(end).atZone(zone)
+                String.format(java.util.Locale.US, "%02d.%02d", e.hour, e.minute)
+            }
+            if (!endStr.isNullOrBlank()) {
+                String.format(java.util.Locale.US, "%02d.%02d – %s WIB", zdt.hour, zdt.minute, endStr)
             } else {
                 String.format(java.util.Locale.US, "%02d.%02d WIB", zdt.hour, zdt.minute)
             }
         } catch (_: Exception) { "08.00 WIB" }
     } ?: "08.00 WIB"
 
-    Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+    val subjectArg = session.subjectName?.trim().orEmpty()
 
-        // ── 1. UNIFIED EXECUTIVE SESSION CARD (ZERO GRADIENT, ZERO DUPLICATION) ──
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+
+        // ── 1. HERO SESI ───────────────────────────────────────────────
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
             color = cardBg,
-            border = BorderStroke(0.5.dp, cardBorder)
+            border = BorderStroke(1.dp, cardBorder),
+            shadowElevation = 1.dp,
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(18.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp)
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // Top Header Row: Icon + Subject + Class + Time Badge
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Squircle Icon Container (Zero gradient)
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(RoundedCornerShape(12.dp))
-                                .background(innerCardBg)
-                                .border(0.5.dp, innerCardBorder, RoundedCornerShape(12.dp)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = icon,
-                                contentDescription = null,
-                                tint = NeonBlue,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        }
-
-                        Spacer(Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = subject,
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = roomText,
-                                fontSize = 12.sp,
-                                color = textSecondary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                        }
+                    if (className.isNotBlank()) {
+                        SessionPill(text = className.uppercase(), bg = skyBg, fg = skyFg, border = skyFg.copy(alpha = 0.35f))
                     }
-
-                    Spacer(Modifier.width(8.dp))
-
-                    // Period & Time Badge
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = innerCardBg,
-                        border = BorderStroke(0.5.dp, innerCardBorder)
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalAlignment = Alignment.End
-                        ) {
-                            Text(
-                                text = sessionPeriod,
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonBlue
-                            )
-                            Text(
-                                text = timeText,
-                                fontSize = 10.sp,
-                                color = textTertiary
-                            )
-                        }
-                    }
+                    SessionPill(
+                        text = "$sessionPeriod • $timeText",
+                        bg = if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9),
+                        fg = textSecondary,
+                        border = null,
+                    )
                 }
 
-                HorizontalDivider(color = innerCardBorder, thickness = 0.5.dp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(skyBg),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(icon, contentDescription = null, tint = skyFg, modifier = Modifier.size(24.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = subject,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
+                            letterSpacing = (-0.3).sp,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = roomText,
+                            fontSize = 12.sp,
+                            color = textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    StatusChip(label = session.status)
+                }
 
-                // Attendance Metrics Row (3 Clean Cards, Zero Gradients)
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    AttendanceMetricBox(
-                        label = "HADIR",
-                        value = presentCount.toString(),
-                        color = NeonSuccess,
-                        modifier = Modifier.weight(1f)
-                    )
-                    AttendanceMetricBox(
-                        label = "TIDAK HADIR",
-                        value = absentCount.toString(),
-                        color = NeonError,
-                        modifier = Modifier.weight(1f)
-                    )
-                    AttendanceMetricBox(
-                        label = "KEHADIRAN",
-                        value = "$attendanceRate%",
-                        color = NeonBlue,
-                        modifier = Modifier.weight(1f)
-                    )
+                    AttendanceMetricBox("HADIR", presentCount.toString(), greenFg, greenBg, Modifier.weight(1f))
+                    AttendanceMetricBox("TIDAK HADIR", absentCount.toString(), redFg, redBg, Modifier.weight(1f))
+                    AttendanceMetricBox("KEHADIRAN", "$attendanceRate%", skyFg, skyBg, Modifier.weight(1f))
                 }
 
-                // Solid Linear Progress Bar (No gradient)
                 if (totalCount > 0) {
-                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         LinearProgressIndicator(
-                            progress = { if (totalCount > 0) (presentCount.toFloat() / totalCount).coerceIn(0f, 1f) else 0f },
+                            progress = { (presentCount.toFloat() / totalCount).coerceIn(0f, 1f) },
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .height(5.dp)
+                                .height(6.dp)
                                 .clip(RoundedCornerShape(3.dp)),
-                            color = NeonSuccess,
-                            trackColor = innerCardBg
+                            color = greenFg,
+                            trackColor = innerBg,
                         )
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Text(
-                                text = "$presentCount dari $totalCount siswa hadir",
-                                fontSize = 11.sp,
-                                color = textTertiary
-                            )
-                            StatusChip(label = session.status)
-                        }
+                        Text(
+                            text = "$presentCount dari $totalCount siswa hadir",
+                            fontSize = 11.sp,
+                            color = textTertiary,
+                        )
                     }
                 }
             }
         }
 
-        // ── 2. RESOURCE MANAGEMENT ACTIONS ──
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(NeonBlue)
-                )
-                Text(
-                    text = "Kelola Sumber Daya Kelas",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textPrimary
-                )
-            }
-            Text(
-                text = "Pintasan Aksi",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Medium,
-                color = textTertiary
-            )
-        }
-
+        // ── 2. AKSES KELAS ─────────────────────────────────────────────
+        SessionSectionHeader("AKSES KELAS", textTertiary)
         Row(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ResourceActionButton(
+            ResourceActionCard(
                 label = "Beri Tugas",
+                action = "Buat tugas",
                 iconRes = CoreR.drawable.ic_modern_tasks,
-                accentColor = StudentNeon,
+                tint = skyFg, tintBg = skyBg,
+                cardBg = cardBg, cardBorder = cardBorder,
+                textPrimary = textPrimary, textSecondary = textSecondary,
                 modifier = Modifier.weight(1f),
-                onClick = { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
+                onClick = { onOpenAssignments(subjectArg) },
             )
-            ResourceActionButton(
+            ResourceActionCard(
                 label = "Buat Kuis",
+                action = "Kelola kuis",
                 iconRes = CoreR.drawable.ic_modern_quiz,
-                accentColor = NeonSuccess,
+                tint = greenFg, tintBg = greenBg,
+                cardBg = cardBg, cardBorder = cardBorder,
+                textPrimary = textPrimary, textSecondary = textSecondary,
                 modifier = Modifier.weight(1f),
-                onClick = { onOpenQuizzes(session.subjectName?.trim().orEmpty()) }
+                onClick = { onOpenQuizzes(subjectArg) },
             )
-            ResourceActionButton(
+            ResourceActionCard(
                 label = "Unggah Materi",
+                action = "Bahan ajar",
                 iconRes = CoreR.drawable.ic_modern_book,
-                accentColor = NeonBlue,
+                tint = purpleFg, tintBg = purpleBg,
+                cardBg = cardBg, cardBorder = cardBorder,
+                textPrimary = textPrimary, textSecondary = textSecondary,
                 modifier = Modifier.weight(1f),
-                onClick = { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
+                onClick = { onOpenMaterials(subjectArg) },
             )
         }
 
-        // ── 2.5 REAL-TIME TODAY'S SESSION MATERIALS & ASSIGNMENTS ──
+        // ── 3. AKTIVITAS SESI INI ──────────────────────────────────────
         if (todayMaterials.isNotEmpty() || todayAssignments.isNotEmpty()) {
+            SessionSectionHeader("AKTIVITAS SESI INI", textTertiary)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
-                border = BorderStroke(0.5.dp, cardBorder)
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = 1.dp,
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(NeonSuccess)
-                            )
-                            Text(
-                                text = "Bahan Ajar & Tugas Sesi Ini",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary
-                            )
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = NeonSuccess.copy(alpha = 0.15f),
-                            border = BorderStroke(0.5.dp, NeonSuccess.copy(alpha = 0.3f))
-                        ) {
-                            Text(
-                                text = "Real-Time Hari Ini",
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = NeonSuccess,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                            )
-                        }
-                    }
-
+                Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                    val rows = todayMaterials.size + todayAssignments.size
+                    var index = 0
                     todayMaterials.forEach { mat ->
                         val isVideo = mat.materialType == MaterialType.VIDEO ||
                             mat.mediaUrl?.contains("youtube", ignoreCase = true) == true ||
-                            mat.mediaUrl?.contains("youtu.be", ignoreCase = true) == true ||
-                            mat.title.contains("video", ignoreCase = true)
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = innerCardBg,
-                            border = BorderStroke(0.5.dp, innerCardBorder),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    modifier = Modifier.weight(1f),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(if (isVideo) CoreR.drawable.ic_modern_video else CoreR.drawable.ic_modern_book),
-                                        contentDescription = null,
-                                        tint = if (isVideo) NeonWarning else NeonBlue,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Column {
-                                        Text(
-                                            text = mat.title,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = textPrimary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = if (isVideo) "Video Pelajaran • Real-Time Sesi" else "Bahan Bacaan • Real-Time Sesi",
-                                            fontSize = 10.sp,
-                                            color = if (isVideo) NeonWarning else NeonBlue
-                                        )
-                                    }
-                                }
-                                Icon(
-                                    painter = painterResource(CoreR.drawable.ic_modern_chevron_right),
-                                    contentDescription = null,
-                                    tint = textTertiary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
+                            mat.mediaUrl?.contains("youtu.be", ignoreCase = true) == true
+                        ActivityRow(
+                            title = mat.title,
+                            caption = if (isVideo) "Video pelajaran" else "Bahan bacaan",
+                            iconRes = if (isVideo) CoreR.drawable.ic_modern_video else CoreR.drawable.ic_modern_book,
+                            tint = if (isVideo) amberFg else purpleFg,
+                            tintBg = if (isVideo) amberBg else purpleBg,
+                            textPrimary = textPrimary, textSecondary = textSecondary, textTertiary = textTertiary,
+                            onClick = { onOpenMaterials(subjectArg) },
+                        )
+                        index++
+                        if (index < rows) HorizontalDivider(Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = cardBorder)
                     }
-
                     todayAssignments.forEach { assign ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = innerCardBg,
-                            border = BorderStroke(0.5.dp, innerCardBorder),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.SpaceBetween
-                            ) {
-                                Row(
-                                    modifier = Modifier.weight(1f),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    Icon(
-                                        painter = painterResource(CoreR.drawable.ic_modern_tasks),
-                                        contentDescription = null,
-                                        tint = StudentNeon,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Column {
-                                        Text(
-                                            text = assign.title,
-                                            fontSize = 12.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = textPrimary,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis
-                                        )
-                                        Text(
-                                            text = "Tugas Sesi Hari Ini • Maks ${assign.maxScore} Poin",
-                                            fontSize = 10.sp,
-                                            color = StudentNeon
-                                        )
-                                    }
-                                }
-                                Icon(
-                                    painter = painterResource(CoreR.drawable.ic_modern_chevron_right),
-                                    contentDescription = null,
-                                    tint = textTertiary,
-                                    modifier = Modifier.size(14.dp)
-                                )
-                            }
-                        }
+                        ActivityRow(
+                            title = assign.title,
+                            caption = "Tugas • Maks ${assign.maxScore} poin",
+                            iconRes = CoreR.drawable.ic_modern_tasks,
+                            tint = skyFg, tintBg = skyBg,
+                            textPrimary = textPrimary, textSecondary = textSecondary, textTertiary = textTertiary,
+                            onClick = { onOpenAssignments(subjectArg) },
+                        )
+                        index++
+                        if (index < rows) HorizontalDivider(Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = cardBorder)
                     }
                 }
             }
         }
 
-        // ── 3. ATTENDANCE ROSTER HEADER & ACTIONS ──
+        // ── 4. PRESENSI SISWA ──────────────────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(start = 4.dp, top = 6.dp),
+                .padding(horizontal = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    text = "Rekap Presensi Siswa",
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textPrimary
-                )
-                if (totalCount > 0) {
-                    Spacer(Modifier.width(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = innerCardBg,
-                        border = BorderStroke(0.5.dp, innerCardBorder)
-                    ) {
-                        Text(
-                            text = "$totalCount Siswa",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = NeonBlue,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                        )
-                    }
-                }
+            Text(
+                text = "PRESENSI SISWA",
+                fontSize = 12.sp,
+                fontWeight = FontWeight.ExtraBold,
+                letterSpacing = 0.5.sp,
+                color = textTertiary,
+            )
+            if (totalCount > 0) {
+                SessionPill(text = "$totalCount Siswa", bg = skyBg, fg = skyFg, border = null)
             }
         }
 
         if (effectiveStudents.isNotEmpty()) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // Button Tandai Hadir Semua
                 Surface(
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp)
+                        .height(44.dp)
                         .clickable(enabled = !isBulkSaving, onClick = onMarkAllPresent),
-                    shape = RoundedCornerShape(10.dp),
-                    color = innerCardBg,
-                    border = BorderStroke(0.5.dp, innerCardBorder)
+                    shape = RoundedCornerShape(14.dp),
+                    color = greenBg,
+                    border = BorderStroke(1.dp, greenFg.copy(alpha = 0.35f)),
                 ) {
                     Row(
                         modifier = Modifier.fillMaxSize(),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
+                        horizontalArrangement = Arrangement.Center,
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DoneAll,
-                            contentDescription = null,
-                            tint = NeonSuccess,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Default.DoneAll, contentDescription = null, tint = greenFg, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Hadir Semua",
-                            color = NeonSuccess,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Hadir Semua", color = greenFg, fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-
-                // Button Simpan Presensi (Solid button, zero gradient)
                 Button(
                     onClick = onSaveAll,
                     enabled = !isBulkSaving,
                     modifier = Modifier
                         .weight(1f)
-                        .height(40.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = NeonBlue,
-                        contentColor = Color.White
-                    )
+                        .height(44.dp),
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = skyFg, contentColor = Color.White),
                 ) {
                     if (isBulkSaving) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(14.dp),
-                            color = Color.White,
-                            strokeWidth = 2.dp
-                        )
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), color = Color.White, strokeWidth = 2.dp)
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Menyimpan...",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Menyimpan...", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                     } else {
-                        Icon(
-                            imageVector = Icons.Default.Save,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp)
-                        )
+                        Icon(Icons.Default.Save, contentDescription = null, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = "Simpan Presensi",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
+                        Text("Simpan Presensi", fontSize = 12.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }
         }
 
-        // ── 4. STUDENT ATTENDANCE ROSTER LIST ──
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(22.dp),
             color = cardBg,
-            border = BorderStroke(0.5.dp, cardBorder)
+            border = BorderStroke(1.dp, cardBorder),
+            shadowElevation = 1.dp,
         ) {
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                if (effectiveStudents.isEmpty()) {
-                    Column(
+            if (effectiveStudents.isEmpty()) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(28.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                            .size(48.dp)
+                            .clip(CircleShape)
+                            .background(skyBg),
+                        contentAlignment = Alignment.Center,
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.EventAvailable,
-                            contentDescription = null,
-                            tint = TextTertiary,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Text(
-                            text = "Data presensi belum tersedia",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Presensi akan muncul setelah sesi dimulai.",
-                            fontSize = 11.sp,
-                            color = TextTertiary
-                        )
+                        Icon(Icons.Default.EventAvailable, contentDescription = null, tint = skyFg, modifier = Modifier.size(24.dp))
                     }
-                } else {
+                    Text("Data presensi belum tersedia", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = textPrimary)
+                    Text(
+                        "Presensi akan muncul setelah sesi dimulai.",
+                        fontSize = 11.5.sp,
+                        color = textTertiary,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+            } else {
+                Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)) {
                     effectiveStudents.forEachIndexed { idx, student ->
-                        if (idx > 0) {
-                            HorizontalDivider(
-                                color = cardBorder,
-                                thickness = 0.5.dp,
-                                modifier = Modifier.padding(vertical = 4.dp)
-                            )
-                        }
-                        val currentStatus = student.status.lowercase()
-
+                        if (idx > 0) HorizontalDivider(thickness = 0.5.dp, color = cardBorder)
+                        val current = student.status.lowercase()
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            val initial = student.studentName.firstOrNull()?.uppercase() ?: "${idx + 1}"
-                            // Avatar Box
                             Box(
                                 modifier = Modifier
-                                    .size(36.dp)
-                                    .clip(RoundedCornerShape(10.dp))
-                                    .background(innerCardBg)
-                                    .border(0.5.dp, innerCardBorder, RoundedCornerShape(10.dp)),
-                                contentAlignment = Alignment.Center
+                                    .size(38.dp)
+                                    .clip(CircleShape)
+                                    .background(skyBg),
+                                contentAlignment = Alignment.Center,
                             ) {
                                 Text(
-                                    text = initial,
-                                    fontSize = 13.sp,
+                                    text = student.studentName.firstOrNull()?.uppercase() ?: "${idx + 1}",
+                                    fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = textPrimary
+                                    color = skyFg,
                                 )
                             }
-
                             Spacer(Modifier.width(10.dp))
-
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
                                     text = student.studentName,
@@ -662,62 +418,65 @@ fun TeacherSessionDetailContent(
                                     fontWeight = FontWeight.Bold,
                                     color = textPrimary,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    overflow = TextOverflow.Ellipsis,
                                 )
-                                val subText = student.nisn?.let { "NISN: $it" } ?: "ID: ${student.studentId.take(8)}"
                                 Text(
-                                    text = subText,
+                                    text = student.nisn?.let { "NISN: $it" } ?: "ID: ${student.studentId.take(8)}",
                                     fontSize = 10.5.sp,
-                                    color = textTertiary
+                                    color = textTertiary,
                                 )
                             }
-
                             Spacer(Modifier.width(8.dp))
-
-                            // 4 Segmented Attendance Buttons: H, S, I, A (High Contrast, Bold, Zero Gradient)
                             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                                AttendanceStatusButton(
-                                    label = "H",
-                                    selected = currentStatus == "present",
-                                    activeColor = NeonSuccess,
-                                    inactiveBg = innerCardBg,
-                                    inactiveBorder = innerCardBorder,
-                                    inactiveText = textSecondary,
-                                    onClick = { onUpdateAttendance(student.studentId, "present") }
-                                )
-                                AttendanceStatusButton(
-                                    label = "S",
-                                    selected = currentStatus == "sick",
-                                    activeColor = NeonBlue,
-                                    inactiveBg = innerCardBg,
-                                    inactiveBorder = innerCardBorder,
-                                    inactiveText = textSecondary,
-                                    onClick = { onUpdateAttendance(student.studentId, "sick") }
-                                )
-                                AttendanceStatusButton(
-                                    label = "I",
-                                    selected = currentStatus == "excused",
-                                    activeColor = NeonWarning,
-                                    inactiveBg = innerCardBg,
-                                    inactiveBorder = innerCardBorder,
-                                    inactiveText = textSecondary,
-                                    onClick = { onUpdateAttendance(student.studentId, "excused") }
-                                )
-                                AttendanceStatusButton(
-                                    label = "A",
-                                    selected = currentStatus == "absent",
-                                    activeColor = NeonError,
-                                    inactiveBg = innerCardBg,
-                                    inactiveBorder = innerCardBorder,
-                                    inactiveText = textSecondary,
-                                    onClick = { onUpdateAttendance(student.studentId, "absent") }
-                                )
+                                AttendanceStatusButton("H", current == "present", greenFg, innerBg, innerBorder, textSecondary) {
+                                    onUpdateAttendance(student.studentId, "present")
+                                }
+                                AttendanceStatusButton("S", current == "sick", skyFg, innerBg, innerBorder, textSecondary) {
+                                    onUpdateAttendance(student.studentId, "sick")
+                                }
+                                AttendanceStatusButton("I", current == "excused", amberFg, innerBg, innerBorder, textSecondary) {
+                                    onUpdateAttendance(student.studentId, "excused")
+                                }
+                                AttendanceStatusButton("A", current == "absent", redFg, innerBg, innerBorder, textSecondary) {
+                                    onUpdateAttendance(student.studentId, "absent")
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun SessionSectionHeader(text: String, color: Color) {
+    Text(
+        text = text,
+        fontSize = 12.sp,
+        fontWeight = FontWeight.ExtraBold,
+        letterSpacing = 0.5.sp,
+        color = color,
+        modifier = Modifier.padding(horizontal = 2.dp),
+    )
+}
+
+@Composable
+private fun SessionPill(text: String, bg: Color, fg: Color, border: Color?) {
+    Surface(
+        shape = RoundedCornerShape(8.dp),
+        color = bg,
+        border = border?.let { BorderStroke(0.5.dp, it) },
+    ) {
+        Text(
+            text = text,
+            color = fg,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
+        )
     }
 }
 
@@ -726,92 +485,132 @@ private fun AttendanceMetricBox(
     label: String,
     value: String,
     color: Color,
+    bg: Color,
     modifier: Modifier = Modifier,
 ) {
-    val isDark = LocalIsDarkTheme.current
-    val bg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
-    val border = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
-    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(bg)
+            .padding(vertical = 10.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(text = value, fontSize = 19.sp, fontWeight = FontWeight.ExtraBold, color = color)
+        Spacer(Modifier.height(2.dp))
+        Text(
+            text = label,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.3.sp,
+            color = color.copy(alpha = 0.8f),
+            maxLines = 1,
+        )
+    }
+}
 
+@Composable
+private fun ResourceActionCard(
+    label: String,
+    action: String,
+    iconRes: Int,
+    tint: Color,
+    tintBg: Color,
+    cardBg: Color,
+    cardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
     Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(10.dp),
-        color = bg,
-        border = BorderStroke(0.5.dp, border)
+        modifier = modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = 1.dp,
     ) {
         Column(
-            modifier = Modifier.padding(vertical = 10.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Text(
-                text = value,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = color
-            )
-            Spacer(Modifier.height(2.dp))
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(tintBg),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+            }
             Text(
                 text = label,
-                fontSize = 9.sp,
+                fontSize = 12.5.sp,
                 fontWeight = FontWeight.Bold,
-                color = textTertiary
+                color = textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Center,
+            )
+            Text(
+                text = "$action →",
+                fontSize = 10.5.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = tint,
+                maxLines = 1,
+                textAlign = TextAlign.Center,
             )
         }
     }
 }
 
 @Composable
-private fun ResourceActionButton(
-    label: String,
-    icon: ImageVector? = null,
-    iconRes: Int? = null,
-    accentColor: Color,
-    modifier: Modifier = Modifier,
+private fun ActivityRow(
+    title: String,
+    caption: String,
+    iconRes: Int,
+    tint: Color,
+    tintBg: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
     onClick: () -> Unit,
 ) {
-    val isDark = LocalIsDarkTheme.current
-    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
-
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 8.dp, horizontal = 4.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+            .padding(horizontal = 14.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(46.dp)
-                .clip(RoundedCornerShape(13.dp))
-                .background(accentColor.copy(alpha = 0.14f))
-                .border(1.dp, accentColor.copy(alpha = 0.28f), RoundedCornerShape(13.dp)),
-            contentAlignment = Alignment.Center
+                .size(38.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(tintBg),
+            contentAlignment = Alignment.Center,
         ) {
-            if (iconRes != null) {
-                Icon(
-                    painter = painterResource(iconRes),
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(22.dp)
-                )
-            } else if (icon != null) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(22.dp)
-                )
-            }
+            Icon(painterResource(iconRes), contentDescription = null, tint = tint, modifier = Modifier.size(18.dp))
         }
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = textPrimary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            textAlign = TextAlign.Center
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(text = caption, fontSize = 11.sp, color = textSecondary)
+        }
+        Icon(
+            painter = painterResource(CoreR.drawable.ic_modern_chevron_right),
+            contentDescription = null,
+            tint = textTertiary,
+            modifier = Modifier.size(14.dp),
         )
     }
 }
@@ -828,20 +627,17 @@ private fun AttendanceStatusButton(
 ) {
     Surface(
         onClick = onClick,
-        shape = RoundedCornerShape(8.dp),
+        shape = RoundedCornerShape(10.dp),
         color = if (selected) activeColor else inactiveBg,
-        border = BorderStroke(
-            0.5.dp,
-            if (selected) activeColor else inactiveBorder
-        ),
-        modifier = Modifier.size(32.dp)
+        border = BorderStroke(0.5.dp, if (selected) activeColor else inactiveBorder),
+        modifier = Modifier.size(32.dp),
     ) {
         Box(contentAlignment = Alignment.Center) {
             Text(
                 text = label,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.ExtraBold,
-                color = if (selected) Color.White else inactiveText
+                color = if (selected) Color.White else inactiveText,
             )
         }
     }

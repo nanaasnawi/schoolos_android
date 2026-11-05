@@ -51,6 +51,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -297,8 +298,11 @@ fun TeacherChatScreen(
 
                 if (!isTeacherMode) {
                     // ── SISWA MODE: WHATSAPP-STYLE DIRECT TEACHER CHAT LIST ──
+                    val directoryVm: TeacherDirectoryViewModel = hiltViewModel()
+                    val directory by directoryVm.state.collectAsState()
                     StudentWhatsAppChatList(
-                        teachers = OfficialTeachersList,
+                        teachers = directory.teachers,
+                        isDirectoryLoading = directory.isLoading,
                         threads = threads,
                         searchQuery = searchQuery,
                         chatManager = chatManager,
@@ -520,131 +524,10 @@ data class TeacherContactItem(
     val roleTitle: String = "Tutor Pengampu",
 )
 
-private val OfficialTeachersList = listOf(
-    TeacherContactItem(
-        id = "01a096e3-cb9d-7cf1-b63e-777afa38f52c",
-        userId = "01a096e3-cb99-7063-b001-70403d24a611",
-        name = "ASEP RIFAI, S.Pd",
-        subject = "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
-        roleTitle = "Tutor IPAS",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cba6-7852-9278-a2cdbc71dc35",
-        userId = "01a096e3-cba1-76e2-b4a0-8ecbb3c344fe",
-        name = "ASY SYIFA RAHMAH IHSANI, S.Pd",
-        subject = "Bahasa Inggris",
-        roleTitle = "Tutor Bahasa Inggris",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cb94-7872-8469-769d08a68872",
-        userId = "01a096e3-cb87-7b33-83d1-778bf63b2e26",
-        name = "AMIN LISANA, S.Pd",
-        subject = "Bahasa Indonesia",
-        roleTitle = "Tutor Bahasa Indonesia",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cbce-7a72-86d2-aa65f1b3b273",
-        userId = "01a096e3-cbca-7040-b410-4d8e19472e31",
-        name = "FITRI NAFISAH, S.Pd",
-        subject = "Bahasa Cirebon & Ekonomi",
-        roleTitle = "Tutor B. Cirebon & Ekonomi",
-    ),
-    TeacherContactItem(
-        id = "01a0e6d6-2b77-7b21-ae3f-ae0d88d2ca12",
-        userId = "01a0e6d6-2b77-7b21-ae3f-ae0d88d2ca12",
-        name = "Siti Muniroh, S.Pd",
-        subject = "Pendidikan Pancasila & Karakter",
-        roleTitle = "Kepala PKBM & Tutor Pamong",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cc24-7fb2-9e49-b22fc9518fa3",
-        userId = "01a096e3-cc21-71c2-b1ef-0034c765d2fd",
-        name = "TAUFIQ HIDAYAT, S.Pd",
-        subject = "Geografi",
-        roleTitle = "Tutor Geografi",
-    ),
-    TeacherContactItem(
-        id = "4294c1b1-20a7-42a8-8c68-982abdab0bad",
-        userId = "67a051e6-5d99-4623-bc53-7a5aed4d4065",
-        name = "HUSNUL CHATIM, S.Pd",
-        subject = "Seni Budaya",
-        roleTitle = "Tutor Seni Budaya",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cbb8-7681-9f3c-80cd7a560152",
-        userId = "01a096e3-cbb3-7321-93ab-af835a60e728",
-        name = "EHA MEIDA KARTIKA, S.Pd",
-        subject = "Pendidikan Agama Islam",
-        roleTitle = "Tutor PAI & Budi Pekerti",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cbbf-77d0-af0e-6df318e9268b",
-        userId = "01a096e3-cbbb-7343-ba60-b5178c3763eb",
-        name = "ESI ROKESI, S.Pd",
-        subject = "Ilmu Pengetahuan Alam (IPA)",
-        roleTitle = "Tutor IPA",
-    ),
-    TeacherContactItem(
-        id = "19ae8622-11e9-4d86-ae4c-3c36a736140c",
-        userId = "a5d83020-51e8-4bdb-956f-96c887aa733c",
-        name = "AMEILIANI DWI IRAFANISYAH, S.Pd",
-        subject = "Matematika (Umum)",
-        roleTitle = "Tutor Matematika",
-    ),
-    TeacherContactItem(
-        id = "46ce30ba-b618-42d9-8d6d-31d698331353",
-        userId = "01a096e3-cbd9-78d3-8a4d-54e97cb12b92",
-        name = "IKIN BAIHAKI, S.Kom",
-        subject = "Keterampilan Komputer",
-        roleTitle = "Tutor TIK & Komputer",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cbed-74e2-b54b-0f01e51d40c7",
-        userId = "01a096e3-cbe8-7760-9580-06cc32b8ddf5",
-        name = "KHAERIYAH, S.Pd",
-        subject = "Bahasa Indonesia",
-        roleTitle = "Tutor Bahasa Indonesia",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cbf5-7041-a07c-720d92034dfa",
-        userId = "01a096e3-cbf1-7923-acc8-1b03dbe6e0e1",
-        name = "KRISTIANTI, S.Pd",
-        subject = "Pendidikan Pancasila",
-        roleTitle = "Tutor Pancasila",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cbfc-7ae0-8297-289feca8aa6b",
-        userId = "01a096e3-cbf8-7b31-9bc3-e1f21e9593c3",
-        name = "KUSWANTO ADI WIJAYA, S.Pd",
-        subject = "Matematika (Umum)",
-        roleTitle = "Tutor Matematika",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cc0b-7b43-8e8e-77273797f48d",
-        userId = "01a096e3-cc00-7811-9637-d963174399fd",
-        name = "ROHMANA, S.Pd",
-        subject = "Sosiologi",
-        roleTitle = "Tutor Sosiologi",
-    ),
-    TeacherContactItem(
-        id = "01a096e3-cc1e-76b0-a545-2c05bff9ee77",
-        userId = "01a096e3-cc1a-7723-ac00-ecc93ba92dfd",
-        name = "SRI MULYANI, S.Ag",
-        subject = "Pendidikan Agama Islam",
-        roleTitle = "Tutor PAI",
-    ),
-    TeacherContactItem(
-        id = "edbfc3dd-258e-48ef-86dd-957beaa56b82",
-        userId = "e98287fc-cf9b-4017-b41c-dbb2a68295ed",
-        name = "SUSILAWATI, S.Pd",
-        subject = "Keterampilan Fungsional",
-        roleTitle = "Tutor Keterampilan",
-    ),
-)
-
 @Composable
 private fun StudentWhatsAppChatList(
     teachers: List<TeacherContactItem>,
+    isDirectoryLoading: Boolean,
     threads: List<ChatThread>,
     searchQuery: String,
     chatManager: ChatManager,
@@ -707,7 +590,11 @@ private fun StudentWhatsAppChatList(
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
-                        text = "Guru atau mata pelajaran '$searchQuery' tidak ditemukan",
+                        text = when {
+                            isDirectoryLoading -> "Memuat daftar guru..."
+                            searchQuery.isBlank() -> "Belum ada guru terdaftar"
+                            else -> "Guru atau mata pelajaran '$searchQuery' tidak ditemukan"
+                        },
                         fontSize = 12.5.sp,
                         color = textTertiary,
                         textAlign = TextAlign.Center,
