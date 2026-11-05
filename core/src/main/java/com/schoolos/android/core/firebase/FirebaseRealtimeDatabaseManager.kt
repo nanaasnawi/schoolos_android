@@ -299,6 +299,36 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
     }
 
     /**
+     * Observe global online presences for all users in real time.
+     * Returns a map of userId -> isOnline (true if status == "online" and lastSeen < 3 minutes ago).
+     */
+    fun observeAllPresences(): Flow<Map<String, Boolean>> = callbackFlow {
+        val presenceRef = rootRef.child("inquiries").child("presence")
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val now = System.currentTimeMillis()
+                val resultMap = mutableMapOf<String, Boolean>()
+                for (child in snapshot.children) {
+                    val uid = child.key ?: continue
+                    val status = child.child("status").getValue(String::class.java)
+                    val lastSeen = child.child("lastSeen").getValue(Long::class.java) ?: 0L
+                    val isOnline = status.equals("online", ignoreCase = true) && (now - lastSeen < 180_000L)
+                    resultMap[uid] = isOnline
+                }
+                trySend(resultMap)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Timber.w("Firebase RTDB observeAllPresences cancelled: ${error.message}")
+            }
+        }
+        presenceRef.addValueEventListener(listener)
+        awaitClose {
+            presenceRef.removeEventListener(listener)
+        }
+    }
+
+    /**
      * Observe real-time messages for a specific inquiry thread.
      */
     fun observeThreadMessages(threadId: String): Flow<List<ChatMessage>> = callbackFlow {
@@ -314,13 +344,20 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                         val senderName = child.child("senderName").getValue(String::class.java) ?: ""
                         val senderRole = child.child("senderRole").getValue(String::class.java) ?: "STUDENT"
                         val content = child.child("content").getValue(String::class.java) ?: ""
-                        val timestamp = child.child("timestamp").getValue(Long::class.java) ?: System.currentTimeMillis()
+                        val timestamp = child.child("timestamp").getValue(Long::class.java) ?: 0L
+                        val attachmentUrl = child.child("attachmentUrl").getValue(String::class.java)
+                        val attachmentType = child.child("attachmentType").getValue(String::class.java)
+
+                        // Strict defensive check: skip empty / corrupted message nodes (zero blank bubbles)
+                        if (content.isBlank() && attachmentUrl.isNullOrBlank()) {
+                            continue
+                        }
+
+                        val effectiveTimestamp = if (timestamp > 0L) timestamp else System.currentTimeMillis()
                         val isFromTeacher = child.child("isFromTeacher").getValue(Boolean::class.java)
                             ?: senderRole.equals("TEACHER", ignoreCase = true)
                         val isRead = child.child("isRead").getValue(Boolean::class.java) ?: false
                         val readAt = child.child("readAt").getValue(Long::class.java)
-                        val attachmentUrl = child.child("attachmentUrl").getValue(String::class.java)
-                        val attachmentType = child.child("attachmentType").getValue(String::class.java)
 
                         messagesList.add(
                             ChatMessage(
@@ -330,7 +367,7 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                                 senderName = senderName,
                                 senderRole = senderRole,
                                 content = content,
-                                timestamp = timestamp,
+                                timestamp = effectiveTimestamp,
                                 isFromTeacher = isFromTeacher,
                                 isRead = isRead,
                                 readAt = readAt,
@@ -342,17 +379,10 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                         Timber.w(e, "Failed to parse RTDB message node")
                     }
                 }
-                // Deduplicate messages by ID or identical sender, content and close timestamp (< 8s)
+                // Deduplicate strictly by unique ID. NEVER drop messages with different IDs!
                 val deduplicated = mutableListOf<ChatMessage>()
                 for (msg in messagesList.sortedBy { it.timestamp }) {
-                    val isDuplicate = deduplicated.any { existing ->
-                        existing.id == msg.id || (
-                            existing.senderRole == msg.senderRole &&
-                            existing.content.trim() == msg.content.trim() &&
-                            Math.abs(existing.timestamp - msg.timestamp) < 8000L
-                        )
-                    }
-                    if (!isDuplicate) {
+                    if (deduplicated.none { it.id == msg.id }) {
                         deduplicated.add(msg)
                     }
                 }
