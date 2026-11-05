@@ -721,22 +721,72 @@ class ChatManager @Inject constructor(
                 thread
             }
         }
+        saveToDisk(_threads.value, auth?.userId)
+
+        // Determine if this is the first message in the thread on the server
+        val isFirstMessageInThread = currentThread == null || currentThread.messages.isEmpty()
+        val targetTeacherId = currentThread?.teacherId?.takeIf { it.isNotBlank() && it.contains("-") && it.length == 36 }
+        val targetTeacherName = updatedTeacherName.ifBlank { currentThread?.teacherName ?: "Guru Mata Pelajaran" }
+        val targetSubject = currentThread?.subjectName ?: "Umum"
+        val targetClass = currentThread?.studentClass ?: "Siswa"
+        val targetTitle = currentThread?.referenceTitle ?: "Konsultasi $targetSubject"
+        val targetRefId = currentThread?.referenceId
+        val targetType = currentThread?.inquiryType ?: InquiryType.GENERAL
 
         // Asynchronously persist to backend API so PostgreSQL stays 100% synchronized
         scope.launch {
             try {
-                api.sendMessage(
-                    threadId = threadId,
-                    request = SendInquiryMessageRequestDto(
+                if (isFirstMessageInThread) {
+                    val createReq = CreateInquiryRequestDto(
+                        id = threadId,
+                        studentId = if (effectiveSenderId.contains("-") && effectiveSenderId.length == 36) effectiveSenderId else null,
+                        studentName = effectiveSenderName,
+                        studentClass = targetClass,
+                        teacherId = targetTeacherId,
+                        teacherName = targetTeacherName,
+                        subjectName = targetSubject,
+                        inquiryType = targetType.name,
+                        referenceTitle = targetTitle,
+                        referenceId = targetRefId,
+                        initialMessage = content.trim(),
                         clientMessageId = clientUuid,
-                        senderId = effectiveSenderId,
-                        senderName = effectiveSenderName,
-                        senderRole = effectiveRole,
-                        content = content.trim(),
-                        attachmentUrl = attachmentUrl,
-                        attachmentType = attachmentType,
                     )
-                )
+                    val resp = api.createInquiry(createReq)
+                    if (resp.success && resp.data != null) {
+                        Timber.d("Inquiry created in PostgreSQL: ${resp.data.id}")
+                    }
+                } else {
+                    val resp = api.sendMessage(
+                        threadId = threadId,
+                        request = SendInquiryMessageRequestDto(
+                            clientMessageId = clientUuid,
+                            senderId = effectiveSenderId,
+                            senderName = effectiveSenderName,
+                            senderRole = effectiveRole,
+                            content = content.trim(),
+                            attachmentUrl = attachmentUrl,
+                            attachmentType = attachmentType,
+                        )
+                    )
+                    if (!resp.success && (resp.error?.code == "ResourceNotFound" || resp.error?.message?.contains("not found", ignoreCase = true) == true)) {
+                        // Fallback self-heal: create thread in database if missing
+                        val createReq = CreateInquiryRequestDto(
+                            id = threadId,
+                            studentId = if (effectiveSenderId.contains("-") && effectiveSenderId.length == 36) effectiveSenderId else null,
+                            studentName = effectiveSenderName,
+                            studentClass = targetClass,
+                            teacherId = targetTeacherId,
+                            teacherName = targetTeacherName,
+                            subjectName = targetSubject,
+                            inquiryType = targetType.name,
+                            referenceTitle = targetTitle,
+                            referenceId = targetRefId,
+                            initialMessage = content.trim(),
+                            clientMessageId = clientUuid,
+                        )
+                        api.createInquiry(createReq)
+                    }
+                }
             } catch (e: Exception) {
                 Timber.w(e, "Async persist of message to server database failed")
             }
@@ -977,6 +1027,66 @@ class ChatManager @Inject constructor(
         firebaseRtdbManager.syncThreadMetadata(newAiThread)
         firebaseRtdbManager.pushMessage(aiThreadId, initialAiMessage)
         return newAiThread
+    }
+
+    /**
+     * Get or create a direct teacher consultation thread.
+     * Guaranteed valid UUID and real-time Firebase RTDB synchronization.
+     */
+    fun getOrCreateTeacherThread(
+        teacherId: String,
+        teacherName: String,
+        subjectName: String,
+    ): ChatThread {
+        val auth = cachedAuth
+        val effectiveStudentName = if (!auth?.name.isNullOrBlank()) auth.name!! else "Siswa"
+        val effectiveStudentId = if (!auth?.userId.isNullOrBlank()) auth.userId!! else UUID.randomUUID().toString()
+        val effectiveStudentClass = if (!auth?.className.isNullOrBlank()) auth.className!! else "Siswa"
+
+        // Check if an active thread already exists for this teacher
+        val existing = _threads.value.firstOrNull { t ->
+            val matchesTeacher = (t.teacherId.isNotBlank() && t.teacherId.equals(teacherId, ignoreCase = true)) ||
+                (teacherName.isNotBlank() && t.teacherName.contains(teacherName.take(6), ignoreCase = true)) ||
+                (teacherName.isNotBlank() && teacherName.contains(t.teacherName.take(6), ignoreCase = true))
+            val matchesStudent = auth == null || isSameStudentIdentity(t.studentId, t.studentName, auth.userId, auth.name)
+            matchesTeacher && matchesStudent
+        }
+
+        if (existing != null) {
+            return existing
+        }
+
+        val newThreadId = UUID.randomUUID().toString()
+        val now = System.currentTimeMillis()
+
+        val newThread = ChatThread(
+            id = newThreadId,
+            studentId = effectiveStudentId,
+            studentName = effectiveStudentName,
+            studentClass = effectiveStudentClass,
+            teacherId = teacherId,
+            teacherName = teacherName,
+            subjectName = subjectName,
+            inquiryType = InquiryType.GENERAL,
+            referenceTitle = "Konsultasi $subjectName",
+            referenceId = null,
+            messages = emptyList(),
+            status = InquiryStatus.WAITING_REPLY,
+            lastUpdated = now,
+            lastMessageContent = null,
+            lastSenderName = null,
+            messageCount = 0,
+            readStatusLabel = "Mulai Diskusi",
+            teacherLastReadAt = 0L,
+        )
+
+        _threads.value = listOf(newThread) + _threads.value
+        saveToDisk(_threads.value, auth?.userId)
+
+        // Sync metadata to Firebase RTDB so the node exists immediately
+        firebaseRtdbManager.syncThreadMetadata(newThread)
+
+        return newThread
     }
 
     fun createInquiry(

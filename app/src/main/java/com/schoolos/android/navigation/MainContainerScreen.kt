@@ -257,21 +257,13 @@ private fun ModernNavItem(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        // Icon container with soft active background capsule
+        // Icon container (no capsule wrapper per user design specification)
         Box(
             modifier = Modifier
                 .width(38.dp)
                 .height(24.dp),
             contentAlignment = Alignment.Center,
         ) {
-            if (selected) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(activeColor.copy(alpha = if (isDark) 0.16f else 0.12f)),
-                )
-            }
 
             if (item.badgeCount > 0) {
                 BadgedBox(
