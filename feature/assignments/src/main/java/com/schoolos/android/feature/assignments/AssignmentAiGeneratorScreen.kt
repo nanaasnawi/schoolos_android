@@ -1,17 +1,21 @@
 package com.schoolos.android.feature.assignments
 
-import androidx.compose.animation.*
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,15 +23,26 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.core.designsystem.*
+import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.GeneratedCurriculumQuestion
 import com.schoolos.android.domain.model.GeneratedCurriculumResult
+import com.schoolos.android.domain.model.findClass
+import com.schoolos.android.domain.model.groupParallelClasses
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 private enum class GeneratorStep {
@@ -36,18 +51,12 @@ private enum class GeneratorStep {
     VERIFY
 }
 
-private val EmeraldPrimary = Color(0xFF16A34A)
-private val EmeraldBg = Color(0xFFF0FDF4)
-private val EmeraldBorder = Color(0xFFBBF7D0)
-private val PurplePrimary = Color(0xFF9333EA)
-private val PurpleBg = Color(0xFFFAF5FF)
-private val PurpleBorder = Color(0xFFE9D5FF)
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AssignmentAiGeneratorScreen(
     availableSubjects: List<AcademicSubject>,
     currentSubjectName: String,
+    availableClasses: List<AcademicClass> = emptyList(),
+    currentClassName: String = "",
     isSubjectLocked: Boolean = false,
     onBack: () -> Unit,
     onApply: (GeneratedCurriculumResult) -> Unit,
@@ -63,26 +72,64 @@ fun AssignmentAiGeneratorScreen(
         includeImages: Boolean,
     ) -> Result<GeneratedCurriculumResult>,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
+
+    val pageBg = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val subSurfaceBg = if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9)
+    val subSurfaceBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF8FAFC) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+
+    val emeraldAccent = if (isDark) Color(0xFF34D399) else Color(0xFF059669)
+    val emeraldButton = Color(0xFF059669)
+    val emeraldSoftBg = if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5)
+    val emeraldSoftBorder = if (isDark) Color(0xFF059669).copy(alpha = 0.45f) else Color(0xFFA7F3D0)
+
+    val purpleAccent = if (isDark) Color(0xFFC084FC) else Color(0xFF7C3AED)
+    val purpleSoftBg = if (isDark) Color(0xFF3B0764).copy(alpha = 0.35f) else Color(0xFFF3E8FF)
+    val purpleSoftBorder = if (isDark) Color(0xFF9333EA).copy(alpha = 0.45f) else Color(0xFFD8B4FE)
+
+    val amberAccent = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+    val amberSoftBg = if (isDark) Color(0xFF451A03).copy(alpha = 0.4f) else Color(0xFFFEF3C7)
+    val amberSoftBorder = if (isDark) Color(0xFFD97706).copy(alpha = 0.45f) else Color(0xFFFDE68A)
 
     var currentStep by remember { mutableStateOf(GeneratorStep.CONFIGURE) }
     var generatedResult by remember { mutableStateOf<GeneratedCurriculumResult?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    // Configuration States
-    val gradeOptions = remember {
-        listOf(
-            "Kelas 1 SD", "Kelas 2 SD", "Kelas 3 SD", "Kelas 4 SD", "Kelas 5 SD", "Kelas 6 SD",
-            "Kelas 7 SMP", "Kelas 8 SMP", "Kelas 9 SMP",
-            "Kelas 10 SMA", "Kelas 11 SMA", "Kelas 12 SMA",
-            "Paket A (Setara SD)", "Paket B (Setara SMP)", "Paket C (Setara SMA)"
+    val unifiedClasses = remember(availableClasses) {
+        availableClasses.groupParallelClasses()
+    }
+    val gradeOptions = remember(unifiedClasses) {
+        val fromClasses = unifiedClasses.map { it.displayName }
+        val defaults = listOf(
+            "PAKET A 4 (Setara SD)",
+            "PAKET A 5 (Setara SD)",
+            "PAKET A 6 (Setara SD)",
+            "PAKET B 7 (Setara SMP)",
+            "PAKET B 8 (Setara SMP)",
+            "PAKET B 9 (Setara SMP)",
+            "PAKET C 10 (Setara SMA)",
+            "PAKET C 11 (Setara SMA)",
+            "PAKET C 12 (Setara SMA)"
         )
+        if (fromClasses.isNotEmpty()) (fromClasses + defaults).distinct() else defaults
     }
 
     var selectedFormat by remember { mutableStateOf("STRUCTURED_QUESTIONS") }
     var customTopic by remember { mutableStateOf("") }
-    var selectedGrade by remember { mutableStateOf("Kelas 5 SD") }
+    var selectedGrade by remember(currentClassName, gradeOptions) {
+        mutableStateOf(
+            currentClassName.takeIf { it.isNotBlank() }
+                ?: gradeOptions.firstOrNull()
+                ?: "PAKET B 8 (Setara SMP)"
+        )
+    }
     var selectedDifficulty by remember { mutableStateOf("Sedang") }
     var numMcq by remember { mutableIntStateOf(4) }
     var numEssay by remember { mutableIntStateOf(2) }
@@ -95,32 +142,24 @@ fun AssignmentAiGeneratorScreen(
         mutableStateOf(matched ?: availableSubjects.firstOrNull())
     }
 
-    var isSubjectDropdownOpen by remember { mutableStateOf(false) }
-    var isGradeDropdownOpen by remember { mutableStateOf(false) }
-
-    val isDark = androidx.compose.foundation.isSystemInDarkTheme()
-    val emeraldContainerBg = if (isDark) colorScheme.primaryContainer.copy(alpha = 0.35f) else Color(0xFFF0FDF4)
-    val purpleContainerBg = if (isDark) colorScheme.secondaryContainer.copy(alpha = 0.35f) else Color(0xFFFAF5FF)
-    val context = androidx.compose.ui.platform.LocalContext.current
-
     var lastBackPressTime by remember { mutableLongStateOf(0L) }
-    var currentGenJob by remember { mutableStateOf<kotlinx.coroutines.Job?>(null) }
+    var currentGenJob by remember { mutableStateOf<Job?>(null) }
 
-    androidx.activity.compose.BackHandler(enabled = currentStep == GeneratorStep.GENERATING) {
+    BackHandler(enabled = currentStep == GeneratorStep.GENERATING) {
         val currentTime = System.currentTimeMillis()
         if (currentTime - lastBackPressTime < 2000L) {
             currentGenJob?.cancel()
             currentStep = GeneratorStep.CONFIGURE
-            android.widget.Toast.makeText(context, "Proses AI dibatalkan", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Proses AI dibatalkan", Toast.LENGTH_SHORT).show()
         } else {
             lastBackPressTime = currentTime
-            android.widget.Toast.makeText(context, "Tekan sekali lagi untuk membatalkan proses AI", android.widget.Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "Tekan sekali lagi untuk membatalkan proses AI", Toast.LENGTH_SHORT).show()
         }
     }
 
     val handleStartGeneration = {
         val subject = selectedSubject
-        if (subject == null) {
+        if (subject == null && currentSubjectName.isBlank()) {
             errorMessage = "Silakan pilih mata pelajaran terlebih dahulu."
         } else {
             errorMessage = null
@@ -128,13 +167,15 @@ fun AssignmentAiGeneratorScreen(
 
             val finalMcq = if (selectedFormat == "HOMEWORK_PR") 0 else numMcq
             val finalEssay = numEssay
-            val effectiveTopic = customTopic.trim().ifBlank { subject.name }
+            val subId = subject?.id ?: ""
+            val subName = subject?.name ?: currentSubjectName
+            val effectiveTopic = customTopic.trim().ifBlank { subName }
 
             currentGenJob = scope.launch {
                 val res = onGenerateRequest(
                     selectedFormat,
-                    subject.id,
-                    subject.name,
+                    subId,
+                    subName,
                     effectiveTopic,
                     selectedGrade,
                     selectedDifficulty,
@@ -146,7 +187,7 @@ fun AssignmentAiGeneratorScreen(
                     generatedResult = result
                     currentStep = GeneratorStep.VERIFY
                 }.onFailure { err ->
-                    if (err !is kotlinx.coroutines.CancellationException) {
+                    if (err !is CancellationException) {
                         errorMessage = err.toHumanReadableError(fallback = "Gagal menyusun penugasan dengan AI. Silakan periksa koneksi dan coba lagi.")
                         currentStep = GeneratorStep.CONFIGURE
                     }
@@ -155,73 +196,55 @@ fun AssignmentAiGeneratorScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
+    val isImeVisible = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+
+    Box(modifier = Modifier.fillMaxSize().background(pageBg)) {
         when (currentStep) {
             GeneratorStep.CONFIGURE -> {
                 Scaffold(
+                    containerColor = pageBg,
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     topBar = {
-                        TopAppBar(
-                            title = {
-                                Column {
-                                    Text(
-                                        "Studio AI Penugasan Guru",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 17.sp,
-                                        color = colorScheme.onSurface
-                                    )
-                                    Text(
-                                        "Kurikulum Merdeka • Berbasis Standar Kemendikdasmen",
-                                        fontSize = 11.sp,
-                                        color = EmeraldPrimary,
-                                        fontWeight = FontWeight.Medium
-                                    )
-                                }
-                            },
-                            navigationIcon = {
-                                IconButton(onClick = onBack) {
-                                    Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack,
-                                        contentDescription = "Kembali",
-                                        tint = colorScheme.onSurface
-                                    )
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = colorScheme.surface
-                            )
+                        ExecutiveTopBar(
+                            title = "Studio AI Penugasan Guru",
+                            subtitle = "Kurikulum Merdeka • Sintesis Soal & Rubrik Otomatis",
+                            onBack = onBack
                         )
                     },
                     bottomBar = {
-                        Surface(
-                            tonalElevation = 8.dp,
-                            shadowElevation = 8.dp,
-                            color = colorScheme.surface,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .navigationBarsPadding()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                        if (!isImeVisible) {
+                            Surface(
+                                color = cardBg,
+                                tonalElevation = 0.dp,
+                                shadowElevation = 12.dp,
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Button(
-                                    onClick = { handleStartGeneration() },
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(50.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = EmeraldPrimary,
-                                        contentColor = Color.White
-                                    )
+                                        .navigationBarsPadding()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
                                 ) {
-                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "Mulai Susun Tugas Otomatis",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Button(
+                                        onClick = { handleStartGeneration() },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(50.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = emeraldButton,
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            "Mulai Susun Tugas Otomatis",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -230,425 +253,546 @@ fun AssignmentAiGeneratorScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(padding)
+                            .padding(
+                                top = padding.calculateTopPadding(),
+                                bottom = if (isImeVisible) 0.dp else padding.calculateBottomPadding()
+                            )
+                            .imePadding()
                             .padding(horizontal = 16.dp),
-                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                        contentPadding = PaddingValues(vertical = 14.dp),
+                        verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
-                        item {
-                            Spacer(Modifier.height(4.dp))
-                            // Alert Error if any
-                            if (errorMessage != null) {
+                        if (errorMessage != null) {
+                            item {
                                 Surface(
-                                    color = Color(0xFFFEF2F2),
-                                    shape = RoundedCornerShape(12.dp),
-                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFCA5A5)),
+                                    color = NeonError.copy(alpha = 0.12f),
+                                    shape = RoundedCornerShape(14.dp),
+                                    border = BorderStroke(1.dp, NeonError.copy(alpha = 0.4f)),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Row(
                                         modifier = Modifier.padding(12.dp),
-                                        verticalAlignment = Alignment.CenterVertically
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                                     ) {
-                                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = Color(0xFFDC2626))
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(errorMessage?.toHumanReadableError() ?: "", color = Color(0xFF991B1B), fontSize = 12.sp)
+                                        Icon(Icons.Default.ErrorOutline, contentDescription = null, tint = NeonError, modifier = Modifier.size(18.dp))
+                                        Text(errorMessage ?: "", color = NeonError, fontSize = 12.sp, fontWeight = FontWeight.Medium)
                                     }
                                 }
                             }
                         }
 
-                        // 1. Mata Pelajaran
-                        item {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(
-                                    "Mata Pelajaran (Mapel)",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = colorScheme.onSurface
-                                )
-                                if (isSubjectLocked) {
-                                    Spacer(Modifier.width(6.dp))
-                                    Surface(
-                                        color = EmeraldPrimary.copy(alpha = 0.15f),
-                                        shape = RoundedCornerShape(6.dp)
-                                    ) {
-                                        Text(
-                                            "Terkunci (Tutor Pengampu)",
-                                            fontSize = 10.sp,
-                                            color = EmeraldPrimary,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                        )
-                                    }
-                                }
-                            }
-                            Spacer(Modifier.height(6.dp))
-                            val effectiveSubjectLocked = isSubjectLocked && availableSubjects.size <= 1
-                            ExposedDropdownMenuBox(
-                                expanded = if (effectiveSubjectLocked) false else isSubjectDropdownOpen,
-                                onExpandedChange = { if (!effectiveSubjectLocked) isSubjectDropdownOpen = it }
-                            ) {
-                                OutlinedTextField(
-                                    value = selectedSubject?.name ?: "Pilih Mata Pelajaran",
-                                    onValueChange = {},
-                                    readOnly = true,
-                                    trailingIcon = {
-                                        if (effectiveSubjectLocked) {
-                                            Icon(Icons.Default.Lock, contentDescription = null, tint = EmeraldPrimary)
-                                        } else {
-                                            ExposedDropdownMenuDefaults.TrailingIcon(expanded = isSubjectDropdownOpen)
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .menuAnchor(),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = EmeraldPrimary
-                                    )
-                                )
-                                if (!effectiveSubjectLocked) {
-                                    ExposedDropdownMenu(
-                                        expanded = isSubjectDropdownOpen,
-                                        onDismissRequest = { isSubjectDropdownOpen = false }
-                                    ) {
-                                        availableSubjects.forEach { sub ->
-                                            DropdownMenuItem(
-                                                text = { Text(sub.name, fontSize = 13.sp) },
-                                                onClick = {
-                                                    selectedSubject = sub
-                                                    isSubjectDropdownOpen = false
-                                                }
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // 2. Topik / Materi Spesifik
-                        item {
-                            Text(
-                                "Topik / Materi Penugasan Spesifik (Opsional)",
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 13.sp,
-                                color = colorScheme.onSurface
-                            )
-                            Spacer(Modifier.height(6.dp))
-                            OutlinedTextField(
-                                value = customTopic,
-                                onValueChange = { customTopic = it },
-                                placeholder = {
-                                    Text(
-                                        "Contoh: Hukum Newton, Rukun Islam, Ekosistem Hutan",
-                                        fontSize = 12.sp,
-                                        color = colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                                    )
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = EmeraldPrimary
-                                )
-                            )
-                        }
-
-                        // 3. Jenjang & Tingkat Kesulitan
-                        item {
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp)
-                            ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text("Jenjang / Kelas", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Spacer(Modifier.height(6.dp))
-                                    ExposedDropdownMenuBox(
-                                        expanded = isGradeDropdownOpen,
-                                        onExpandedChange = { isGradeDropdownOpen = it }
-                                    ) {
-                                        OutlinedTextField(
-                                            value = selectedGrade,
-                                            onValueChange = {},
-                                            readOnly = true,
-                                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = isGradeDropdownOpen) },
-                                            modifier = Modifier.fillMaxWidth().menuAnchor(),
-                                            shape = RoundedCornerShape(12.dp),
-                                            colors = OutlinedTextFieldDefaults.colors(
-                                                focusedBorderColor = EmeraldPrimary
-                                            )
-                                        )
-                                        ExposedDropdownMenu(
-                                            expanded = isGradeDropdownOpen,
-                                            onDismissRequest = { isGradeDropdownOpen = false }
-                                        ) {
-                                            gradeOptions.forEach { g ->
-                                                DropdownMenuItem(
-                                                    text = { Text(g, fontSize = 12.sp) },
-                                                    onClick = {
-                                                        selectedGrade = g
-                                                        isGradeDropdownOpen = false
-                                                    }
-                                                )
-                                            }
-                                        }
-                                    }
-                                }
-                                Column(modifier = Modifier.weight(1.2f)) {
-                                    Text("Tingkat Kesulitan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                                    Spacer(Modifier.height(6.dp))
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                                    ) {
-                                        listOf("Mudah", "Sedang", "HOTS").forEach { diff ->
-                                            val isSel = selectedDifficulty == diff
-                                            Surface(
-                                                modifier = Modifier
-                                                    .weight(1f)
-                                                    .height(48.dp)
-                                                    .clickable { selectedDifficulty = diff },
-                                                shape = RoundedCornerShape(10.dp),
-                                                color = if (isSel) EmeraldBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                                border = androidx.compose.foundation.BorderStroke(
-                                                    if (isSel) 1.5.dp else 1.dp,
-                                                    if (isSel) EmeraldPrimary else colorScheme.outlineVariant
-                                                )
-                                            ) {
-                                                Box(contentAlignment = Alignment.Center) {
-                                                    Text(
-                                                        diff,
-                                                        fontSize = 11.sp,
-                                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (isSel) EmeraldPrimary else colorScheme.onSurface
-                                                    )
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // 4. Format Tugas (Opsi A vs Opsi B)
-                        item {
-                            Text("Format Penugasan", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            Spacer(Modifier.height(8.dp))
-                            Row(
-                                modifier = Modifier.fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                // Opsi A
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { selectedFormat = "STRUCTURED_QUESTIONS" },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (selectedFormat == "STRUCTURED_QUESTIONS") EmeraldBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = androidx.compose.foundation.BorderStroke(
-                                        if (selectedFormat == "STRUCTURED_QUESTIONS") 1.5.dp else 1.dp,
-                                        if (selectedFormat == "STRUCTURED_QUESTIONS") EmeraldPrimary else colorScheme.outlineVariant
-                                    )
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("Opsi A: Terstruktur", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "STRUCTURED_QUESTIONS") EmeraldPrimary else colorScheme.onSurface)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text("Kombinasi soal PG otomatis dan uraian analitis.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                                // Opsi B
-                                Surface(
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .clickable { selectedFormat = "HOMEWORK_PR" },
-                                    shape = RoundedCornerShape(14.dp),
-                                    color = if (selectedFormat == "HOMEWORK_PR") EmeraldBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                                    border = androidx.compose.foundation.BorderStroke(
-                                        if (selectedFormat == "HOMEWORK_PR") 1.5.dp else 1.dp,
-                                        if (selectedFormat == "HOMEWORK_PR") EmeraldPrimary else colorScheme.outlineVariant
-                                    )
-                                ) {
-                                    Column(modifier = Modifier.padding(12.dp)) {
-                                        Text("Opsi B: Tugas Mandiri (PR)", fontWeight = FontWeight.Bold, fontSize = 12.sp, color = if (selectedFormat == "HOMEWORK_PR") EmeraldPrimary else colorScheme.onSurface)
-                                        Spacer(Modifier.height(4.dp))
-                                        Text("Tugas mandiri, petunjuk foto lembar kerja & rubrik.", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
-                                    }
-                                }
-                            }
-                        }
-
-                        // 5. Jumlah Soal PG & Essay
+                        // ── 1. KONTEKS KURIKULUM (MAPEL & JENJANG ROMBEL) ──
                         item {
                             Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = colorScheme.surfaceVariant.copy(alpha = 0.3f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
+                                color = cardBg,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, cardBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(8.dp)
+                                                .clip(CircleShape)
+                                                .background(emeraldAccent)
+                                        )
+                                        Text(
+                                            "KONTEKS MAPEL & ROMBEL",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = emeraldAccent,
+                                            letterSpacing = 0.6.sp
+                                        )
+                                    }
+
+                                    val effectiveSubjectLocked = isSubjectLocked && availableSubjects.size <= 1
+                                    val subNames = remember(availableSubjects, currentSubjectName) {
+                                        val list = availableSubjects.map { it.name }
+                                        if (list.isEmpty() && currentSubjectName.isNotBlank()) listOf(currentSubjectName) else list
+                                    }
+
+                                    ExecutiveBottomSheetSelector(
+                                        value = selectedSubject?.name ?: currentSubjectName.ifBlank { "Pilih Mata Pelajaran" },
+                                        label = "Mata Pelajaran",
+                                        icon = Icons.Default.School,
+                                        options = subNames,
+                                        onSelect = { chosen ->
+                                            selectedSubject = availableSubjects.find { it.name.equals(chosen, ignoreCase = true) }
+                                        },
+                                        sheetTitle = "Pilih Mata Pelajaran",
+                                        sheetSubtitle = "Tentukan mata pelajaran untuk sintesis soal AI",
+                                        accentColor = emeraldAccent,
+                                        isLocked = effectiveSubjectLocked,
+                                        lockedBadgeText = "Tutor Pengampu",
+                                        onLockedClick = {
+                                            Toast.makeText(context, "Mata pelajaran dikunci sesuai penugasan tutor", Toast.LENGTH_SHORT).show()
+                                        }
+                                    )
+
+                                    ExecutiveBottomSheetSelector(
+                                        value = selectedGrade,
+                                        label = "Sasaran Rombel / Jenjang",
+                                        icon = Icons.Default.Group,
+                                        options = gradeOptions,
+                                        onSelect = { selectedGrade = it },
+                                        sheetTitle = "Pilih Rombel / Jenjang Kelas",
+                                        sheetSubtitle = "Tingkat kesulitan bahasa akan disesuaikan dengan jenjang ini",
+                                        accentColor = emeraldAccent
+                                    )
+                                }
+                            }
+                        }
+
+                        // ── 2. TOPIK & KONSEP SPESIFIK ──
+                        item {
+                            Surface(
+                                color = cardBg,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            "Topik / Pokok Bahasan",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.5.sp,
+                                            color = textPrimary
+                                        )
+                                        Text(
+                                            "Opsional",
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = textTertiary
+                                        )
+                                    }
+
+                                    OutlinedTextField(
+                                        value = customTopic,
+                                        onValueChange = { customTopic = it },
+                                        placeholder = {
+                                            Text(
+                                                "Contoh: Teks Eksposisi, Hukum Newton, Sejarah Kemerdekaan...",
+                                                fontSize = 12.sp,
+                                                color = textTertiary
+                                            )
+                                        },
+                                        leadingIcon = {
+                                            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = emeraldAccent, modifier = Modifier.size(18.dp))
+                                        },
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(12.dp),
+                                        minLines = 2,
+                                        maxLines = 3,
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = emeraldAccent,
+                                            unfocusedBorderColor = subSurfaceBorder,
+                                            focusedTextColor = textPrimary,
+                                            unfocusedTextColor = textPrimary,
+                                            cursorColor = emeraldAccent
+                                        )
+                                    )
+
+                                    Text(
+                                        "Kosongkan jika ingin AI memilih topik inti secara otomatis sesuai kurikulum.",
+                                        fontSize = 11.sp,
+                                        color = textSecondary
+                                    )
+                                }
+                            }
+                        }
+
+                        // ── 3. METODE PENUGASAN & TINGKAT KESULITAN ──
+                        item {
+                            Surface(
+                                color = cardBg,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            "Format Penugasan",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.5.sp,
+                                            color = textPrimary
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            listOf(
+                                                Triple("STRUCTURED_QUESTIONS", "Terstruktur (PG & Esai)", "Koreksi otomatis & uraian"),
+                                                Triple("HOMEWORK_PR", "Tugas Mandiri (PR)", "Instruksi lembar kerja & rubrik")
+                                            ).forEach { (fmtKey, titleLabel, descLabel) ->
+                                                val isSel = selectedFormat == fmtKey
+                                                Surface(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .clip(RoundedCornerShape(13.dp))
+                                                        .clickable { selectedFormat = fmtKey },
+                                                    shape = RoundedCornerShape(13.dp),
+                                                    color = if (isSel) emeraldSoftBg else subSurfaceBg,
+                                                    border = BorderStroke(
+                                                        width = if (isSel) 1.5.dp else 1.dp,
+                                                        color = if (isSel) emeraldAccent else subSurfaceBorder
+                                                    )
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier.padding(12.dp),
+                                                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                    ) {
+                                                        Row(
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                                            modifier = Modifier.fillMaxWidth()
+                                                        ) {
+                                                            Text(
+                                                                titleLabel,
+                                                                fontWeight = FontWeight.Bold,
+                                                                fontSize = 12.sp,
+                                                                color = if (isSel) emeraldAccent else textPrimary,
+                                                                modifier = Modifier.weight(1f)
+                                                            )
+                                                            if (isSel) {
+                                                                Icon(
+                                                                    Icons.Default.CheckCircle,
+                                                                    contentDescription = null,
+                                                                    tint = emeraldAccent,
+                                                                    modifier = Modifier.size(15.dp)
+                                                                )
+                                                            }
+                                                        }
+                                                        Text(
+                                                            descLabel,
+                                                            fontSize = 10.5.sp,
+                                                            color = textSecondary,
+                                                            lineHeight = 14.sp
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+
+                                    HorizontalDivider(color = cardBorder)
+
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        Text(
+                                            "Tingkat Kesulitan Kognitif",
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 13.5.sp,
+                                            color = textPrimary
+                                        )
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                        ) {
+                                            listOf(
+                                                "Mudah" to "Dasar (C1–C2)",
+                                                "Sedang" to "Aplikasi (C3)",
+                                                "HOTS" to "Analitis (C4–C6)"
+                                            ).forEach { (diffKey, diffSub) ->
+                                                val isSel = selectedDifficulty == diffKey
+                                                Surface(
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .clip(RoundedCornerShape(12.dp))
+                                                        .clickable { selectedDifficulty = diffKey },
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = if (isSel) emeraldSoftBg else subSurfaceBg,
+                                                    border = BorderStroke(
+                                                        width = if (isSel) 1.5.dp else 1.dp,
+                                                        color = if (isSel) emeraldAccent else subSurfaceBorder
+                                                    )
+                                                ) {
+                                                    Column(
+                                                        modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+                                                        horizontalAlignment = Alignment.CenterHorizontally,
+                                                        verticalArrangement = Arrangement.spacedBy(2.dp)
+                                                    ) {
+                                                        Text(
+                                                            diffKey,
+                                                            fontSize = 12.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = if (isSel) emeraldAccent else textPrimary
+                                                        )
+                                                        Text(
+                                                            diffSub,
+                                                            fontSize = 9.5.sp,
+                                                            color = textSecondary,
+                                                            maxLines = 1
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // ── 4. KOMPOSISI JUMLAH SOAL & VISUAL ──
+                        item {
+                            Surface(
+                                color = cardBg,
+                                shape = RoundedCornerShape(18.dp),
+                                border = BorderStroke(1.dp, cardBorder),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(16.dp),
+                                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                                ) {
                                     if (selectedFormat == "STRUCTURED_QUESTIONS") {
-                                        Column {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
                                                 horizontalArrangement = Arrangement.SpaceBetween,
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text("Jumlah Soal Pilihan Ganda (PG)", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                                Surface(
-                                                    color = EmeraldPrimary,
-                                                    shape = RoundedCornerShape(6.dp)
+                                                Text(
+                                                    "Jumlah Soal Pilihan Ganda (PG)",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp,
+                                                    color = textPrimary
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(emeraldSoftBg)
+                                                        .border(0.5.dp, emeraldSoftBorder, RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 8.dp, vertical = 3.dp)
                                                 ) {
-                                                    Text("$numMcq PG", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                                    Text(
+                                                        "$numMcq Butir PG",
+                                                        color = emeraldAccent,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
                                                 }
                                             }
-                                            Spacer(Modifier.height(6.dp))
-                                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
                                                 listOf(2, 4, 5, 10).forEach { count ->
                                                     val isSel = numMcq == count
                                                     Surface(
-                                                        modifier = Modifier.clickable {
-                                                            numMcq = count
-                                                            customMcqInput = count.toString()
-                                                        },
-                                                        shape = RoundedCornerShape(8.dp),
-                                                        color = if (isSel) EmeraldPrimary else colorScheme.surface,
-                                                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isSel) EmeraldPrimary else colorScheme.outlineVariant)
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .height(38.dp)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .clickable {
+                                                                numMcq = count
+                                                                customMcqInput = count.toString()
+                                                            },
+                                                        shape = RoundedCornerShape(10.dp),
+                                                        color = if (isSel) emeraldButton else subSurfaceBg,
+                                                        border = BorderStroke(1.dp, if (isSel) emeraldButton else subSurfaceBorder)
                                                     ) {
-                                                        Text(
-                                                            "$count PG",
-                                                            fontSize = 11.sp,
-                                                            fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                            color = if (isSel) Color.White else colorScheme.onSurface,
-                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                                        )
+                                                        Box(contentAlignment = Alignment.Center) {
+                                                            Text(
+                                                                "$count PG",
+                                                                fontSize = 11.5.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = if (isSel) Color.White else textPrimary
+                                                            )
+                                                        }
                                                     }
                                                 }
                                                 Box(
                                                     modifier = Modifier
-                                                        .width(54.dp)
-                                                        .height(34.dp)
-                                                        .background(colorScheme.surface, RoundedCornerShape(8.dp))
-                                                        .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                                        .width(56.dp)
+                                                        .height(38.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .background(subSurfaceBg)
+                                                        .border(1.dp, subSurfaceBorder, RoundedCornerShape(10.dp)),
                                                     contentAlignment = Alignment.Center
                                                 ) {
-                                                    androidx.compose.foundation.text.BasicTextField(
+                                                    BasicTextField(
                                                         value = customMcqInput,
                                                         onValueChange = {
-                                                            customMcqInput = it
-                                                            it.toIntOrNull()?.let { v -> if (v in 1..20) numMcq = v }
+                                                            val filtered = it.filter { ch -> ch.isDigit() }.take(2)
+                                                            customMcqInput = filtered
+                                                            filtered.toIntOrNull()?.let { v -> if (v in 1..20) numMcq = v }
                                                         },
                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                                         singleLine = true,
-                                                        textStyle = androidx.compose.ui.text.TextStyle(
+                                                        cursorBrush = SolidColor(emeraldAccent),
+                                                        textStyle = TextStyle(
                                                             fontSize = 13.sp,
                                                             fontWeight = FontWeight.Bold,
-                                                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                                            color = colorScheme.onSurface
+                                                            textAlign = TextAlign.Center,
+                                                            color = textPrimary
                                                         ),
-                                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
+                                                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
                                                     )
                                                 }
                                             }
                                         }
-                                        HorizontalDivider(color = colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+                                        HorizontalDivider(color = cardBorder)
                                     }
 
-                                    Column {
+                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                if (selectedFormat == "HOMEWORK_PR") "Jumlah Butir Tugas PR" else "Jumlah Soal Uraian / Essay",
+                                                if (selectedFormat == "HOMEWORK_PR") "Jumlah Butir Tugas Mandiri" else "Jumlah Soal Uraian / Esai",
                                                 fontWeight = FontWeight.Bold,
-                                                fontSize = 12.sp
+                                                fontSize = 13.sp,
+                                                color = textPrimary
                                             )
-                                            Surface(
-                                                color = PurplePrimary,
-                                                shape = RoundedCornerShape(6.dp)
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(purpleSoftBg)
+                                                    .border(0.5.dp, purpleSoftBorder, RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
                                             ) {
-                                                Text("$numEssay Essay", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp))
+                                                Text(
+                                                    "$numEssay Butir Esai",
+                                                    color = purpleAccent,
+                                                    fontSize = 11.sp,
+                                                    fontWeight = FontWeight.Bold
+                                                )
                                             }
                                         }
-                                        Spacer(Modifier.height(6.dp))
-                                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
                                             listOf(1, 2, 3, 5).forEach { count ->
                                                 val isSel = numEssay == count
                                                 Surface(
-                                                    modifier = Modifier.clickable {
-                                                        numEssay = count
-                                                        customEssayInput = count.toString()
-                                                    },
-                                                    shape = RoundedCornerShape(8.dp),
-                                                    color = if (isSel) PurplePrimary else colorScheme.surface,
-                                                    border = androidx.compose.foundation.BorderStroke(1.dp, if (isSel) PurplePrimary else colorScheme.outlineVariant)
+                                                    modifier = Modifier
+                                                        .weight(1f)
+                                                        .height(38.dp)
+                                                        .clip(RoundedCornerShape(10.dp))
+                                                        .clickable {
+                                                            numEssay = count
+                                                            customEssayInput = count.toString()
+                                                        },
+                                                    shape = RoundedCornerShape(10.dp),
+                                                    color = if (isSel) Color(0xFF7C3AED) else subSurfaceBg,
+                                                    border = BorderStroke(1.dp, if (isSel) Color(0xFF7C3AED) else subSurfaceBorder)
                                                 ) {
-                                                    Text(
-                                                        "$count Essay",
-                                                        fontSize = 11.sp,
-                                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Normal,
-                                                        color = if (isSel) Color.White else colorScheme.onSurface,
-                                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
-                                                    )
+                                                    Box(contentAlignment = Alignment.Center) {
+                                                        Text(
+                                                            "$count Esai",
+                                                            fontSize = 11.5.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = if (isSel) Color.White else textPrimary
+                                                        )
+                                                    }
                                                 }
                                             }
                                             Box(
                                                 modifier = Modifier
-                                                    .width(54.dp)
-                                                    .height(34.dp)
-                                                    .background(colorScheme.surface, RoundedCornerShape(8.dp))
-                                                    .border(1.dp, colorScheme.outlineVariant, RoundedCornerShape(8.dp)),
+                                                    .width(56.dp)
+                                                    .height(38.dp)
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(subSurfaceBg)
+                                                    .border(1.dp, subSurfaceBorder, RoundedCornerShape(10.dp)),
                                                 contentAlignment = Alignment.Center
                                             ) {
-                                                androidx.compose.foundation.text.BasicTextField(
+                                                BasicTextField(
                                                     value = customEssayInput,
                                                     onValueChange = {
-                                                        customEssayInput = it
-                                                        it.toIntOrNull()?.let { v -> if (v in 1..15) numEssay = v }
+                                                        val filtered = it.filter { ch -> ch.isDigit() }.take(2)
+                                                        customEssayInput = filtered
+                                                        filtered.toIntOrNull()?.let { v -> if (v in 1..15) numEssay = v }
                                                     },
                                                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                                     singleLine = true,
-                                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                                    cursorBrush = SolidColor(purpleAccent),
+                                                    textStyle = TextStyle(
                                                         fontSize = 13.sp,
                                                         fontWeight = FontWeight.Bold,
-                                                        textAlign = androidx.compose.ui.text.style.TextAlign.Center,
-                                                        color = colorScheme.onSurface
+                                                        textAlign = TextAlign.Center,
+                                                        color = textPrimary
                                                     ),
-                                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp)
+                                                    modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
                                                 )
                                             }
                                         }
                                     }
-                                }
-                            }
-                        }
 
-                        // 6. Sertakan Diagram / Gambar
-                        item {
-                            Surface(
-                                shape = RoundedCornerShape(12.dp),
-                                color = colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                                border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable { includeImages = !includeImages }
-                            ) {
-                                Row(
-                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Checkbox(
-                                        checked = includeImages,
-                                        onCheckedChange = { includeImages = it },
-                                        colors = CheckboxDefaults.colors(checkedColor = EmeraldPrimary)
-                                    )
-                                    Spacer(Modifier.width(6.dp))
-                                    Column {
-                                        Text("Sertakan Soal Bergambar / Diagram", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                                        Text("Ilustrasi edukatif Kurikulum Merdeka (sains, bagan, grafik)", fontSize = 10.sp, color = colorScheme.onSurfaceVariant)
+                                    HorizontalDivider(color = cardBorder)
+
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(subSurfaceBg)
+                                            .clickable { includeImages = !includeImages }
+                                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.weight(1f),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Image,
+                                                contentDescription = null,
+                                                tint = if (includeImages) emeraldAccent else textSecondary,
+                                                modifier = Modifier.size(20.dp)
+                                            )
+                                            Column {
+                                                Text(
+                                                    "Sertakan Ilustrasi / Diagram Soal",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 12.5.sp,
+                                                    color = textPrimary
+                                                )
+                                                Text(
+                                                    "Bagan kontekstual sains, geografi, atau tabel data",
+                                                    fontSize = 10.5.sp,
+                                                    color = textSecondary
+                                                )
+                                            }
+                                        }
+                                        Switch(
+                                            checked = includeImages,
+                                            onCheckedChange = { includeImages = it },
+                                            colors = SwitchDefaults.colors(
+                                                checkedThumbColor = Color.White,
+                                                checkedTrackColor = emeraldButton
+                                            )
+                                        )
                                     }
                                 }
                             }
-                            Spacer(Modifier.height(24.dp))
                         }
                     }
                 }
@@ -658,7 +802,7 @@ fun AssignmentAiGeneratorScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(colorScheme.background),
+                        .background(pageBg),
                     contentAlignment = Alignment.Center
                 ) {
                     AiGenerationLoadingOverlay(
@@ -678,44 +822,21 @@ fun AssignmentAiGeneratorScreen(
                     val essayCount = res.questions.count { it.questionType == "ESSAY" }
 
                     Scaffold(
+                        containerColor = pageBg,
                         contentWindowInsets = WindowInsets(0, 0, 0, 0),
                         topBar = {
-                            TopAppBar(
-                                title = {
-                                    Column {
-                                        Text(
-                                            "Verifikasi Hasil AI",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 17.sp,
-                                            color = colorScheme.onSurface
-                                        )
-                                        Text(
-                                            "Periksa & Verifikasi sebelum diterapkan ke penugasan",
-                                            fontSize = 11.sp,
-                                            color = EmeraldPrimary,
-                                            fontWeight = FontWeight.Medium
-                                        )
-                                    }
-                                },
-                                navigationIcon = {
-                                    IconButton(onClick = { currentStep = GeneratorStep.CONFIGURE }) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.ArrowBack,
-                                            contentDescription = "Kembali ke Pengaturan",
-                                            tint = colorScheme.onSurface
-                                        )
-                                    }
-                                },
-                                colors = TopAppBarDefaults.topAppBarColors(
-                                    containerColor = colorScheme.surface
-                                )
+                            ExecutiveTopBar(
+                                title = "Verifikasi Hasil AI",
+                                subtitle = "Tinjau paket soal & kunci jawaban sebelum diterapkan",
+                                onBack = { currentStep = GeneratorStep.CONFIGURE }
                             )
                         },
                         bottomBar = {
                             Surface(
-                                tonalElevation = 8.dp,
-                                shadowElevation = 8.dp,
-                                color = colorScheme.surface,
+                                color = cardBg,
+                                tonalElevation = 0.dp,
+                                shadowElevation = 12.dp,
+                                border = BorderStroke(1.dp, cardBorder),
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Row(
@@ -731,12 +852,12 @@ fun AssignmentAiGeneratorScreen(
                                             .weight(1f)
                                             .height(48.dp),
                                         shape = RoundedCornerShape(12.dp),
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = EmeraldPrimary),
-                                        border = androidx.compose.foundation.BorderStroke(1.dp, EmeraldPrimary)
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = textPrimary),
+                                        border = BorderStroke(1.dp, cardBorder)
                                     ) {
                                         Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Regenerate", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                        Text("Susun Ulang", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                     }
                                     Button(
                                         onClick = { onApply(res) },
@@ -745,13 +866,13 @@ fun AssignmentAiGeneratorScreen(
                                             .height(48.dp),
                                         shape = RoundedCornerShape(12.dp),
                                         colors = ButtonDefaults.buttonColors(
-                                            containerColor = EmeraldPrimary,
+                                            containerColor = emeraldButton,
                                             contentColor = Color.White
                                         )
                                     ) {
                                         Icon(Icons.Default.CheckCircle, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(6.dp))
-                                        Text("Terapkan ke Studio", fontSize = 13.sp, fontWeight = FontWeight.Black)
+                                        Text("Terapkan ke Studio", fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                     }
                                 }
                             }
@@ -762,82 +883,136 @@ fun AssignmentAiGeneratorScreen(
                                 .fillMaxSize()
                                 .padding(padding)
                                 .padding(horizontal = 16.dp),
-                            verticalArrangement = Arrangement.spacedBy(14.dp)
+                            contentPadding = PaddingValues(vertical = 14.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
+                            // ── RINGKASAN PAKET TUGAS (ADAPTIVE DARK/LIGHT, ZERO HARSH GREEN) ──
                             item {
-                                Spacer(Modifier.height(4.dp))
-                                // Summary Card
                                 Surface(
-                                    shape = RoundedCornerShape(16.dp),
-                                    color = EmeraldBg,
-                                    border = androidx.compose.foundation.BorderStroke(1.5.dp, EmeraldBorder),
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = cardBg,
+                                    border = BorderStroke(1.dp, cardBorder),
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(16.dp),
-                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                        verticalArrangement = Arrangement.spacedBy(12.dp)
                                     ) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                                                Icon(Icons.Default.Verified, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(18.dp))
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(24.dp)
+                                                        .clip(RoundedCornerShape(7.dp))
+                                                        .background(emeraldSoftBg),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Verified,
+                                                        contentDescription = null,
+                                                        tint = emeraldAccent,
+                                                        modifier = Modifier.size(15.dp)
+                                                    )
+                                                }
                                                 Text(
-                                                    "Paket Tugas Terverifikasi",
+                                                    "Paket Tugas Terverifikasi AI",
                                                     fontWeight = FontWeight.Bold,
-                                                    fontSize = 13.sp,
-                                                    color = EmeraldPrimary
+                                                    fontSize = 12.sp,
+                                                    color = emeraldAccent
                                                 )
                                             }
-                                            Text(
-                                                "${res.questions.size} Butir Total",
-                                                fontWeight = FontWeight.Black,
-                                                fontSize = 12.sp,
-                                                color = EmeraldPrimary
-                                            )
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(subSurfaceBg)
+                                                    .border(0.5.dp, subSurfaceBorder, RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 8.dp, vertical = 3.dp)
+                                            ) {
+                                                Text(
+                                                    "${res.questions.size} Butir Soal",
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 11.sp,
+                                                    color = textPrimary
+                                                )
+                                            }
                                         }
 
                                         Text(
                                             res.title,
-                                            fontWeight = FontWeight.Black,
-                                            fontSize = 15.sp,
-                                            color = colorScheme.onSurface
+                                            fontWeight = FontWeight.ExtraBold,
+                                            fontSize = 16.sp,
+                                            color = textPrimary,
+                                            lineHeight = 22.sp
                                         )
 
-                                        // Badges row
                                         Row(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .horizontalScroll(rememberScrollState()),
                                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             if (mcqCount > 0) {
-                                                Surface(color = EmeraldPrimary, shape = RoundedCornerShape(6.dp)) {
-                                                    Text("$mcqCount Soal PG", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(emeraldSoftBg)
+                                                        .border(0.5.dp, emeraldSoftBorder, RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                                                ) {
+                                                    Text("$mcqCount Soal PG", color = emeraldAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                                 }
                                             }
                                             if (essayCount > 0) {
-                                                Surface(color = PurplePrimary, shape = RoundedCornerShape(6.dp)) {
-                                                    Text("$essayCount Soal Essay", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(purpleSoftBg)
+                                                        .border(0.5.dp, purpleSoftBorder, RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                                                ) {
+                                                    Text("$essayCount Soal Esai", color = purpleAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                                 }
                                             }
-                                            Surface(color = NeonWarning, shape = RoundedCornerShape(6.dp)) {
-                                                Text("KKTP: ${res.passingScore}", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .background(amberSoftBg)
+                                                    .border(0.5.dp, amberSoftBorder, RoundedCornerShape(8.dp))
+                                                    .padding(horizontal = 9.dp, vertical = 4.dp)
+                                            ) {
+                                                Text("KKTP: ${res.passingScore}", color = amberAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                             }
                                         }
 
                                         if (!res.instructions.isNullOrBlank()) {
-                                            Surface(
-                                                color = Color.White.copy(alpha = 0.8f),
-                                                shape = RoundedCornerShape(10.dp),
-                                                modifier = Modifier.fillMaxWidth()
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(subSurfaceBg)
+                                                    .border(0.5.dp, subSurfaceBorder, RoundedCornerShape(12.dp))
+                                                    .padding(12.dp),
+                                                verticalArrangement = Arrangement.spacedBy(4.dp)
                                             ) {
                                                 Text(
+                                                    "Panduan & Rubrik Penilaian",
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = textSecondary
+                                                )
+                                                Text(
                                                     res.instructions ?: "",
-                                                    fontSize = 11.sp,
-                                                    color = colorScheme.onSurfaceVariant,
-                                                    modifier = Modifier.padding(10.dp),
-                                                    lineHeight = 15.sp
+                                                    fontSize = 11.5.sp,
+                                                    color = textPrimary.copy(alpha = 0.88f),
+                                                    lineHeight = 16.sp
                                                 )
                                             }
                                         }
@@ -846,21 +1021,49 @@ fun AssignmentAiGeneratorScreen(
                             }
 
                             item {
-                                Text(
-                                    "Daftar Butir Soal Hasil Sintesis AI:",
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 13.sp,
-                                    color = colorScheme.onSurface
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        "Daftar Butir Soal (${res.questions.size})",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.5.sp,
+                                        color = textPrimary
+                                    )
+                                    Text(
+                                        "Total ${res.questions.sumOf { it.points }} Poin",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 11.5.sp,
+                                        color = emeraldAccent
+                                    )
+                                }
+                            }
+
+                            itemsIndexed(res.questions) { idx, q ->
+                                QuestionVerificationCard(
+                                    index = idx + 1,
+                                    question = q,
+                                    cardBg = cardBg,
+                                    cardBorder = cardBorder,
+                                    subSurfaceBg = subSurfaceBg,
+                                    subSurfaceBorder = subSurfaceBorder,
+                                    textPrimary = textPrimary,
+                                    textSecondary = textSecondary,
+                                    emeraldAccent = emeraldAccent,
+                                    emeraldSoftBg = emeraldSoftBg,
+                                    emeraldSoftBorder = emeraldSoftBorder,
+                                    purpleAccent = purpleAccent,
+                                    purpleSoftBg = purpleSoftBg,
+                                    purpleSoftBorder = purpleSoftBorder
                                 )
                             }
 
-                            // Items
-                            itemsIndexed(res.questions) { idx, q ->
-                                QuestionVerificationCard(index = idx + 1, question = q)
-                            }
-
                             item {
-                                Spacer(Modifier.height(16.dp))
+                                Spacer(Modifier.height(12.dp))
                             }
                         }
                     }
@@ -873,134 +1076,164 @@ fun AssignmentAiGeneratorScreen(
 @Composable
 private fun QuestionVerificationCard(
     index: Int,
-    question: GeneratedCurriculumQuestion
+    question: GeneratedCurriculumQuestion,
+    cardBg: Color,
+    cardBorder: Color,
+    subSurfaceBg: Color,
+    subSurfaceBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    emeraldAccent: Color,
+    emeraldSoftBg: Color,
+    emeraldSoftBorder: Color,
+    purpleAccent: Color,
+    purpleSoftBg: Color,
+    purpleSoftBorder: Color,
 ) {
-    val colorScheme = MaterialTheme.colorScheme
     val isMcq = question.questionType == "MULTIPLE_CHOICE"
 
     Surface(
-        shape = RoundedCornerShape(14.dp),
-        color = colorScheme.surface,
-        border = androidx.compose.foundation.BorderStroke(1.dp, colorScheme.outlineVariant),
-        shadowElevation = 1.dp,
+        shape = RoundedCornerShape(16.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
         modifier = Modifier.fillMaxWidth()
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
                     Box(
                         modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(if (isMcq) EmeraldPrimary else PurplePrimary),
+                            .size(26.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isMcq) emeraldSoftBg else purpleSoftBg)
+                            .border(0.5.dp, if (isMcq) emeraldSoftBorder else purpleSoftBorder, RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(index.toString(), color = Color.White, fontWeight = FontWeight.Bold, fontSize = 11.sp)
-                    }
-                    Surface(
-                        color = if (isMcq) EmeraldBg else PurpleBg,
-                        shape = RoundedCornerShape(6.dp),
-                        border = androidx.compose.foundation.BorderStroke(1.dp, if (isMcq) EmeraldBorder else PurpleBorder)
-                    ) {
                         Text(
-                            if (isMcq) "Pilihan Ganda" else "Uraian / Essay",
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isMcq) EmeraldPrimary else PurplePrimary,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            "#$index",
+                            color = if (isMcq) emeraldAccent else purpleAccent,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 11.sp
                         )
                     }
+                    Text(
+                        if (isMcq) "Pilihan Ganda" else "Uraian / Esai",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (isMcq) emeraldAccent else purpleAccent
+                    )
                 }
-                Text(
-                    "${question.points} Poin",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 11.sp,
-                    color = colorScheme.onSurfaceVariant
-                )
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(subSurfaceBg)
+                        .padding(horizontal = 8.dp, vertical = 3.dp)
+                ) {
+                    Text(
+                        "${question.points} Poin",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 10.5.sp,
+                        color = textSecondary
+                    )
+                }
             }
 
-            // Question Text
             Text(
                 question.questionText,
-                fontWeight = FontWeight.SemiBold,
+                fontWeight = FontWeight.Medium,
                 fontSize = 13.sp,
-                color = colorScheme.onSurface,
-                lineHeight = 18.sp
+                color = textPrimary,
+                lineHeight = 19.sp
             )
 
-            // Choices for MCQ
             if (isMcq && question.choices.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     question.choices.forEachIndexed { cIdx, choice ->
                         val letter = ('A' + cIdx).toString()
                         val isCorrect = choice.isCorrect
-                        Surface(
-                            shape = RoundedCornerShape(10.dp),
-                            color = if (isCorrect) EmeraldBg else colorScheme.surfaceVariant.copy(alpha = 0.35f),
-                            border = androidx.compose.foundation.BorderStroke(
-                                if (isCorrect) 1.5.dp else 1.dp,
-                                if (isCorrect) EmeraldPrimary else colorScheme.outlineVariant
-                            ),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(22.dp)
-                                        .clip(CircleShape)
-                                        .background(if (isCorrect) EmeraldPrimary else colorScheme.outlineVariant.copy(alpha = 0.5f)),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(letter, color = if (isCorrect) Color.White else colorScheme.onSurface, fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                }
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    choice.choiceText,
-                                    fontSize = 12.sp,
-                                    color = if (isCorrect) EmeraldPrimary else colorScheme.onSurface,
-                                    fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
-                                    modifier = Modifier.weight(1f)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (isCorrect) emeraldSoftBg else subSurfaceBg)
+                                .border(
+                                    width = if (isCorrect) 1.dp else 0.5.dp,
+                                    color = if (isCorrect) emeraldSoftBorder else subSurfaceBorder,
+                                    shape = RoundedCornerShape(10.dp)
                                 )
-                                if (isCorrect) {
-                                    Icon(Icons.Default.CheckCircle, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(16.dp))
-                                }
+                                .padding(horizontal = 10.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .clip(CircleShape)
+                                    .background(if (isCorrect) emeraldAccent else cardBg)
+                                    .border(0.5.dp, if (isCorrect) emeraldAccent else subSurfaceBorder, CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    letter,
+                                    color = if (isCorrect) Color.White else textSecondary,
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                choice.choiceText,
+                                fontSize = 12.sp,
+                                color = if (isCorrect) emeraldAccent else textPrimary,
+                                fontWeight = if (isCorrect) FontWeight.Bold else FontWeight.Normal,
+                                modifier = Modifier.weight(1f),
+                                lineHeight = 16.sp
+                            )
+                            if (isCorrect) {
+                                Spacer(Modifier.width(6.dp))
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = emeraldAccent,
+                                    modifier = Modifier.size(16.dp)
+                                )
                             }
                         }
                     }
                 }
             }
 
-            // Explanation / Rubric
             if (!question.explanation.isNullOrBlank()) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(subSurfaceBg)
+                        .padding(10.dp),
+                    verticalAlignment = Alignment.Top,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.padding(8.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Icon(Icons.Default.Info, contentDescription = null, tint = EmeraldPrimary, modifier = Modifier.size(14.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            question.explanation ?: "",
-                            fontSize = 11.sp,
-                            color = colorScheme.onSurfaceVariant,
-                            lineHeight = 14.sp
-                        )
-                    }
+                    Icon(
+                        Icons.Default.Lightbulb,
+                        contentDescription = null,
+                        tint = emeraldAccent,
+                        modifier = Modifier.size(14.dp).padding(top = 1.dp)
+                    )
+                    Text(
+                        question.explanation ?: "",
+                        fontSize = 11.sp,
+                        color = textSecondary,
+                        lineHeight = 15.sp
+                    )
                 }
             }
         }

@@ -1365,7 +1365,6 @@ private fun QuizSectionHeader(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun QuizDropdown(
     value: String,
@@ -1378,56 +1377,18 @@ private fun QuizDropdown(
     options: List<String>,
     onSelect: (String) -> Unit
 ) {
-    ExposedDropdownMenuBox(
-        expanded = expanded,
-        onExpandedChange = { if (!expanded) onExpand() else onDismiss() }
-    ) {
-        OutlinedTextField(
-            value = value,
-            onValueChange = {},
-            readOnly = true,
-            label = { Text(label) },
-            leadingIcon = {
-                Icon(icon, contentDescription = null, tint = accentColor, modifier = Modifier.size(20.dp))
-            },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
-            },
-            modifier = Modifier.fillMaxWidth().menuAnchor(),
-            shape = RoundedCornerShape(14.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = accentColor,
-                unfocusedBorderColor = if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFCBD5E1),
-                focusedLabelColor = accentColor,
-                focusedLeadingIconColor = accentColor,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary,
-                unfocusedLabelColor = TextTertiary
-            )
-        )
-        ExposedDropdownMenu(
-            expanded = expanded,
-            onDismissRequest = onDismiss,
-            modifier = Modifier.background(if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color.White)
-        ) {
-            options.forEach { option ->
-                val isSelected = option == value
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            option,
-                            color = if (isSelected) accentColor else TextPrimary,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                        )
-                    },
-                    onClick = { onSelect(option); onDismiss() },
-                    leadingIcon = if (isSelected) ({
-                        Icon(Icons.Default.Check, null, tint = accentColor, modifier = Modifier.size(16.dp))
-                    }) else null
-                )
-            }
-        }
-    }
+    ExecutiveBottomSheetSelector(
+        value = value,
+        label = label.replace(" *", ""),
+        icon = icon,
+        options = options,
+        onSelect = { selected ->
+            onSelect(selected)
+            onDismiss()
+        },
+        accentColor = accentColor,
+        isLocked = label.contains("Terkunci", ignoreCase = true) && options.size <= 1
+    )
 }
 
 @Composable

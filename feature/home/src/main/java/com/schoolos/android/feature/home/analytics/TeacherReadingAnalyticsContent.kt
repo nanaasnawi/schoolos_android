@@ -437,27 +437,21 @@ private fun ReadingFilterSection(
                     }
                 }
 
-                DropdownMenu(
-                    expanded = classDropdownOpen,
-                    onDismissRequest = { classDropdownOpen = false },
-                    modifier = Modifier.background(menuBg)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Semua Rombel", color = textPrimary, fontWeight = if (selectedClass == "ALL") FontWeight.Bold else FontWeight.Normal) },
-                        onClick = {
-                            onSelectClass("ALL")
+                if (classDropdownOpen) {
+                    val classOptions = remember(classes) { listOf("Semua Rombel") + classes }
+                    val currentClassLabel = if (selectedClass == "ALL") "Semua Rombel" else selectedClass
+                    ExecutiveSelectionBottomSheet(
+                        title = "Pilih Filter Rombel",
+                        subtitle = "Tampilkan analitik bacaan berdasarkan kelas",
+                        options = classOptions,
+                        selectedValue = currentClassLabel,
+                        accentColor = emeraldAccent,
+                        onDismiss = { classDropdownOpen = false },
+                        onSelect = { chosen ->
+                            onSelectClass(if (chosen == "Semua Rombel") "ALL" else chosen)
                             classDropdownOpen = false
                         }
                     )
-                    classes.forEach { cls ->
-                        DropdownMenuItem(
-                            text = { Text(cls, color = textPrimary, fontWeight = if (selectedClass == cls) FontWeight.Bold else FontWeight.Normal) },
-                            onClick = {
-                                onSelectClass(cls)
-                                classDropdownOpen = false
-                            }
-                        )
-                    }
                 }
             }
 
@@ -498,7 +492,7 @@ private fun ReadingFilterSection(
                         }
                         Spacer(Modifier.width(4.dp))
                         Icon(
-                            imageVector = Icons.Default.ArrowDropDown,
+                            imageVector = Icons.Default.KeyboardArrowDown,
                             contentDescription = "Pilih",
                             tint = textTertiary,
                             modifier = Modifier.size(18.dp)
@@ -506,27 +500,28 @@ private fun ReadingFilterSection(
                     }
                 }
 
-                DropdownMenu(
-                    expanded = materialDropdownOpen,
-                    onDismissRequest = { materialDropdownOpen = false },
-                    modifier = Modifier.background(menuBg)
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Semua Materi / Modul", color = textPrimary, fontWeight = if (selectedMaterialId == "ALL") FontWeight.Bold else FontWeight.Normal) },
-                        onClick = {
-                            onSelectMaterial("ALL")
+                if (materialDropdownOpen) {
+                    val materialOptions = remember(materials) {
+                        listOf("Semua Materi / Modul") + materials.map { it.second }
+                    }
+                    val currentMatLabel = if (selectedMaterialId == "ALL") "Semua Materi / Modul" else selectedTitle
+                    ExecutiveSelectionBottomSheet(
+                        title = "Pilih Filter Materi & Modul",
+                        subtitle = "Filter progres bacaan warga belajar per materi",
+                        options = materialOptions,
+                        selectedValue = currentMatLabel,
+                        accentColor = emeraldAccent,
+                        onDismiss = { materialDropdownOpen = false },
+                        onSelect = { chosen ->
+                            if (chosen == "Semua Materi / Modul") {
+                                onSelectMaterial("ALL")
+                            } else {
+                                val foundId = materials.firstOrNull { it.second == chosen }?.first ?: "ALL"
+                                onSelectMaterial(foundId)
+                            }
                             materialDropdownOpen = false
                         }
                     )
-                    materials.forEach { (mId, mTitle) ->
-                        DropdownMenuItem(
-                            text = { Text(mTitle, color = textPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = if (selectedMaterialId == mId) FontWeight.Bold else FontWeight.Normal) },
-                            onClick = {
-                                onSelectMaterial(mId)
-                                materialDropdownOpen = false
-                            }
-                        )
-                    }
                 }
             }
         }
