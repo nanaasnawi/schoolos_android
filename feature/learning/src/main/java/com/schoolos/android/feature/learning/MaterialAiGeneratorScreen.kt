@@ -151,10 +151,13 @@ fun MaterialAiGeneratorScreen(
         }
     }
 
+    val isImeVisible = WindowInsets.ime.getBottom(androidx.compose.ui.platform.LocalDensity.current) > 0
+
     Box(modifier = Modifier.fillMaxSize()) {
         when (currentStep) {
             MaterialGenStep.CONFIGURE -> {
                 Scaffold(
+                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     topBar = {
                         TopAppBar(
                             title = {
@@ -188,36 +191,38 @@ fun MaterialAiGeneratorScreen(
                         )
                     },
                     bottomBar = {
-                        Surface(
-                            tonalElevation = 8.dp,
-                            shadowElevation = 8.dp,
-                            color = colorScheme.surface,
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .navigationBarsPadding()
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                        if (!isImeVisible) {
+                            Surface(
+                                tonalElevation = 8.dp,
+                                shadowElevation = 8.dp,
+                                color = colorScheme.surface,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Button(
-                                    onClick = { handleStartGeneration() },
+                                Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(50.dp),
-                                    shape = RoundedCornerShape(14.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = EmeraldPrimary,
-                                        contentColor = Color.White
-                                    )
+                                        .navigationBarsPadding()
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
                                 ) {
-                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(
-                                        "Generate Materi Modul Sekarang",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
+                                    Button(
+                                        onClick = { handleStartGeneration() },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(50.dp),
+                                        shape = RoundedCornerShape(14.dp),
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = EmeraldPrimary,
+                                            contentColor = Color.White
+                                        )
+                                    ) {
+                                        Icon(Icons.Default.AutoAwesome, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            "Generate Materi Modul Sekarang",
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -226,7 +231,11 @@ fun MaterialAiGeneratorScreen(
                     LazyColumn(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(padding)
+                            .padding(
+                                top = padding.calculateTopPadding(),
+                                bottom = if (isImeVisible) 0.dp else padding.calculateBottomPadding()
+                            )
+                            .imePadding()
                             .padding(horizontal = 16.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
