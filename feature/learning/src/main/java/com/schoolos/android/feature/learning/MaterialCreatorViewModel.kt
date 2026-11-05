@@ -6,6 +6,8 @@ import com.schoolos.android.core.common.toHumanReadableError
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.MaterialType
+import com.schoolos.android.domain.model.findClass
+import com.schoolos.android.domain.model.groupParallelClasses
 import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.AuthRepository
 import com.schoolos.android.domain.repository.LearningMaterialRepository
@@ -403,6 +405,46 @@ class MaterialCreatorViewModel @Inject constructor(
         )
     }
 
+    private suspend fun expandParallelClasses(
+        classId: String?,
+        classIds: List<String>,
+        descriptionOrText: String?,
+    ): List<Pair<String?, String?>> {
+        val classes = _state.value.availableClasses.ifEmpty {
+            academicRepository.getClasses().getOrDefault(emptyList())
+        }
+        val unified = classes.groupParallelClasses()
+        val rawTargets = if (classIds.isNotEmpty()) {
+            classIds.filter { it.isNotBlank() }
+        } else {
+            listOfNotNull(classId?.takeIf { it.isNotBlank() })
+        }
+
+        if (rawTargets.isEmpty()) {
+            return listOf(null to null)
+        }
+
+        val expandedIds = if (rawTargets.size == 1) {
+            val single = rawTargets.first()
+            val matchedGroup = unified.findClass(single)
+            val mentionsParallelInDesc = descriptionOrText?.contains("Kelas A & B", ignoreCase = true) == true
+            if (matchedGroup != null && matchedGroup.memberClassIds.size > 1 &&
+                (mentionsParallelInDesc || single.equals(matchedGroup.displayName, ignoreCase = true) || matchedGroup.memberClassIds.contains(single))
+            ) {
+                matchedGroup.memberClassIds
+            } else {
+                rawTargets
+            }
+        } else {
+            rawTargets.distinct()
+        }
+
+        return expandedIds.map { cid ->
+            val cName = classes.find { it.id == cid || it.name.equals(cid, ignoreCase = true) }?.name
+            cid to cName
+        }
+    }
+
     fun createMaterial(
         title: String,
         description: String?,
@@ -410,6 +452,7 @@ class MaterialCreatorViewModel @Inject constructor(
         mediaUrl: String?,
         subject: String,
         classId: String?,
+        classIds: List<String> = emptyList(),
         subjectId: String? = null,
         visibility: String? = null,
         releaseAt: String? = null,
@@ -428,23 +471,44 @@ class MaterialCreatorViewModel @Inject constructor(
                 null
             }
 
-            repository.createMaterial(
-                title = title,
-                description = description,
-                materialType = materialType,
-                contentBody = finalContentBody,
-                mediaUrl = mediaUrl,
-                subject = subject,
-                classId = classId,
-                subjectId = subjectId,
-                visibility = visibility,
-                releaseAt = releaseAt,
-            ).onSuccess {
+            val targets = expandParallelClasses(classId, classIds, description)
+            val parallelLabelRegex = Regex("PAKET\\s+[ABC]\\s+\\d+\\s*\\(Kelas\\s+A\\s*&\\s*B\\)", RegexOption.IGNORE_CASE)
+            var successCount = 0
+            var lastError: Throwable? = null
+
+            for ((targetCid, targetClassName) in targets) {
+                val classSpecificDesc = if (description != null && !targetClassName.isNullOrBlank()) {
+                    description.replace(parallelLabelRegex, targetClassName)
+                } else {
+                    description
+                }
+
+                val res = repository.createMaterial(
+                    title = title,
+                    description = classSpecificDesc,
+                    materialType = materialType,
+                    contentBody = finalContentBody,
+                    mediaUrl = mediaUrl,
+                    subject = subject,
+                    classId = targetCid,
+                    subjectId = subjectId,
+                    visibility = visibility,
+                    releaseAt = releaseAt,
+                )
+                if (res.isSuccess) {
+                    successCount++
+                } else {
+                    lastError = res.exceptionOrNull()
+                }
+            }
+
+            if (successCount > 0) {
                 _state.value = _state.value.copy(isLoading = false, success = true)
-            }.onFailure { err ->
+            } else {
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = err.toHumanReadableError("Gagal membuat materi ajar. Periksa koneksi internet Anda.")
+                    error = lastError?.toHumanReadableError("Gagal membuat materi ajar. Periksa koneksi internet Anda.")
+                        ?: "Gagal membuat materi ajar. Periksa koneksi internet Anda."
                 )
             }
         }
@@ -472,6 +536,7 @@ class MaterialCreatorViewModel @Inject constructor(
         endPage: Int,
         instructions: String?,
         classId: String,
+        classIds: List<String> = emptyList(),
         subjectId: String?,
         releaseAt: String? = null,
         visibility: String? = null,
@@ -479,22 +544,43 @@ class MaterialCreatorViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
             val title = "Materi Bacaan: ${book.title} (Hal. $startPage–$endPage)"
-            repository.assignReadingMaterial(
-                bookId = book.id,
-                title = title,
-                instructions = instructions,
-                classId = classId,
-                subjectId = subjectId,
-                startPage = startPage,
-                endPage = endPage,
-                releaseAt = releaseAt,
-                visibility = visibility,
-            ).onSuccess {
+            val targets = expandParallelClasses(classId, classIds, instructions)
+            val parallelLabelRegex = Regex("PAKET\\s+[ABC]\\s+\\d+\\s*\\(Kelas\\s+A\\s*&\\s*B\\)", RegexOption.IGNORE_CASE)
+            var successCount = 0
+            var lastError: Throwable? = null
+
+            for ((targetCid, targetClassName) in targets) {
+                val cid = targetCid ?: classId
+                val classSpecificInstr = if (instructions != null && !targetClassName.isNullOrBlank()) {
+                    instructions.replace(parallelLabelRegex, targetClassName)
+                } else {
+                    instructions
+                }
+                val res = repository.assignReadingMaterial(
+                    bookId = book.id,
+                    title = title,
+                    instructions = classSpecificInstr,
+                    classId = cid,
+                    subjectId = subjectId,
+                    startPage = startPage,
+                    endPage = endPage,
+                    releaseAt = releaseAt,
+                    visibility = visibility,
+                )
+                if (res.isSuccess) {
+                    successCount++
+                } else {
+                    lastError = res.exceptionOrNull()
+                }
+            }
+
+            if (successCount > 0) {
                 _state.value = _state.value.copy(isLoading = false, success = true)
-            }.onFailure { err ->
+            } else {
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    error = err.toHumanReadableError("Gagal menugaskan materi buku perpustakaan.")
+                    error = lastError?.toHumanReadableError("Gagal menugaskan materi buku perpustakaan.")
+                        ?: "Gagal menugaskan materi buku perpustakaan."
                 )
             }
         }

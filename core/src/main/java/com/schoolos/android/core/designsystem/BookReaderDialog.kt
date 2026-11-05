@@ -38,6 +38,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -590,6 +591,18 @@ fun BookReaderDialog(
 
             // ── BOTTOM PAGE NAVIGATION BAR ───────────────────────────────────
             if (pageNumbers.isNotEmpty()) {
+                val density = LocalDensity.current
+                val systemNavBarHeightDp = remember(context) {
+                    val resId = context.resources.getIdentifier("navigation_bar_height", "dimen", "android")
+                    if (resId > 0) {
+                        with(density) { context.resources.getDimensionPixelSize(resId).toDp() }
+                    } else {
+                        48.dp
+                    }
+                }.coerceIn(44.dp, 64.dp)
+                val insetNavBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+                val safeBottomPad = maxOf(insetNavBottom, systemNavBarHeightDp)
+
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     color = Color(0xFF0F172A),
@@ -599,7 +612,7 @@ fun BookReaderDialog(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                            .padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = safeBottomPad + 8.dp),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
