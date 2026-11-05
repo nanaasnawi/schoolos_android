@@ -293,10 +293,11 @@ private fun ScreenTopNavigation(
                 }
             }
 
-            Column(verticalArrangement = Arrangement.Center) {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = title,
-                    fontSize = 18.sp,
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary,
                     maxLines = 1,
@@ -305,7 +306,8 @@ private fun ScreenTopNavigation(
                 if (!subtitle.isNullOrBlank()) {
                     Text(
                         text = subtitle,
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
+                        lineHeight = 14.sp,
                         fontWeight = FontWeight.Normal,
                         color = textSecondary,
                         maxLines = 1,
@@ -476,7 +478,7 @@ private fun AgendaHeroBanner(
                     )
                 }
 
-                Column {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
                         text = buildAnnotatedString {
                             withStyle(SpanStyle(color = studentNameColor)) {
@@ -485,19 +487,19 @@ private fun AgendaHeroBanner(
                             append(", ")
                             append(datePart)
                         },
-                        fontSize = 18.sp,
+                        fontSize = 15.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary,
-                        letterSpacing = (-0.3).sp,
+                        letterSpacing = (-0.2).sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(1.dp))
                     Text(
                         text = "Agenda pembelajaran dan sesi kelas terjadwal.",
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = textSecondary,
-                        lineHeight = 15.sp
+                        lineHeight = 14.sp
                     )
                 }
             }

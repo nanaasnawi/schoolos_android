@@ -305,16 +305,21 @@ private fun AtRiskTopHeader(
                         )
                     }
                 }
-                Column(modifier = Modifier.padding(start = if (onBack != null) 0.dp else 4.dp)) {
+                Column(
+                    modifier = Modifier.padding(start = if (onBack != null) 0.dp else 4.dp),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
                     Text(
                         text = "Siswa Perlu Perhatian",
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary
                     )
                     Text(
                         text = "Early Warning System (At-Risk Monitoring)",
                         fontSize = 11.sp,
+                        lineHeight = 14.sp,
                         color = textSecondary
                     )
                 }

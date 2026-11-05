@@ -1054,7 +1054,10 @@ private fun TeacherSectionHeader(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(modifier = Modifier.weight(1f, fill = false)) {
+        Column(
+            modifier = Modifier.weight(1f, fill = false),
+            verticalArrangement = Arrangement.spacedBy(1.dp),
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -1062,6 +1065,7 @@ private fun TeacherSectionHeader(
                 Text(
                     text = title,
                     fontSize = 15.sp,
+                    lineHeight = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary,
                 )
@@ -1083,10 +1087,10 @@ private fun TeacherSectionHeader(
                 }
             }
             if (subtitle.isNotBlank()) {
-                Spacer(Modifier.height(1.dp))
                 Text(
                     text = subtitle,
-                    fontSize = 11.5.sp,
+                    fontSize = 11.sp,
+                    lineHeight = 14.sp,
                     color = textTertiary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

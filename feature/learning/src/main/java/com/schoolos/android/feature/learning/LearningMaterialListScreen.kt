@@ -368,22 +368,25 @@ private fun StudentMaterialHeroBanner(
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
                     Text(
                         text = "Bahan Bacaan & Materi",
-                        fontSize = 18.sp,
+                        fontSize = 15.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary,
-                        letterSpacing = (-0.3).sp,
+                        letterSpacing = (-0.2).sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(1.dp))
                     Text(
                         text = "Pelajari modul mandiri dan video pembelajaran.",
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = textSecondary,
-                        lineHeight = 15.sp
+                        lineHeight = 14.sp
                     )
                 }
             }
@@ -571,22 +574,25 @@ private fun TeacherLearningHeroBanner(
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
                     Text(
                         text = "Modul & Bahan Bacaan",
-                        fontSize = 18.sp,
+                        fontSize = 15.sp,
+                        lineHeight = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary,
-                        letterSpacing = (-0.3).sp,
+                        letterSpacing = (-0.2).sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(1.dp))
                     Text(
                         text = "Kelola dan distribusikan bahan ajar untuk siswa.",
-                        fontSize = 11.5.sp,
+                        fontSize = 11.sp,
                         color = textSecondary,
-                        lineHeight = 15.sp
+                        lineHeight = 14.sp
                     )
                 }
             }
