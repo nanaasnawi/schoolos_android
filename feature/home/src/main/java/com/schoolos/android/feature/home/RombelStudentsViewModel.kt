@@ -17,6 +17,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -218,13 +219,71 @@ class RombelStudentsViewModel @Inject constructor(
         }
 
         viewModelScope.launch {
+            val auth = authManager.authState.first()
+            val isPrin = auth.isPrincipal || isPrincipalRole(auth.role)
+            _uiState.update { it.copy(isPrincipal = isPrin) }
+
+            val teacherScheduledClassNames = mutableSetOf<String>()
+            val teacherScheduledClassIds = mutableSetOf<String>()
+            if (!isPrin) {
+                val userId = auth.userId?.trim().orEmpty()
+                val userName = auth.name?.trim().orEmpty()
+                val cleanUserName = userName
+                    .replace(Regex("(?i)^(bpk\\.?|ibu|bapak|pak|bu|ustadz|ustadzah|drs\\.?|dra\\.?|ir\\.?|h\\.?|hj\\.?)\\s+"), "")
+                    .replace(Regex(",.*$"), "")
+                    .trim()
+                sessionRepository.getSessions(null).onSuccess { sessions ->
+                    sessions.forEach { s ->
+                        val matchId = userId.isNotBlank() && s.teacherId.equals(userId, ignoreCase = true)
+                        val sTeacherClean = (s.teacherName ?: "")
+                            .replace(Regex("(?i)^(bpk\\.?|ibu|bapak|pak|bu|ustadz|ustadzah|drs\\.?|dra\\.?|ir\\.?|h\\.?|hj\\.?)\\s+"), "")
+                            .replace(Regex(",.*$"), "")
+                            .trim()
+                        val matchName = cleanUserName.length >= 3 && sTeacherClean.length >= 3 && (
+                            sTeacherClean.equals(cleanUserName, ignoreCase = true) ||
+                                sTeacherClean.contains(cleanUserName, ignoreCase = true) ||
+                                cleanUserName.contains(sTeacherClean, ignoreCase = true)
+                            )
+                        if (matchId || matchName) {
+                            if (s.classId.isNotBlank()) teacherScheduledClassIds.add(s.classId.lowercase())
+                            val cn = s.className?.trim().orEmpty()
+                            if (cn.isNotBlank()) teacherScheduledClassNames.add(cn.uppercase().replace(Regex("\\s+"), " "))
+                        }
+                    }
+                }
+                val homeClass = auth.className?.trim().orEmpty()
+                if (homeClass.isNotBlank() && !homeClass.equals("ALL", ignoreCase = true) && !homeClass.equals("Semua", ignoreCase = true)) {
+                    teacherScheduledClassNames.add(homeClass.uppercase().replace(Regex("\\s+"), " "))
+                }
+            }
+
             val classesResult = academicRepository.getClasses()
-            val classes = classesResult.getOrDefault(emptyList())
+            val rawClasses = classesResult.getOrDefault(emptyList())
+            val classes = if (!isPrin && (teacherScheduledClassNames.isNotEmpty() || teacherScheduledClassIds.isNotEmpty())) {
+                rawClasses.filter { cls ->
+                    teacherScheduledClassIds.contains(cls.id.lowercase()) ||
+                        teacherScheduledClassNames.contains(cls.name.trim().uppercase().replace(Regex("\\s+"), " ")) ||
+                        (!auth.userId.isNullOrBlank() && cls.homeroomTeacherId.equals(auth.userId, ignoreCase = true))
+                }.ifEmpty { rawClasses }
+            } else {
+                rawClasses
+            }
+
+            val allowedClassNames = classes.map { it.name.trim().uppercase().replace(Regex("\\s+"), " ") }.toSet()
+            val allowedClassIds = classes.map { it.id.lowercase() }.toSet()
 
             val realAttendance = fetchAttendanceForClasses(classes)
 
             val studentsResult = academicRepository.getClassStudents("")
-            studentsResult.onSuccess { studentList ->
+            studentsResult.onSuccess { rawStudentList ->
+                val studentList = if (!isPrin && (allowedClassNames.isNotEmpty() || allowedClassIds.isNotEmpty())) {
+                    rawStudentList.filter { st ->
+                        (st.classId.isNotBlank() && allowedClassIds.contains(st.classId.lowercase())) ||
+                            allowedClassNames.contains(st.className.trim().uppercase().replace(Regex("\\s+"), " "))
+                    }
+                } else {
+                    rawStudentList
+                }
                 val mergedAttendance = studentList.associate { it.id to (realAttendance[it.id] ?: "present") }
                 _uiState.update { current ->
                     current.copy(

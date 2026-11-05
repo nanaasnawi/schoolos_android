@@ -36,9 +36,32 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                         else MaterialType.ARTICLE
                     }
                 }
-                val parts = (dto.description ?: "").split(" • ")
-                val subject = dto.subjectName?.takeIf { it.isNotBlank() }
-                    ?: if (parts.size > 1 && parts[0].isNotBlank()) parts[0] else "Umum"
+                val parts = (dto.description ?: "").split(" • ").map { it.trim() }
+                val rawDtoSubject = dto.subjectName?.trim()?.takeIf { it.isNotBlank() && !it.equals("Umum", ignoreCase = true) }
+                val descSubject = if (parts.size > 1) {
+                    parts[0].takeIf {
+                        it.isNotBlank() &&
+                            !it.startsWith("[") &&
+                            !it.startsWith("{") &&
+                            !it.startsWith("PAKET", ignoreCase = true) &&
+                            !it.startsWith("KELAS", ignoreCase = true) &&
+                            it.length <= 60
+                    }
+                } else null
+                val subject = rawDtoSubject ?: descSubject ?: dto.subjectName?.takeIf { it.isNotBlank() } ?: "Mata Pelajaran"
+
+                val resolvedClassName = dto.className?.trim()?.takeIf { it.isNotBlank() }
+                    ?: parts.firstOrNull { it.startsWith("PAKET", ignoreCase = true) || it.startsWith("KELAS", ignoreCase = true) }
+
+                val resolvedTeacherName = dto.teacherName?.trim()?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
+                    ?: parts.getOrNull(2)?.takeIf {
+                        it.length in 3..50 &&
+                            !it.startsWith("PAKET", ignoreCase = true) &&
+                            !it.startsWith("KELAS", ignoreCase = true) &&
+                            !it.contains("\n")
+                    }
+                    ?: dto.teacherName
+
                 val rawUrl = resolveMaterialMediaUrl(dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey)
 
                 LearningMaterial(
@@ -53,9 +76,9 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     size = dto.storageKey ?: dto.pdfFileName ?: "PDF Digital",
                     isCompleted = dto.isCompleted ?: false,
                     completedCount = dto.completedCount ?: 0L,
-                    teacherName = dto.teacherName,
+                    teacherName = resolvedTeacherName,
                     teacherId = dto.teacherId,
-                    className = dto.className,
+                    className = resolvedClassName,
                     classId = dto.classId,
                     startPage = dto.startPage,
                     endPage = dto.endPage,
@@ -145,9 +168,32 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     else MaterialType.ARTICLE
                 }
             }
-            val parts = (dto.description ?: "").split(" • ")
-            val subject = dto.subjectName?.takeIf { it.isNotBlank() }
-                ?: if (parts.size > 1 && parts[0].isNotBlank()) parts[0] else "Umum"
+            val parts = (dto.description ?: "").split(" • ").map { it.trim() }
+            val rawDtoSubject = dto.subjectName?.trim()?.takeIf { it.isNotBlank() && !it.equals("Umum", ignoreCase = true) }
+            val descSubject = if (parts.size > 1) {
+                parts[0].takeIf {
+                    it.isNotBlank() &&
+                        !it.startsWith("[") &&
+                        !it.startsWith("{") &&
+                        !it.startsWith("PAKET", ignoreCase = true) &&
+                        !it.startsWith("KELAS", ignoreCase = true) &&
+                        it.length <= 60
+                }
+            } else null
+            val subject = rawDtoSubject ?: descSubject ?: dto.subjectName?.takeIf { it.isNotBlank() } ?: "Mata Pelajaran"
+
+            val resolvedClassName = dto.className?.trim()?.takeIf { it.isNotBlank() }
+                ?: parts.firstOrNull { it.startsWith("PAKET", ignoreCase = true) || it.startsWith("KELAS", ignoreCase = true) }
+
+            val resolvedTeacherName = dto.teacherName?.trim()?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
+                ?: parts.getOrNull(2)?.takeIf {
+                    it.length in 3..50 &&
+                        !it.startsWith("PAKET", ignoreCase = true) &&
+                        !it.startsWith("KELAS", ignoreCase = true) &&
+                        !it.contains("\n")
+                }
+                ?: dto.teacherName
+
             val rawUrl = resolveMaterialMediaUrl(dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey)
 
             val domain = LearningMaterial(
@@ -162,9 +208,9 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 size = dto.storageKey ?: dto.pdfFileName ?: "PDF Digital",
                 isCompleted = dto.isCompleted ?: false,
                 completedCount = dto.completedCount ?: 0L,
-                teacherName = dto.teacherName,
+                teacherName = resolvedTeacherName,
                 teacherId = dto.teacherId,
-                className = dto.className,
+                className = resolvedClassName,
                 classId = dto.classId,
                 startPage = dto.startPage,
                 endPage = dto.endPage,

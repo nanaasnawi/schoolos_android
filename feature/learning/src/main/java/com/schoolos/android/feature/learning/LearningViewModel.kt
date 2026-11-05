@@ -81,6 +81,9 @@ class LearningViewModel @Inject constructor(
     /** Optional class/rombel filter passed via navigation (e.g. "PAKET B 8A"). */
     private var classFilter: String? = savedStateHandle.get<String>("className")?.takeIf { it.isNotBlank() }
 
+    /** Enrolled class of the logged-in student (strictly enforced so other classes never leak). */
+    private var studentEnrolledClass: String? = null
+
     /** Optional date filter passed via navigation (e.g. "2026-11-02" or "today"). */
     private var dateFilter: String? = savedStateHandle.get<String>("date")?.takeIf { it.isNotBlank() }
 
@@ -98,7 +101,19 @@ class LearningViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             authManager.authState.collect { auth ->
-                _state.value = _state.value.copy(userRole = auth.role ?: "student")
+                val role = auth.role ?: "student"
+                val isStudent = !com.schoolos.android.core.auth.isTeacherRole(role) &&
+                    !com.schoolos.android.core.auth.isPrincipalRole(role) &&
+                    !auth.isPrincipal
+                studentEnrolledClass = if (isStudent) {
+                    auth.className?.trim()?.takeIf { it.isNotBlank() && !it.equals("ALL", ignoreCase = true) }
+                } else {
+                    null
+                }
+                _state.value = _state.value.copy(userRole = role)
+                if (allMaterials.isNotEmpty()) {
+                    filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
+                }
             }
         }
         loadMaterials()
@@ -371,7 +386,13 @@ class LearningViewModel @Inject constructor(
     }
 
     private fun filterMaterials(query: String, category: String) {
-        var filtered = allMaterials
+        val roleScopedMaterials = studentEnrolledClass?.let { enrolledClass ->
+            allMaterials.filter { item ->
+                com.schoolos.android.core.designsystem.matchesClassFilter(item.className, enrolledClass)
+            }
+        } ?: allMaterials
+
+        var filtered = roleScopedMaterials
 
         dateFilter?.let { dFilter ->
             val targetDate = if (dFilter.equals("today", ignoreCase = true)) {
@@ -419,7 +440,7 @@ class LearningViewModel @Inject constructor(
 
         // Base scoped pool for count statistics (scoped by active subject/class/date filters)
         val scopedBase = if (subjectFilter != null || classFilter != null || dateFilter != null) {
-            allMaterials.filter { item ->
+            roleScopedMaterials.filter { item ->
                 (subjectFilter == null || com.schoolos.android.core.designsystem.matchesSubjectFilter(item.subject, subjectFilter)) &&
                 (classFilter == null || com.schoolos.android.core.designsystem.matchesClassFilter(item.className, classFilter)) &&
                 (dateFilter == null || run {
@@ -434,7 +455,7 @@ class LearningViewModel @Inject constructor(
                 })
             }
         } else {
-            allMaterials
+            roleScopedMaterials
         }
 
         val completedCount = scopedBase.count { it.isCompleted }
