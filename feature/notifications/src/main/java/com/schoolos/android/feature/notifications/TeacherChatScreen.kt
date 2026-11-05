@@ -33,6 +33,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -178,13 +180,12 @@ fun TeacherChatScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
-                title = "Tanya Jawab",
+                title = if (isTeacherMode) "Tanya Jawab Siswa" else "Tanya Jawab Guru",
                 subtitle = if (isTeacherMode) {
                     if (waitingCount > 0) "$waitingCount pertanyaan menunggu tanggapan"
                     else "Semua pertanyaan siswa telah dijawab"
                 } else {
-                    if (waitingCount > 0) "$waitingCount pertanyaan menunggu balasan guru"
-                    else "Konsultasi materi & tugas bersama guru pengampu"
+                    "Pesan & Konsultasi Mata Pelajaran PKBM"
                 },
                 onBack = onBack,
                 actions = {
@@ -237,95 +238,97 @@ fun TeacherChatScreen(
             Column(
                 modifier = Modifier.fillMaxSize(),
             ) {
-                // ── 1. METRIC OVERVIEW ──────────────────────────────────────────
-                ChatOverviewCard(
-                    totalCount = threads.size,
-                    waitingCount = waitingCount,
-                    contactCount = uniqueContacts,
-                    selectedFilter = selectedFilter,
-                    onFilterSelected = { selectedFilter = it },
-                    isTeacherMode = isTeacherMode,
-                    isDark = isDark,
-                    cardBg = cardBg,
-                    cardBorder = cardBorder,
-                    textPrimary = textPrimary,
-                    textSecondary = textSecondary,
-                    studentAccent = studentAccent,
-                    teacherAccent = teacherAccent,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp),
-                )
+                // ── Search Bar ──────────────────────────────────────────
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                ) {
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier.fillMaxWidth(),
+                        placeholder = {
+                            Text(
+                                text = if (isTeacherMode) "Cari siswa, kelas, topik tugas/materi..."
+                                else "Cari nama guru atau mata pelajaran...",
+                                fontSize = 12.5.sp,
+                                color = textTertiary,
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Search,
+                                contentDescription = null,
+                                tint = textTertiary,
+                                modifier = Modifier.size(18.dp),
+                            )
+                        },
+                        trailingIcon = {
+                            if (searchQuery.isNotBlank()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(
+                                        Icons.Default.Clear,
+                                        contentDescription = "Hapus",
+                                        tint = textSecondary,
+                                        modifier = Modifier.size(16.dp),
+                                    )
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedContainerColor = cardBg,
+                            unfocusedContainerColor = cardBg,
+                            focusedBorderColor = activeRoleAccent,
+                            unfocusedBorderColor = cardBorder,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary,
+                        ),
+                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                        keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
+                    )
+                }
 
-                // ── 2. KONTAK GURU PENGAMPU (Direct Contact Hub) ───────────────
                 if (!isTeacherMode) {
-                    TeacherContactsSection(
+                    // ── SISWA MODE: WHATSAPP-STYLE DIRECT TEACHER CHAT LIST ──
+                    StudentWhatsAppChatList(
+                        teachers = OfficialTeachersList,
                         threads = threads,
-                        chatManager = chatManager,
+                        searchQuery = searchQuery,
                         onOpenThread = onOpenThread,
                         isDark = isDark,
-                        cardBg = cardBg,
-                        cardBorder = cardBorder,
-                        innerCardBg = innerCardBg,
-                        innerCardBorder = innerCardBorder,
                         textPrimary = textPrimary,
                         textSecondary = textSecondary,
                         textTertiary = textTertiary,
                         studentAccent = studentAccent,
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        innerCardBg = innerCardBg,
+                        innerCardBorder = innerCardBorder,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                } else {
+                    // ── GURU MODE: INQUIRY OVERVIEW & FILTERED THREADS ──────
+                    ChatOverviewCard(
+                        totalCount = threads.size,
+                        waitingCount = waitingCount,
+                        contactCount = uniqueContacts,
+                        selectedFilter = selectedFilter,
+                        onFilterSelected = { selectedFilter = it },
+                        isTeacherMode = isTeacherMode,
+                        isDark = isDark,
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary,
+                        studentAccent = studentAccent,
+                        teacherAccent = teacherAccent,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
-                }
-
-                    // B. Search Bar
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 4.dp),
-                    ) {
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            placeholder = {
-                                Text(
-                                    text = if (isTeacherMode) "Cari siswa, kelas, topik tugas/materi..."
-                                    else "Cari nama guru, mata pelajaran, materi...",
-                                    fontSize = 12.5.sp,
-                                    color = textTertiary,
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    Icons.Default.Search,
-                                    contentDescription = null,
-                                    tint = textTertiary,
-                                    modifier = Modifier.size(18.dp),
-                                )
-                            },
-                            trailingIcon = {
-                                if (searchQuery.isNotBlank()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(
-                                            Icons.Default.Clear,
-                                            contentDescription = "Hapus",
-                                            tint = textSecondary,
-                                            modifier = Modifier.size(16.dp),
-                                        )
-                                    }
-                                }
-                            },
-                            singleLine = true,
-                            shape = RoundedCornerShape(16.dp),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedContainerColor = cardBg,
-                                unfocusedContainerColor = cardBg,
-                                focusedBorderColor = activeRoleAccent,
-                                unfocusedBorderColor = cardBorder,
-                                focusedTextColor = textPrimary,
-                                unfocusedTextColor = textPrimary,
-                            ),
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                            keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                        )
-                    }
 
                     // C. Filter Tabs
                     val showFilterRow = threads.isNotEmpty()
@@ -500,20 +503,18 @@ fun TeacherChatScreen(
                         }
                     }
                 }
+                }
             }
         }
     }
 
-// ── 1. KONTAK GURU MAPEL SECTION (Direct Interaction for Students) ────────
+// ── 1. WHATSAPP-STYLE TEACHER CONTACTS & CHAT LIST (Zero WhatsApp dummy) ──
 
 data class TeacherContactItem(
     val id: String,
     val name: String,
     val subject: String,
-    val phone: String,
-    val email: String,
     val roleTitle: String = "Tutor Pengampu",
-    val status: String = "Online",
 )
 
 private val OfficialTeachersList = listOf(
@@ -521,167 +522,180 @@ private val OfficialTeachersList = listOf(
         id = "teacher-asep-rifai",
         name = "ASEP RIFAI, S.Pd",
         subject = "Ilmu Pengetahuan Alam dan Sosial (IPAS)",
-        phone = "081223344551",
-        email = "aseprifai@pkbm.sch.id",
         roleTitle = "Tutor IPAS",
     ),
     TeacherContactItem(
         id = "teacher-asy-syifa",
         name = "ASY SYIFA RAHMAH IHSANI, S.Pd",
         subject = "Bahasa Inggris",
-        phone = "085211223344",
-        email = "asysyifa@pkbm.sch.id",
-        roleTitle = "Tutor Bhs. Inggris",
+        roleTitle = "Tutor Bahasa Inggris",
     ),
     TeacherContactItem(
         id = "teacher-amin-lisana",
         name = "AMIN LISANA, S.Pd",
         subject = "Bahasa Indonesia",
-        phone = "087799881122",
-        email = "aminlisana@pkbm.sch.id",
-        roleTitle = "Tutor Bhs. Indonesia",
+        roleTitle = "Tutor Bahasa Indonesia",
+    ),
+    TeacherContactItem(
+        id = "teacher-fitri-nafisah",
+        name = "FITRI NAFISAH, S.Pd",
+        subject = "Bahasa Cirebon & Ekonomi",
+        roleTitle = "Tutor B. Cirebon & Ekonomi",
     ),
     TeacherContactItem(
         id = "teacher-siti-muniroh",
         name = "Siti Muniroh, S.Pd",
         subject = "Pendidikan Pancasila & Karakter",
-        phone = "081388776655",
-        email = "sitimuniroh@pkbm.sch.id",
-        roleTitle = "Tutor Karakter & PKn",
+        roleTitle = "Tutor Pancasila & Karakter",
+    ),
+    TeacherContactItem(
+        id = "teacher-taufiq-hidayat",
+        name = "TAUFIQ HIDAYAT, S.Pd",
+        subject = "Geografi",
+        roleTitle = "Tutor Geografi",
+    ),
+    TeacherContactItem(
+        id = "teacher-husnul-chatim",
+        name = "HUSNUL CHATIM, S.Pd",
+        subject = "Seni Budaya",
+        roleTitle = "Tutor Seni Budaya",
+    ),
+    TeacherContactItem(
+        id = "teacher-eha-meida",
+        name = "EHA MEIDA KARTIKA, S.Pd",
+        subject = "Pendidikan Agama Islam",
+        roleTitle = "Tutor PAI & Budi Pekerti",
+    ),
+    TeacherContactItem(
+        id = "teacher-ikin-baihaki",
+        name = "IKIN BAIHAKI, S.Kom",
+        subject = "Keterampilan Komputer",
+        roleTitle = "Tutor TIK & Komputer",
     ),
     TeacherContactItem(
         id = "teacher-eulis-komala",
-        name = "Dra. Hj. Eulis Komala",
-        subject = "Bimbingan & Konseling",
-        phone = "081299887766",
-        email = "euliskomala@pkbm.sch.id",
-        roleTitle = "Kepala PKBM / Pembina",
+        name = "Dra. Hj. Eulis Komala, M.Pd",
+        subject = "Bimbingan & Konseling (BK)",
+        roleTitle = "Kepala PKBM / Pembina BK",
     ),
 )
 
 @Composable
-private fun TeacherContactsSection(
+private fun StudentWhatsAppChatList(
+    teachers: List<TeacherContactItem>,
     threads: List<ChatThread>,
-    chatManager: ChatManager,
+    searchQuery: String,
     onOpenThread: (threadId: String, recipientName: String) -> Unit,
     isDark: Boolean,
-    cardBg: Color,
-    cardBorder: Color,
-    innerCardBg: Color,
-    innerCardBorder: Color,
     textPrimary: Color,
     textSecondary: Color,
     textTertiary: Color,
     studentAccent: Color,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
     modifier: Modifier = Modifier,
 ) {
-    val context = LocalContext.current
-    var isExpanded by remember { mutableStateOf(false) }
+    val filteredTeachers = remember(teachers, searchQuery) {
+        if (searchQuery.isBlank()) teachers
+        else teachers.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+            it.subject.contains(searchQuery, ignoreCase = true) ||
+            it.roleTitle.contains(searchQuery, ignoreCase = true)
+        }
+    }
 
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = cardBg,
-        border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp,
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            // Header Row
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(32.dp)
-                            .clip(CircleShape)
-                            .background(studentAccent.copy(alpha = 0.12f))
-                            .border(1.dp, studentAccent.copy(alpha = 0.35f), CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_modern_classes),
-                            contentDescription = null,
-                            tint = studentAccent,
-                            modifier = Modifier.size(16.dp),
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Kontak Guru Mapel",
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textPrimary,
-                        )
-                        Text(
-                            text = "Hubungi langsung guru via WhatsApp atau Chat",
-                            fontSize = 10.5.sp,
-                            color = textSecondary,
-                        )
-                    }
-                }
+            Text(
+                text = "GURU MATA PELAJARAN (${filteredTeachers.size})",
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.5.sp,
+                color = studentAccent,
+            )
+            Text(
+                text = "Pilih untuk mulai chat",
+                fontSize = 10.5.sp,
+                color = textTertiary,
+            )
+        }
 
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = innerCardBg,
-                    border = BorderStroke(1.dp, innerCardBorder),
-                    modifier = Modifier.clickable { isExpanded = !isExpanded }
+        Surface(
+            modifier = Modifier.fillMaxWidth().weight(1f),
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            shadowElevation = if (isDark) 0.dp else 1.dp,
+        ) {
+            if (filteredTeachers.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        Text(
-                            text = if (isExpanded) "Sembunyikan" else "Lihat Semua",
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = studentAccent,
-                        )
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
-                            contentDescription = null,
-                            tint = studentAccent,
-                            modifier = Modifier.size(12.dp),
-                        )
-                    }
-                }
-            }
-
-            // Teachers List
-            val displayTeachers = if (isExpanded) OfficialTeachersList else OfficialTeachersList.take(2)
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                displayTeachers.forEach { teacher ->
-                    TeacherContactCardItem(
-                        teacher = teacher,
-                        threads = threads,
-                        chatManager = chatManager,
-                        onOpenThread = onOpenThread,
-                        isDark = isDark,
-                        innerCardBg = innerCardBg,
-                        innerCardBorder = innerCardBorder,
-                        textPrimary = textPrimary,
-                        textSecondary = textSecondary,
-                        textTertiary = textTertiary,
-                        studentAccent = studentAccent,
-                        onWhatsAppClick = {
-                            openWhatsAppDirect(context, teacher.phone, teacher.name, teacher.subject, chatManager)
-                        },
-                        onCallClick = {
-                            openDialerDirect(context, teacher.phone)
-                        },
-                        onEmailClick = {
-                            openEmailDirect(context, teacher.email, teacher.name, teacher.subject, chatManager)
-                        }
+                    Text(
+                        text = "Guru atau mata pelajaran '$searchQuery' tidak ditemukan",
+                        fontSize = 12.5.sp,
+                        color = textTertiary,
+                        textAlign = TextAlign.Center,
                     )
+                }
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                ) {
+                    itemsIndexed(filteredTeachers, key = { _, it -> it.id }) { index, teacher ->
+                        val thread = threads.firstOrNull {
+                            it.teacherName.contains(teacher.name.take(6), ignoreCase = true) ||
+                            it.subjectName.contains(teacher.subject.take(5), ignoreCase = true)
+                        }
+                        val lastMsg = thread?.messages?.lastOrNull()?.content
+                            ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
+                            ?: "Mata Pelajaran • Ketuk untuk mulai chat"
+                        val timeText = if (thread?.messages?.isNotEmpty() == true) {
+                            "Aktif"
+                        } else {
+                            "Online"
+                        }
+
+                        WhatsAppChatRowItem(
+                            teacher = teacher,
+                            previewText = lastMsg,
+                            timeText = timeText,
+                            isOnline = true,
+                            hasUnread = thread?.status == InquiryStatus.ANSWERED,
+                            isDark = isDark,
+                            textPrimary = textPrimary,
+                            textSecondary = textSecondary,
+                            textTertiary = textTertiary,
+                            studentAccent = studentAccent,
+                            innerCardBorder = innerCardBorder,
+                            onClick = {
+                                val targetId = thread?.id ?: "teacher-${teacher.name.filter { it.isLetter() }.lowercase()}"
+                                onOpenThread(targetId, teacher.name)
+                            },
+                        )
+
+                        if (index < filteredTeachers.size - 1) {
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 74.dp, end = 16.dp),
+                                thickness = 0.5.dp,
+                                color = if (isDark) innerCardBorder else Color(0xFFF1F5F9),
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -689,253 +703,132 @@ private fun TeacherContactsSection(
 }
 
 @Composable
-private fun TeacherContactCardItem(
+private fun WhatsAppChatRowItem(
     teacher: TeacherContactItem,
-    threads: List<ChatThread>,
-    chatManager: ChatManager,
-    onOpenThread: (threadId: String, recipientName: String) -> Unit,
+    previewText: String,
+    timeText: String,
+    isOnline: Boolean,
+    hasUnread: Boolean,
     isDark: Boolean,
-    innerCardBg: Color,
-    innerCardBorder: Color,
     textPrimary: Color,
     textSecondary: Color,
     textTertiary: Color,
     studentAccent: Color,
-    onWhatsAppClick: () -> Unit,
-    onCallClick: () -> Unit,
-    onEmailClick: () -> Unit,
+    innerCardBorder: Color,
+    onClick: () -> Unit,
 ) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        color = innerCardBg,
-        border = BorderStroke(1.dp, innerCardBorder),
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+        // Avatar with Online Dot
+        Box(
+            modifier = Modifier.size(50.dp),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
+            Box(
+                modifier = Modifier
+                    .size(48.dp)
+                    .clip(CircleShape)
+                    .background(studentAccent.copy(alpha = if (isDark) 0.20f else 0.12f))
+                    .border(1.dp, studentAccent.copy(alpha = if (isDark) 0.45f else 0.30f), CircleShape),
+                contentAlignment = Alignment.Center,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(38.dp)
-                            .clip(CircleShape)
-                            .background(Color(0xFF10B981).copy(alpha = 0.15f))
-                            .border(1.dp, Color(0xFF10B981).copy(alpha = 0.35f), CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            text = teacher.name.take(1).uppercase(),
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDark) Color(0xFF34D399) else Color(0xFF059669),
-                        )
-                    }
-
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text(
-                                text = teacher.name,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .size(6.dp)
-                                    .clip(CircleShape)
-                                    .background(Color(0xFF10B981))
-                            )
-                        }
-                        Text(
-                            text = teacher.subject,
-                            fontSize = 11.sp,
-                            color = studentAccent,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                    }
-                }
-
-                // Phone text label
                 Text(
-                    text = teacher.phone,
-                    fontSize = 10.5.sp,
-                    color = textTertiary,
-                    fontWeight = FontWeight.Medium,
+                    text = teacher.name.take(1).uppercase(),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = studentAccent,
                 )
             }
 
-            // Action Buttons Row (WhatsApp, Telepon, Chat di Aplikasi)
+            if (isOnline) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF10B981))
+                        .border(2.dp, if (isDark) Color(0xFF111113) else Color.White, CircleShape)
+                        .align(Alignment.BottomEnd),
+                )
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        // Center: Teacher Name, Subject Badge, and Last Message
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                // 1. WhatsApp Button
+                Text(
+                    text = teacher.name,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+
+                Spacer(Modifier.width(8.dp))
+
+                Text(
+                    text = timeText,
+                    fontSize = 10.5.sp,
+                    color = if (timeText == "Online") Color(0xFF10B981) else textTertiary,
+                    fontWeight = if (timeText == "Online") FontWeight.Bold else FontWeight.Normal,
+                )
+            }
+
+            Spacer(Modifier.height(3.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Compact Subject Tag
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7),
-                    border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.45f) else Color(0xFF86EFAC)),
-                    modifier = Modifier
-                        .weight(1.1f)
-                        .clickable { onWhatsAppClick() },
+                    shape = RoundedCornerShape(4.dp),
+                    color = studentAccent.copy(alpha = if (isDark) 0.18f else 0.10f),
+                    border = BorderStroke(0.5.dp, studentAccent.copy(alpha = 0.35f)),
+                    modifier = Modifier.padding(end = 6.dp),
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_modern_whatsapp),
-                            contentDescription = null,
-                            tint = if (isDark) Color(0xFF34D399) else Color(0xFF15803D),
-                            modifier = Modifier.size(13.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "WhatsApp",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (isDark) Color(0xFF34D399) else Color(0xFF15803D),
-                        )
-                    }
+                    Text(
+                        text = teacher.subject.take(22) + if (teacher.subject.length > 22) "..." else "",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = studentAccent,
+                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp),
+                    )
                 }
 
-                // 2. Call Button
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = innerCardBg,
-                    border = BorderStroke(1.dp, innerCardBorder),
-                    modifier = Modifier
-                        .weight(0.9f)
-                        .clickable { onCallClick() },
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_modern_phone),
-                            contentDescription = null,
-                            tint = textSecondary,
-                            modifier = Modifier.size(12.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "Telepon",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = textSecondary,
-                        )
-                    }
-                }
+                Text(
+                    text = previewText,
+                    fontSize = 11.5.sp,
+                    color = textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
 
-                // 3. In-App Chat Button
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = studentAccent,
-                    modifier = Modifier
-                        .weight(1.2f)
-                        .clickable {
-                            val existingThread = threads.firstOrNull {
-                                it.teacherName.contains(teacher.name.take(6), ignoreCase = true) ||
-                                it.subjectName.contains(teacher.subject.take(5), ignoreCase = true)
-                            }
-                            if (existingThread != null) {
-                                onOpenThread(existingThread.id, teacher.name)
-                            } else {
-                                val dummyThreadId = "teacher-${teacher.name.filter { it.isLetter() }.lowercase()}"
-                                onOpenThread(dummyThreadId, teacher.name)
-                            }
-                        },
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_modern_chat),
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp),
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            text = "Tanya di Chat",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                        )
-                    }
+                if (hasUnread) {
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF10B981)),
+                    )
                 }
             }
         }
-    }
-}
-
-private fun openWhatsAppDirect(
-    context: android.content.Context,
-    phone: String,
-    teacherName: String,
-    subject: String,
-    chatManager: ChatManager
-) {
-    try {
-        val clean = phone.replace("+", "").replace("-", "").replace(" ", "").trim()
-        val standardPhone = if (clean.startsWith("0")) "62" + clean.substring(1) else clean
-        val auth = chatManager.currentAuth
-        val studentName = auth?.name?.ifBlank { "Siswa" } ?: "Siswa"
-        val studentClass = auth?.className?.ifBlank { "PKBM As-Salafiyah" } ?: "PKBM As-Salafiyah"
-        val message = "Halo Bapak/Ibu $teacherName, saya $studentName ($studentClass) ingin berkonsultasi mengenai mata pelajaran $subject."
-        val url = "https://api.whatsapp.com/send?phone=$standardPhone&text=${java.net.URLEncoder.encode(message, "UTF-8")}"
-        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        android.widget.Toast.makeText(context, "Tidak dapat membuka WhatsApp", android.widget.Toast.LENGTH_SHORT).show()
-    }
-}
-
-private fun openDialerDirect(context: android.content.Context, phone: String) {
-    try {
-        val intent = android.content.Intent(android.content.Intent.ACTION_DIAL, android.net.Uri.parse("tel:$phone"))
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        android.widget.Toast.makeText(context, "Tidak dapat membuka panggilan", android.widget.Toast.LENGTH_SHORT).show()
-    }
-}
-
-private fun openEmailDirect(
-    context: android.content.Context,
-    email: String,
-    teacherName: String,
-    subject: String,
-    chatManager: ChatManager
-) {
-    try {
-        val auth = chatManager.currentAuth
-        val studentName = auth?.name?.ifBlank { "Siswa" } ?: "Siswa"
-        val intent = android.content.Intent(android.content.Intent.ACTION_SENDTO).apply {
-            data = android.net.Uri.parse("mailto:$email")
-            putExtra(android.content.Intent.EXTRA_SUBJECT, "Konsultasi $subject - $studentName")
-        }
-        context.startActivity(intent)
-    } catch (e: Exception) {
-        android.widget.Toast.makeText(context, "Tidak dapat membuka email", android.widget.Toast.LENGTH_SHORT).show()
     }
 }
 

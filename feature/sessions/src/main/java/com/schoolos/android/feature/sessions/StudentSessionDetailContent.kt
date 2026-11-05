@@ -192,7 +192,7 @@ fun StudentSessionDetailContent(
                     Column {
                         Text(
                             text = "Guru Pengampu",
-                            fontSize = 11.sp,
+                            fontSize = 10.5.sp,
                             color = textTertiary,
                             fontWeight = FontWeight.SemiBold
                         )
@@ -202,6 +202,16 @@ fun StudentSessionDetailContent(
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary
+                        )
+                        val subjectName = session.subjectName?.takeIf { it.isNotBlank() }
+                            ?: session.notes?.substringBefore(" • ")?.substringBefore(" (Ruang")?.trim()?.takeIf { it.isNotBlank() }
+                            ?: "Mata Pelajaran"
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = subjectName,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = studentAccent,
                         )
                     }
                 }
