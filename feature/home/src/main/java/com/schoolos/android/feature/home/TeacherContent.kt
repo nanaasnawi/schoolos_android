@@ -173,7 +173,7 @@ fun LazyListScope.teacherContent(
     // ── 0. KARTU SAPAAN GURU (GREETING HERO CARD SAMA DENGAN PORTAL SISWA & KEPALA SEKOLAH) ──
     item {
         val effectiveClassLabel = if (rawClass != "-") formatClassName(rawClass).uppercase() else "TUTOR PENGAMPU"
-        val effectiveSubjectLabel = formatSubjectAbbreviation(activeSubject, teacherName)
+        val effectiveSubjectLabel = formatSubjectAbbreviation(activeSubject)
         StudentGreetingHeroCard(
             studentName = teacherName.ifBlank { "Tutor Pengampu" },
             studentClass = effectiveClassLabel,
@@ -1441,51 +1441,50 @@ private fun AlertActionButton(
 }
 
 /**
- * Cleanly abbreviates and standardizes subject names for teacher profile badge.
- * Replaces generic/awkward labels like "PENDIDIK & GTK" with real, concise subject codes (e.g. PAI, IPAS, IPA).
+ * Cleanly abbreviates and standardizes subject names for teacher profile badge dynamically.
+ * Zero hardcoded teacher name tables or arbitrary fallback mappings.
  */
-private fun formatSubjectAbbreviation(rawSubject: String?, teacherName: String? = null): String {
-    val s = rawSubject?.trim()?.uppercase().orEmpty()
-    val name = teacherName?.trim()?.uppercase().orEmpty()
-
-    val candidate = if (s.isBlank() || s == "-" || s == "PENDIDIK & GTK" || s == "GURU" || s == "TUTOR" || s == "UMUM") {
-        when {
-            name.contains("ASEP RIFAI") -> "IPAS"
-            name.contains("ASY SYIFA") -> "B. INGGRIS"
-            name.contains("AMIN LISANA") -> "B. INDONESIA"
-            name.contains("FITRI NAFISAH") -> "B. CIREBON & EKONOMI"
-            name.contains("SITI MUNIROH") -> "PPKn"
-            name.contains("TAUFIQ HIDAYAT") -> "GEOGRAFI"
-            name.contains("HUSNUL CHATIM") -> "SENI BUDAYA"
-            name.contains("EHA MEIDA") || name.contains("SRI MULYANI") -> "PAI"
-            name.contains("ESI ROKESI") -> "IPA"
-            name.contains("AMEILIANI") || name.contains("KUSWANTO") -> "MATEMATIKA"
-            name.contains("IKIN BAIHAKI") -> "TIK / KOMPUTER"
-            name.contains("KHAERIYAH") -> "B. INDONESIA"
-            name.contains("KRISTIANTI") -> "PPKn"
-            name.contains("ROHMANA") -> "SOSIOLOGI"
-            name.contains("SUSILAWATI") -> "KETERAMPILAN"
-            else -> "TUTOR PENGAMPU"
-        }
-    } else s
-
+private fun abbreviateSingleSubject(sub: String): String {
+    val s = sub.trim().uppercase()
     return when {
-        candidate.contains("AGAMA") -> "PAI"
-        candidate.contains("ALAM DAN SOSIAL") || candidate.contains("IPAS") -> "IPAS"
-        candidate.contains("ALAM") || candidate.contains("IPA") -> "IPA"
-        candidate.contains("SOSIAL") && !candidate.contains("SOSIOLOGI") -> "IPS"
-        candidate.contains("PANCASILA") || candidate.contains("PKN") || candidate.contains("PPKN") -> "PPKn"
-        candidate.contains("CIREBON") -> "B. CIREBON & EKONOMI"
-        candidate.contains("INDONESIA") -> "B. INDONESIA"
-        candidate.contains("INGGRIS") -> "B. INGGRIS"
-        candidate.contains("MATEMATIKA") -> "MATEMATIKA"
-        candidate.contains("KOMPUTER") || candidate.contains("TIK") -> "TIK / KOMPUTER"
-        candidate.contains("FUNGSIONAL") || candidate.contains("KETERAMPILAN") -> "KETERAMPILAN"
-        candidate.contains("SENI") -> "SENI BUDAYA"
-        candidate.contains("GEOGRAFI") -> "GEOGRAFI"
-        candidate.contains("SOSIOLOGI") -> "SOSIOLOGI"
-        candidate.contains("EKONOMI") -> "EKONOMI"
-        candidate.length > 20 -> candidate.take(18) + "..."
-        else -> candidate
+        s.contains("AGAMA") -> "PAI"
+        s.contains("ALAM DAN SOSIAL") || s == "IPAS" || s.contains("IPAS") -> "IPAS"
+        s.contains("ALAM") || s == "IPA" -> "IPA"
+        (s.contains("SOSIAL") && !s.contains("SOSIOLOGI")) || s == "IPS" -> "IPS"
+        s.contains("PANCASILA") || s.contains("PKN") || s.contains("PPKN") -> "PPKn"
+        s.contains("INDONESIA") -> "B. INDONESIA"
+        s.contains("INGGRIS") -> "B. INGGRIS"
+        s.contains("CIREBON") -> "B. CIREBON"
+        s.contains("MATEMATIKA") || s.contains("MTK") -> "MATEMATIKA"
+        s.contains("KOMPUTER") || s.contains("TIK") || s.contains("INFORMATIKA") -> "TIK / KOMPUTER"
+        s.contains("FUNGSIONAL") || s.contains("KETERAMPILAN") -> "KETERAMPILAN"
+        s.contains("SENI") -> "SENI BUDAYA"
+        s.contains("GEOGRAFI") -> "GEOGRAFI"
+        s.contains("SOSIOLOGI") -> "SOSIOLOGI"
+        s.contains("EKONOMI") -> "EKONOMI"
+        s.contains("SEJARAH") -> "SEJARAH"
+        s.contains("PJOK") || s.contains("OLAHRAGA") || s.contains("PENJAS") -> "PJOK"
+        s.length > 20 -> s.take(18) + "..."
+        else -> s
     }
+}
+
+private fun formatSubjectAbbreviation(rawSubject: String?): String {
+    val s = rawSubject?.trim()?.uppercase().orEmpty()
+    if (s.isBlank() || s == "-" || s == "PENDIDIK & GTK" || s == "GURU" || s == "TUTOR" || s == "UMUM") {
+        return "TUTOR PENGAMPU"
+    }
+    val delimiter = when {
+        s.contains("&") -> "&"
+        s.contains(",") -> ","
+        s.contains(";") -> ";"
+        s.contains("/") -> "/"
+        else -> null
+    }
+    if (delimiter != null) {
+        val parts = s.split(delimiter).map { it.trim() }.filter { it.isNotBlank() }
+        val formattedParts = parts.map { abbreviateSingleSubject(it) }.distinct()
+        return formattedParts.joinToString(" & ")
+    }
+    return abbreviateSingleSubject(s)
 }
