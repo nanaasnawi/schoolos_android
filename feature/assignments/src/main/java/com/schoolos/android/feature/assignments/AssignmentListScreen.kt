@@ -314,6 +314,8 @@ private fun StudentAssignmentHeroHeader(
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -328,6 +330,8 @@ private fun StudentAssignmentHeroHeader(
                         color = if (isDark) successColor else Color(0xFF15803D),
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -335,6 +339,7 @@ private fun StudentAssignmentHeroHeader(
 
             // Title & Subtitle with Student Accent
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -354,7 +359,7 @@ private fun StudentAssignmentHeroHeader(
                     )
                 }
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     val child = if (childName.isNotBlank()) childName else "Anak"
                     Text(
                         text = if (isParent) "Status Tugas $child" else "Daftar Tugas Mandiri",
@@ -515,6 +520,8 @@ private fun TeacherAssignmentHeroHeader(
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -529,12 +536,15 @@ private fun TeacherAssignmentHeroHeader(
                         color = if (activeCount > 0 || scheduledCount > 0) teacherAccentColor else textTertiary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
             }
 
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -554,7 +564,7 @@ private fun TeacherAssignmentHeroHeader(
                     )
                 }
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Penugasan & Evaluasi Siswa",
                         fontSize = 18.sp,
@@ -777,6 +787,7 @@ private fun AssignmentTabFilter(
                         fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
                         color = chipTextColor,
                         maxLines = 1,
+                        softWrap = false,
                     )
                     if (count > 0) {
                         Spacer(Modifier.width(6.dp))
@@ -790,7 +801,9 @@ private fun AssignmentTabFilter(
                                 text = "$count",
                                 fontSize = 11.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = badgeTextColor
+                                color = badgeTextColor,
+                                maxLines = 1,
+                                softWrap = false,
                             )
                         }
                     }

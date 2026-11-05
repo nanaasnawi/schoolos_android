@@ -7,9 +7,12 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -51,13 +54,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -832,6 +839,7 @@ private fun MaterialRow(
 }
 
 // ── SUBMISSION EDITOR ─────────────────────────────────────────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun SubmissionEditor(
     isParent: Boolean,
@@ -843,9 +851,13 @@ private fun SubmissionEditor(
     hasQuestions: Boolean = false,
     allAnswered: Boolean = true,
 ) {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester)
             .clip(RoundedCornerShape(20.dp))
             .background(CosmicNavy)
             .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
@@ -930,7 +942,15 @@ private fun SubmissionEditor(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(130.dp),
+                        .height(130.dp)
+                        .onFocusEvent { focusState ->
+                            if (focusState.isFocused) {
+                                coroutineScope.launch {
+                                    delay(200)
+                                    bringIntoViewRequester.bringIntoView()
+                                }
+                            }
+                        },
                     maxLines = 6,
                     shape = RoundedCornerShape(12.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1357,6 +1377,7 @@ private fun MultipleChoiceCard(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun EssayQuestionCard(
     index: Int,
@@ -1365,9 +1386,13 @@ private fun EssayQuestionCard(
     onAnswerChanged: (String) -> Unit,
     isParent: Boolean,
 ) {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester)
             .clip(RoundedCornerShape(16.dp))
             .background(CosmicNavy)
             .border(1.dp, GlassBorder, RoundedCornerShape(16.dp))
@@ -1418,7 +1443,15 @@ private fun EssayQuestionCard(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(110.dp),
+                        .height(110.dp)
+                        .onFocusEvent { focusState ->
+                            if (focusState.isFocused) {
+                                coroutineScope.launch {
+                                    delay(200)
+                                    bringIntoViewRequester.bringIntoView()
+                                }
+                            }
+                        },
                     maxLines = 5,
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1857,6 +1890,7 @@ private fun SubmittedEssayCard(
 }
 
 // ── QUESTIONS SUBMISSION ACTION CARD (BEFORE SUBMISSION) ─────────────────────
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun QuestionsSubmissionCard(
     isParent: Boolean,
@@ -1869,9 +1903,13 @@ private fun QuestionsSubmissionCard(
     onContentChange: (String) -> Unit,
     onSubmitClick: () -> Unit,
 ) {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .bringIntoViewRequester(bringIntoViewRequester)
             .clip(RoundedCornerShape(20.dp))
             .background(CosmicNavy)
             .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
@@ -1946,7 +1984,15 @@ private fun QuestionsSubmissionCard(
                 },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(80.dp),
+                    .height(80.dp)
+                    .onFocusEvent { focusState ->
+                        if (focusState.isFocused) {
+                            coroutineScope.launch {
+                                delay(200)
+                                bringIntoViewRequester.bringIntoView()
+                            }
+                        }
+                    },
                 maxLines = 3,
                 shape = RoundedCornerShape(12.dp),
                 colors = OutlinedTextFieldDefaults.colors(

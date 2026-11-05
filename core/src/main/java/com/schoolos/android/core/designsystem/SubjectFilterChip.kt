@@ -216,6 +216,8 @@ fun SubjectFilterChip(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextSecondary,
+                            maxLines = 1,
+                            softWrap = false,
                         )
                         Text(
                             subject,
@@ -224,6 +226,7 @@ fun SubjectFilterChip(
                             color = NeonBlue,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
                     }
                 }
@@ -234,6 +237,8 @@ fun SubjectFilterChip(
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Bold,
                             color = TextSecondary,
+                            maxLines = 1,
+                            softWrap = false,
                         )
                         Text(
                             className!!,
@@ -242,6 +247,7 @@ fun SubjectFilterChip(
                             color = AccentNeonCyan,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f, fill = false),
                         )
                     }
                 }

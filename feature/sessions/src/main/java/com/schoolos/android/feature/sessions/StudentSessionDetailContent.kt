@@ -280,7 +280,7 @@ fun StudentSessionDetailContent(
                 ) { onOpenQuizzes(session.subjectName?.trim().orEmpty()) }
 
                 ResourceItem(
-                    label = "Materi Modul",
+                    label = "Materi",
                     iconRes = CoreR.drawable.ic_modern_book,
                     color = Color(0xFF8B5CF6),
                     modifier = Modifier.weight(1f)

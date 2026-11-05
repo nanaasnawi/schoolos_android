@@ -323,6 +323,8 @@ private fun StudentMaterialHeroBanner(
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -337,6 +339,8 @@ private fun StudentMaterialHeroBanner(
                         color = if (completionPercent >= 100) successColor else textSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -344,6 +348,7 @@ private fun StudentMaterialHeroBanner(
 
             // Title & Subtitle with Outline Book Icon
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -363,7 +368,7 @@ private fun StudentMaterialHeroBanner(
                     )
                 }
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Bahan Bacaan & Materi",
                         fontSize = 18.sp,
@@ -522,6 +527,8 @@ private fun TeacherLearningHeroBanner(
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
@@ -536,12 +543,15 @@ private fun TeacherLearningHeroBanner(
                         color = textSecondary,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        softWrap = false,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                     )
                 }
             }
 
             Row(
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -561,7 +571,7 @@ private fun TeacherLearningHeroBanner(
                     )
                 }
 
-                Column {
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "Modul & Bahan Bacaan",
                         fontSize = 18.sp,
@@ -694,7 +704,9 @@ private fun MaterialCategoryTabs(
                         text = tab.label,
                         color = chipTextColor,
                         fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        maxLines = 1,
+                        softWrap = false
                     )
                     if (tab.count > 0) {
                         Spacer(Modifier.width(6.dp))
@@ -708,7 +720,9 @@ private fun MaterialCategoryTabs(
                                 text = "${tab.count}",
                                 color = badgeTextColor,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold
+                                fontWeight = FontWeight.SemiBold,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -767,7 +781,8 @@ private fun ModernMaterialCard(
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
-                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD))
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD)),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Text(
                         text = item.subject.uppercase(),
@@ -796,6 +811,8 @@ private fun ModernMaterialCard(
                                 color = if (isDark) NeonWarning else Color(0xFFB45309),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
@@ -810,6 +827,8 @@ private fun ModernMaterialCard(
                                 color = if (isDark) successColor else Color(0xFF15803D),
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                             )
                         }
@@ -825,6 +844,8 @@ private fun ModernMaterialCard(
                             color = if (isDark) successColor else Color(0xFF15803D),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
+                            maxLines = 1,
+                            softWrap = false,
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                         )
                     }
@@ -839,6 +860,8 @@ private fun ModernMaterialCard(
                             color = textTertiary,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Medium,
+                            maxLines = 1,
+                            softWrap = false,
                             modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
                         )
                     }

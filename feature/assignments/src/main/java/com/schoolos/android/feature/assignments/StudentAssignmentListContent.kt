@@ -203,7 +203,8 @@ private fun StudentAssignmentCard(
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
-                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD))
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD)),
+                    modifier = Modifier.weight(1f, fill = false)
                 ) {
                     Text(
                         text = subjectLabel.uppercase(),
@@ -219,6 +220,7 @@ private fun StudentAssignmentCard(
 
                 // Max Score pill
                 if (assignment.maxScore > 0) {
+                    Spacer(Modifier.width(8.dp))
                     Surface(
                         shape = RoundedCornerShape(8.dp),
                         color = innerCardBg,
@@ -230,6 +232,7 @@ private fun StudentAssignmentCard(
                             fontWeight = FontWeight.SemiBold,
                             color = textSecondary,
                             maxLines = 1,
+                            softWrap = false,
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
                         )
