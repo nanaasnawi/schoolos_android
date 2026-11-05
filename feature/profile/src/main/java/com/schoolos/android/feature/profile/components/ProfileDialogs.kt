@@ -545,37 +545,18 @@ fun ProfileLogoutBottomSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(NeonError.copy(alpha = 0.15f)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Close,
-                            contentDescription = null,
-                            tint = NeonError,
-                            modifier = Modifier.size(22.dp),
-                        )
-                    }
-                    Column {
-                        Text(
-                            text = "Konfirmasi Keluar Akun",
-                            color = TextPrimary,
-                            fontSize = 17.sp,
-                            fontWeight = FontWeight.Black,
-                        )
-                        Text(
-                            text = "Sesi aktif Anda akan diakhiri",
-                            color = TextSecondary,
-                            fontSize = 12.sp,
-                        )
-                    }
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Konfirmasi Keluar Akun",
+                        color = TextPrimary,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Black,
+                    )
+                    Text(
+                        text = "Sesi aktif Anda akan diakhiri",
+                        color = TextSecondary,
+                        fontSize = 12.sp,
+                    )
                 }
 
                 IconButton(

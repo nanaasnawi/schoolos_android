@@ -745,25 +745,26 @@ private fun ScheduleFilterChips(
     ) {
         itemsIndexed(tabs) { _, tab ->
             val isSelected = selectedFilter == tab.id
+            val tabAccent = tab.dotColor ?: accentColor
 
             val chipBg = when {
-                isSelected -> if (isDark) Color(0xFF27272A) else Color(0xFF0F172A)
-                else -> if (isDark) Color(0xFF161618) else Color.White
+                isSelected -> tabAccent.copy(alpha = if (isDark) 0.16f else 0.10f)
+                else -> if (isDark) Color(0xFF141417) else Color.White
             }
             val chipBorder = when {
-                isSelected -> if (isDark) Color(0xFF3F3F46) else Color(0xFF0F172A)
-                else -> if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+                isSelected -> tabAccent.copy(alpha = if (isDark) 0.55f else 0.45f)
+                else -> if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
             }
             val chipTextColor = when {
-                isSelected -> Color.White
+                isSelected -> tabAccent
                 else -> textSecondary
             }
             val badgeBg = when {
-                isSelected -> if (isDark) Color(0xFF3F3F46) else Color(0xFF334155)
-                else -> if (isDark) Color(0xFF222226) else Color(0xFFF1F5F9)
+                isSelected -> tabAccent.copy(alpha = if (isDark) 0.24f else 0.16f)
+                else -> if (isDark) Color(0xFF1F1F23) else Color(0xFFF1F5F9)
             }
             val badgeTextColor = when {
-                isSelected -> Color.White
+                isSelected -> tabAccent
                 else -> textSecondary
             }
 
@@ -791,7 +792,7 @@ private fun ScheduleFilterChips(
                     Text(
                         text = tab.label,
                         fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         color = chipTextColor,
                     )
                     if (tab.count > 0) {
@@ -805,7 +806,7 @@ private fun ScheduleFilterChips(
                             Text(
                                 text = "${tab.count}",
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 color = badgeTextColor,
                             )
                         }

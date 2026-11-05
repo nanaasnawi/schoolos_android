@@ -558,7 +558,7 @@ private fun StudentWhatsAppChatList(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 2.dp),
+                .padding(vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -646,7 +646,7 @@ private fun StudentWhatsAppChatList(
 
                         if (index < filteredTeachers.size - 1) {
                             HorizontalDivider(
-                                modifier = Modifier.padding(start = 78.dp, end = 16.dp),
+                                modifier = Modifier.padding(start = 56.dp),
                                 thickness = 0.5.dp,
                                 color = if (isDark) innerCardBorder else Color(0xFFF1F5F9),
                             )
@@ -690,16 +690,16 @@ private fun WhatsAppChatRowItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 11.dp),
+            .padding(vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // ── 1. AVATAR with Real-time Online Indicator (dot hijau kecil di profile) ──
         Box(
-            modifier = Modifier.size(50.dp),
+            modifier = Modifier.size(44.dp),
         ) {
             Box(
                 modifier = Modifier
-                    .size(48.dp)
+                    .size(42.dp)
                     .clip(CircleShape)
                     .background(studentAccent.copy(alpha = if (isDark) 0.18f else 0.10f))
                     .border(1.dp, studentAccent.copy(alpha = if (isDark) 0.35f else 0.22f), CircleShape)
@@ -708,7 +708,7 @@ private fun WhatsAppChatRowItem(
             ) {
                 Text(
                     text = teacher.name.take(1).uppercase(),
-                    fontSize = 18.sp,
+                    fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = studentAccent,
                 )
@@ -718,7 +718,7 @@ private fun WhatsAppChatRowItem(
             if (isOnline) {
                 Box(
                     modifier = Modifier
-                        .size(13.dp)
+                        .size(12.dp)
                         .clip(CircleShape)
                         .background(Color(0xFF10B981))
                         .border(2.dp, if (isDark) Color(0xFF09090B) else Color.White, CircleShape)
@@ -727,7 +727,7 @@ private fun WhatsAppChatRowItem(
             }
         }
 
-        Spacer(Modifier.width(14.dp))
+        Spacer(Modifier.width(12.dp))
 
         // ── 2. TEXT COLUMN: Clean WhatsApp Layout ──
         Column(
@@ -1090,9 +1090,11 @@ private fun FilterPill(
     innerCardBorder: Color,
     onClick: () -> Unit,
 ) {
-    val bg = if (isSelected) (if (isDark) Color(0xFF27272A) else Color(0xFF0F172A)) else cardBg
-    val borderCol = if (isSelected) (if (isDark) Color(0xFF3F3F46) else Color(0xFF0F172A)) else cardBorder
-    val textColor = if (isSelected) Color.White else textSecondary
+    val bg = if (isSelected) accentColor.copy(alpha = if (isDark) 0.16f else 0.10f) else cardBg
+    val borderCol = if (isSelected) accentColor.copy(alpha = if (isDark) 0.55f else 0.45f) else cardBorder
+    val textColor = if (isSelected) accentColor else textSecondary
+    val badgeBg = if (isSelected) accentColor.copy(alpha = if (isDark) 0.24f else 0.16f) else innerCardBg
+    val badgeTextColor = if (isSelected) accentColor else textSecondary
 
     Box(
         modifier = Modifier
@@ -1115,7 +1117,7 @@ private fun FilterPill(
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(6.dp))
-                    .background(if (isSelected) (if (isDark) Color(0xFF3F3F46) else Color(0xFF334155)) else innerCardBg)
+                    .background(badgeBg)
                     .border(0.5.dp, if (isSelected) Color.Transparent else innerCardBorder, RoundedCornerShape(6.dp))
                     .padding(horizontal = 5.dp, vertical = 1.dp),
                 contentAlignment = Alignment.Center,
@@ -1124,7 +1126,7 @@ private fun FilterPill(
                     text = "$count",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (isSelected) Color.White else textSecondary,
+                    color = badgeTextColor,
                 )
             }
         }

@@ -109,25 +109,30 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val isDark = LocalIsDarkTheme.current
+                    val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
                     availableSubjects.forEach { subj ->
                         val isSelected = subj.name.equals(selectedSubjectName, ignoreCase = true)
+                        val chipBg = if (isSelected) teacherAccent.copy(alpha = if (isDark) 0.16f else 0.10f) else (if (isDark) Color(0xFF141417) else Color.White)
+                        val chipBorder = if (isSelected) teacherAccent.copy(alpha = if (isDark) 0.55f else 0.45f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0))
+                        val chipTextColor = if (isSelected) teacherAccent else (if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B))
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(if (isSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)))
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(chipBg)
                                 .border(
-                                    if (isSelected) 1.dp else 0.5.dp,
-                                    if (isSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
-                                    RoundedCornerShape(8.dp)
+                                    1.dp,
+                                    chipBorder,
+                                    RoundedCornerShape(12.dp)
                                 )
                                 .clickable { onSelectSubject(subj) }
-                                .padding(horizontal = 12.dp, vertical = 7.dp)
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
                             Text(
                                 text = subj.name,
-                                fontSize = 12.sp,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isSelected) TeacherNeon else TextSecondary
+                                fontSize = 12.5.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                color = chipTextColor
                             )
                         }
                     }
@@ -153,25 +158,27 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
                     .horizontalScroll(rememberScrollState()),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                val isDark = LocalIsDarkTheme.current
+                val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
                 // Semua Rombel
                 val isAllSelected = selectedClassFilter.isBlank() || selectedClassFilter.equals("ALL", ignoreCase = true)
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (isAllSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)))
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(if (isAllSelected) teacherAccent.copy(alpha = if (isDark) 0.16f else 0.10f) else (if (isDark) Color(0xFF141417) else Color.White))
                         .border(
-                            if (isAllSelected) 1.dp else 0.5.dp,
-                            if (isAllSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
-                            RoundedCornerShape(8.dp)
+                            1.dp,
+                            if (isAllSelected) teacherAccent.copy(alpha = if (isDark) 0.55f else 0.45f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)),
+                            RoundedCornerShape(12.dp)
                         )
                         .clickable { onSelectClassFilter("ALL") }
-                        .padding(horizontal = 12.dp, vertical = 7.dp)
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
                     Text(
                         text = "Semua Rombel ($totalStudents)",
-                        fontSize = 12.sp,
-                        fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = if (isAllSelected) TeacherNeon else TextSecondary
+                        fontSize = 12.5.sp,
+                        fontWeight = if (isAllSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isAllSelected) teacherAccent else (if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B))
                     )
                 }
 
@@ -180,21 +187,21 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
                     val isSelected = cls.name.equals(selectedClassFilter, ignoreCase = true)
                     Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(if (isSelected) TeacherNeon.copy(alpha = 0.15f) else (if (LocalIsDarkTheme.current) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)))
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isSelected) teacherAccent.copy(alpha = if (isDark) 0.16f else 0.10f) else (if (isDark) Color(0xFF141417) else Color.White))
                             .border(
-                                if (isSelected) 1.dp else 0.5.dp,
-                                if (isSelected) TeacherNeon else (if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0)),
-                                RoundedCornerShape(8.dp)
+                                1.dp,
+                                if (isSelected) teacherAccent.copy(alpha = if (isDark) 0.55f else 0.45f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)),
+                                RoundedCornerShape(12.dp)
                             )
                             .clickable { onSelectClassFilter(cls.name) }
-                            .padding(horizontal = 12.dp, vertical = 7.dp)
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Text(
                             text = cls.name,
-                            fontSize = 12.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isSelected) TeacherNeon else TextSecondary
+                            fontSize = 12.5.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                            color = if (isSelected) teacherAccent else (if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B))
                         )
                     }
                 }

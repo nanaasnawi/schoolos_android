@@ -636,6 +636,11 @@ private fun MaterialCategoryTabs(
 ) {
     val isDark = LocalIsDarkTheme.current
     val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val accentColor = if (isTeacher) {
+        if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    } else {
+        if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    }
 
     data class TabDef(val id: String, val label: String, val count: Int)
 
@@ -668,23 +673,23 @@ private fun MaterialCategoryTabs(
             val isSelected = tab.id == selectedCategory
 
             val chipBg = when {
-                isSelected -> if (isDark) Color(0xFF27272A) else Color(0xFF0F172A)
-                else -> if (isDark) Color(0xFF161618) else Color.White
+                isSelected -> accentColor.copy(alpha = if (isDark) 0.16f else 0.10f)
+                else -> if (isDark) Color(0xFF141417) else Color.White
             }
             val chipBorder = when {
-                isSelected -> if (isDark) Color(0xFF3F3F46) else Color(0xFF0F172A)
-                else -> if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+                isSelected -> accentColor.copy(alpha = if (isDark) 0.55f else 0.45f)
+                else -> if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
             }
             val chipTextColor = when {
-                isSelected -> Color.White
+                isSelected -> accentColor
                 else -> textSecondary
             }
             val badgeBg = when {
-                isSelected -> if (isDark) Color(0xFF3F3F46) else Color(0xFF334155)
-                else -> if (isDark) Color(0xFF222226) else Color(0xFFF1F5F9)
+                isSelected -> accentColor.copy(alpha = if (isDark) 0.24f else 0.16f)
+                else -> if (isDark) Color(0xFF1F1F23) else Color(0xFFF1F5F9)
             }
             val badgeTextColor = when {
-                isSelected -> Color.White
+                isSelected -> accentColor
                 else -> textSecondary
             }
 
@@ -704,7 +709,7 @@ private fun MaterialCategoryTabs(
                         text = tab.label,
                         color = chipTextColor,
                         fontSize = 13.sp,
-                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                         maxLines = 1,
                         softWrap = false
                     )
@@ -720,7 +725,7 @@ private fun MaterialCategoryTabs(
                                 text = "${tab.count}",
                                 color = badgeTextColor,
                                 fontSize = 11.sp,
-                                fontWeight = FontWeight.SemiBold,
+                                fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 softWrap = false
                             )

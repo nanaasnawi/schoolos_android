@@ -294,175 +294,22 @@ fun LazyListScope.teacherContent(
         }
     }
 
-    // ── 2. JADWAL MENGAJAR HARI INI ──────────────────────────────────────────────
+    // ── 2. JADWAL MENGAJAR HARI INI (UNIFIED DESIGN SAMA DENGAN PORTAL SISWA) ────
     item {
-        TeacherSectionHeader(
-            title = "Jadwal Mengajar Hari Ini",
-            subtitle = "Agenda tatap muka dan sesi kelas terjadwal",
-            count = todaySessions.size,
-            actionLabel = "Lihat Semua",
-            onActionClick = onNavigateToSessions,
+        HomeTodayScheduleCard(
+            todaySessions = todaySessions,
+            onNavigateToSessions = onNavigateToSessions,
+            onNavigateToSessionDetail = onNavigateToSessionDetail,
+            cardTitle = "Jadwal Mengajar Hari Ini",
+            subtitleBuilder = { session ->
+                val sessionClass = formatClassName(session.className ?: session.room)
+                if (session.status.equals("active", ignoreCase = true)) {
+                    "$sessionClass • Sedang Berlangsung"
+                } else {
+                    sessionClass
+                }
+            },
         )
-    }
-
-    if (todaySessions.isNotEmpty()) {
-        items(todaySessions.take(3), key = { it.id }) { session ->
-            val isDark = LocalIsDarkTheme.current
-            val cardBg = if (isDark) Color(0xFF111113) else Color.White
-            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
-            val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
-            val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
-            val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
-            val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
-            val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
-
-            val isLive = session.status.equals("active", ignoreCase = true)
-            val timeLabel = formatSessionTime(session.scheduledAt, session.startedAt)
-            val sessionClass = formatClassName(session.className ?: session.room)
-
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(22.dp))
-                    .clickable { onNavigateToSessionDetail(session.id) },
-                shape = RoundedCornerShape(22.dp),
-                color = cardBg,
-                border = BorderStroke(
-                    1.dp,
-                    if (isLive) NeonSuccess.copy(alpha = 0.5f) else cardBorder
-                ),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Time indicator box
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(if (isLive) NeonSuccess.copy(alpha = 0.12f) else innerCardBg)
-                                .border(
-                                    1.dp,
-                                    if (isLive) NeonSuccess.copy(alpha = 0.35f) else innerCardBorder,
-                                    RoundedCornerShape(10.dp)
-                                )
-                                .padding(horizontal = 10.dp, vertical = 7.dp),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(
-                                text = timeLabel,
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (isLive) NeonSuccess else textPrimary,
-                            )
-                        }
-
-                        Spacer(Modifier.width(12.dp))
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = session.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran",
-                                fontSize = 14.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = textPrimary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                            Spacer(Modifier.height(2.dp))
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Text(
-                                    text = sessionClass,
-                                    fontSize = 11.5.sp,
-                                    color = textSecondary,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                                if (isLive) {
-                                    Text("•", fontSize = 8.sp, color = NeonSuccess)
-                                    Text(
-                                        text = "Sedang Berlangsung",
-                                        fontSize = 10.5.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = NeonSuccess,
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    Icon(
-                        painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
-                        contentDescription = null,
-                        tint = textTertiary,
-                        modifier = Modifier.size(13.dp),
-                    )
-                }
-            }
-        }
-    } else {
-        item {
-            val isDark = LocalIsDarkTheme.current
-            val cardBg = if (isDark) Color(0xFF111113) else Color.White
-            val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
-            val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
-            val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
-            val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
-
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(22.dp),
-                color = cardBg,
-                border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp),
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .size(42.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(innerCardBg),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.CalendarMonth,
-                            contentDescription = null,
-                            tint = textTertiary,
-                            modifier = Modifier.size(20.dp),
-                        )
-                    }
-
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Tidak Ada Sesi Mengajar Hari Ini",
-                            fontSize = 13.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = textPrimary,
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = "Jadwal tatap muka bebas. Manfaatkan waktu untuk evaluasi tugas atau menyusun modul ajar.",
-                            fontSize = 11.5.sp,
-                            color = textTertiary,
-                        )
-                    }
-                }
-            }
-        }
     }
 
     // ── 3. CLASS COMMAND HERO (WALI KELAS / KELAS PENGAMPU) ─────────────────────

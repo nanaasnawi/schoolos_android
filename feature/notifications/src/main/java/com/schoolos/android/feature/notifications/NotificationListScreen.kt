@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.notifications
 
+import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -184,8 +185,16 @@ fun NotificationListScreen(
 
                         // ── 3. CATEGORY FILTER CHIPS ─────────────────────────
                         item {
+                            val isDark = LocalIsDarkTheme.current
+                            val accentColor = if (isTeacher) {
+                                if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+                            } else {
+                                if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                            }
+                            val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+
                             LazyRow(
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 2.dp)
@@ -215,38 +224,43 @@ fun NotificationListScreen(
                                         }
                                     }
 
+                                    val chipBg = if (isSelected) accentColor.copy(alpha = if (isDark) 0.16f else 0.10f) else (if (isDark) Color(0xFF141417) else Color.White)
+                                    val chipBorder = if (isSelected) accentColor.copy(alpha = if (isDark) 0.55f else 0.45f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0))
+                                    val chipTextColor = if (isSelected) accentColor else textSecondary
+                                    val badgeBg = if (isSelected) accentColor.copy(alpha = if (isDark) 0.24f else 0.16f) else (if (isDark) Color(0xFF1F1F23) else Color(0xFFF1F5F9))
+
                                     Box(
                                         modifier = Modifier
-                                            .clip(RoundedCornerShape(8.dp))
-                                            .background(if (isSelected) CosmicSurface2 else CosmicNavy)
+                                            .clip(RoundedCornerShape(12.dp))
+                                            .background(chipBg)
                                             .border(
-                                                0.5.dp,
-                                                if (isSelected) GlassBorder2 else GlassBorder,
-                                                RoundedCornerShape(8.dp),
+                                                1.dp,
+                                                chipBorder,
+                                                RoundedCornerShape(12.dp),
                                             )
                                             .clickable { selectedFilter = filter }
-                                            .padding(horizontal = 12.dp, vertical = 6.dp),
+                                            .padding(horizontal = 14.dp, vertical = 8.dp),
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
                                             Text(
                                                 filter,
-                                                fontSize = 12.sp,
-                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                                color = if (isSelected) TextPrimary else TextTertiary,
+                                                fontSize = 12.5.sp,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                color = chipTextColor,
                                             )
                                             if (count > 0) {
                                                 Spacer(Modifier.width(6.dp))
                                                 Box(
                                                     modifier = Modifier
-                                                        .clip(RoundedCornerShape(4.dp))
-                                                        .background(if (isSelected) GlassBorder2 else CosmicSurface2)
-                                                        .padding(horizontal = 5.dp, vertical = 1.dp)
+                                                        .clip(RoundedCornerShape(6.dp))
+                                                        .background(badgeBg)
+                                                        .padding(horizontal = 6.dp, vertical = 2.dp)
                                                 ) {
                                                     Text(
                                                         count.toString(),
-                                                        fontSize = 10.sp,
+                                                        fontSize = 10.5.sp,
                                                         fontWeight = FontWeight.Bold,
-                                                        color = if (isSelected) TextPrimary else TextTertiary
+                                                        color = chipTextColor
                                                     )
                                                 }
                                             }

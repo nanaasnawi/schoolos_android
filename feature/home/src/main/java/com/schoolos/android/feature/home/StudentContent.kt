@@ -536,13 +536,15 @@ internal fun HomeMenuGridCard(
     }
 }
 
-// ── 2. JADWAL PELAJARAN HARI INI ──────────────────────────────────────────────
+// ── 2. JADWAL PELAJARAN HARI INI (UNIFIED ACROSS STUDENT, TEACHER & PRINCIPAL) ──
 
 @Composable
-private fun HomeTodayScheduleCard(
+internal fun HomeTodayScheduleCard(
     todaySessions: List<LearningSession>,
     onNavigateToSessions: () -> Unit,
     onNavigateToSessionDetail: (String) -> Unit,
+    cardTitle: String = "Jadwal Pelajaran Hari Ini",
+    subtitleBuilder: ((LearningSession) -> String)? = null,
 ) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -582,16 +584,18 @@ private fun HomeTodayScheduleCard(
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
-                            text = "Jadwal Pelajaran Hari Ini",
+                            text = cardTitle,
                             fontSize = 14.5.sp,
+                            lineHeight = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary
                         )
                         Text(
                             text = "${todaySessions.size} Sesi terjadwal hari ini",
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
                             color = textSecondary
                         )
                     }
@@ -632,10 +636,16 @@ private fun HomeTodayScheduleCard(
             } else {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     todaySessions.take(3).forEach { session ->
-                        val title = session.subjectName ?: session.notes?.substringBefore(" • ") ?: "Mata Pelajaran"
+                        val title = session.subjectName?.takeIf { it.isNotBlank() }
+                            ?: session.notes?.substringBefore(" • ")?.takeIf { it.isNotBlank() }
+                            ?: "Mata Pelajaran"
                         val time = formatSessionTime(session.scheduledAt ?: session.startedAt)
-                        val teacher = session.notes?.substringAfter(" • ")?.substringBefore(" (")?.trim().orEmpty()
-                        val subText = if (teacher.isNotBlank()) "Kelas Online • $teacher" else "Kelas Pembelajaran"
+                        val subText = if (subtitleBuilder != null) {
+                            subtitleBuilder(session)
+                        } else {
+                            val teacher = session.notes?.substringAfter(" • ")?.substringBefore(" (")?.trim().orEmpty()
+                            if (teacher.isNotBlank()) "Kelas Online • $teacher" else "Kelas Pembelajaran"
+                        }
 
                         Surface(
                             modifier = Modifier
@@ -661,6 +671,7 @@ private fun HomeTodayScheduleCard(
                                         Text(
                                             text = time,
                                             fontSize = 12.sp,
+                                            lineHeight = 14.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = textPrimary
                                         )
@@ -669,16 +680,17 @@ private fun HomeTodayScheduleCard(
                                                 .padding(top = 3.dp)
                                                 .size(6.dp)
                                                 .clip(CircleShape)
-                                                .background(if (session.status == "active") Color(0xFF10B981) else Color(0xFF94A3B8))
+                                                .background(if (session.status.equals("active", ignoreCase = true)) Color(0xFF10B981) else Color(0xFF94A3B8))
                                         )
                                     }
 
                                     Spacer(Modifier.width(14.dp))
 
-                                    Column {
+                                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                                         Text(
                                             text = title,
                                             fontSize = 13.5.sp,
+                                            lineHeight = 16.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = textPrimary,
                                             maxLines = 1,
@@ -687,6 +699,7 @@ private fun HomeTodayScheduleCard(
                                         Text(
                                             text = subText,
                                             fontSize = 11.sp,
+                                            lineHeight = 14.sp,
                                             color = textSecondary,
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
@@ -764,16 +777,18 @@ private fun HomeAcademicPerformanceCard(
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
                             text = "Performa Akademik & Nilai",
                             fontSize = 14.5.sp,
+                            lineHeight = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary
                         )
                         Text(
                             text = "Indeks capaian belajar semester berjalan",
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
                             color = textSecondary
                         )
                     }
@@ -935,16 +950,18 @@ private fun HomeSibiReadingCard(
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
                             text = if (activeReadingHistory.isNotEmpty()) "Lanjutkan Membaca" else "Rekomendasi Buku SIBI",
                             fontSize = 14.5.sp,
+                            lineHeight = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary
                         )
                         Text(
                             text = "Buku teks resmi Kemendikdasmen RI",
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
                             color = textSecondary
                         )
                     }
@@ -1137,16 +1154,18 @@ private fun HomeWeeklyActivityCard(
                         )
                     }
                     Spacer(Modifier.width(8.dp))
-                    Column {
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                         Text(
                             text = "Aktivitas Belajar Minggu Ini",
                             fontSize = 14.5.sp,
+                            lineHeight = 17.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary
                         )
                         Text(
                             text = "Senin s/d Sabtu • Real-time progres harian",
                             fontSize = 11.sp,
+                            lineHeight = 14.sp,
                             color = textSecondary
                         )
                     }
