@@ -175,7 +175,8 @@ fun HomeScreen(
                 painter = painterResource(id = CoreR.drawable.mascot_akselerasi_edu),
                 contentDescription = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Tanya Guru AI",
                 modifier = Modifier
-                    .size(72.dp)
+                    .offset(y = 10.dp)
+                    .size(70.dp)
                     .clickable(
                         interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
                         indication = null,
