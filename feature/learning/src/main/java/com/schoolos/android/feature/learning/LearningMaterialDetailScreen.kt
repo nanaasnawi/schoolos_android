@@ -1,6 +1,9 @@
 package com.schoolos.android.feature.learning
 
 import android.widget.Toast
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -19,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -45,7 +49,7 @@ fun LearningMaterialDetailScreen(
     materialId: String,
     onBack: () -> Unit = {},
     onCreateMaterial: () -> Unit = {},
-    onAskTeacher: ((materialTitle: String, materialId: String, subjectName: String, teacherName: String) -> Unit)? = null,
+    onAskTeacher: ((materialTitle: String, materialId: String, subjectName: String, teacherName: String, question: String) -> Unit)? = null,
     viewModel: LearningViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
@@ -138,6 +142,10 @@ fun LearningMaterialDetailScreen(
 
     val material = materialState!!
     val isCompleted = material.isCompleted
+    val isDark = LocalIsDarkTheme.current
+    val descParts = (material.description ?: "").split(" • ")
+    val resolvedTeacherName = material.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
+        ?: if (descParts.size >= 3 && descParts[2].isNotBlank() && !descParts[2].equals("Guru Pengampu", ignoreCase = true)) descParts[2] else "Guru Mata Pelajaran"
 
     // Role-aware UX: teachers/principals supervise & monitor materials, students consume them
     val learningState by viewModel.state.collectAsState()
@@ -150,6 +158,9 @@ fun LearningMaterialDetailScreen(
     var showEditDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
     var showCompletionsSheet by remember { mutableStateOf(false) }
+    var isSpeedDialOpen by remember { mutableStateOf(false) }
+    var showAskTeacherDialog by remember { mutableStateOf(false) }
+    var tutorQuestionDraft by remember { mutableStateOf("") }
 
     // ── ANTI-CHEATING READING DURATION ENGINE ────────────────────────────────
     val estimatedReadingMinutes = remember(material.id) { calculateEstimatedReadingMinutes(material) }
@@ -219,50 +230,141 @@ fun LearningMaterialDetailScreen(
         },
         floatingActionButton = {
             if (isTeacher) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                val isDark = LocalIsDarkTheme.current
+                val speedDialCardBg = if (isDark) Color(0xFF141416) else Color.White
+                val speedDialBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+                val primaryColor = if (isDark) Color(0xFF059669) else Color(0xFF10B981)
+                val primaryBorder = if (isDark) Color(0xFF34D399).copy(alpha = 0.35f) else Color(0xFF059669).copy(alpha = 0.20f)
+                val deleteBg = if (isDark) Color(0xFF3B1215) else Color(0xFFFEE2E2)
+                val deleteBorder = if (isDark) Color(0xFFEF4444).copy(alpha = 0.45f) else Color(0xFFF87171).copy(alpha = 0.40f)
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.padding(bottom = 8.dp)
                 ) {
-                    // Floating Icon Button: Hapus Materi
-                    SmallFloatingActionButton(
-                        onClick = { showDeleteDialog = true },
-                        containerColor = CosmicSurface2,
-                        contentColor = NeonError,
-                        shape = CircleShape,
-                        modifier = Modifier
-                            .size(44.dp)
-                            .border(1.dp, NeonError.copy(alpha = 0.45f), CircleShape),
-                        elevation = FloatingActionButtonDefaults.elevation(
-                            defaultElevation = 4.dp,
-                            pressedElevation = 8.dp
-                        )
+                    AnimatedVisibility(
+                        visible = isSpeedDialOpen,
+                        enter = fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 2 },
+                        exit = fadeOut(tween(140)) + slideOutVertically(tween(140)) { it / 2 },
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DeleteOutline,
-                            contentDescription = "Hapus Materi",
-                            modifier = Modifier.size(20.dp),
-                            tint = NeonError
-                        )
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            // 1. Action: Hapus Materi
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        isSpeedDialOpen = false
+                                        showDeleteDialog = true
+                                    }
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = speedDialCardBg,
+                                    border = BorderStroke(1.dp, speedDialBorder),
+                                    shadowElevation = 2.dp,
+                                ) {
+                                    Text(
+                                        text = "Hapus Materi",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = NeonError,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
+                                }
+                                Surface(
+                                    shape = CircleShape,
+                                    color = deleteBg,
+                                    border = BorderStroke(1.dp, deleteBorder),
+                                    shadowElevation = 4.dp,
+                                    modifier = Modifier.size(42.dp),
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.DeleteOutline,
+                                            contentDescription = "Hapus Materi",
+                                            tint = NeonError,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+
+                            // 2. Action: Edit Materi
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        isSpeedDialOpen = false
+                                        showEditDialog = true
+                                    }
+                            ) {
+                                Surface(
+                                    shape = RoundedCornerShape(8.dp),
+                                    color = speedDialCardBg,
+                                    border = BorderStroke(1.dp, speedDialBorder),
+                                    shadowElevation = 2.dp,
+                                ) {
+                                    Text(
+                                        text = "Edit Materi",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (isDark) Color(0xFF34D399) else Color(0xFF047857),
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    )
+                                }
+                                Surface(
+                                    shape = CircleShape,
+                                    color = primaryColor,
+                                    border = BorderStroke(1.dp, primaryBorder),
+                                    shadowElevation = 4.dp,
+                                    modifier = Modifier.size(42.dp),
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Default.Edit,
+                                            contentDescription = "Edit Materi",
+                                            tint = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
                     }
 
-                    // Floating Icon Button: Edit Materi
-                    FloatingActionButton(
-                        onClick = { showEditDialog = true },
-                        containerColor = TeacherNeon,
-                        contentColor = Color.White,
+                    // Main Executive Floating Button
+                    val rotation by animateFloatAsState(
+                        targetValue = if (isSpeedDialOpen) 135f else 0f,
+                        animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                        label = "fabRotation"
+                    )
+
+                    Surface(
+                        onClick = { isSpeedDialOpen = !isSpeedDialOpen },
                         shape = CircleShape,
-                        modifier = Modifier.size(52.dp),
-                        elevation = FloatingActionButtonDefaults.elevation(
-                            defaultElevation = 6.dp,
-                            pressedElevation = 10.dp
-                        )
+                        color = if (isSpeedDialOpen) (if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)) else primaryColor,
+                        border = BorderStroke(1.dp, if (isSpeedDialOpen) speedDialBorder else primaryBorder),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.size(52.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.Edit,
-                            contentDescription = "Edit Materi",
-                            modifier = Modifier.size(22.dp),
-                            tint = Color.White
-                        )
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isSpeedDialOpen) Icons.Default.Close else Icons.Default.Tune,
+                                contentDescription = if (isSpeedDialOpen) "Tutup Menu" else "Aksi Materi",
+                                tint = if (isSpeedDialOpen) (if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)) else Color.White,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .graphicsLayer { rotationZ = rotation }
+                            )
+                        }
                     }
                 }
             }
@@ -684,11 +786,6 @@ fun LearningMaterialDetailScreen(
                     }
                 }
 
-                // ── RESOLVED TEACHER NAME ───────────────────────────────────
-                val descPartsForQ = (material.description ?: "").split(" • ")
-                val resolvedTeacherName = material.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
-                    ?: if (descPartsForQ.size >= 3 && descPartsForQ[2].isNotBlank() && !descPartsForQ[2].equals("Guru Pengampu", ignoreCase = true)) descPartsForQ[2] else "Guru Mata Pelajaran"
-
                 // ── RICH BLOCK CONTENT RENDERER (INFOGRAFIS / MULTI-BLOCK) ────────
                 if (material.materialType == MaterialType.IMAGE || material.materialType == MaterialType.INFOGRAPHIC) {
                     val effectiveBlocks = if (richBlocks != null && richBlocks.isNotEmpty()) {
@@ -728,7 +825,10 @@ fun LearningMaterialDetailScreen(
                             .clip(RoundedCornerShape(16.dp))
                             .background(TeacherNeon.copy(alpha = 0.08f))
                             .border(1.dp, TeacherNeon.copy(alpha = 0.3f), RoundedCornerShape(16.dp))
-                            .clickable { onAskTeacher(material.title, material.id, material.subject, resolvedTeacherName) }
+                            .clickable {
+                                tutorQuestionDraft = "Halo $resolvedTeacherName, saya ingin bertanya mengenai materi '${material.title}' ini karena ada bagian yang belum saya pahami:"
+                                showAskTeacherDialog = true
+                            }
                             .padding(14.dp)
                     ) {
                         Row(
@@ -949,58 +1049,245 @@ fun LearningMaterialDetailScreen(
 
         // ── DELETE CONFIRMATION DIALOG ──
         if (showDeleteDialog) {
-            AlertDialog(
-                onDismissRequest = { showDeleteDialog = false },
-                containerColor = CosmicNavy,
-                shape = RoundedCornerShape(20.dp),
-                title = {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(36.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(NeonError.copy(alpha = 0.15f)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Default.Delete, contentDescription = null, tint = NeonError, modifier = Modifier.size(18.dp))
+            SchoolOsConfirmationDialog(
+                title = "Hapus Materi Pembelajaran?",
+                message = "Materi \"${material.title}\" akan dihapus secara permanen dari portal siswa. Tindakan ini tidak dapat dibatalkan.",
+                confirmText = "Ya, Hapus",
+                dismissText = "Batal",
+                icon = Icons.Default.Delete,
+                accentColor = NeonError,
+                onConfirm = {
+                    viewModel.deleteMaterial(material.id) { success, err ->
+                        if (success) {
+                            showDeleteDialog = false
+                            Toast.makeText(context, "Materi berhasil dihapus!", Toast.LENGTH_SHORT).show()
+                            onBack()
+                        } else {
+                            Toast.makeText(context, "Gagal: ${err ?: "Terjadi kesalahan"}", Toast.LENGTH_SHORT).show()
                         }
-                        Spacer(Modifier.width(10.dp))
-                        Text("Hapus Materi?", color = TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
                 },
-                text = {
-                    Text(
-                        "Materi \"${material.title}\" akan dihapus secara permanen dari portal siswa. Tindakan ini tidak dapat dibatalkan.",
-                        color = TextSecondary,
-                        fontSize = 13.sp,
-                        lineHeight = 18.sp
-                    )
-                },
-                confirmButton = {
-                    Button(
-                        onClick = {
-                            viewModel.deleteMaterial(material.id) { success, err ->
-                                if (success) {
-                                    showDeleteDialog = false
-                                    Toast.makeText(context, "Materi berhasil dihapus!", Toast.LENGTH_SHORT).show()
-                                    onBack()
-                                } else {
-                                    Toast.makeText(context, "Gagal: ${err ?: "Terjadi kesalahan"}", Toast.LENGTH_SHORT).show()
+                onDismiss = { showDeleteDialog = false }
+            )
+        }
+
+        // ── CUSTOM TANYA TUTOR PAMONG CONFIRMATION & EDIT FORM DIALOG ──
+        if (showAskTeacherDialog) {
+            val askDialogCardBg = if (isDark) Color(0xFF161618) else Color.White
+            val askDialogCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+            val askDialogTextPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+            val askDialogTextSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+            val askDialogTextTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+            val askDialogInnerBg = if (isDark) Color(0xFF1E1E22) else Color(0xFFF8FAFC)
+            val askDialogInnerBorder = if (isDark) Color(0xFF2F2F36) else Color(0xFFCBD5E1)
+            val askDialogAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
+            Dialog(
+                onDismissRequest = { showAskTeacherDialog = false }
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = askDialogCardBg,
+                    border = BorderStroke(1.dp, askDialogCardBorder),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(22.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Header
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(askDialogAccent.copy(alpha = 0.15f))
+                                        .border(1.dp, askDialogAccent.copy(alpha = 0.35f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Forum,
+                                        contentDescription = null,
+                                        tint = askDialogAccent,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Tanya Tutor Pamong",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = askDialogTextPrimary
+                                    )
+                                    Text(
+                                        text = "Konsultasi materi dengan $resolvedTeacherName",
+                                        fontSize = 11.5.sp,
+                                        color = askDialogTextSecondary,
+                                        maxLines = 1,
+                                        overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                    )
                                 }
                             }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = NeonError, contentColor = Color.White),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text("Ya, Hapus", fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                    }
-                },
-                dismissButton = {
-                    TextButton(onClick = { showDeleteDialog = false }) {
-                        Text("Batal", color = TextTertiary, fontSize = 12.sp)
+                            IconButton(
+                                onClick = { showAskTeacherDialog = false },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Tutup",
+                                    tint = askDialogTextTertiary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Context Badge
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = askDialogInnerBg,
+                            border = BorderStroke(1.dp, askDialogInnerBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.MenuBook,
+                                    contentDescription = null,
+                                    tint = askDialogAccent,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "${material.subject} • ${material.title}",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = askDialogTextPrimary,
+                                    maxLines = 1,
+                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        // Question Form Field
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Draft / Edit Pertanyaan Anda",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = askDialogTextSecondary
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 100.dp, max = 170.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(askDialogInnerBg)
+                                    .border(1.dp, askDialogInnerBorder, RoundedCornerShape(12.dp))
+                                    .padding(12.dp)
+                            ) {
+                                androidx.compose.foundation.text.BasicTextField(
+                                    value = tutorQuestionDraft,
+                                    onValueChange = { tutorQuestionDraft = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        color = askDialogTextPrimary,
+                                        fontSize = 13.sp,
+                                        lineHeight = 18.sp,
+                                    ),
+                                    decorationBox = { innerTextField ->
+                                        if (tutorQuestionDraft.isEmpty()) {
+                                            Text(
+                                                text = "Tulis pertanyaan atau bagian modul yang belum dipahami di sini...",
+                                                color = askDialogTextTertiary,
+                                                fontSize = 13.sp,
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                            }
+                        }
+
+                        // Actions Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                onClick = { showAskTeacherDialog = false },
+                                shape = RoundedCornerShape(12.dp),
+                                color = askDialogInnerBg,
+                                border = BorderStroke(1.dp, askDialogInnerBorder),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Batal",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = askDialogTextSecondary
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                onClick = {
+                                    val finalQuestion = tutorQuestionDraft.trim().ifBlank {
+                                        "Halo $resolvedTeacherName, saya ingin bertanya mengenai materi '${material.title}' ini karena ada bagian yang belum saya pahami."
+                                    }
+                                    showAskTeacherDialog = false
+                                    onAskTeacher?.invoke(material.title, material.id, material.subject, resolvedTeacherName, finalQuestion)
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                color = askDialogAccent,
+                                shadowElevation = 2.dp,
+                                modifier = Modifier.weight(1.3f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Send,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Kirim Pertanyaan",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            )
+            }
         }
 
         // ── READING DURATION INFORMATION DIALOG ──

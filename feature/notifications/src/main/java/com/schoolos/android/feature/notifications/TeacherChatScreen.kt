@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -37,12 +38,21 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Send
+import androidx.compose.ui.window.Dialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -117,15 +127,19 @@ fun TeacherChatScreen(
     val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
     val activeRoleAccent = if (isTeacherMode) teacherAccent else studentAccent
 
+    val auth = chatManager.currentAuth
+    val isPrincipal = auth?.isPrincipal == true
+    var showPrincipalConsultDialog by remember { mutableStateOf(false) }
+
     val rawThreads by chatManager.threads.collectAsState()
-    val threads = remember(rawThreads, isTeacherMode, chatManager.currentAuth) {
-        val userThreads = if (!isTeacherMode) {
-            chatManager.filterThreadsForUser(rawThreads, chatManager.currentAuth)
+    val threads = remember(rawThreads, isTeacherMode, isPrincipal, auth) {
+        val userThreads = if (isPrincipal || !isTeacherMode) {
+            chatManager.filterThreadsForUser(rawThreads, auth)
         } else {
             rawThreads
         }
         // Exclude AI thread from teacher consultation list so they are completely separated
-        userThreads.filterNot { it.id.startsWith("ai-tutor") }
+        userThreads.filterNot { it.id.startsWith("ai-tutor") || it.id.startsWith("ai-principal") }
     }
     val isLoading by chatManager.isLoading.collectAsState()
     val isOnline by chatManager.isOnline.collectAsState()
@@ -185,8 +199,13 @@ fun TeacherChatScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
-                title = if (isTeacherMode) "Tanya Jawab Siswa" else "Tanya Jawab Guru",
-                subtitle = if (isTeacherMode) {
+                title = if (isPrincipal) "Tanya Jawab & Konsultasi"
+                    else if (isTeacherMode) "Tanya Jawab Siswa"
+                    else "Tanya Jawab Guru",
+                subtitle = if (isPrincipal) {
+                    if (waitingCount > 0) "$waitingCount pesan konsultasi langsung"
+                    else "Konsultasi langsung Dewan Guru & Siswa"
+                } else if (isTeacherMode) {
                     if (waitingCount > 0) "$waitingCount pertanyaan menunggu tanggapan"
                     else "Semua pertanyaan siswa telah dijawab"
                 } else {
@@ -194,6 +213,34 @@ fun TeacherChatScreen(
                 },
                 onBack = onBack,
                 actions = {
+                    if (isPrincipal) {
+                        Surface(
+                            onClick = { showPrincipalConsultDialog = true },
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isDark) Color(0xFF064E3B) else Color(0xFFECFDF5),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0)),
+                            modifier = Modifier.padding(end = 4.dp)
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = null,
+                                    tint = if (isDark) Color(0xFF34D399) else Color(0xFF047857),
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Text(
+                                    text = "Konsultasi Baru",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFF34D399) else Color(0xFF047857)
+                                )
+                            }
+                        }
+                    }
                     if (!isOnline) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
@@ -255,7 +302,8 @@ fun TeacherChatScreen(
                         modifier = Modifier.fillMaxWidth(),
                         placeholder = {
                             Text(
-                                text = if (isTeacherMode) "Cari siswa, kelas, topik tugas/materi..."
+                                text = if (isPrincipal) "Cari nama guru, rombel, atau siswa..."
+                                else if (isTeacherMode) "Cari siswa, kelas, topik tugas/materi..."
                                 else "Cari nama guru atau mata pelajaran...",
                                 fontSize = 12.5.sp,
                                 color = textTertiary,
@@ -296,7 +344,30 @@ fun TeacherChatScreen(
                     )
                 }
 
-                if (!isTeacherMode) {
+                if (isPrincipal) {
+                    val directoryVm: TeacherDirectoryViewModel = hiltViewModel()
+                    val directory by directoryVm.state.collectAsState()
+                    PrincipalSupervisionChatContent(
+                        teachers = directory.teachers.filterNot { it.isPrincipal },
+                        isDirectoryLoading = directory.isLoading,
+                        threads = threads,
+                        searchQuery = searchQuery,
+                        chatManager = chatManager,
+                        onOpenThread = onOpenThread,
+                        isDark = isDark,
+                        cardBg = cardBg,
+                        cardBorder = cardBorder,
+                        innerCardBg = innerCardBg,
+                        innerCardBorder = innerCardBorder,
+                        textPrimary = textPrimary,
+                        textSecondary = textSecondary,
+                        textTertiary = textTertiary,
+                        accentColor = teacherAccent,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                } else if (!isTeacherMode) {
                     // ── SISWA MODE: WHATSAPP-STYLE DIRECT TEACHER CHAT LIST ──
                     val directoryVm: TeacherDirectoryViewModel = hiltViewModel()
                     val directory by directoryVm.state.collectAsState()
@@ -415,6 +486,7 @@ fun TeacherChatScreen(
                                         }
                                         Text(
                                             text = if (searchQuery.isNotBlank()) "Tidak Ditemukan"
+                                            else if (isPrincipal) "Ruang Tanya Jawab Kepala Sekolah"
                                             else if (selectedFilter != ChatFilter.ALL) "Tidak Ada Diskusi"
                                             else "Belum Ada Tanya Jawab",
                                             fontSize = 15.5.sp,
@@ -424,6 +496,8 @@ fun TeacherChatScreen(
                                         Text(
                                             text = if (searchQuery.isNotBlank())
                                                 "Tidak ada diskusi yang cocok dengan \"$searchQuery\""
+                                            else if (isPrincipal)
+                                                "Saluran konsultasi langsung Kepala Sekolah dengan Dewan Guru dan Siswa. Pesan tanya jawab antar guru dan murid bersifat privat dan terlindungi."
                                             else if (selectedFilter != ChatFilter.ALL)
                                                 "Tidak ada pertanyaan dalam kategori ini"
                                             else if (isTeacherMode)
@@ -435,6 +509,34 @@ fun TeacherChatScreen(
                                             textAlign = TextAlign.Center,
                                             lineHeight = 17.sp
                                         )
+                                        if (isPrincipal) {
+                                            Spacer(Modifier.height(8.dp))
+                                            Surface(
+                                                onClick = { showPrincipalConsultDialog = true },
+                                                shape = RoundedCornerShape(12.dp),
+                                                color = teacherAccent,
+                                                shadowElevation = 2.dp
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Add,
+                                                        contentDescription = null,
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(16.dp)
+                                                    )
+                                                    Text(
+                                                        text = "Mulai Konsultasi Langsung",
+                                                        color = Color.White,
+                                                        fontSize = 12.5.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                        }
                                         if (searchQuery.isNotBlank() || selectedFilter != ChatFilter.ALL) {
                                             Spacer(Modifier.height(4.dp))
                                             Surface(
@@ -512,7 +614,292 @@ fun TeacherChatScreen(
                 }
             }
         }
+
+    if (showPrincipalConsultDialog) {
+        var recipientType by remember { mutableStateOf("GURU") }
+        var recipientName by remember { mutableStateOf("") }
+        var topicText by remember { mutableStateOf("") }
+        var initialMsgText by remember { mutableStateOf("") }
+
+        val dialogCardBg = if (isDark) Color(0xFF161618) else Color.White
+        val dialogCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+        val dialogInnerBg = if (isDark) Color(0xFF1E1E22) else Color(0xFFF8FAFC)
+        val dialogInnerBorder = if (isDark) Color(0xFF2F2F36) else Color(0xFFCBD5E1)
+        val dialogAccent = teacherAccent
+
+        Dialog(
+            onDismissRequest = { showPrincipalConsultDialog = false }
+        ) {
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = dialogCardBg,
+                border = BorderStroke(1.dp, dialogCardBorder),
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 4.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(22.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    // Header
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .background(dialogAccent.copy(alpha = 0.15f))
+                                    .border(1.dp, dialogAccent.copy(alpha = 0.35f), CircleShape),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Forum,
+                                    contentDescription = null,
+                                    tint = dialogAccent,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Konsultasi Langsung",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary
+                                )
+                                Text(
+                                    text = "Akses langsung Kepala Sekolah",
+                                    fontSize = 11.5.sp,
+                                    color = textSecondary
+                                )
+                            }
+                        }
+                        IconButton(
+                            onClick = { showPrincipalConsultDialog = false },
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Tutup",
+                                tint = textTertiary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    }
+
+                    // Recipient Type Segmented Chips
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf("GURU" to "Dewan Guru", "SISWA" to "Warga Belajar").forEach { (typeKey, typeLabel) ->
+                            val isSel = recipientType == typeKey
+                            Surface(
+                                onClick = {
+                                    recipientType = typeKey
+                                    if (recipientName.isBlank()) {
+                                        recipientName = if (typeKey == "GURU") "Guru Pamong" else "Warga Belajar"
+                                    }
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSel) dialogAccent.copy(alpha = 0.15f) else dialogInnerBg,
+                                border = BorderStroke(1.dp, if (isSel) dialogAccent else dialogInnerBorder),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 9.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = typeLabel,
+                                        fontSize = 12.sp,
+                                        fontWeight = if (isSel) FontWeight.Bold else FontWeight.Medium,
+                                        color = if (isSel) dialogAccent else textSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Recipient Name Field
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = if (recipientType == "GURU") "Nama Guru / Tutor" else "Nama Siswa / Warga Belajar",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textSecondary
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(dialogInnerBg)
+                                .border(1.dp, dialogInnerBorder, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            BasicTextField(
+                                value = recipientName,
+                                onValueChange = { recipientName = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = androidx.compose.ui.text.TextStyle(color = textPrimary, fontSize = 13.sp),
+                                singleLine = true,
+                                decorationBox = { inner ->
+                                    if (recipientName.isEmpty()) {
+                                        Text(
+                                            if (recipientType == "GURU") "Ketik nama Bapak/Ibu Guru..." else "Ketik nama Siswa...",
+                                            color = textTertiary,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    inner()
+                                }
+                            )
+                        }
+                    }
+
+                    // Topic Field
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Topik / Perihal",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textSecondary
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(dialogInnerBg)
+                                .border(1.dp, dialogInnerBorder, RoundedCornerShape(10.dp))
+                                .padding(horizontal = 12.dp, vertical = 10.dp)
+                        ) {
+                            BasicTextField(
+                                value = topicText,
+                                onValueChange = { topicText = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = androidx.compose.ui.text.TextStyle(color = textPrimary, fontSize = 13.sp),
+                                singleLine = true,
+                                decorationBox = { inner ->
+                                    if (topicText.isEmpty()) {
+                                        Text(
+                                            "Contoh: Supervisi Pembelajaran / Bimbingan Siswa",
+                                            color = textTertiary,
+                                            fontSize = 13.sp
+                                        )
+                                    }
+                                    inner()
+                                }
+                            )
+                        }
+                    }
+
+                    // Message Field
+                    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text(
+                            text = "Pesan Awal",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textSecondary
+                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 80.dp, max = 130.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(dialogInnerBg)
+                                .border(1.dp, dialogInnerBorder, RoundedCornerShape(10.dp))
+                                .padding(12.dp)
+                        ) {
+                            BasicTextField(
+                                value = initialMsgText,
+                                onValueChange = { initialMsgText = it },
+                                modifier = Modifier.fillMaxWidth(),
+                                textStyle = androidx.compose.ui.text.TextStyle(color = textPrimary, fontSize = 13.sp, lineHeight = 18.sp),
+                                decorationBox = { inner ->
+                                    if (initialMsgText.isEmpty()) {
+                                        Text(
+                                            "Ketik pesan atau instruksi konsultasi Anda di sini...",
+                                            color = textTertiary,
+                                            fontSize = 13.sp,
+                                            lineHeight = 18.sp
+                                        )
+                                    }
+                                    inner()
+                                }
+                            )
+                        }
+                    }
+
+                    // Actions
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Surface(
+                            onClick = { showPrincipalConsultDialog = false },
+                            shape = RoundedCornerShape(12.dp),
+                            color = dialogInnerBg,
+                            border = BorderStroke(1.dp, dialogInnerBorder),
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Box(modifier = Modifier.padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
+                                Text("Batal", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = textSecondary)
+                            }
+                        }
+
+                        Surface(
+                            onClick = {
+                                val targetName = recipientName.trim().ifBlank {
+                                    if (recipientType == "GURU") "Guru Pamong" else "Warga Belajar"
+                                }
+                                val effectiveSubject = topicText.trim().ifBlank { "Konsultasi Kepala Sekolah" }
+                                val effectiveMsg = initialMsgText.trim().ifBlank {
+                                    "Halo $targetName, saya ingin berkonsultasi mengenai $effectiveSubject."
+                                }
+                                showPrincipalConsultDialog = false
+                                val thread = chatManager.createInquiry(
+                                    studentId = if (recipientType == "SISWA") "recipient-student" else auth?.userId ?: "principal",
+                                    studentName = if (recipientType == "SISWA") targetName else auth?.name ?: "Kepala Sekolah",
+                                    studentClass = if (recipientType == "SISWA") "Warga Belajar" else "Kepala Sekolah",
+                                    teacherName = if (recipientType == "GURU") targetName else auth?.name ?: "Kepala Sekolah",
+                                    subjectName = effectiveSubject,
+                                    inquiryType = InquiryType.GENERAL,
+                                    referenceTitle = "Konsultasi Langsung",
+                                    referenceId = null,
+                                    initialQuestion = effectiveMsg
+                                )
+                                onOpenThread(thread.id, targetName)
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            color = dialogAccent,
+                            shadowElevation = 2.dp,
+                            modifier = Modifier.weight(1.3f)
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(vertical = 12.dp),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(Icons.Default.Send, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Mulai Percakapan", fontSize = 13.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                            }
+                        }
+                    }
+                }
+            }
+        }
     }
+}
 
 // ── 1. WHATSAPP-STYLE TEACHER CONTACTS & CHAT LIST (Zero WhatsApp dummy) ──
 
@@ -522,6 +909,7 @@ data class TeacherContactItem(
     val name: String,
     val subject: String,
     val roleTitle: String = "Tutor Pengampu",
+    val isPrincipal: Boolean = false,
 )
 
 @Composable
@@ -694,6 +1082,10 @@ private fun WhatsAppChatRowItem(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         // ── 1. AVATAR with Real-time Online Indicator (dot hijau kecil di profile) ──
+        val effectiveRoleAccent = if (teacher.isPrincipal) {
+            if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+        } else studentAccent
+
         Box(
             modifier = Modifier.size(44.dp),
         ) {
@@ -701,16 +1093,16 @@ private fun WhatsAppChatRowItem(
                 modifier = Modifier
                     .size(42.dp)
                     .clip(CircleShape)
-                    .background(studentAccent.copy(alpha = if (isDark) 0.18f else 0.10f))
-                    .border(1.dp, studentAccent.copy(alpha = if (isDark) 0.35f else 0.22f), CircleShape)
+                    .background(effectiveRoleAccent.copy(alpha = if (isDark) 0.18f else 0.10f))
+                    .border(1.dp, effectiveRoleAccent.copy(alpha = if (isDark) 0.35f else 0.22f), CircleShape)
                     .align(Alignment.Center),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = teacher.name.take(1).uppercase(),
+                    text = if (teacher.isPrincipal) "K" else teacher.name.take(1).uppercase(),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
-                    color = studentAccent,
+                    color = effectiveRoleAccent,
                 )
             }
 
@@ -740,15 +1132,35 @@ private fun WhatsAppChatRowItem(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(
-                    text = teacher.name,
-                    fontSize = 14.5.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = textPrimary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                     modifier = Modifier.weight(1f, fill = false),
-                )
+                ) {
+                    Text(
+                        text = teacher.name,
+                        fontSize = 14.5.sp,
+                        fontWeight = if (teacher.isPrincipal) FontWeight.Bold else FontWeight.SemiBold,
+                        color = textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (teacher.isPrincipal) {
+                        Surface(
+                            shape = RoundedCornerShape(4.dp),
+                            color = effectiveRoleAccent.copy(alpha = 0.15f),
+                            border = BorderStroke(0.5.dp, effectiveRoleAccent.copy(alpha = 0.4f)),
+                        ) {
+                            Text(
+                                text = "Pimpinan",
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = effectiveRoleAccent,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                            )
+                        }
+                    }
+                }
 
                 if (formattedTime.isNotBlank()) {
                     Spacer(Modifier.width(8.dp))
@@ -1477,4 +1889,575 @@ private fun formatTimeAgo(timestamp: Long): String {
     if (days == 1L) return "Kemarin"
     if (days < 30) return "$days hr lalu"
     return "${days / 30} bln lalu"
+}
+
+// ── 2. PRINCIPAL SUPERVISION & CHAT CONTENT ──
+
+@Composable
+private fun PrincipalSupervisionChatContent(
+    teachers: List<TeacherContactItem>,
+    isDirectoryLoading: Boolean,
+    threads: List<ChatThread>,
+    searchQuery: String,
+    chatManager: ChatManager,
+    onOpenThread: (threadId: String, recipientName: String) -> Unit,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+) {
+    val presences by chatManager.teacherPresences.collectAsState()
+    var selectedTab by remember { mutableStateOf(0) } // 0: Dewan Guru, 1: Siswa
+
+    val auth = chatManager.currentAuth
+    val myName = auth?.name.orEmpty().trim()
+    val myId = auth?.userId.orEmpty().trim()
+
+    val filteredTeachers = remember(teachers, searchQuery) {
+        if (searchQuery.isBlank()) teachers
+        else teachers.filter {
+            it.name.contains(searchQuery, ignoreCase = true) ||
+            it.subject.contains(searchQuery, ignoreCase = true) ||
+            it.roleTitle.contains(searchQuery, ignoreCase = true)
+        }
+    }
+
+    val studentThreads = remember(threads, searchQuery, myName, myId) {
+        val realStudentThreads = threads.filter { t ->
+            val isMeAsStudent = (myId.isNotBlank() && t.studentId == myId) ||
+                isSamePersonName(t.studentName, myName) ||
+                t.studentClass.equals("Kepala Sekolah", ignoreCase = true) ||
+                t.studentName.contains("Kepala Sekolah", ignoreCase = true)
+
+            !isMeAsStudent && t.studentName.isNotBlank()
+        }
+        if (searchQuery.isBlank()) realStudentThreads
+        else realStudentThreads.filter { t ->
+            t.studentName.contains(searchQuery, ignoreCase = true) ||
+            t.studentClass.contains(searchQuery, ignoreCase = true) ||
+            t.referenceTitle.contains(searchQuery, ignoreCase = true) ||
+            t.subjectName.contains(searchQuery, ignoreCase = true) ||
+            (t.lastMessage?.content?.contains(searchQuery, ignoreCase = true) == true)
+        }
+    }
+
+    Column(
+        modifier = modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        // ── PRINCIPAL TAB SELECTOR ──
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9))
+                .padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Tab 0: Dewan Guru
+            Surface(
+                onClick = { selectedTab = 0 },
+                shape = RoundedCornerShape(10.dp),
+                color = if (selectedTab == 0) (if (isDark) Color(0xFF27272A) else Color.White) else Color.Transparent,
+                border = if (selectedTab == 0) BorderStroke(1.dp, if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)) else null,
+                shadowElevation = if (selectedTab == 0 && !isDark) 1.dp else 0.dp,
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 9.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.School,
+                        contentDescription = null,
+                        tint = if (selectedTab == 0) accentColor else textTertiary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = "Dewan Guru (${teachers.size})",
+                        fontSize = 12.5.sp,
+                        fontWeight = if (selectedTab == 0) FontWeight.Bold else FontWeight.Medium,
+                        color = if (selectedTab == 0) textPrimary else textSecondary
+                    )
+                }
+            }
+
+            // Tab 1: Siswa
+            Surface(
+                onClick = { selectedTab = 1 },
+                shape = RoundedCornerShape(10.dp),
+                color = if (selectedTab == 1) (if (isDark) Color(0xFF27272A) else Color.White) else Color.Transparent,
+                border = if (selectedTab == 1) BorderStroke(1.dp, if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)) else null,
+                shadowElevation = if (selectedTab == 1 && !isDark) 1.dp else 0.dp,
+                modifier = Modifier.weight(1f)
+            ) {
+                Row(
+                    modifier = Modifier.padding(vertical = 9.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Forum,
+                        contentDescription = null,
+                        tint = if (selectedTab == 1) Color(0xFF38BDF8) else textTertiary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = if (studentThreads.isNotEmpty()) "Siswa (${studentThreads.size})" else "Siswa",
+                        fontSize = 12.5.sp,
+                        fontWeight = if (selectedTab == 1) FontWeight.Bold else FontWeight.Medium,
+                        color = if (selectedTab == 1) textPrimary else textSecondary
+                    )
+                }
+            }
+        }
+
+        if (selectedTab == 0) {
+            // ── DEWAN GURU LIST: CLEAN WHATSAPP STYLE ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "DEWAN GURU (${filteredTeachers.size})",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    color = accentColor,
+                )
+                Text(
+                    text = "Pilih untuk mulai chat",
+                    fontSize = 10.5.sp,
+                    color = textTertiary,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                if (filteredTeachers.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            text = when {
+                                isDirectoryLoading -> "Memuat daftar dewan guru..."
+                                searchQuery.isBlank() -> "Belum ada guru terdaftar"
+                                else -> "Guru atau mata pelajaran '$searchQuery' tidak ditemukan"
+                            },
+                            fontSize = 12.5.sp,
+                            color = textTertiary,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                    ) {
+                        itemsIndexed(filteredTeachers, key = { _, it -> it.id }) { index, teacher ->
+                            val thread = threads.firstOrNull {
+                                (it.teacherId.isNotBlank() && it.teacherId.equals(teacher.id, ignoreCase = true)) ||
+                                (it.teacherName.isNotBlank() && teacher.name.isNotBlank() && (
+                                    it.teacherName.contains(teacher.name.take(6), ignoreCase = true) ||
+                                    teacher.name.contains(it.teacherName.take(6), ignoreCase = true)
+                                ))
+                            }
+                            val cleanMessages = remember(thread?.messages) {
+                                thread?.messages?.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() } ?: emptyList()
+                            }
+                            val lastMsg = cleanMessages.lastOrNull()?.content
+                                ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
+                            val lastMsgTime = cleanMessages.lastOrNull()?.timestamp
+                                ?: thread?.lastUpdated?.takeIf { it > 0L && !lastMsg.isNullOrBlank() }
+
+                            val isTeacherOnline = presences[teacher.userId] == true || presences[teacher.id] == true
+
+                            PrincipalTeacherRowItem(
+                                teacher = teacher,
+                                lastMessage = lastMsg,
+                                lastMessageTime = lastMsgTime,
+                                isOnline = isTeacherOnline,
+                                hasUnread = thread?.status == InquiryStatus.WAITING_REPLY,
+                                isDark = isDark,
+                                textPrimary = textPrimary,
+                                textSecondary = textSecondary,
+                                textTertiary = textTertiary,
+                                accentColor = accentColor,
+                                onClick = {
+                                    val targetThread = thread ?: chatManager.getOrCreateTeacherThread(
+                                        teacherId = teacher.id,
+                                        teacherName = teacher.name,
+                                        subjectName = teacher.subject,
+                                    )
+                                    onOpenThread(targetThread.id, teacher.name)
+                                },
+                            )
+
+                            if (index < filteredTeachers.size - 1) {
+                                HorizontalDivider(
+                                    modifier = Modifier.padding(start = 56.dp),
+                                    thickness = 0.5.dp,
+                                    color = if (isDark) innerCardBorder else Color(0xFFF1F5F9),
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            // ── SISWA: THREADS FROM REAL STUDENTS ──
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 2.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "PESAN WARGA BELAJAR (${studentThreads.size})",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 0.5.sp,
+                    color = Color(0xFF38BDF8),
+                )
+                Text(
+                    text = "Pertanyaan dari siswa",
+                    fontSize = 10.5.sp,
+                    color = textTertiary,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                if (studentThreads.isEmpty()) {
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 24.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        color = cardBg,
+                        border = BorderStroke(1.dp, cardBorder),
+                    ) {
+                        Column(
+                            modifier = Modifier.padding(28.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(0xFF38BDF8).copy(alpha = 0.12f)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Forum,
+                                    contentDescription = null,
+                                    tint = Color(0xFF38BDF8),
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            }
+                            Text(
+                                text = if (searchQuery.isNotBlank()) "Tidak Ditemukan" else "Belum ada pertanyaan dari siswa",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary,
+                                textAlign = TextAlign.Center
+                            )
+                            Text(
+                                text = if (searchQuery.isNotBlank())
+                                    "Tidak ada pesan siswa yang cocok dengan \"$searchQuery\""
+                                else
+                                    "Pertanyaan dan konsultasi langsung dari warga belajar akan muncul di sini secara real-time.",
+                                fontSize = 12.sp,
+                                color = textSecondary,
+                                textAlign = TextAlign.Center,
+                                lineHeight = 17.sp
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(studentThreads, key = { it.id }) { thread ->
+                            val cleanMessages = remember(thread.messages) {
+                                thread.messages.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() }
+                            }
+                            val lastMsg = cleanMessages.lastOrNull()?.content
+                                ?: thread.lastMessageContent?.takeIf { it.isNotBlank() }
+                            val lastMsgTime = cleanMessages.lastOrNull()?.timestamp
+                                ?: thread.lastUpdated.takeIf { it > 0L && !lastMsg.isNullOrBlank() }
+
+                            PrincipalStudentThreadRowItem(
+                                thread = thread,
+                                lastMessage = lastMsg,
+                                lastMessageTime = lastMsgTime,
+                                isDark = isDark,
+                                cardBg = cardBg,
+                                cardBorder = cardBorder,
+                                textPrimary = textPrimary,
+                                textSecondary = textSecondary,
+                                textTertiary = textTertiary,
+                                onClick = {
+                                    onOpenThread(thread.id, thread.studentName.ifBlank { "Warga Belajar" })
+                                }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PrincipalTeacherRowItem(
+    teacher: TeacherContactItem,
+    lastMessage: String?,
+    lastMessageTime: Long?,
+    isOnline: Boolean,
+    hasUnread: Boolean,
+    isDark: Boolean,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
+    accentColor: Color,
+    onClick: () -> Unit,
+) {
+    val formattedTime = remember(lastMessageTime) {
+        if (lastMessageTime != null && lastMessageTime > 0L) {
+            val now = System.currentTimeMillis()
+            val fDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+            val msgDay = fDay.format(Date(lastMessageTime))
+            val today = fDay.format(Date(now))
+            when {
+                msgDay == today -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(lastMessageTime))
+                now - lastMessageTime < 86400000L * 2 -> "Kemarin"
+                else -> SimpleDateFormat("dd/MM/yy", Locale.getDefault()).format(Date(lastMessageTime))
+            }
+        } else ""
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        // Avatar with Online dot
+        Box(modifier = Modifier.size(44.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(accentColor.copy(alpha = if (isDark) 0.18f else 0.10f))
+                    .border(1.dp, accentColor.copy(alpha = if (isDark) 0.35f else 0.22f), CircleShape)
+                    .align(Alignment.Center),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = teacher.name.take(1).uppercase(),
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = accentColor,
+                )
+            }
+
+            if (isOnline) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF10B981))
+                        .border(2.dp, if (isDark) Color(0xFF09090B) else Color.White, CircleShape)
+                        .align(Alignment.BottomEnd),
+                )
+            }
+        }
+
+        Spacer(Modifier.width(12.dp))
+
+        // Text Info
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = teacher.name,
+                    fontSize = 14.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+
+                if (formattedTime.isNotBlank()) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = formattedTime,
+                        fontSize = 11.sp,
+                        color = if (hasUnread) Color(0xFF10B981) else textTertiary,
+                        fontWeight = if (hasUnread) FontWeight.SemiBold else FontWeight.Normal,
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(3.dp))
+
+            Text(
+                text = if (!lastMessage.isNullOrBlank()) "${teacher.subject} • $lastMessage" else teacher.subject,
+                fontSize = 12.5.sp,
+                color = if (hasUnread) textPrimary else textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrincipalStudentThreadRowItem(
+    thread: ChatThread,
+    lastMessage: String?,
+    lastMessageTime: Long?,
+    isDark: Boolean,
+    cardBg: Color,
+    cardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
+    onClick: () -> Unit,
+) {
+    val formattedTime = remember(lastMessageTime) {
+        if (lastMessageTime != null && lastMessageTime > 0L) {
+            val now = System.currentTimeMillis()
+            val fDay = SimpleDateFormat("yyyyMMdd", Locale.getDefault())
+            val msgDay = fDay.format(Date(lastMessageTime))
+            val today = fDay.format(Date(now))
+            when {
+                msgDay == today -> SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(lastMessageTime))
+                now - lastMessageTime < 86400000L * 2 -> "Kemarin"
+                else -> SimpleDateFormat("dd/MM/yy", Locale.getDefault()).format(Date(lastMessageTime))
+            }
+        } else ""
+    }
+
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(42.dp)
+                    .clip(CircleShape)
+                    .background(Color(0xFF38BDF8).copy(alpha = 0.15f))
+                    .border(1.dp, Color(0xFF38BDF8).copy(alpha = 0.35f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = thread.studentName.take(1).uppercase().ifBlank { "S" },
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF38BDF8)
+                )
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = thread.studentName.ifBlank { "Warga Belajar" },
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = textPrimary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+
+                    if (formattedTime.isNotBlank()) {
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = formattedTime,
+                            fontSize = 11.sp,
+                            color = textTertiary
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(3.dp))
+
+                val subtitle = remember(thread.studentClass, thread.referenceTitle, lastMessage) {
+                    val contextPart = if (thread.studentClass.isNotBlank()) thread.studentClass else "Siswa"
+                    if (!lastMessage.isNullOrBlank()) "$contextPart • $lastMessage"
+                    else if (thread.referenceTitle.isNotBlank()) "$contextPart • ${thread.referenceTitle}"
+                    else contextPart
+                }
+
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+    }
+}
+
+private fun normalizePersonName(name: String?): String {
+    if (name.isNullOrBlank()) return ""
+    return name.trim().lowercase().replace(Regex("\\s+"), " ")
+}
+
+private fun isSamePersonName(a: String?, b: String?): Boolean {
+    val normA = normalizePersonName(a)
+    val normB = normalizePersonName(b)
+    return normA.isNotBlank() && normB.isNotBlank() && normA == normB
 }

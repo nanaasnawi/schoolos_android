@@ -178,38 +178,83 @@ fun ChatDetailScreen(
         }
     }
 
+    val auth = chatManager.currentAuth
+    val myName = auth?.name.orEmpty().trim()
+    val myId = auth?.userId.orEmpty().trim()
+    val isPrincipal = auth?.isPrincipal == true
+
+    val rawThreadTeacher = thread?.teacherName?.trim().orEmpty()
+    val rawThreadStudent = thread?.studentName?.trim().orEmpty()
+
+    // Heal teacherName if it was corrupted to current user's name
+    val healedTeacherName = when {
+        rawThreadTeacher.isNotBlank() && !isSamePersonName(rawThreadTeacher, myName) -> rawThreadTeacher
+        initialRecipientName.isNotBlank() && !isSamePersonName(initialRecipientName, myName) -> initialRecipientName
+        else -> rawThreadTeacher
+    }
+
+    val isStudentInitiator = isSamePersonName(rawThreadStudent, myName) || (myId.isNotBlank() && thread?.studentId == myId)
+    val isTeacherRecipient = (!isStudentInitiator && isSamePersonName(healedTeacherName, myName)) ||
+        (!isStudentInitiator && myId.isNotBlank() && thread?.teacherId == myId) ||
+        (isPrincipal && !isStudentInitiator && (healedTeacherName.contains("Kepala Sekolah", ignoreCase = true) || thread?.teacherId == "principal-user"))
+
     val contactName = if (isPrincipalAi) {
         "AI Analitik Kepala Sekolah"
     } else if (isTeacherAi) {
         "AI Copilot Guru"
-    } else if (isTeacherMode) {
-        thread?.studentName?.ifBlank { null } ?: initialRecipientName.ifBlank { null } ?: "Siswa"
     } else {
-        val tName = thread?.teacherName
-        if (!tName.isNullOrBlank() && !tName.equals("Guru Pengampu", ignoreCase = true) && !tName.equals("Bapak/Ibu Guru", ignoreCase = true)) {
-            tName
-        } else if (initialRecipientName.isNotBlank() && !initialRecipientName.equals("Guru Pengampu", ignoreCase = true) && !initialRecipientName.equals("Bapak/Ibu Guru", ignoreCase = true)) {
-            initialRecipientName
-        } else {
-            "Guru Mata Pelajaran"
+        when {
+            // Case 1: The current user is recorded as the student/initiator -> contact is TEACHER!
+            isStudentInitiator -> {
+                if (healedTeacherName.isNotBlank() && !isSamePersonName(healedTeacherName, myName)) {
+                    healedTeacherName
+                } else if (initialRecipientName.isNotBlank() && !isSamePersonName(initialRecipientName, myName)) {
+                    initialRecipientName
+                } else {
+                    "Guru Mata Pelajaran"
+                }
+            }
+            // Case 2: The current user is recorded as teacher/recipient -> contact is STUDENT!
+            isTeacherRecipient -> {
+                if (rawThreadStudent.isNotBlank() && !isSamePersonName(rawThreadStudent, myName)) {
+                    rawThreadStudent
+                } else if (initialRecipientName.isNotBlank() && !isSamePersonName(initialRecipientName, myName)) {
+                    initialRecipientName
+                } else {
+                    "Warga Belajar"
+                }
+            }
+            // Case 3: initialRecipientName provided and is not me
+            initialRecipientName.isNotBlank() && !isSamePersonName(initialRecipientName, myName) -> {
+                initialRecipientName
+            }
+            isTeacherMode && !isPrincipal -> {
+                rawThreadStudent.ifBlank { "Siswa" }
+            }
+            else -> {
+                healedTeacherName.ifBlank { "Guru Mata Pelajaran" }
+            }
         }
     }
     val contactInitial = contactName.trim().take(1).uppercase().ifBlank { "?" }
     val statusText = if (isParticipantOnline) "Aktif" else "Tidak Aktif"
+
     val contactSubtitle = if (isPrincipalAi) {
         "Asisten Eksekutif Supervisi & Analitik Real-Time • NVIDIA NIM"
     } else if (isTeacherAi) {
         "Asisten Pedagogik & Administrasi Guru • Kurikulum Merdeka"
     } else if (isAiThread) {
         "Asisten Pintar 24 Jam • NVIDIA NIM"
-    } else if (isTeacherMode) {
-        "Siswa • ${thread?.studentClass?.ifBlank { "Rombel" } ?: "Rombel"} • $statusText"
+    } else if (isStudentInitiator) {
+        "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • $statusText"
+    } else if (isTeacherRecipient || (isTeacherMode && !isPrincipal)) {
+        "Siswa • ${thread?.studentClass?.ifBlank { "Warga Belajar" } ?: "Warga Belajar"} • $statusText"
     } else {
         "${thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"} • $statusText"
     }
     val roleNeon = if (isPrincipalAi) Color(0xFF8B5CF6) else if (isTeacherAi) TeacherNeon else if (isTeacherMode) StudentNeon else TeacherNeon
 
-    val rawAvatarUrl = if (isTeacherMode) thread?.studentAvatarUrl else thread?.teacherAvatarUrl
+    val rawAvatarUrl = if (isStudentInitiator) thread?.teacherAvatarUrl else thread?.studentAvatarUrl
     val fullAvatarUrl = remember(rawAvatarUrl) {
         if (!rawAvatarUrl.isNullOrBlank()) {
             if (rawAvatarUrl.startsWith("http://", ignoreCase = true) || rawAvatarUrl.startsWith("https://", ignoreCase = true)) {
@@ -221,7 +266,11 @@ fun ChatDetailScreen(
         } else null
     }
 
-    val isPermitted = isTeacherMode || thread == null || chatManager.isThreadOwnedByCurrentStudent(thread)
+    val isPermitted = if (isPrincipal) {
+        thread == null || chatManager.isThreadOwnedByCurrentStudent(thread)
+    } else {
+        isTeacherMode || thread == null || chatManager.isThreadOwnedByCurrentStudent(thread)
+    }
 
     val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -472,13 +521,20 @@ fun ChatDetailScreen(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 itemsIndexed(messages, key = { _, msg -> msg.id }) { index, msg ->
-                    val isMe = if (isTeacherMode) msg.isFromTeacher else !msg.isFromTeacher
+                    val isMe = when {
+                        myId.isNotBlank() && msg.senderId.isNotBlank() -> msg.senderId == myId
+                        myName.isNotBlank() && msg.senderName.isNotBlank() -> isSamePersonName(msg.senderName, myName)
+                        isStudentInitiator -> !msg.isFromTeacher
+                        isTeacherRecipient -> msg.isFromTeacher
+                        isTeacherMode -> msg.isFromTeacher
+                        else -> !msg.isFromTeacher
+                    }
                     val prevMsg = if (index > 0) messages[index - 1] else null
                     val isNewDay = prevMsg == null || !isSameDay(prevMsg.timestamp, msg.timestamp)
-                    val isReadByOther = if (isTeacherMode) {
-                        (thread?.studentLastReadAt ?: 0L) >= msg.timestamp
-                    } else {
+                    val isReadByOther = if (isStudentInitiator) {
                         (thread?.teacherLastReadAt ?: 0L) >= msg.timestamp
+                    } else {
+                        (thread?.studentLastReadAt ?: 0L) >= msg.timestamp
                     }
                     if (isNewDay) DatePill(dateText = formatDateGroup(msg.timestamp))
                     MessageBubble(
@@ -1270,16 +1326,19 @@ private fun sendMessage(
             teacherName = initialRecipientName.ifBlank { "Guru Mata Pelajaran" },
             subjectName = "Umum",
         )
-        val isTeacher = isTeacherMode || auth?.isTeacher == true
-        val senderRole = if (isTeacher) "TEACHER" else "STUDENT"
-        val senderName = when {
-            isTeacher -> auth?.name?.takeIf { it.isNotBlank() } ?: targetThread.teacherName
-            else -> auth?.name?.takeIf { it.isNotBlank() } ?: targetThread.studentName
-        }
-        val senderId = when {
-            isTeacher -> auth?.userId?.takeIf { it.isNotBlank() } ?: targetThread.teacherId
-            else -> auth?.userId?.takeIf { it.isNotBlank() } ?: targetThread.studentId
-        }
+        val isPrincipal = auth?.isPrincipal == true
+        val myName = auth?.name.orEmpty().trim()
+        val myId = auth?.userId.orEmpty().trim()
+
+        val isInitiator = (myId.isNotBlank() && targetThread.studentId == myId) ||
+            isSamePersonName(targetThread.studentName, myName)
+
+        val isTeacher = !isInitiator && (isTeacherMode || auth?.isTeacher == true)
+        val senderRole = if (isPrincipal) "PRINCIPAL" else if (isTeacher) "TEACHER" else "STUDENT"
+        val senderName = auth?.name?.takeIf { it.isNotBlank() }
+            ?: if (isPrincipal) "Kepala Sekolah" else if (isTeacher) targetThread.teacherName else targetThread.studentName
+        val senderId = auth?.userId?.takeIf { it.isNotBlank() }
+            ?: if (isPrincipal) "principal" else if (isTeacher) targetThread.teacherId else targetThread.studentId
         chatManager.sendMessage(
             threadId = targetThread.id,
             senderId = senderId,
@@ -1335,4 +1394,15 @@ private fun PrincipalChatSuggestionChip(
             color = textPrimary,
         )
     }
+}
+
+private fun normalizePersonName(name: String?): String {
+    if (name.isNullOrBlank()) return ""
+    return name.trim().lowercase().replace(Regex("\\s+"), " ")
+}
+
+private fun isSamePersonName(a: String?, b: String?): Boolean {
+    val normA = normalizePersonName(a)
+    val normB = normalizePersonName(b)
+    return normA.isNotBlank() && normB.isNotBlank() && normA == normB
 }

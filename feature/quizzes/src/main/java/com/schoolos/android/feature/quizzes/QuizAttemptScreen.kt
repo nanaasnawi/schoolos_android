@@ -41,6 +41,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.outlined.CheckCircle
+import com.schoolos.android.core.designsystem.SchoolOsConfirmationDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -420,55 +422,25 @@ fun QuizAttemptScreen(
 
     // Confirmation Dialog before final submit
     if (showConfirm) {
-        AlertDialog(
-            onDismissRequest = { showConfirm = false },
-            containerColor = cardBg,
-            shape = RoundedCornerShape(22.dp),
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(
-                        painter = painterResource(id = CoreR.drawable.ic_modern_warning),
-                        contentDescription = null,
-                        tint = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
-                        modifier = Modifier.size(22.dp)
-                    )
-                    Text("Selesai & Kumpulkan Ujian?", color = textPrimary, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                }
+        val unanswered = state.questions.size - state.answeredCount
+        val confirmMsg = if (unanswered > 0) {
+            "Kamu telah menjawab ${state.answeredCount} dari ${state.questions.size} soal. Masih ada $unanswered soal yang belum dijawab. Yakin ingin mengumpulkan sekarang?"
+        } else {
+            "Seluruh ${state.questions.size} soal telah terjawab. Pastikan kembali jawabanmu sebelum mengakhiri sesi ujian CBT."
+        }
+        SchoolOsConfirmationDialog(
+            title = "Selesai & Kumpulkan Ujian?",
+            message = confirmMsg,
+            confirmText = "Ya, Kumpulkan",
+            dismissText = "Periksa Lagi",
+            icon = Icons.Outlined.CheckCircle,
+            accentColor = if (unanswered > 0) Color(0xFFF59E0B) else Color(0xFF10B981),
+            confirmButtonColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669),
+            onConfirm = {
+                showConfirm = false
+                viewModel.submit()
             },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        "Kamu telah menjawab ${state.answeredCount} dari ${state.questions.size} soal.",
-                        color = textSecondary,
-                        fontSize = 13.sp
-                    )
-                    if (state.answeredCount < state.questions.size) {
-                        Text(
-                            "Masih ada ${state.questions.size - state.answeredCount} soal yang belum dijawab. Yakin ingin mengumpulkan sekarang?",
-                            color = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626),
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showConfirm = false
-                        viewModel.submit()
-                    },
-                    shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669)),
-                ) {
-                    Text("Ya, Kumpulkan", fontWeight = FontWeight.Bold, color = Color.White)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showConfirm = false }) {
-                    Text("Periksa Lagi", color = textSecondary, fontWeight = FontWeight.Medium)
-                }
-            },
+            onDismiss = { showConfirm = false }
         )
     }
 

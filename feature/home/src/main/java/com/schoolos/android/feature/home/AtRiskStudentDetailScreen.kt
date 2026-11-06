@@ -58,6 +58,42 @@ fun AtRiskStudentDetailScreen(
     val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
     val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
 
+    var showSendAllConfirmDialog by remember { mutableStateOf(false) }
+    var singleItemToRemind by remember { mutableStateOf<AtRiskStudent?>(null) }
+
+    if (showSendAllConfirmDialog) {
+        SchoolOsConfirmationDialog(
+            title = "Kirim Pengingat Terpadu?",
+            message = "Notifikasi pengingat akademik akan dikirimkan langsung ke smartphone warga belajar ${state.studentName} untuk ${state.totalIssues} kendala belajar.",
+            confirmText = "Kirim Pengingat",
+            dismissText = "Batal",
+            icon = Icons.Outlined.NotificationsActive,
+            accentColor = Color(0xFFEF4444),
+            onConfirm = {
+                showSendAllConfirmDialog = false
+                viewModel.sendAllReminders()
+            },
+            onDismiss = { showSendAllConfirmDialog = false }
+        )
+    }
+
+    singleItemToRemind?.let { item ->
+        SchoolOsConfirmationDialog(
+            title = "Kirim Pengingat Kendala?",
+            message = "Kirimkan pengingat untuk: \"${item.title}\" kepada warga belajar ${state.studentName}?",
+            confirmText = "Kirim",
+            dismissText = "Batal",
+            icon = Icons.Outlined.Notifications,
+            accentColor = Color(0xFFEF4444),
+            onConfirm = {
+                val target = item
+                singleItemToRemind = null
+                viewModel.sendSingleReminder(target)
+            },
+            onDismiss = { singleItemToRemind = null }
+        )
+    }
+
     LaunchedEffect(state.toastMessage) {
         state.toastMessage?.let {
             snackbarHostState.showSnackbar(it)
@@ -92,8 +128,26 @@ fun AtRiskStudentDetailScreen(
                 .padding(paddingValues)
         ) {
             if (state.isLoading && !state.isRefreshing) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(color = Color(0xFF38BDF8))
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 40.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
+                ) {
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            AtRiskDetailHeroSkeleton(isDark = isDark)
+                        }
+                    }
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            AtRiskStatStripSkeleton(isDark = isDark)
+                        }
+                    }
+                    items(3) {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            AtRiskIssueItemSkeleton(isDark = isDark)
+                        }
+                    }
                 }
             } else {
                 LazyColumn(
@@ -110,7 +164,7 @@ fun AtRiskStudentDetailScreen(
                                 className = state.className,
                                 totalIssues = state.totalIssues,
                                 isSendingAll = state.isSendingAll,
-                                onSendAllReminders = { viewModel.sendAllReminders() },
+                                onSendAllReminders = { showSendAllConfirmDialog = true },
                                 isDark = isDark,
                                 cardBg = cardBg,
                                 cardBorder = cardBorder,
@@ -235,7 +289,7 @@ fun AtRiskStudentDetailScreen(
                                     textPrimary = textPrimary,
                                     textSecondary = textSecondary,
                                     textTertiary = textTertiary,
-                                    onSendReminder = { viewModel.sendSingleReminder(item) },
+                                    onSendReminder = { singleItemToRemind = item },
                                     onOpenItem = {
                                         val matId = item.materialId
                                         val assignId = item.assignmentId
@@ -524,112 +578,115 @@ private fun FourPillarStatStrip(
     textSecondary: Color,
     textTertiary: Color,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        PillarStatBox(
-            modifier = Modifier.weight(1f),
-            label = "Total Kendala",
-            count = total,
-            icon = Icons.Outlined.WarningAmber,
-            accentColor = if (total > 0) Color(0xFFEF4444) else Color(0xFF10B981),
-            isDark = isDark,
-            cardBg = cardBg,
-            cardBorder = cardBorder,
-            textPrimary = textPrimary,
-            textTertiary = textTertiary,
-        )
-        PillarStatBox(
-            modifier = Modifier.weight(1f),
-            label = "Modul",
-            count = unreadMaterials,
-            icon = Icons.Outlined.MenuBook,
-            accentColor = Color(0xFFF59E0B),
-            isDark = isDark,
-            cardBg = cardBg,
-            cardBorder = cardBorder,
-            textPrimary = textPrimary,
-            textTertiary = textTertiary,
-        )
-        PillarStatBox(
-            modifier = Modifier.weight(1f),
-            label = "Tugas",
-            count = overdueAssignments,
-            icon = Icons.AutoMirrored.Outlined.Assignment,
-            accentColor = Color(0xFF38BDF8),
-            isDark = isDark,
-            cardBg = cardBg,
-            cardBorder = cardBorder,
-            textPrimary = textPrimary,
-            textTertiary = textTertiary,
-        )
-        PillarStatBox(
-            modifier = Modifier.weight(1f),
-            label = "Nilai / Kuis",
-            count = lowScores + quizAlerts,
-            icon = Icons.Outlined.TrendingDown,
-            accentColor = Color(0xFFA855F7),
-            isDark = isDark,
-            cardBg = cardBg,
-            cardBorder = cardBorder,
-            textPrimary = textPrimary,
-            textTertiary = textTertiary,
-        )
-    }
-}
-
-@Composable
-private fun PillarStatBox(
-    modifier: Modifier = Modifier,
-    label: String,
-    count: Int,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    accentColor: Color,
-    isDark: Boolean,
-    cardBg: Color,
-    cardBorder: Color,
-    textPrimary: Color,
-    textTertiary: Color,
-) {
     Surface(
         shape = RoundedCornerShape(16.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        modifier = modifier
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 6.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(vertical = 12.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            UnifiedStatColumnItem(
+                label = "Kendala",
+                value = "$total",
+                accentColor = if (total > 0) Color(0xFFEF4444) else Color(0xFF10B981),
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                modifier = Modifier.weight(1f)
+            )
+
+            Box(
+                modifier = Modifier
+                    .width(0.5.dp)
+                    .height(28.dp)
+                    .background(cardBorder)
+            )
+
+            UnifiedStatColumnItem(
+                label = "Modul",
+                value = "$unreadMaterials",
+                accentColor = Color(0xFFF59E0B),
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                modifier = Modifier.weight(1f)
+            )
+
+            Box(
+                modifier = Modifier
+                    .width(0.5.dp)
+                    .height(28.dp)
+                    .background(cardBorder)
+            )
+
+            UnifiedStatColumnItem(
+                label = "Tugas",
+                value = "$overdueAssignments",
+                accentColor = Color(0xFF38BDF8),
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                modifier = Modifier.weight(1f)
+            )
+
+            Box(
+                modifier = Modifier
+                    .width(0.5.dp)
+                    .height(28.dp)
+                    .background(cardBorder)
+            )
+
+            UnifiedStatColumnItem(
+                label = "Nilai / Kuis",
+                value = "${lowScores + quizAlerts}",
+                accentColor = Color(0xFFA855F7),
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                modifier = Modifier.weight(1f)
+            )
+        }
+    }
+}
+
+@Composable
+private fun UnifiedStatColumnItem(
+    label: String,
+    value: String,
+    accentColor: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier.padding(vertical = 4.dp, horizontal = 2.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        Text(
+            text = value,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = textPrimary,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(32.dp)
+                    .size(5.dp)
                     .clip(CircleShape)
-                    .background(accentColor.copy(alpha = 0.14f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    tint = accentColor,
-                    modifier = Modifier.size(17.dp)
-                )
-            }
-            Spacer(Modifier.height(6.dp))
-            Text(
-                text = "$count",
-                fontSize = 17.sp,
-                fontWeight = FontWeight.Black,
-                color = textPrimary
+                    .background(accentColor)
             )
-            Spacer(Modifier.height(2.dp))
             Text(
                 text = label,
-                fontSize = 10.sp,
-                color = textTertiary,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Medium,
+                color = textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -654,8 +711,9 @@ private fun AtRiskCategoryFilterRow(
     onSelect: (String) -> Unit,
 ) {
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
@@ -1043,6 +1101,99 @@ private fun InterventionStepItem(
                 color = textSecondary,
                 lineHeight = 16.sp,
             )
+        }
+    }
+}
+
+@Composable
+private fun AtRiskDetailHeroSkeleton(isDark: Boolean) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(13.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                ShimmerBox(modifier = Modifier.size(52.dp), shape = RoundedCornerShape(16.dp))
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    ShimmerBox(modifier = Modifier.width(150.dp).height(16.dp), shape = RoundedCornerShape(4.dp))
+                    ShimmerBox(modifier = Modifier.width(100.dp).height(12.dp), shape = RoundedCornerShape(4.dp))
+                }
+                ShimmerBox(modifier = Modifier.width(70.dp).height(24.dp), shape = RoundedCornerShape(8.dp))
+            }
+            ShimmerBox(modifier = Modifier.fillMaxWidth().height(44.dp), shape = RoundedCornerShape(12.dp))
+            ShimmerBox(modifier = Modifier.fillMaxWidth().height(36.dp), shape = RoundedCornerShape(10.dp))
+        }
+    }
+}
+
+@Composable
+private fun AtRiskStatStripSkeleton(isDark: Boolean) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+
+    Surface(
+        shape = RoundedCornerShape(16.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 14.dp, horizontal = 12.dp),
+            horizontalArrangement = Arrangement.SpaceAround
+        ) {
+            repeat(4) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    ShimmerBox(modifier = Modifier.width(36.dp).height(18.dp), shape = RoundedCornerShape(4.dp))
+                    ShimmerBox(modifier = Modifier.width(48.dp).height(12.dp), shape = RoundedCornerShape(4.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AtRiskIssueItemSkeleton(isDark: Boolean) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ShimmerBox(modifier = Modifier.width(130.dp).height(16.dp), shape = RoundedCornerShape(6.dp))
+                ShimmerBox(modifier = Modifier.width(80.dp).height(16.dp), shape = RoundedCornerShape(6.dp))
+            }
+            ShimmerBox(modifier = Modifier.fillMaxWidth(0.9f).height(16.dp), shape = RoundedCornerShape(4.dp))
+            ShimmerBox(modifier = Modifier.fillMaxWidth().height(48.dp), shape = RoundedCornerShape(12.dp))
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                ShimmerBox(modifier = Modifier.width(90.dp).height(34.dp), shape = RoundedCornerShape(10.dp))
+                ShimmerBox(modifier = Modifier.width(110.dp).height(34.dp), shape = RoundedCornerShape(10.dp))
+            }
         }
     }
 }

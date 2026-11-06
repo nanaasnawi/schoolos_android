@@ -328,9 +328,11 @@ fun NavGraph(
                     materialId = materialId,
                     onBack = { navController.popBackStack() },
                     onCreateMaterial = { navController.navigate(Screen.MaterialCreator.route) },
-                    onAskTeacher = { title, id, subject, teacherName ->
+                    onAskTeacher = { title, id, subject, teacherName, customQuestion ->
                         val effectiveTeacher = if (teacherName.isNotBlank() && !teacherName.equals("Guru Pengampu", ignoreCase = true)) teacherName else "Guru Mata Pelajaran"
                         val greeting = if (effectiveTeacher != "Guru Mata Pelajaran") "Halo $effectiveTeacher," else "Halo Bapak/Ibu guru,"
+                        val defaultQuestion = "$greeting saya ingin bertanya mengenai materi '$title' ini karena ada bagian yang belum saya pahami."
+                        val finalQuestion = if (customQuestion.isNotBlank()) customQuestion else defaultQuestion
                         val thread = chatManager.createInquiry(
                             studentId = authState?.userId ?: "std-current",
                             studentName = authState?.name ?: "Siswa",
@@ -340,7 +342,7 @@ fun NavGraph(
                             inquiryType = InquiryType.MATERIAL,
                             referenceTitle = title,
                             referenceId = id,
-                            initialQuestion = "$greeting saya ingin bertanya mengenai materi '$title' ini karena ada bagian yang belum saya pahami."
+                            initialQuestion = finalQuestion
                         )
                         navController.navigate(Screen.ChatDetail.createRoute(thread.id, effectiveTeacher))
                     }
@@ -426,9 +428,11 @@ fun NavGraph(
                 AssignmentDetailScreen(
                     onBack = { navController.popBackStack() },
                     onOpenMaterial = { id -> navController.navigate(Screen.LearningDetail.createRoute(id)) },
-                    onAskTeacher = { title, id, subject, teacher ->
+                    onAskTeacher = { title, id, subject, teacher, customQuestion ->
                         val effectiveTeacher = if (teacher.isNotBlank() && !teacher.equals("Guru Pengampu", ignoreCase = true)) teacher else "Guru Mata Pelajaran"
                         val greeting = if (effectiveTeacher != "Guru Mata Pelajaran") "Halo $effectiveTeacher," else "Halo Bapak/Ibu guru,"
+                        val defaultQuestion = "$greeting saya ingin berkonsultasi mengenai tugas '$title' ini karena ada hal yang ingin saya tanyakan."
+                        val finalQuestion = if (customQuestion.isNotBlank()) customQuestion else defaultQuestion
                         val thread = chatManager.createInquiry(
                             studentId = authState?.userId ?: "std-current",
                             studentName = authState?.name ?: "Siswa",
@@ -438,7 +442,7 @@ fun NavGraph(
                             inquiryType = InquiryType.ASSIGNMENT,
                             referenceTitle = title,
                             referenceId = id,
-                            initialQuestion = "$greeting saya ingin berkonsultasi mengenai tugas '$title' ini karena ada hal yang ingin saya tanyakan."
+                            initialQuestion = finalQuestion,
                         )
                         navController.navigate(Screen.ChatDetail.createRoute(thread.id, effectiveTeacher))
                     }
@@ -530,18 +534,13 @@ fun NavGraph(
                 QuizResultScreen(onBack = { navController.popBackStack(Screen.Home.route, false) })
             }
 
-            // Teacher Analytics Hub (Literasi & Bacaan, Early Warning)
+            // Teacher & Principal Analytics Hub (Literasi & Bacaan, Early Warning)
             composable(Screen.TeacherAnalytics.route) {
+                val isPrincipal = authState?.isPrincipal == true
                 TeacherAnalyticsHubScreen(
                     initialTab = 0,
-                    onBack = {
-                        if (!navController.popBackStack()) {
-                            navController.navigate(Screen.Home.route) {
-                                popUpTo(Screen.Home.route) { inclusive = false }
-                                launchSingleTop = true
-                            }
-                        }
-                    },
+                    isPrincipal = isPrincipal,
+                    onBack = null,
                     onNavigateToStudentDetail = { studentId, name, nisn, className ->
                         navController.navigate(
                             Screen.StudentDetail.createRoute(
@@ -649,14 +648,16 @@ fun NavGraph(
                 )
             }
 
-            // Chat & Q&A Consultation (Teacher & Student)
+            // Chat & Q&A Consultation (Teacher, Principal & Student)
             composable(Screen.Chat.route) {
+                val isPrincipal = authState?.isPrincipal == true
+                val isTeacher = authState?.isTeacher == true
                 TeacherChatScreen(
                     chatManager = chatManager,
                     onOpenThread = { threadId, recipientName ->
                         navController.navigate(Screen.ChatDetail.createRoute(threadId, recipientName))
                     },
-                    isTeacherMode = authState?.isTeacher == true
+                    isTeacherMode = isTeacher || isPrincipal
                 )
             }
 
@@ -700,7 +701,7 @@ fun NavGraph(
                             }
                         }
                     },
-                    isTeacherMode = authState?.isTeacher == true
+                    isTeacherMode = authState?.isTeacher == true || authState?.isPrincipal == true
                 )
             }
 

@@ -31,6 +31,7 @@ import com.schoolos.android.feature.home.AtRiskMonitoringViewModel
 @Composable
 fun TeacherAnalyticsHubScreen(
     initialTab: Int = 0,
+    isPrincipal: Boolean = false,
     onBack: (() -> Unit)? = null,
     onNavigateToStudentDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)? = null,
     onNavigateToAtRiskDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)? = onNavigateToStudentDetail,
@@ -66,8 +67,8 @@ fun TeacherAnalyticsHubScreen(
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             ExecutiveTopBar(
-                title = "Teacher Analytics & Supervisi",
-                subtitle = "Monitoring Literasi & Early Warning Siswa",
+                title = if (isPrincipal) "Analisis & Supervisi Sekolah" else "Teacher Analytics & Supervisi",
+                subtitle = if (isPrincipal) "Monitoring Literasi & Early Warning Seluruh Kelas" else "Monitoring Literasi & Early Warning Siswa",
                 onBack = onBack,
             )
         }
