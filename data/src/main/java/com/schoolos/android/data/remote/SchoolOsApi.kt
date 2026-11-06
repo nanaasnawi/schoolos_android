@@ -20,6 +20,9 @@ interface SchoolOsApi {
     @POST("auth/change-password")
     suspend fun changePassword(@Body request: ChangePasswordRequestDto): ApiResponse<Map<String, String>>
 
+    @POST("auth/logout")
+    suspend fun logout(): ApiResponse<Map<String, String>>
+
     @PUT("auth/profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequestDto): ApiResponse<UpdateProfileResponseDto>
 

@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -65,7 +66,7 @@ fun AtRiskStudentDetailScreen(
     }
 
     Scaffold(
-        containerColor = CosmicBlack,
+        containerColor = if (isDark) Color(0xFF09090B) else Color(0xFFF8FAFC),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             ExecutiveTopBar(
@@ -83,57 +84,6 @@ fun AtRiskStudentDetailScreen(
                     }
                 }
             )
-        },
-        bottomBar = {
-            if (state.items.isNotEmpty()) {
-                Surface(
-                    color = cardBg,
-                    border = BorderStroke(1.dp, cardBorder),
-                    modifier = Modifier.navigationBarsPadding()
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp)
-                    ) {
-                        Button(
-                            onClick = { viewModel.sendAllReminders() },
-                            enabled = !state.isSendingAll,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(48.dp),
-                            shape = RoundedCornerShape(14.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = if (isDark) Color(0xFFDC2626) else Color(0xFFE11D48),
-                                contentColor = Color.White
-                            ),
-                            elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
-                        ) {
-                            if (state.isSendingAll) {
-                                CircularProgressIndicator(
-                                    modifier = Modifier.size(18.dp),
-                                    strokeWidth = 2.dp,
-                                    color = Color.White
-                                )
-                                Spacer(Modifier.width(10.dp))
-                                Text("Mengirimkan Notifikasi...", fontSize = 13.5.sp, fontWeight = FontWeight.Bold)
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Outlined.NotificationsActive,
-                                    contentDescription = null,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                Text(
-                                    text = "Kirim Pengingat Terpadu (${state.totalIssues} Kendala)",
-                                    fontSize = 13.5.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-                }
-            }
         }
     ) { paddingValues ->
         Box(
@@ -148,53 +98,59 @@ fun AtRiskStudentDetailScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 14.dp),
+                    contentPadding = PaddingValues(top = 12.dp, bottom = 40.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
-                    // 1. Student Identity Hero Card
+                    // 1. Student Identity Hero Card (With Primary Send All Reminders Action)
                     item {
-                        StudentIdentityHeroCard(
-                            studentName = state.studentName,
-                            nisn = state.nisn,
-                            className = state.className,
-                            totalIssues = state.totalIssues,
-                            isDark = isDark,
-                            cardBg = cardBg,
-                            cardBorder = cardBorder,
-                            innerCardBg = innerCardBg,
-                            innerCardBorder = innerCardBorder,
-                            textPrimary = textPrimary,
-                            textSecondary = textSecondary,
-                            textTertiary = textTertiary,
-                            onOpenFullProfile = {
-                                onNavigateToFullProfile(
-                                    state.studentId,
-                                    state.studentName,
-                                    state.nisn,
-                                    state.className
-                                )
-                            }
-                        )
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            StudentIdentityHeroCard(
+                                studentName = state.studentName,
+                                nisn = state.nisn,
+                                className = state.className,
+                                totalIssues = state.totalIssues,
+                                isSendingAll = state.isSendingAll,
+                                onSendAllReminders = { viewModel.sendAllReminders() },
+                                isDark = isDark,
+                                cardBg = cardBg,
+                                cardBorder = cardBorder,
+                                innerCardBg = innerCardBg,
+                                innerCardBorder = innerCardBorder,
+                                textPrimary = textPrimary,
+                                textSecondary = textSecondary,
+                                textTertiary = textTertiary,
+                                onOpenFullProfile = {
+                                    onNavigateToFullProfile(
+                                        state.studentId,
+                                        state.studentName,
+                                        state.nisn,
+                                        state.className
+                                    )
+                                }
+                            )
+                        }
                     }
 
                     // 2. 4-Pillar Stat Grid
                     item {
-                        FourPillarStatStrip(
-                            total = state.totalIssues,
-                            unreadMaterials = state.unreadMaterialsCount,
-                            overdueAssignments = state.overdueAssignmentsCount,
-                            lowScores = state.lowScoresCount,
-                            quizAlerts = state.quizAlertsCount,
-                            isDark = isDark,
-                            cardBg = cardBg,
-                            cardBorder = cardBorder,
-                            textPrimary = textPrimary,
-                            textSecondary = textSecondary,
-                            textTertiary = textTertiary,
-                        )
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            FourPillarStatStrip(
+                                total = state.totalIssues,
+                                unreadMaterials = state.unreadMaterialsCount,
+                                overdueAssignments = state.overdueAssignmentsCount,
+                                lowScores = state.lowScoresCount,
+                                quizAlerts = state.quizAlertsCount,
+                                isDark = isDark,
+                                cardBg = cardBg,
+                                cardBorder = cardBorder,
+                                textPrimary = textPrimary,
+                                textSecondary = textSecondary,
+                                textTertiary = textTertiary,
+                            )
+                        }
                     }
 
-                    // 3. Category Filter Tabs
+                    // 3. Category Filter Tabs (Edge-to-edge LazyRow)
                     item {
                         AtRiskCategoryFilterRow(
                             selected = state.selectedCategoryFilter,
@@ -216,46 +172,48 @@ fun AtRiskStudentDetailScreen(
                     // 4. Issue Breakdown Cards
                     if (state.filteredItems.isEmpty()) {
                         item {
-                            Surface(
-                                shape = RoundedCornerShape(22.dp),
-                                color = cardBg,
-                                border = BorderStroke(1.dp, cardBorder),
-                                modifier = Modifier.fillMaxWidth()
-                            ) {
-                                Column(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .padding(28.dp),
-                                    horizontalAlignment = Alignment.CenterHorizontally
+                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                Surface(
+                                    shape = RoundedCornerShape(20.dp),
+                                    color = cardBg,
+                                    border = BorderStroke(1.dp, cardBorder),
+                                    modifier = Modifier.fillMaxWidth()
                                 ) {
-                                    Box(
+                                    Column(
                                         modifier = Modifier
-                                            .size(54.dp)
-                                            .clip(CircleShape)
-                                            .background(Color(0xFF10B981).copy(alpha = 0.12f)),
-                                        contentAlignment = Alignment.Center
+                                            .fillMaxWidth()
+                                            .padding(28.dp),
+                                        horizontalAlignment = Alignment.CenterHorizontally
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Outlined.CheckCircle,
-                                            contentDescription = null,
-                                            tint = Color(0xFF10B981),
-                                            modifier = Modifier.size(32.dp)
+                                        Box(
+                                            modifier = Modifier
+                                                .size(54.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF10B981).copy(alpha = 0.12f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Outlined.CheckCircle,
+                                                contentDescription = null,
+                                                tint = Color(0xFF10B981),
+                                                modifier = Modifier.size(32.dp)
+                                            )
+                                        }
+                                        Spacer(Modifier.height(12.dp))
+                                        Text(
+                                            text = "Tidak Ada Kendala Pada Kategori Ini",
+                                            fontSize = 15.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textPrimary
+                                        )
+                                        Spacer(Modifier.height(4.dp))
+                                        Text(
+                                            text = "Warga belajar terpantau aktif dan tidak memiliki masalah belajar pada filter yang dipilih.",
+                                            fontSize = 12.sp,
+                                            color = textSecondary,
+                                            textAlign = TextAlign.Center
                                         )
                                     }
-                                    Spacer(Modifier.height(12.dp))
-                                    Text(
-                                        text = "Tidak Ada Kendala Pada Kategori Ini",
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = textPrimary
-                                    )
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = "Warga belajar terpantau aktif dan tidak memiliki masalah belajar pada filter yang dipilih.",
-                                        fontSize = 12.sp,
-                                        color = textSecondary,
-                                        textAlign = TextAlign.Center
-                                    )
                                 }
                             }
                         }
@@ -265,9 +223,38 @@ fun AtRiskStudentDetailScreen(
                             key = { _, it -> "${it.studentId}_${it.category}_${it.materialId ?: it.assignmentId ?: it.quizId ?: it.title}" }
                         ) { _, item ->
                             val isSending = state.sendingItemId == "${item.studentId}_${item.category}_${item.materialId ?: item.assignmentId ?: item.quizId}"
-                            AtRiskDetailItemCard(
-                                item = item,
-                                isSending = isSending,
+                            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                                AtRiskDetailItemCard(
+                                    item = item,
+                                    isSending = isSending,
+                                    isDark = isDark,
+                                    cardBg = cardBg,
+                                    cardBorder = cardBorder,
+                                    innerCardBg = innerCardBg,
+                                    innerCardBorder = innerCardBorder,
+                                    textPrimary = textPrimary,
+                                    textSecondary = textSecondary,
+                                    textTertiary = textTertiary,
+                                    onSendReminder = { viewModel.sendSingleReminder(item) },
+                                    onOpenItem = {
+                                        val matId = item.materialId
+                                        val assignId = item.assignmentId
+                                        val qzId = item.quizId
+                                        when {
+                                            matId != null -> onOpenMaterial?.invoke(matId)
+                                            assignId != null -> onOpenAssignment?.invoke(assignId)
+                                            qzId != null -> onOpenQuiz?.invoke(qzId)
+                                        }
+                                    }
+                                )
+                            }
+                        }
+                    }
+
+                    // 5. Pedagogical Intervention Guidelines
+                    item {
+                        Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                            PedagogicalInterventionCard(
                                 isDark = isDark,
                                 cardBg = cardBg,
                                 cardBorder = cardBorder,
@@ -276,33 +263,8 @@ fun AtRiskStudentDetailScreen(
                                 textPrimary = textPrimary,
                                 textSecondary = textSecondary,
                                 textTertiary = textTertiary,
-                                onSendReminder = { viewModel.sendSingleReminder(item) },
-                                onOpenItem = {
-                                    val matId = item.materialId
-                                    val assignId = item.assignmentId
-                                    val qzId = item.quizId
-                                    when {
-                                        matId != null -> onOpenMaterial?.invoke(matId)
-                                        assignId != null -> onOpenAssignment?.invoke(assignId)
-                                        qzId != null -> onOpenQuiz?.invoke(qzId)
-                                    }
-                                }
                             )
                         }
-                    }
-
-                    // 5. Pedagogical Intervention Guidelines
-                    item {
-                        PedagogicalInterventionCard(
-                            isDark = isDark,
-                            cardBg = cardBg,
-                            cardBorder = cardBorder,
-                            innerCardBg = innerCardBg,
-                            innerCardBorder = innerCardBorder,
-                            textPrimary = textPrimary,
-                            textSecondary = textSecondary,
-                            textTertiary = textTertiary,
-                        )
                     }
 
                     item {
@@ -324,6 +286,8 @@ private fun StudentIdentityHeroCard(
     nisn: String,
     className: String,
     totalIssues: Int,
+    isSendingAll: Boolean,
+    onSendAllReminders: () -> Unit,
     isDark: Boolean,
     cardBg: Color,
     cardBorder: Color,
@@ -337,59 +301,30 @@ private fun StudentIdentityHeroCard(
     val initial = studentName.firstOrNull()?.uppercase() ?: "W"
     val hasIssues = totalIssues > 0
 
-    val heroGradient = if (isDark) {
-        if (hasIssues) {
-            Brush.linearGradient(
-                listOf(
-                    Color(0xFF4C0519).copy(alpha = 0.45f),
-                    Color(0xFF1E1118),
-                    Color(0xFF111113)
-                )
-            )
-        } else {
-            Brush.linearGradient(
-                listOf(
-                    Color(0xFF064E3B).copy(alpha = 0.35f),
-                    Color(0xFF111815),
-                    Color(0xFF111113)
-                )
-            )
-        }
+    val alertAccent = if (hasIssues) Color(0xFFEF4444) else Color(0xFF10B981)
+    val cardBackground = if (isDark) {
+        if (hasIssues) Color(0xFF151214) else Color(0xFF111113)
     } else {
-        if (hasIssues) {
-            Brush.linearGradient(
-                listOf(
-                    Color(0xFFFFE4E6),
-                    Color(0xFFFFF1F2),
-                    Color(0xFFFFFFFF)
-                )
-            )
-        } else {
-            Brush.linearGradient(
-                listOf(
-                    Color(0xFFECFDF5),
-                    Color(0xFFF0FDF4),
-                    Color(0xFFFFFFFF)
-                )
-            )
-        }
+        if (hasIssues) Color(0xFFFFFDFD) else Color.White
+    }
+    val cardOutline = if (hasIssues) {
+        alertAccent.copy(alpha = if (isDark) 0.35f else 0.28f)
+    } else {
+        cardBorder
     }
 
-    val alertAccent = if (hasIssues) Color(0xFFEF4444) else Color(0xFF10B981)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(22.dp))
-            .background(heroGradient)
-            .border(
-                1.dp,
-                if (hasIssues) alertAccent.copy(alpha = 0.35f) else cardBorder,
-                RoundedCornerShape(22.dp)
-            )
-            .padding(16.dp)
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = cardBackground,
+        border = BorderStroke(1.dp, cardOutline),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(13.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -398,50 +333,57 @@ private fun StudentIdentityHeroCard(
                 // Avatar Box
                 Box(
                     modifier = Modifier
-                        .size(54.dp)
+                        .size(52.dp)
                         .clip(RoundedCornerShape(16.dp))
                         .background(
-                            Brush.linearGradient(
-                                if (hasIssues) listOf(Color(0xFFEF4444), Color(0xFFB91C1C))
-                                else listOf(Color(0xFF10B981), Color(0xFF059669))
-                            )
+                            if (hasIssues) {
+                                if (isDark) Color(0xFF7F1D1D).copy(alpha = 0.45f) else Color(0xFFFEE2E2)
+                            } else {
+                                if (isDark) Color(0xFF064E3B).copy(alpha = 0.45f) else Color(0xFFDCFCE7)
+                            }
                         )
-                        .border(1.5.dp, Color.White.copy(alpha = 0.35f), RoundedCornerShape(16.dp)),
+                        .border(
+                            1.dp,
+                            if (hasIssues) alertAccent.copy(alpha = 0.4f) else Color(0xFF10B981).copy(alpha = 0.4f),
+                            RoundedCornerShape(16.dp)
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
                         text = initial,
-                        fontSize = 22.sp,
-                        fontWeight = FontWeight.Black,
-                        color = Color.White
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (hasIssues) (if (isDark) Color(0xFFFCA5A5) else Color(0xFFDC2626)) else (if (isDark) Color(0xFF6EE7B7) else Color(0xFF16A34A))
                     )
                 }
 
-                Column(modifier = Modifier.weight(1f)) {
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
                     Text(
                         text = studentName.ifBlank { "Warga Belajar" },
-                        fontSize = 17.sp,
+                        fontSize = 16.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
-                    Spacer(Modifier.height(4.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(6.dp)
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF))
-                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) Color(0xFF1E1B4B) else Color(0xFFEEF2FF),
+                            border = BorderStroke(0.5.dp, if (isDark) Color(0xFF3730A3) else Color(0xFFC7D2FE))
                         ) {
                             Text(
                                 text = className.ifBlank { "Rombel" },
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4F46E5),
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
                             )
                         }
 
@@ -454,16 +396,15 @@ private fun StudentIdentityHeroCard(
                 }
 
                 // Alert Status Badge
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(alertAccent.copy(alpha = 0.14f))
-                        .border(0.5.dp, alertAccent.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
-                        .padding(horizontal = 9.dp, vertical = 5.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = alertAccent.copy(alpha = if (isDark) 0.16f else 0.1f),
+                    border = BorderStroke(0.5.dp, alertAccent.copy(alpha = 0.45f))
                 ) {
                     Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
                     ) {
                         Box(
                             modifier = Modifier
@@ -481,44 +422,89 @@ private fun StudentIdentityHeroCard(
                 }
             }
 
-            HorizontalDivider(
-                thickness = 0.5.dp,
-                color = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
-            )
+            // PRIMARY ACTION BUTTON (Moved here from bottom sticky bar per user request)
+            if (hasIssues) {
+                Button(
+                    onClick = onSendAllReminders,
+                    enabled = !isSendingAll,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isDark) Color(0xFFDC2626) else Color(0xFFE11D48),
+                        contentColor = Color.White
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                ) {
+                    if (isSendingAll) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(16.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Mengirimkan Notifikasi...",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Outlined.NotificationsActive,
+                            contentDescription = null,
+                            modifier = Modifier.size(17.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Kirim Pengingat Terpadu ($totalIssues Kendala)",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
 
             // Direct link to student's profile & portfolio
-            Row(
+            Surface(
+                shape = RoundedCornerShape(10.dp),
+                color = innerCardBg,
+                border = BorderStroke(0.5.dp, innerCardBorder),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
                     .clickable(onClick = onOpenFullProfile)
-                    .padding(vertical = 4.dp, horizontal = 2.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Badge,
+                            contentDescription = null,
+                            tint = textSecondary,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Text(
+                            text = "Lihat Profil & Biodata Lengkap Warga Belajar",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = textSecondary
+                        )
+                    }
                     Icon(
-                        imageVector = Icons.Outlined.Badge,
+                        imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
                         contentDescription = null,
-                        tint = textSecondary,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Text(
-                        text = "Lihat Profil & Biodata Lengkap Warga Belajar",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = textSecondary
+                        tint = textTertiary,
+                        modifier = Modifier.size(14.dp)
                     )
                 }
-                Icon(
-                    imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
-                    contentDescription = null,
-                    tint = textTertiary,
-                    modifier = Modifier.size(14.dp)
-                )
             }
         }
     }
@@ -667,36 +653,43 @@ private fun AtRiskCategoryFilterRow(
     textSecondary: Color,
     onSelect: (String) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(rememberScrollState()),
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        CategoryFilterChip(
-            label = "Semua ($total)",
-            isSelected = selected == "ALL",
-            isDark = isDark,
-            onClick = { onSelect("ALL") }
-        )
-        CategoryFilterChip(
-            label = "Modul Belajar ($unreadMaterials)",
-            isSelected = selected == "UNREAD_MATERIAL",
-            isDark = isDark,
-            onClick = { onSelect("UNREAD_MATERIAL") }
-        )
-        CategoryFilterChip(
-            label = "Tugas Tertunda ($overdueAssignments)",
-            isSelected = selected == "OVERDUE_ASSIGNMENT",
-            isDark = isDark,
-            onClick = { onSelect("OVERDUE_ASSIGNMENT") }
-        )
-        CategoryFilterChip(
-            label = "Nilai & Kuis ($scoresAndQuizzes)",
-            isSelected = selected == "LOW_SCORE" || selected == "QUIZ_ALERT",
-            isDark = isDark,
-            onClick = { onSelect("LOW_SCORE") }
-        )
+        item {
+            CategoryFilterChip(
+                label = "Semua ($total)",
+                isSelected = selected == "ALL",
+                isDark = isDark,
+                onClick = { onSelect("ALL") }
+            )
+        }
+        item {
+            CategoryFilterChip(
+                label = "Modul Belajar ($unreadMaterials)",
+                isSelected = selected == "UNREAD_MATERIAL",
+                isDark = isDark,
+                onClick = { onSelect("UNREAD_MATERIAL") }
+            )
+        }
+        item {
+            CategoryFilterChip(
+                label = "Tugas Tertunda ($overdueAssignments)",
+                isSelected = selected == "OVERDUE_ASSIGNMENT",
+                isDark = isDark,
+                onClick = { onSelect("OVERDUE_ASSIGNMENT") }
+            )
+        }
+        item {
+            CategoryFilterChip(
+                label = "Nilai & Kuis ($scoresAndQuizzes)",
+                isSelected = selected == "LOW_SCORE" || selected == "QUIZ_ALERT",
+                isDark = isDark,
+                onClick = { onSelect("LOW_SCORE") }
+            )
+        }
     }
 }
 

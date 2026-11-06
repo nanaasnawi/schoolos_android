@@ -8,6 +8,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -224,9 +225,9 @@ private fun ReadingAnalyticsHeroHeader(
                         modifier = Modifier.size(18.dp)
                     )
                 }
-                Column(verticalArrangement = Arrangement.Center) {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                     Text(
-                        text = "Teacher Analytics & Reading Progress",
+                        text = "Reading Progress",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Bold,
                         color = textPrimary,
@@ -234,7 +235,7 @@ private fun ReadingAnalyticsHeroHeader(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = "Monitoring progres literasi & keterbacaan materi",
+                        text = "Monitoring progress literasi",
                         fontSize = 11.sp,
                         color = textSecondary,
                         maxLines = 1,
@@ -278,41 +279,47 @@ private fun ReadingMetricsGrid(
 ) {
     val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .horizontalScroll(rememberScrollState()),
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        CompactMetricTile(
-            title = "Materi Terbit",
-            value = metrics.totalMaterials.toString(),
-            icon = Icons.AutoMirrored.Filled.MenuBook,
-            accentColor = emeraldAccent,
-            isDark = isDark
-        )
-        CompactMetricTile(
-            title = "Siswa Pembaca",
-            value = metrics.totalReaders.toString(),
-            icon = Icons.Default.Group,
-            accentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
-            isDark = isDark
-        )
-        CompactMetricTile(
-            title = "Ketercapaian",
-            value = "${metrics.overallCompletionRate}%",
-            icon = Icons.Default.CheckCircle,
-            accentColor = emeraldAccent,
-            isDark = isDark
-        )
-        CompactMetricTile(
-            title = "Total Halaman",
-            value = String.format(Locale.US, "%,d", metrics.totalPagesRead),
-            icon = Icons.Default.AutoStories,
-            accentColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
-            isDark = isDark
-        )
+        item {
+            CompactMetricTile(
+                title = "Materi Terbit",
+                value = metrics.totalMaterials.toString(),
+                icon = Icons.AutoMirrored.Filled.MenuBook,
+                accentColor = emeraldAccent,
+                isDark = isDark
+            )
+        }
+        item {
+            CompactMetricTile(
+                title = "Siswa Pembaca",
+                value = metrics.totalReaders.toString(),
+                icon = Icons.Default.Group,
+                accentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                isDark = isDark
+            )
+        }
+        item {
+            CompactMetricTile(
+                title = "Ketercapaian",
+                value = "${metrics.overallCompletionRate}%",
+                icon = Icons.Default.CheckCircle,
+                accentColor = emeraldAccent,
+                isDark = isDark
+            )
+        }
+        item {
+            CompactMetricTile(
+                title = "Total Halaman",
+                value = String.format(Locale.US, "%,d", metrics.totalPagesRead),
+                icon = Icons.Default.AutoStories,
+                accentColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
+                isDark = isDark
+            )
+        }
     }
 }
 
@@ -601,47 +608,52 @@ private fun ReadingStatusFilterTabs(
     isDark: Boolean,
     onSelectStatus: (String) -> Unit,
 ) {
-    val scrollState = rememberScrollState()
     val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
 
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .horizontalScroll(scrollState)
-            .padding(horizontal = 16.dp),
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        StatusFilterPill(
-            label = "Semua (${statusCounts.all})",
-            selected = selectedStatus == "ALL",
-            accentColor = emeraldAccent,
-            isDark = isDark,
-            onClick = { onSelectStatus("ALL") }
-        )
+        item {
+            StatusFilterPill(
+                label = "Semua (${statusCounts.all})",
+                selected = selectedStatus == "ALL",
+                accentColor = emeraldAccent,
+                isDark = isDark,
+                onClick = { onSelectStatus("ALL") }
+            )
+        }
 
-        StatusFilterPill(
-            label = "Selesai (${statusCounts.completed})",
-            selected = selectedStatus == "COMPLETED",
-            accentColor = emeraldAccent,
-            isDark = isDark,
-            onClick = { onSelectStatus("COMPLETED") }
-        )
+        item {
+            StatusFilterPill(
+                label = "Selesai (${statusCounts.completed})",
+                selected = selectedStatus == "COMPLETED",
+                accentColor = emeraldAccent,
+                isDark = isDark,
+                onClick = { onSelectStatus("COMPLETED") }
+            )
+        }
 
-        StatusFilterPill(
-            label = "Sedang Baca (${statusCounts.inProgress})",
-            selected = selectedStatus == "IN_PROGRESS",
-            accentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
-            isDark = isDark,
-            onClick = { onSelectStatus("IN_PROGRESS") }
-        )
+        item {
+            StatusFilterPill(
+                label = "Sedang Baca (${statusCounts.inProgress})",
+                selected = selectedStatus == "IN_PROGRESS",
+                accentColor = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                isDark = isDark,
+                onClick = { onSelectStatus("IN_PROGRESS") }
+            )
+        }
 
-        StatusFilterPill(
-            label = "Belum Mulai (${statusCounts.notStarted})",
-            selected = selectedStatus == "NOT_STARTED",
-            accentColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
-            isDark = isDark,
-            onClick = { onSelectStatus("NOT_STARTED") }
-        )
+        item {
+            StatusFilterPill(
+                label = "Belum Mulai (${statusCounts.notStarted})",
+                selected = selectedStatus == "NOT_STARTED",
+                accentColor = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8),
+                isDark = isDark,
+                onClick = { onSelectStatus("NOT_STARTED") }
+            )
+        }
     }
 }
 

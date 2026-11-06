@@ -534,7 +534,14 @@ fun NavGraph(
             composable(Screen.TeacherAnalytics.route) {
                 TeacherAnalyticsHubScreen(
                     initialTab = 0,
-                    onBack = null,
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(Screen.Home.route) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
                     onNavigateToStudentDetail = { studentId, name, nisn, className ->
                         navController.navigate(
                             Screen.StudentDetail.createRoute(
@@ -563,10 +570,15 @@ fun NavGraph(
 
             // Gradebook
             composable(Screen.Grades.route) {
-                val isPrincipal = authState?.isPrincipal == true
-                val isTeacher = authState?.isTeacher == true
                 GradebookListScreen(
-                    onBack = if (isPrincipal || isTeacher) null else { { navController.popBackStack() } },
+                    onBack = {
+                        if (!navController.popBackStack()) {
+                            navController.navigate(Screen.Home.route) {
+                                popUpTo(Screen.Home.route) { inclusive = false }
+                                launchSingleTop = true
+                            }
+                        }
+                    },
                     onSubjectClick = { subjectId, subjectName ->
                         navController.navigate(Screen.GradeDetail.createRoute(subjectId, subjectName))
                     },
@@ -712,12 +724,8 @@ fun NavGraph(
             composable(Screen.Profile.route) {
                 ProfileScreen(
                     onLogout = {
-                        scope.launch {
-                            chatManager.clearOnLogout()
-                            authManager.clearSession()
-                            navController.navigate(Screen.Auth.route) {
-                                popUpTo(0) { inclusive = true }
-                            }
+                        navController.navigate(Screen.Auth.route) {
+                            popUpTo(0) { inclusive = true }
                         }
                     },
                     onNavigateToSecurity = {
@@ -860,7 +868,14 @@ fun NavGraph(
                     )
                 } else {
                     AtRiskMonitoringScreen(
-                        onBack = if (isPrincipal) null else { { navController.popBackStack() } },
+                        onBack = {
+                            if (!navController.popBackStack()) {
+                                navController.navigate(Screen.Home.route) {
+                                    popUpTo(Screen.Home.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
                         onNavigateToStudentDetail = { studentId, name, nisn, className ->
                             navController.navigate(
                                 Screen.AtRiskStudentDetail.createRoute(

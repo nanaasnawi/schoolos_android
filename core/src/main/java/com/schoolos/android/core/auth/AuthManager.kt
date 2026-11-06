@@ -374,6 +374,12 @@ class AuthManager @Inject constructor(
         }
     }
 
+    fun invalidateTokensInMemory() {
+        cachedAccessToken = null
+        cachedRefreshToken = null
+        cachedIsLoggedIn = false
+    }
+
     suspend fun clearSession() {
         cachedAccessToken = null
         cachedRefreshToken = null
@@ -385,6 +391,9 @@ class AuthManager @Inject constructor(
             it.remove(KEY_TENANT_ID)
             it.remove(KEY_NAME)
             it.remove(KEY_EMAIL)
+            it.remove(KEY_PHONE)
+            it.remove(KEY_ABOUT)
+            it.remove(KEY_AVATAR_URL)
             it.remove(KEY_ROLE)
             it.remove(KEY_IDENTIFIER)
             it.remove(KEY_CLASS_NAME)
