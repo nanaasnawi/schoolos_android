@@ -9,6 +9,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -33,14 +35,90 @@ fun LazyListScope.teacherAssignmentListContent(
     selectedTab: String,
     onAssignmentClick: (String) -> Unit
 ) {
-    if (selectedTab == "Semua" || selectedTab == "Terjadwal") {
-        renderTeacherSection("Draf Terjadwal", scheduledItems, onAssignmentClick)
+    val showAll = selectedTab == "Semua"
+    val showScheduled = showAll || selectedTab == "Terjadwal"
+    val showDueSoon = showAll || selectedTab == "Perlu Dinilai"
+    val showActive = showAll || selectedTab == "Aktif"
+
+    val hasAnyItems = (showScheduled && scheduledItems.isNotEmpty()) ||
+            (showDueSoon && dueSoonItems.isNotEmpty()) ||
+            (showActive && activeItems.isNotEmpty())
+
+    if (!hasAnyItems) {
+        item {
+            TeacherAssignmentEmptyState(selectedTab = selectedTab)
+        }
+    } else {
+        if (showScheduled && scheduledItems.isNotEmpty()) {
+            renderTeacherSection("Draf Terjadwal", scheduledItems, onAssignmentClick)
+        }
+        if (showDueSoon && dueSoonItems.isNotEmpty()) {
+            renderTeacherSection("Perlu Dinilai", dueSoonItems, onAssignmentClick)
+        }
+        if (showActive && activeItems.isNotEmpty()) {
+            renderTeacherSection("Tugas Berjalan", activeItems, onAssignmentClick)
+        }
     }
-    if (selectedTab == "Semua" || selectedTab == "Perlu Dinilai") {
-        renderTeacherSection("Perlu Dinilai", dueSoonItems, onAssignmentClick)
+}
+
+@Composable
+private fun TeacherAssignmentEmptyState(selectedTab: String) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+
+    val (title, subtitle) = when (selectedTab) {
+        "Terjadwal" -> "Tidak Ada Tugas Terjadwal" to "Belum ada draf penugasan terjadwal untuk rombel ini."
+        "Aktif" -> "Tidak Ada Tugas Berjalan" to "Belum ada penugasan yang sedang aktif saat ini."
+        "Perlu Dinilai" -> "Semua Tugas Sudah Dinilai" to "Tidak ada tugas siswa yang menunggu penilaian."
+        else -> "Tugas Tidak Ditemukan" to "Belum ada penugasan pada kategori ini."
     }
-    if (selectedTab == "Semua" || selectedTab == "Aktif") {
-        renderTeacherSection("Tugas Berjalan", activeItems, onAssignmentClick)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(28.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(innerCardBg)
+                    .border(1.dp, innerCardBorder, CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
+                    contentDescription = null,
+                    tint = textTertiary,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                text = title,
+                color = textPrimary,
+                fontSize = 15.5.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = subtitle,
+                color = textTertiary,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center
+            )
+        }
     }
 }
 

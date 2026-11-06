@@ -101,6 +101,42 @@ private fun AtRiskMonitoringContent(
     onNavigateToStudentDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
+    var showBatchConfirmDialog by remember { mutableStateOf(false) }
+    var singleStudentToRemind by remember { mutableStateOf<AtRiskStudent?>(null) }
+
+    if (showBatchConfirmDialog) {
+        SchoolOsConfirmationDialog(
+            title = "Kirim Pengingat Serentak?",
+            message = "Notifikasi pengingat akademik akan dikirimkan serentak ke seluruh warga belajar (${state.stats.total} siswa) yang membutuhkan perhatian.",
+            confirmText = "Kirim Sekarang",
+            dismissText = "Batal",
+            icon = Icons.Default.Notifications,
+            accentColor = NeonError,
+            onConfirm = {
+                showBatchConfirmDialog = false
+                viewModel.sendBatchReminder()
+            },
+            onDismiss = { showBatchConfirmDialog = false }
+        )
+    }
+
+    singleStudentToRemind?.let { student ->
+        SchoolOsConfirmationDialog(
+            title = "Kirim Pengingat Siswa?",
+            message = "Kirimkan pengingat kendala belajar \"${student.title}\" kepada ${student.studentName}?",
+            confirmText = "Kirim Pengingat",
+            dismissText = "Batal",
+            icon = Icons.Default.Notifications,
+            accentColor = NeonError,
+            onConfirm = {
+                val target = student
+                singleStudentToRemind = null
+                viewModel.sendSingleReminder(target)
+            },
+            onDismiss = { singleStudentToRemind = null }
+        )
+    }
+
     PullRefreshContainer(
         isRefreshing = state.isRefreshing,
         onRefresh = { viewModel.refresh() },
@@ -116,7 +152,7 @@ private fun AtRiskMonitoringContent(
                         totalAtRisk = state.stats.total,
                         isSendingBatch = state.isSendingBatch,
                         isDark = isDark,
-                        onSendBatch = { viewModel.sendBatchReminder() }
+                        onSendBatch = { showBatchConfirmDialog = true }
                     )
                 }
 
@@ -253,7 +289,7 @@ private fun AtRiskMonitoringContent(
                             student = student,
                             isSending = state.sendingStudentId == student.studentId,
                             isDark = isDark,
-                            onSendReminder = { viewModel.sendSingleReminder(student) },
+                            onSendReminder = { singleStudentToRemind = student },
                             onClick = {
                                 onNavigateToStudentDetail?.invoke(
                                     student.studentId,
@@ -462,8 +498,9 @@ private fun AtRiskInteractiveStatBar(
     onSelectCategory: (String) -> Unit,
 ) {
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
@@ -664,11 +701,12 @@ private fun AtRiskFilterToolbar(
             }
         }
 
-        // Rombel Selector Chips (LazyRow edge-to-edge scroll)
+        // Rombel Selector Chips (Horizontal Scroll with side padding)
         val allRombelOptions = listOf("ALL") + classes
         LazyRow(
-            modifier = Modifier.fillMaxWidth(),
-            contentPadding = PaddingValues(horizontal = 16.dp),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             items(allRombelOptions.size) { index ->

@@ -3,6 +3,7 @@ package com.schoolos.android.feature.home
 import com.schoolos.android.core.R as CoreR
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.filled.Campaign as FilledCampaign
 import androidx.compose.material.icons.automirrored.filled.Assignment as FilledAssignment
 import androidx.compose.material.icons.automirrored.filled.MenuBook as FilledMenuBook
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -616,6 +618,210 @@ fun LazyListScope.principalContent(
                 assignment = assignment,
                 onClick = onNavigateToAssignments
             )
+        }
+    }
+
+    // ── 5.5. WIDGET BUKU NILAI & LEGER SISWA (PINDAH DARI BOTTOM NAV) ────────
+    item {
+        val isDark = LocalIsDarkTheme.current
+        val cardBg = if (isDark) Color(0xFF111113) else Color.White
+        val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+        val innerBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+        val innerBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+        val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+        val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+        val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+        val emeraldFg = if (isDark) Color(0xFF34D399) else Color(0xFF10B981)
+        val emeraldBg = if (isDark) Color(0xFF0A2B1D) else Color(0xFFDCFCE7)
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            PrincipalSectionHeader(
+                title = "Buku Nilai & Leger Siswa",
+                subtitle = "Standar Kurikulum Merdeka (Kemendikdasmen RI)",
+                actionLabel = "Buka Leger",
+                onActionClick = onNavigateToGrades,
+            )
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onNavigateToGrades),
+                shape = RoundedCornerShape(22.dp),
+                color = cardBg,
+                border = BorderStroke(1.dp, cardBorder),
+                shadowElevation = if (isDark) 0.dp else 1.dp,
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    // Header Row with Badge
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(emeraldBg)
+                                    .border(1.dp, emeraldFg.copy(alpha = 0.35f), RoundedCornerShape(12.dp)),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = CoreR.drawable.ic_modern_grades),
+                                    contentDescription = null,
+                                    tint = emeraldFg,
+                                    modifier = Modifier.size(22.dp),
+                                )
+                            }
+                            Column {
+                                Text(
+                                    text = "Buku Nilai (Teacher Gradebook)",
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary,
+                                )
+                                Spacer(Modifier.height(2.dp))
+                                Text(
+                                    text = "Asesmen Sumatif & Evaluasi KKTP PKBM",
+                                    fontSize = 11.sp,
+                                    color = textSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = emeraldBg,
+                            border = BorderStroke(1.dp, emeraldFg.copy(alpha = 0.35f)),
+                        ) {
+                            Text(
+                                text = "Skema ATS & SAS",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = emeraldFg,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                            )
+                        }
+                    }
+
+                    // Metric Strip: Total Siswa, Rombel Aktif, Kategori
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = innerBg,
+                            border = BorderStroke(1.dp, innerBorder),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(
+                                    text = totalStudentsCount.ifBlank { "0" },
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary,
+                                )
+                                Text(
+                                    text = "Peserta Didik",
+                                    fontSize = 10.5.sp,
+                                    color = textTertiary,
+                                )
+                            }
+                        }
+
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = innerBg,
+                            border = BorderStroke(1.dp, innerBorder),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                val classCount = if (schoolClasses.isNotEmpty()) schoolClasses.size.toString() else "Semua"
+                                Text(
+                                    text = classCount,
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = emeraldFg,
+                                )
+                                Text(
+                                    text = "Rombel / Kelas",
+                                    fontSize = 10.5.sp,
+                                    color = textTertiary,
+                                )
+                            }
+                        }
+
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = innerBg,
+                            border = BorderStroke(1.dp, innerBorder),
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(vertical = 10.dp, horizontal = 10.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                            ) {
+                                Text(
+                                    text = "KKTP",
+                                    fontSize = 16.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7),
+                                )
+                                Text(
+                                    text = "Skema B Murni",
+                                    fontSize = 10.5.sp,
+                                    color = textTertiary,
+                                )
+                            }
+                        }
+                    }
+
+                    // Action Footer
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = innerBg,
+                        border = BorderStroke(1.dp, innerBorder),
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                text = "Akses Rekap Nilai & Leger Lengkap",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = textPrimary,
+                            )
+                            Icon(
+                                painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
+                                contentDescription = null,
+                                tint = textTertiary,
+                                modifier = Modifier.size(13.dp),
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 

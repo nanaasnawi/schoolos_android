@@ -3,7 +3,14 @@ package com.schoolos.android.feature.learning
 import com.schoolos.android.core.R as CoreR
 import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -25,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -53,6 +61,7 @@ fun LearningMaterialListScreen(
     val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
     val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    var isSpeedDialOpen by remember { mutableStateOf(false) }
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -82,25 +91,99 @@ fun LearningMaterialListScreen(
         },
         floatingActionButton = {
             if (isTeacher) {
-                ExtendedFloatingActionButton(
-                    onClick = onCreateMaterial,
-                    containerColor = TeacherNeon,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(16.dp),
-                    icon = { Icon(Icons.Default.Add, null) },
-                    text = { Text("Buat Materi", fontWeight = FontWeight.Bold) },
-                    modifier = Modifier.navigationBarsPadding()
+                val speedDialCardBg = if (isDark) Color(0xFF141416) else Color.White
+                val speedDialBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+                val primaryColor = if (isDark) Color(0xFF059669) else Color(0xFF10B981)
+                val primaryBorder = if (isDark) Color(0xFF34D399).copy(alpha = 0.35f) else Color(0xFF059669).copy(alpha = 0.20f)
+                val rotation by animateFloatAsState(
+                    targetValue = if (isSpeedDialOpen) 135f else 0f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "fabRotation"
                 )
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp)
+                ) {
+                    AnimatedVisibility(
+                        visible = isSpeedDialOpen,
+                        enter = fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 2 },
+                        exit = fadeOut(tween(140)) + slideOutVertically(tween(140)) { it / 2 },
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    isSpeedDialOpen = false
+                                    onCreateMaterial()
+                                }
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = speedDialCardBg,
+                                border = BorderStroke(1.dp, speedDialBorder),
+                                shadowElevation = 2.dp,
+                            ) {
+                                Text(
+                                    text = "Buat Materi",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFF34D399) else Color(0xFF047857),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                            Surface(
+                                shape = CircleShape,
+                                color = primaryColor,
+                                border = BorderStroke(1.dp, primaryBorder),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.size(42.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Buat Materi",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Main Executive Floating Button
+                    Surface(
+                        onClick = { isSpeedDialOpen = !isSpeedDialOpen },
+                        shape = CircleShape,
+                        color = if (isSpeedDialOpen) (if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)) else primaryColor,
+                        border = BorderStroke(1.dp, if (isSpeedDialOpen) speedDialBorder else primaryBorder),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.size(52.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (isSpeedDialOpen) Icons.Default.Close else Icons.Default.Add,
+                                contentDescription = if (isSpeedDialOpen) "Tutup Menu" else "Buat Materi",
+                                tint = if (isSpeedDialOpen) (if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)) else Color.White,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .graphicsLayer { rotationZ = rotation }
+                            )
+                        }
+                    }
+                }
             }
         }
     ) { padding ->
-        PullRefreshContainer(
-            isRefreshing = state.isRefreshing,
-            onRefresh = { viewModel.refresh(isPullRefresh = true) },
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding),
-        ) {
+        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+            PullRefreshContainer(
+                isRefreshing = state.isRefreshing,
+                onRefresh = { viewModel.refresh(isPullRefresh = true) },
+                modifier = Modifier.fillMaxSize(),
+            ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 32.dp),
@@ -224,7 +307,22 @@ fun LearningMaterialListScreen(
                 }
             }
         }
+
+        // Speed dial scrim
+        AnimatedVisibility(
+            visible = isSpeedDialOpen,
+            enter = fadeIn(tween(200)),
+            exit = fadeOut(tween(150))
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.32f))
+                    .clickable { isSpeedDialOpen = false }
+            )
+        }
     }
+}
 }
 
 // ── SKELETON SHIMMER ITEM ─────────────────────────────────────────────────────

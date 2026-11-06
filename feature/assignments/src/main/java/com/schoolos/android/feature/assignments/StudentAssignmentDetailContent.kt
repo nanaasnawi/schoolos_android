@@ -31,6 +31,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.window.Dialog
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.filled.CheckCircle
@@ -98,6 +102,7 @@ import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.common.formatPublishTimestamp
 import com.schoolos.android.core.designsystem.TextTertiary
+import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.AssignmentQuestion
 import com.schoolos.android.domain.model.AssignmentSubmission
@@ -116,7 +121,7 @@ fun StudentAssignmentDetailContent(
     onOpenMaterial: (String) -> Unit,
     onSubmitClick: () -> Unit,
     childName: String = "",
-    onAskTeacher: (() -> Unit)? = null,
+    onAskTeacher: ((customQuestion: String) -> Unit)? = null,
     // PG answers: questionId -> chosenChoiceId
     pgAnswers: Map<String, String> = emptyMap(),
     // Essay answers: questionId -> text
@@ -133,6 +138,16 @@ fun StudentAssignmentDetailContent(
     val isSubmitted = submission != null && submission.status.lowercase() !in listOf("draft")
     val isGraded = submission?.status?.lowercase() == "graded"
     val isLate = submission?.status?.lowercase() == "late"
+    val isDark = LocalIsDarkTheme.current
+    var showAskTeacherDialog by remember { mutableStateOf(false) }
+    var tutorQuestionDraft by remember { mutableStateOf("") }
+    val resolvedTeacherName = remember(assignment.teacherName) {
+        if (!assignment.teacherName.isNullOrBlank() && !assignment.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
+            assignment.teacherName!!
+        } else {
+            "Guru Pengampu"
+        }
+    }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -182,7 +197,10 @@ fun StudentAssignmentDetailContent(
                     .clip(RoundedCornerShape(16.dp))
                     .background(TeacherNeon.copy(alpha = 0.08f))
                     .border(1.dp, TeacherNeon.copy(alpha = 0.28f), RoundedCornerShape(16.dp))
-                    .clickable { onAskTeacher() }
+                    .clickable {
+                        tutorQuestionDraft = "Halo $resolvedTeacherName, saya ingin berkonsultasi mengenai tugas '${assignment.title}' ini karena ada bagian yang belum saya pahami:"
+                        showAskTeacherDialog = true
+                    }
                     .padding(14.dp)
             ) {
                 Row(
@@ -217,11 +235,7 @@ fun StudentAssignmentDetailContent(
                                 color = TextPrimary
                             )
                             Text(
-                                text = if (!assignment.teacherName.isNullOrBlank() && !assignment.teacherName.equals("Guru Pengampu", ignoreCase = true)) {
-                                    "Tanya ${assignment.teacherName} langsung tanpa keluar app"
-                                } else {
-                                    "Tanya guru mata pelajaran langsung tanpa keluar app"
-                                },
+                                text = "Tanya $resolvedTeacherName langsung tanpa keluar app",
                                 fontSize = 11.sp,
                                 color = TextSecondary
                             )
@@ -232,6 +246,10 @@ fun StudentAssignmentDetailContent(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
                             .background(TeacherNeon)
+                            .clickable {
+                                tutorQuestionDraft = "Halo $resolvedTeacherName, saya ingin berkonsultasi mengenai tugas '${assignment.title}' ini karena ada bagian yang belum saya pahami:"
+                                showAskTeacherDialog = true
+                            }
                             .padding(horizontal = 10.dp, vertical = 6.dp)
                     ) {
                         Text(
@@ -240,6 +258,225 @@ fun StudentAssignmentDetailContent(
                             fontWeight = FontWeight.Bold,
                             color = Color.Black
                         )
+                    }
+                }
+            }
+        }
+
+        // ── CUSTOM TANYA TUTOR PAMONG CONFIRMATION & EDIT FORM DIALOG ──
+        if (showAskTeacherDialog) {
+            val askDialogCardBg = if (isDark) Color(0xFF161618) else Color.White
+            val askDialogCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+            val askDialogTextPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+            val askDialogTextSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+            val askDialogTextTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+            val askDialogInnerBg = if (isDark) Color(0xFF1E1E22) else Color(0xFFF8FAFC)
+            val askDialogInnerBorder = if (isDark) Color(0xFF2F2F36) else Color(0xFFCBD5E1)
+            val askDialogAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+
+            Dialog(
+                onDismissRequest = { showAskTeacherDialog = false }
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = askDialogCardBg,
+                    border = BorderStroke(1.dp, askDialogCardBorder),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 4.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(22.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        // Header
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(42.dp)
+                                        .clip(CircleShape)
+                                        .background(askDialogAccent.copy(alpha = 0.15f))
+                                    .border(1.dp, askDialogAccent.copy(alpha = 0.35f), CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Forum,
+                                        contentDescription = null,
+                                        tint = askDialogAccent,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Column {
+                                    Text(
+                                        text = "Tanya Tutor Pamong",
+                                        fontSize = 16.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = askDialogTextPrimary
+                                    )
+                                    Text(
+                                        text = "Konsultasi tugas dengan $resolvedTeacherName",
+                                        fontSize = 11.5.sp,
+                                        color = askDialogTextSecondary,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                            }
+                            IconButton(
+                                onClick = { showAskTeacherDialog = false },
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Tutup",
+                                    tint = askDialogTextTertiary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Context Badge
+                        Surface(
+                            shape = RoundedCornerShape(10.dp),
+                            color = askDialogInnerBg,
+                            border = BorderStroke(1.dp, askDialogInnerBorder)
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Description,
+                                    contentDescription = null,
+                                    tint = askDialogAccent,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "${assignment.subjectName ?: "Tugas"} • ${assignment.title}",
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = askDialogTextPrimary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        // Question Form Field
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text(
+                                text = "Draft / Edit Pertanyaan Anda",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = askDialogTextSecondary
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .heightIn(min = 100.dp, max = 170.dp)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(askDialogInnerBg)
+                                    .border(1.dp, askDialogInnerBorder, RoundedCornerShape(12.dp))
+                                    .padding(12.dp)
+                            ) {
+                                BasicTextField(
+                                    value = tutorQuestionDraft,
+                                    onValueChange = { tutorQuestionDraft = it },
+                                    modifier = Modifier.fillMaxWidth(),
+                                    textStyle = androidx.compose.ui.text.TextStyle(
+                                        color = askDialogTextPrimary,
+                                        fontSize = 13.sp,
+                                        lineHeight = 18.sp,
+                                    ),
+                                    decorationBox = { innerTextField ->
+                                        if (tutorQuestionDraft.isEmpty()) {
+                                            Text(
+                                                text = "Tulis pertanyaan atau kesulitan pengerjaan tugas di sini...",
+                                                color = askDialogTextTertiary,
+                                                fontSize = 13.sp,
+                                                lineHeight = 18.sp
+                                            )
+                                        }
+                                        innerTextField()
+                                    }
+                                )
+                            }
+                        }
+
+                        // Actions Row
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Surface(
+                                onClick = { showAskTeacherDialog = false },
+                                shape = RoundedCornerShape(12.dp),
+                                color = askDialogInnerBg,
+                                border = BorderStroke(1.dp, askDialogInnerBorder),
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                Box(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = "Batal",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = askDialogTextSecondary
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                onClick = {
+                                    val finalQuestion = tutorQuestionDraft.trim().ifBlank {
+                                        "Halo $resolvedTeacherName, saya ingin berkonsultasi mengenai tugas '${assignment.title}' ini karena ada bagian yang belum saya pahami."
+                                    }
+                                    showAskTeacherDialog = false
+                                    onAskTeacher?.invoke(finalQuestion)
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                color = askDialogAccent,
+                                shadowElevation = 2.dp,
+                                modifier = Modifier.weight(1.3f)
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(vertical = 12.dp),
+                                    horizontalArrangement = Arrangement.Center,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Send,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(Modifier.width(6.dp))
+                                    Text(
+                                        text = "Kirim Pertanyaan",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = Color.White
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -863,6 +1100,10 @@ private fun SubmissionEditor(
     allAnswered: Boolean = true,
 ) {
     var showEditorSheet by remember { mutableStateOf(false) }
+    val isDark = LocalIsDarkTheme.current
+    val submitBtnBg = if (isDark) Color(0xFF6366F1) else Color(0xFF4F46E5)
+    val disabledBtnBg = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val disabledBtnFg = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
 
     Box(
         modifier = Modifier
@@ -1001,33 +1242,37 @@ private fun SubmissionEditor(
                         .height(50.dp),
                     shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = StudentNeon,
-                        disabledContainerColor = GlassBorder
+                        containerColor = submitBtnBg,
+                        contentColor = Color.White,
+                        disabledContainerColor = disabledBtnBg,
+                        disabledContentColor = disabledBtnFg
                     ),
                 ) {
                     if (isSubmitting) {
                         CircularProgressIndicator(
-                            color = CosmicBlack,
+                            color = Color.White,
                             strokeWidth = 2.dp,
                             modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             "Mengirim...",
-                            fontWeight = FontWeight.Black,
-                            color = CosmicBlack,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
                             fontSize = 14.sp
                         )
                     } else {
                         Icon(
                             imageVector = if (content.isBlank() && !hasQuestions) Icons.Default.Edit else Icons.Default.Send,
                             contentDescription = null,
+                            tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
                             if (content.isBlank() && !hasQuestions) "Tulis Jawaban & Kumpulkan" else "Kumpulkan Tugas",
-                            fontWeight = FontWeight.Black,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
                             fontSize = 14.sp
                         )
                     }
@@ -1134,14 +1379,15 @@ private fun SubmissionEditor(
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = StudentNeon,
-                            contentColor = Color.Black,
-                            disabledContainerColor = GlassBorder
+                            containerColor = submitBtnBg,
+                            contentColor = Color.White,
+                            disabledContainerColor = disabledBtnBg,
+                            disabledContentColor = disabledBtnFg
                         )
                     ) {
-                        Icon(Icons.Default.Send, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Send, null, tint = Color.White, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Kumpulkan", fontWeight = FontWeight.Black, fontSize = 13.sp)
+                        Text("Kumpulkan", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
                     }
                 }
             }
@@ -2163,15 +2409,33 @@ private fun QuestionsSubmissionCard(
 ) {
     var showNoteAndSubmitSheet by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(20.dp))
-            .background(CosmicNavy)
-            .border(1.dp, GlassBorder, RoundedCornerShape(20.dp))
-            .padding(16.dp)
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val studentAccent = if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
+    val submitBtnBg = if (isDark) Color(0xFF6366F1) else Color(0xFF4F46E5)
+    val submitBtnFg = Color.White
+    val disabledBtnBg = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val disabledBtnFg = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val successColor = if (isDark) Color(0xFF10B981) else Color(0xFF16A34A)
+    val warningColor = if (isDark) Color(0xFFF59E0B) else Color(0xFFD97706)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = if (isDark) 0.dp else 1.dp
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
             // Header: Icon + Title + Progress
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -2181,69 +2445,71 @@ private fun QuestionsSubmissionCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
-                            .size(32.dp)
-                            .clip(RoundedCornerShape(9.dp))
-                            .background(if (allAnswered) NeonSuccess.copy(alpha = 0.15f) else StudentNeon.copy(alpha = 0.12f)),
+                            .size(34.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(if (allAnswered) successColor.copy(alpha = if (isDark) 0.20f else 0.12f) else studentAccent.copy(alpha = if (isDark) 0.20f else 0.12f))
+                            .border(1.dp, if (allAnswered) successColor.copy(alpha = 0.35f) else studentAccent.copy(alpha = 0.30f), RoundedCornerShape(10.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = if (allAnswered) Icons.Default.CheckCircle else Icons.Default.Edit,
                             contentDescription = null,
-                            tint = if (allAnswered) NeonSuccess else StudentNeon,
-                            modifier = Modifier.size(16.dp)
+                            tint = if (allAnswered) successColor else studentAccent,
+                            modifier = Modifier.size(17.dp)
                         )
                     }
                     Spacer(Modifier.width(10.dp))
                     Column {
                         Text(
                             text = "Pengumpulan Tugas",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextPrimary
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
                         )
                         Text(
                             text = if (allAnswered) "Semua soal telah dijawab" else "$answeredCount dari $totalQuestions soal telah dijawab",
-                            fontSize = 10.sp,
-                            color = if (allAnswered) NeonSuccess else NeonWarning
+                            fontSize = 11.sp,
+                            color = if (allAnswered) successColor else warningColor,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
 
-                Box(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(if (allAnswered) NeonSuccess.copy(alpha = 0.15f) else CosmicSurface2)
-                        .border(1.dp, if (allAnswered) NeonSuccess.copy(alpha = 0.4f) else GlassBorder, RoundedCornerShape(8.dp))
-                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = if (allAnswered) successColor.copy(alpha = if (isDark) 0.18f else 0.10f) else innerCardBg,
+                    border = BorderStroke(1.dp, if (allAnswered) successColor.copy(alpha = 0.4f) else innerCardBorder)
                 ) {
                     Text(
                         text = "$answeredCount / $totalQuestions",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        color = if (allAnswered) NeonSuccess else TextSecondary
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (allAnswered) successColor else textSecondary,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                     )
                 }
             }
 
-            HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+            HorizontalDivider(color = cardBorder, thickness = 0.5.dp)
 
             if (!isParent && isActive) {
                 // Clickable note row that opens the Bottom Sheet
-                Box(
+                Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(12.dp))
-                        .background(CosmicBlack)
-                        .border(
-                            1.dp,
-                            if (content.isNotBlank()) StudentNeon.copy(alpha = 0.4f) else GlassBorder,
-                            RoundedCornerShape(12.dp)
-                        )
-                        .clickable { showNoteAndSubmitSheet = true }
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                        .clickable { showNoteAndSubmitSheet = true },
+                    shape = RoundedCornerShape(12.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(
+                        1.dp,
+                        if (content.isNotBlank()) studentAccent.copy(alpha = 0.45f) else innerCardBorder
+                    )
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -2252,12 +2518,13 @@ private fun QuestionsSubmissionCard(
                                 text = if (content.isNotBlank()) "Catatan untuk Guru:" else "Tambah Catatan untuk Guru (Opsional)",
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = if (content.isNotBlank()) StudentNeon else TextSecondary
+                                color = if (content.isNotBlank()) studentAccent else textSecondary
                             )
+                            Spacer(Modifier.height(2.dp))
                             Text(
                                 text = if (content.isNotBlank()) content else "Ketuk untuk menulis pesan atau catatan tambahan...",
                                 fontSize = 12.sp,
-                                color = if (content.isNotBlank()) TextPrimary else TextTertiary,
+                                color = if (content.isNotBlank()) textPrimary else textTertiary,
                                 maxLines = 2,
                                 overflow = TextOverflow.Ellipsis
                             )
@@ -2266,7 +2533,7 @@ private fun QuestionsSubmissionCard(
                         Icon(
                             imageVector = Icons.Default.Edit,
                             contentDescription = "Tambah Catatan",
-                            tint = StudentNeon,
+                            tint = studentAccent,
                             modifier = Modifier.size(16.dp)
                         )
                     }
@@ -2275,37 +2542,33 @@ private fun QuestionsSubmissionCard(
 
             // Submit Button
             if (isParent) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(CosmicBlack)
-                        .border(1.dp, GlassBorder2, RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder)
                 ) {
                     Text(
                         text = "Mode Pratinjau Orang Tua (Hanya siswa yang dapat mengumpulkan tugas)",
                         fontSize = 11.sp,
-                        color = TextTertiary,
-                        textAlign = TextAlign.Center
+                        color = textTertiary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(12.dp)
                     )
                 }
             } else if (!isActive) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(CosmicBlack)
-                        .border(1.dp, GlassBorder2, RoundedCornerShape(12.dp))
-                        .padding(12.dp),
-                    contentAlignment = Alignment.Center
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp),
+                    color = innerCardBg,
+                    border = BorderStroke(1.dp, innerCardBorder)
                 ) {
                     Text(
                         text = "Tugas ini telah ditutup dan tidak menerima pengumpulan baru.",
                         fontSize = 11.sp,
-                        color = TextTertiary,
-                        textAlign = TextAlign.Center
+                        color = textTertiary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(12.dp)
                     )
                 }
             } else {
@@ -2315,19 +2578,20 @@ private fun QuestionsSubmissionCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = StudentNeon,
-                        contentColor = Color.Black,
-                        disabledContainerColor = CosmicSurface2,
-                        disabledContentColor = TextTertiary
-                    )
+                        containerColor = submitBtnBg,
+                        contentColor = submitBtnFg,
+                        disabledContainerColor = disabledBtnBg,
+                        disabledContentColor = disabledBtnFg
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = if (isDark) 0.dp else 1.dp)
                 ) {
                     if (isSubmitting) {
                         CircularProgressIndicator(
-                            color = Color.Black,
+                            color = submitBtnFg,
                             strokeWidth = 2.dp,
-                            modifier = Modifier.size(20.dp)
+                            modifier = Modifier.size(18.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text("Mengirimkan...", fontSize = 13.sp, fontWeight = FontWeight.Bold)
@@ -2335,11 +2599,12 @@ private fun QuestionsSubmissionCard(
                         Icon(
                             imageVector = Icons.Default.Send,
                             contentDescription = null,
+                            tint = if (allAnswered) submitBtnFg else disabledBtnFg,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            text = if (allAnswered) "Kumpulkan Lembar Tugas Sekarang" else "Lengkapi Jawaban (${totalQuestions - answeredCount} soal lagi)",
+                            text = if (allAnswered) "Kumpulkan Tugas" else "Lengkapi Jawaban (${totalQuestions - answeredCount} soal lagi)",
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -2354,8 +2619,8 @@ private fun QuestionsSubmissionCard(
         ModalBottomSheet(
             onDismissRequest = { showNoteAndSubmitSheet = false },
             sheetState = sheetState,
-            containerColor = CosmicNavy,
-            contentColor = TextPrimary,
+            containerColor = cardBg,
+            contentColor = textPrimary,
             shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp)
         ) {
             Column(
@@ -2376,25 +2641,25 @@ private fun QuestionsSubmissionCard(
                         Text(
                             text = "Pengumpulan Lembar Tugas",
                             fontSize = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            color = TextPrimary
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
                         )
                         Text(
                             text = "$answeredCount dari $totalQuestions soal telah terjawab",
                             fontSize = 11.5.sp,
-                            color = if (allAnswered) NeonSuccess else NeonWarning
+                            color = if (allAnswered) successColor else warningColor
                         )
                     }
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = if (allAnswered) NeonSuccess.copy(alpha = 0.15f) else CosmicSurface2,
-                        border = BorderStroke(1.dp, if (allAnswered) NeonSuccess.copy(alpha = 0.4f) else GlassBorder)
+                        color = if (allAnswered) successColor.copy(alpha = if (isDark) 0.18f else 0.10f) else innerCardBg,
+                        border = BorderStroke(1.dp, if (allAnswered) successColor.copy(alpha = 0.4f) else innerCardBorder)
                     ) {
                         Text(
                             text = "$answeredCount / $totalQuestions",
                             fontSize = 12.sp,
-                            fontWeight = FontWeight.Black,
-                            color = if (allAnswered) NeonSuccess else TextSecondary,
+                            fontWeight = FontWeight.Bold,
+                            color = if (allAnswered) successColor else textSecondary,
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
@@ -2405,7 +2670,7 @@ private fun QuestionsSubmissionCard(
                         text = "CATATAN TAMBAHAN UNTUK GURU (OPSIONAL)",
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TextTertiary,
+                        color = textTertiary,
                         letterSpacing = 0.5.sp
                     )
                     OutlinedTextField(
@@ -2415,7 +2680,7 @@ private fun QuestionsSubmissionCard(
                             Text(
                                 "Tulis catatan atau pesan tambahan untuk guru...",
                                 fontSize = 12.5.sp,
-                                color = TextTertiary
+                                color = textTertiary
                             )
                         },
                         modifier = Modifier
@@ -2424,12 +2689,12 @@ private fun QuestionsSubmissionCard(
                         maxLines = 5,
                         shape = RoundedCornerShape(14.dp),
                         colors = OutlinedTextFieldDefaults.colors(
-                            focusedBorderColor = StudentNeon,
-                            unfocusedBorderColor = GlassBorder,
-                            focusedTextColor = TextPrimary,
-                            unfocusedTextColor = TextPrimary,
-                            focusedContainerColor = CosmicBlack,
-                            unfocusedContainerColor = CosmicBlack,
+                            focusedBorderColor = studentAccent,
+                            unfocusedBorderColor = innerCardBorder,
+                            focusedTextColor = textPrimary,
+                            unfocusedTextColor = textPrimary,
+                            focusedContainerColor = innerCardBg,
+                            unfocusedContainerColor = innerCardBg,
                         )
                     )
                 }
@@ -2446,8 +2711,8 @@ private fun QuestionsSubmissionCard(
                             .weight(1f)
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
-                        border = BorderStroke(1.dp, GlassBorder),
-                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextPrimary)
+                        border = BorderStroke(1.dp, innerCardBorder),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = textPrimary)
                     ) {
                         Text("Simpan Catatan", fontWeight = FontWeight.Bold, fontSize = 12.5.sp)
                     }
@@ -2463,17 +2728,18 @@ private fun QuestionsSubmissionCard(
                             .height(48.dp),
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = StudentNeon,
-                            contentColor = Color.Black,
-                            disabledContainerColor = CosmicSurface2,
-                            disabledContentColor = TextTertiary
+                            containerColor = submitBtnBg,
+                            contentColor = submitBtnFg,
+                            disabledContainerColor = disabledBtnBg,
+                            disabledContentColor = disabledBtnFg
                         )
                     ) {
-                        Icon(Icons.Default.Send, null, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Send, null, tint = submitBtnFg, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(
                             text = if (allAnswered) "Kumpulkan Tugas" else "Belum Lengkap",
-                            fontWeight = FontWeight.Black,
+                            fontWeight = FontWeight.Bold,
+                            color = submitBtnFg,
                             fontSize = 13.sp
                         )
                     }

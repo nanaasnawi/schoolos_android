@@ -48,6 +48,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import com.schoolos.android.core.designsystem.SchoolOsConfirmationDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -124,35 +125,19 @@ fun QuizDetailScreen(
     }
 
     if (showDeleteDialog) {
-        AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            containerColor = cardBg, shape = RoundedCornerShape(22.dp),
-            title = {
-                Text("Hapus Paket Kuis CBT?", color = TextPrimary, fontWeight = FontWeight.Bold)
+        SchoolOsConfirmationDialog(
+            title = "Hapus Paket Kuis CBT?",
+            message = "Apakah Anda yakin ingin menghapus kuis \"${state.quiz?.title}\"? Seluruh butir soal dan data pengerjaan terkait akan diarsipkan.",
+            confirmText = "Ya, Hapus Kuis",
+            dismissText = "Batal",
+            icon = Icons.Default.DeleteOutline,
+            accentColor = Color(0xFFEF4444),
+            confirmButtonColor = Color(0xFFEF4444),
+            onConfirm = {
+                showDeleteDialog = false
+                viewModel.deleteQuiz(onSuccess = onBack)
             },
-            text = {
-                Text(
-                    "Apakah Anda yakin ingin menghapus kuis \"${state.quiz?.title}\"? Seluruh butir soal dan data pengerjaan terkait akan diarsipkan.",
-                    color = TextSecondary,
-                    fontSize = 13.sp
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showDeleteDialog = false
-                        viewModel.deleteQuiz(onSuccess = onBack)
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = NeonError)
-                ) {
-                    Text("Ya, Hapus", color = Color.White, fontWeight = FontWeight.Bold)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
-                    Text("Batal", color = TextSecondary)
-                }
-            }
+            onDismiss = { showDeleteDialog = false },
         )
     }
 

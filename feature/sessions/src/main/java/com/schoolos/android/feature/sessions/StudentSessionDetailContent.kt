@@ -309,7 +309,7 @@ fun StudentSessionDetailContent(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text(
-                            text = "Bahan Ajar & Tugas Sesi Ini",
+                            text = "Materi & Tugas Sesi Ini",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary

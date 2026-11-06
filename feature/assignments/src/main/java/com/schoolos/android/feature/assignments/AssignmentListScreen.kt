@@ -3,12 +3,16 @@ package com.schoolos.android.feature.assignments
 import com.schoolos.android.core.R as CoreR
 import androidx.compose.ui.res.painterResource
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -35,6 +39,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
@@ -52,6 +57,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -129,15 +135,91 @@ fun AssignmentListScreen(
         },
         floatingActionButton = {
             if (isTeacher) {
-                ExtendedFloatingActionButton(
-                    onClick = onCreateAssignment,
-                    containerColor = TeacherNeon,
-                    contentColor = Color.White,
-                    shape = RoundedCornerShape(16.dp),
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    text = { Text("Buat Tugas", fontWeight = FontWeight.Bold) },
-                    modifier = Modifier.navigationBarsPadding()
+                val isDark = LocalIsDarkTheme.current
+                val speedDialCardBg = if (isDark) Color(0xFF141416) else Color.White
+                val speedDialBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+                val primaryColor = if (isDark) Color(0xFF059669) else Color(0xFF10B981)
+                val primaryBorder = if (isDark) Color(0xFF34D399).copy(alpha = 0.35f) else Color(0xFF059669).copy(alpha = 0.20f)
+                val rotation by animateFloatAsState(
+                    targetValue = if (speedDialExpanded) 135f else 0f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                    label = "fabRotation"
                 )
+
+                Column(
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(10.dp),
+                    modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp)
+                ) {
+                    AnimatedVisibility(
+                        visible = speedDialExpanded,
+                        enter = fadeIn(tween(180)) + slideInVertically(tween(180)) { it / 2 },
+                        exit = fadeOut(tween(140)) + slideOutVertically(tween(140)) { it / 2 },
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable {
+                                    speedDialExpanded = false
+                                    onCreateAssignment()
+                                }
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = speedDialCardBg,
+                                border = BorderStroke(1.dp, speedDialBorder),
+                                shadowElevation = 2.dp,
+                            ) {
+                                Text(
+                                    text = "Buat Tugas",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isDark) Color(0xFF34D399) else Color(0xFF047857),
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                )
+                            }
+                            Surface(
+                                shape = CircleShape,
+                                color = primaryColor,
+                                border = BorderStroke(1.dp, primaryBorder),
+                                shadowElevation = 4.dp,
+                                modifier = Modifier.size(42.dp),
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Default.Add,
+                                        contentDescription = "Buat Tugas",
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Main Executive Floating Button
+                    Surface(
+                        onClick = { speedDialExpanded = !speedDialExpanded },
+                        shape = CircleShape,
+                        color = if (speedDialExpanded) (if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)) else primaryColor,
+                        border = BorderStroke(1.dp, if (speedDialExpanded) speedDialBorder else primaryBorder),
+                        shadowElevation = 6.dp,
+                        modifier = Modifier.size(52.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = if (speedDialExpanded) Icons.Default.Close else Icons.Default.Add,
+                                contentDescription = if (speedDialExpanded) "Tutup Menu" else "Buat Tugas",
+                                tint = if (speedDialExpanded) (if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)) else Color.White,
+                                modifier = Modifier
+                                    .size(22.dp)
+                                    .graphicsLayer { rotationZ = rotation }
+                            )
+                        }
+                    }
+                }
             }
         }
     ) { padding ->
@@ -202,25 +284,14 @@ fun AssignmentListScreen(
                             }
                         }
 
-                        val hasTeacherAssignments = state.active.isNotEmpty() || state.dueSoon.isNotEmpty() || state.completed.isNotEmpty() || state.scheduled.isNotEmpty()
-
-                        // Empty state for teachers
-                        if (isTeacher && !hasTeacherAssignments) {
-                            item {
-                                TeacherEmptyState()
-                            }
-                        }
-
                         // ── PREMIUM TAB FILTER CHIPS ─────────────────────────
-                        if (!isTeacher || hasTeacherAssignments) {
-                            item {
-                                AssignmentTabFilter(
-                                    isTeacher = isTeacher,
-                                    selectedTab = selectedTab,
-                                    onTabSelected = { selectedTab = it },
-                                    counts = tabCounts
-                                )
-                            }
+                        item {
+                            AssignmentTabFilter(
+                                isTeacher = isTeacher,
+                                selectedTab = selectedTab,
+                                onTabSelected = { selectedTab = it },
+                                counts = tabCounts
+                            )
                         }
 
                         // ── DELEGATE TO MODULAR CONTENT ──────────────────────

@@ -150,8 +150,33 @@ class ChatManager @Inject constructor(
         return normMyName.isNotBlank() && normCandidate.isNotBlank() && normCandidate == normMyName
     }
 
+    private fun isSamePersonName(candidateName: String?, myName: String?): Boolean {
+        val normCandidate = normalizePersonName(candidateName)
+        val normMyName = normalizePersonName(myName)
+        return normMyName.isNotBlank() && normCandidate.isNotBlank() && normCandidate == normMyName
+    }
+
+    private fun isPrincipalThread(t: ChatThread, auth: AuthState): Boolean {
+        val myId = auth.userId.orEmpty()
+        val myName = auth.name.orEmpty()
+        return (myId.isNotBlank() && (t.teacherId == myId || t.studentId == myId)) ||
+               isSamePersonName(t.teacherName, myName) ||
+               isSamePersonName(t.studentName, myName) ||
+               t.teacherName.contains("Kepala Sekolah", ignoreCase = true) ||
+               t.studentName.contains("Kepala Sekolah", ignoreCase = true) ||
+               t.subjectName.contains("Kepala Sekolah", ignoreCase = true) ||
+               t.id.startsWith("ai-principal")
+    }
+
     fun filterThreadsForUser(threadList: List<ChatThread>, auth: AuthState? = cachedAuth): List<ChatThread> {
         if (auth == null || !auth.isLoggedIn) return emptyList()
+        if (auth.isPrincipal) {
+            // Respect teacher-student privacy: Principal does NOT spy on private teacher-student inquiries.
+            // Principal only sees inquiries directed to Principal or where Principal is participant/sender.
+            return threadList.filter { t ->
+                isPrincipalThread(t, auth)
+            }
+        }
         if (auth.isTeacher) {
             return threadList
         }
@@ -163,6 +188,9 @@ class ChatManager @Inject constructor(
     fun isThreadOwnedByCurrentStudent(thread: ChatThread): Boolean {
         val auth = cachedAuth ?: return false
         if (!auth.isLoggedIn) return false
+        if (auth.isPrincipal) {
+            return isPrincipalThread(thread, auth)
+        }
         if (auth.isTeacher) return true
         return isSameStudentIdentity(thread.studentId, thread.studentName, auth.userId, auth.name)
     }
@@ -658,7 +686,7 @@ class ChatManager @Inject constructor(
         attachmentType: String? = null,
     ): ChatMessage {
         val auth = cachedAuth
-        val isTeacher = if (auth?.isStudent == true) false else (senderRole.equals("TEACHER", ignoreCase = true) || auth?.isTeacher == true)
+        val currentThread = _threads.value.find { it.id == threadId }
         val now = System.currentTimeMillis()
         val clientUuid = UUID.randomUUID().toString()
 
@@ -666,7 +694,7 @@ class ChatManager @Inject constructor(
             auth?.isStudent == true -> auth.name ?: "Siswa"
             !auth?.name.isNullOrBlank() -> auth.name!!
             senderName.isNotBlank() && !senderName.equals("Guru Pengampu", ignoreCase = true) -> senderName
-            isTeacher -> "Guru Pengajar"
+            senderRole.equals("TEACHER", ignoreCase = true) || auth?.isTeacher == true -> "Guru Pengajar"
             else -> "Siswa"
         }
         val effectiveSenderId = when {
@@ -674,7 +702,25 @@ class ChatManager @Inject constructor(
             senderId.isNotBlank() -> senderId
             else -> UUID.randomUUID().toString()
         }
-        val effectiveRole = if (isTeacher) "TEACHER" else "STUDENT"
+
+        // Check whether the sender is the recorded student / initiator of this thread
+        val isSenderTheInitiator = currentThread != null && (
+            (currentThread.studentId.isNotBlank() && currentThread.studentId == effectiveSenderId) ||
+            isSamePersonName(currentThread.studentName, effectiveSenderName)
+        )
+
+        val isFromTeacher = when {
+            isSenderTheInitiator -> false
+            auth?.isStudent == true -> false
+            auth?.isPrincipal == true -> false
+            senderRole.equals("TEACHER", ignoreCase = true) || auth?.isTeacher == true -> true
+            else -> false
+        }
+        val effectiveRole = when {
+            auth?.isPrincipal == true -> "PRINCIPAL"
+            isFromTeacher -> "TEACHER"
+            else -> "STUDENT"
+        }
 
         val localMsg = ChatMessage(
             id = clientUuid,
@@ -684,17 +730,24 @@ class ChatManager @Inject constructor(
             senderRole = effectiveRole,
             content = content.trim(),
             timestamp = now,
-            isFromTeacher = isTeacher,
+            isFromTeacher = isFromTeacher,
             isRead = false,
             attachmentUrl = attachmentUrl,
             attachmentType = attachmentType,
         )
 
-        val currentThread = _threads.value.find { it.id == threadId }
-        val updatedTeacherName = if (isTeacher && effectiveSenderName.isNotBlank() && !effectiveSenderName.equals("Guru Pengampu", ignoreCase = true)) {
-            effectiveSenderName
-        } else {
-            currentThread?.teacherName ?: ""
+        // NEVER overwrite valid teacherName with student/initiator or principal name!
+        val updatedTeacherName = when {
+            currentThread != null && currentThread.teacherName.isNotBlank() &&
+                !currentThread.teacherName.equals("Guru Pengampu", ignoreCase = true) &&
+                !currentThread.teacherName.equals("Bapak/Ibu Guru", ignoreCase = true) &&
+                !isSamePersonName(currentThread.teacherName, currentThread.studentName) -> {
+                currentThread.teacherName
+            }
+            isFromTeacher && effectiveSenderName.isNotBlank() && !effectiveSenderName.equals("Guru Pengampu", ignoreCase = true) -> {
+                effectiveSenderName
+            }
+            else -> currentThread?.teacherName ?: ""
         }
 
         // Single Source of Truth: Push directly to Firebase Realtime Database
@@ -715,14 +768,14 @@ class ChatManager @Inject constructor(
                 val effectiveSnippet = if (content.isNotBlank()) content.trim() else if (!attachmentUrl.isNullOrBlank()) "📷 [Foto Lampiran]" else ""
                 thread.copy(
                     messages = updatedMsgs,
-                    status = if (isTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
+                    status = if (isFromTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
                     lastUpdated = now,
                     teacherName = updatedTeacherName,
                     lastMessageContent = effectiveSnippet,
                     lastSenderName = effectiveSenderName,
                     messageCount = updatedMsgs.size,
-                    readStatusLabel = if (isTeacher) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong",
-                    teacherLastReadAt = if (isTeacher) now else 0L,
+                    readStatusLabel = if (isFromTeacher) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong",
+                    teacherLastReadAt = if (isFromTeacher) now else 0L,
                 )
             } else {
                 thread
@@ -1048,7 +1101,16 @@ class ChatManager @Inject constructor(
         val auth = cachedAuth
         val effectiveStudentName = if (!auth?.name.isNullOrBlank()) auth.name!! else "Siswa"
         val effectiveStudentId = if (!auth?.userId.isNullOrBlank()) auth.userId!! else UUID.randomUUID().toString()
-        val effectiveStudentClass = if (!auth?.className.isNullOrBlank()) auth.className!! else "Siswa"
+        val effectiveStudentClass = if (!auth?.className.isNullOrBlank()) {
+            auth.className!!
+        } else if (auth?.isPrincipal == true) {
+            "Kepala Sekolah"
+        } else if (auth?.isTeacher == true) {
+            "Guru"
+        } else {
+            "Siswa"
+        }
+        val refTitle = if (auth?.isPrincipal == true) "Koordinasi $subjectName" else "Konsultasi $subjectName"
 
         // Check if an active thread already exists for this teacher
         val existing = _threads.value.firstOrNull { t ->
@@ -1075,7 +1137,7 @@ class ChatManager @Inject constructor(
             teacherName = teacherName,
             subjectName = subjectName,
             inquiryType = InquiryType.GENERAL,
-            referenceTitle = "Konsultasi $subjectName",
+            referenceTitle = refTitle,
             referenceId = null,
             messages = emptyList(),
             status = InquiryStatus.WAITING_REPLY,

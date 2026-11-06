@@ -204,81 +204,218 @@ fun TeacherSessionDetailContent(
             }
         }
 
-        // ── 2. AKSES KELAS ─────────────────────────────────────────────
-        SessionSectionHeader("AKSES KELAS", textTertiary)
-        Row(
+        // ── 2. SUMBER DAYA PELAJARAN ───────────────────────────────────
+        SessionSectionHeader("SUMBER DAYA PELAJARAN", textTertiary)
+        Surface(
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.dp, cardBorder),
+            shadowElevation = if (isDark) 0.dp else 1.dp
         ) {
-            ResourceActionCard(
-                label = "Beri Tugas",
-                iconRes = CoreR.drawable.ic_modern_tasks,
-                tint = skyFg, tintBg = skyBg,
-                cardBg = cardBg, cardBorder = cardBorder,
-                textPrimary = textPrimary,
-                modifier = Modifier.weight(1f),
-                onClick = { onOpenAssignments(subjectArg) },
-            )
-            ResourceActionCard(
-                label = "Buat Kuis",
-                iconRes = CoreR.drawable.ic_modern_quiz,
-                tint = greenFg, tintBg = greenBg,
-                cardBg = cardBg, cardBorder = cardBorder,
-                textPrimary = textPrimary,
-                modifier = Modifier.weight(1f),
-                onClick = { onOpenQuizzes(subjectArg) },
-            )
-            ResourceActionCard(
-                label = "Unggah Materi",
-                iconRes = CoreR.drawable.ic_modern_book,
-                tint = purpleFg, tintBg = purpleBg,
-                cardBg = cardBg, cardBorder = cardBorder,
-                textPrimary = textPrimary,
-                modifier = Modifier.weight(1f),
-                onClick = { onOpenMaterials(subjectArg) },
-            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(14.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                ResourceItem(
+                    label = "Tugas",
+                    iconRes = CoreR.drawable.ic_modern_tasks,
+                    color = skyFg,
+                    modifier = Modifier.weight(1f)
+                ) { onOpenAssignments(subjectArg) }
+
+                ResourceItem(
+                    label = "Kuis CBT",
+                    iconRes = CoreR.drawable.ic_modern_quiz,
+                    color = greenFg,
+                    modifier = Modifier.weight(1f)
+                ) { onOpenQuizzes(subjectArg) }
+
+                ResourceItem(
+                    label = "Materi",
+                    iconRes = CoreR.drawable.ic_modern_book,
+                    color = Color(0xFF8B5CF6),
+                    modifier = Modifier.weight(1f)
+                ) { onOpenMaterials(subjectArg) }
+            }
         }
 
-        // ── 3. AKTIVITAS SESI INI ──────────────────────────────────────
+        // ── 3. BAHAN AJAR & TUGAS SESI INI ─────────────────────────────
         if (todayMaterials.isNotEmpty() || todayAssignments.isNotEmpty()) {
-            SessionSectionHeader("AKTIVITAS SESI INI", textTertiary)
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = 1.dp,
+                shadowElevation = if (isDark) 0.dp else 1.dp
             ) {
-                Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                    val rows = todayMaterials.size + todayAssignments.size
-                    var index = 0
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Bahan Ajar & Tugas Sesi Ini",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (isDark) greenFg.copy(alpha = 0.15f) else Color(0xFFDCFCE7),
+                            border = BorderStroke(1.dp, if (isDark) greenFg.copy(alpha = 0.40f) else Color(0xFF86EFAC))
+                        ) {
+                            Text(
+                                text = "Real-Time Hari Ini",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) greenFg else Color(0xFF15803D),
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
+                            )
+                        }
+                    }
+
                     todayMaterials.forEach { mat ->
                         val isVideo = mat.materialType == MaterialType.VIDEO ||
                             mat.mediaUrl?.contains("youtube", ignoreCase = true) == true ||
-                            mat.mediaUrl?.contains("youtu.be", ignoreCase = true) == true
-                        ActivityRow(
-                            title = mat.title,
-                            caption = if (isVideo) "Video pelajaran" else "Bahan bacaan",
-                            iconRes = if (isVideo) CoreR.drawable.ic_modern_video else CoreR.drawable.ic_modern_book,
-                            tint = if (isVideo) amberFg else purpleFg,
-                            tintBg = if (isVideo) amberBg else purpleBg,
-                            textPrimary = textPrimary, textSecondary = textSecondary, textTertiary = textTertiary,
-                            onClick = { onOpenMaterials(subjectArg) },
-                        )
-                        index++
-                        if (index < rows) HorizontalDivider(Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = cardBorder)
+                            mat.mediaUrl?.contains("youtu.be", ignoreCase = true) == true ||
+                            mat.title.contains("video", ignoreCase = true)
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = innerBg,
+                            border = BorderStroke(1.dp, innerBorder),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenMaterials(subjectArg) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(if (isVideo) Color(0xFFEF4444).copy(alpha = if (isDark) 0.15f else 0.10f) else skyFg.copy(alpha = if (isDark) 0.15f else 0.10f))
+                                            .border(1.dp, if (isVideo) Color(0xFFEF4444).copy(alpha = 0.35f) else skyFg.copy(alpha = 0.30f), RoundedCornerShape(10.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(
+                                                id = if (isVideo) CoreR.drawable.ic_modern_video else CoreR.drawable.ic_modern_book
+                                            ),
+                                            contentDescription = null,
+                                            tint = if (isVideo) Color(0xFFEF4444) else skyFg,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = mat.title,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(Modifier.height(1.dp))
+                                        Text(
+                                            text = if (isVideo) "Tayang: Hari Ini • Video Pembelajaran" else "Tayang: Hari Ini • Modul Bacaan",
+                                            fontSize = 10.5.sp,
+                                            color = if (isVideo) Color(0xFFEF4444) else amberFg,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
+                                    contentDescription = null,
+                                    tint = textTertiary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
                     }
+
                     todayAssignments.forEach { assign ->
-                        ActivityRow(
-                            title = assign.title,
-                            caption = "Tugas • Maks ${assign.maxScore} poin",
-                            iconRes = CoreR.drawable.ic_modern_tasks,
-                            tint = skyFg, tintBg = skyBg,
-                            textPrimary = textPrimary, textSecondary = textSecondary, textTertiary = textTertiary,
-                            onClick = { onOpenAssignments(subjectArg) },
-                        )
-                        index++
-                        if (index < rows) HorizontalDivider(Modifier.padding(horizontal = 14.dp), thickness = 0.5.dp, color = cardBorder)
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = innerBg,
+                            border = BorderStroke(1.dp, innerBorder),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onOpenAssignments(subjectArg) }
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 14.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    modifier = Modifier.weight(1f),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(36.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(skyFg.copy(alpha = if (isDark) 0.15f else 0.10f))
+                                            .border(1.dp, skyFg.copy(alpha = 0.30f), RoundedCornerShape(10.dp)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
+                                            contentDescription = null,
+                                            tint = skyFg,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = assign.title,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textPrimary,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                        Spacer(Modifier.height(1.dp))
+                                        Text(
+                                            text = "Tugas Sesi Hari Ini • Maks ${assign.maxScore} Poin",
+                                            fontSize = 10.5.sp,
+                                            color = skyFg,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    painter = painterResource(id = CoreR.drawable.ic_modern_chevron_right),
+                                    contentDescription = null,
+                                    tint = textTertiary,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }

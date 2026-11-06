@@ -23,8 +23,10 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Schedule
+import com.schoolos.android.core.designsystem.SchoolOsConfirmationDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -71,7 +73,7 @@ import com.schoolos.android.core.designsystem.TextTertiary
 fun AssignmentDetailScreen(
     onBack: (() -> Unit)? = null,
     onOpenMaterial: (String) -> Unit = {},
-    onAskTeacher: ((assignmentTitle: String, assignmentId: String, subjectName: String, teacherName: String) -> Unit)? = null,
+    onAskTeacher: ((assignmentTitle: String, assignmentId: String, subjectName: String, teacherName: String, customQuestion: String) -> Unit)? = null,
     viewModel: AssignmentDetailViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -248,13 +250,14 @@ fun AssignmentDetailScreen(
                                     onOpenMaterial = onOpenMaterial,
                                     onSubmitClick = { showConfirm = true },
                                     childName = state.childName,
-                                    onAskTeacher = {
+                                    onAskTeacher = { customQuestion ->
                                         val teacher: String = a.teacherName?.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) } ?: "Guru Mata Pelajaran"
                                         onAskTeacher?.invoke(
                                             a.title,
                                             a.id,
                                             a.subjectName ?: "Tugas",
                                             teacher,
+                                            customQuestion,
                                         )
                                     },
                                     pgAnswers = pgAnswers,
@@ -280,23 +283,23 @@ fun AssignmentDetailScreen(
     }
 
     if (showConfirm) {
-        AlertDialog(
-            onDismissRequest = { showConfirm = false },
-            title = { Text("Kumpulkan Tugas?") },
-            text = { Text("Pastikan jawaban kamu sudah benar sebelum dikirimkan.") },
-            confirmButton = {
-                TextButton(onClick = {
-                    showConfirm = false
-                    viewModel.submit(
-                        content = content,
-                        pgAnswers = pgAnswers,
-                        essayAnswers = essayAnswers,
-                    )
-                }) { Text("Kumpulkan") }
+        SchoolOsConfirmationDialog(
+            title = "Kumpulkan Tugas Mandiri?",
+            message = "Pastikan seluruh lembar jawaban kamu sudah benar sebelum dikirimkan ke guru pembimbing.",
+            confirmText = "Ya, Kumpulkan",
+            dismissText = "Periksa Lagi",
+            icon = Icons.Default.Schedule,
+            accentColor = Color(0xFF10B981),
+            confirmButtonColor = Color(0xFF10B981),
+            onConfirm = {
+                showConfirm = false
+                viewModel.submit(
+                    content = content,
+                    pgAnswers = pgAnswers,
+                    essayAnswers = essayAnswers,
+                )
             },
-            dismissButton = {
-                TextButton(onClick = { showConfirm = false }) { Text("Batal") }
-            },
+            onDismiss = { showConfirm = false }
         )
     }
 

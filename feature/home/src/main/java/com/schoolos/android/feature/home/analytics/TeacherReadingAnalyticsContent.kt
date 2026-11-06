@@ -142,19 +142,9 @@ fun TeacherReadingAnalyticsContent(
             }
 
             if (state.isLoading && state.allReadingRows.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 48.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(36.dp),
-                            color = NeonBlue,
-                            strokeWidth = 3.dp
-                        )
-                    }
+                items(5) {
+                    ReadingProgressSkeletonCard(isDark = isDark)
+                    Spacer(Modifier.height(10.dp))
                 }
             } else if (state.filteredRows.isEmpty()) {
                 item {
@@ -280,8 +270,9 @@ private fun ReadingMetricsGrid(
     val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
 
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
@@ -611,8 +602,9 @@ private fun ReadingStatusFilterTabs(
     val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
 
     LazyRow(
-        modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         item {
@@ -961,6 +953,106 @@ private fun EmptyReadingState(isDark: Boolean) {
                 textAlign = TextAlign.Center,
                 color = textSecondary
             )
+        }
+    }
+}
+
+@Composable
+private fun ReadingProgressSkeletonCard(
+    isDark: Boolean,
+) {
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
+    val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+    val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header: Name + NISN + Class Badge + Status Badge
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    ShimmerBox(
+                        modifier = Modifier.width(140.dp).height(16.dp),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        ShimmerBox(
+                            modifier = Modifier.width(90.dp).height(12.dp),
+                            shape = RoundedCornerShape(4.dp)
+                        )
+                        ShimmerBox(
+                            modifier = Modifier.width(64.dp).height(18.dp),
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                    }
+                }
+                ShimmerBox(
+                    modifier = Modifier.width(60.dp).height(20.dp),
+                    shape = RoundedCornerShape(8.dp)
+                )
+            }
+
+            // Material title box placeholder
+            Surface(
+                shape = RoundedCornerShape(14.dp),
+                color = innerCardBg,
+                border = BorderStroke(1.dp, innerCardBorder),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    ShimmerBox(
+                        modifier = Modifier.fillMaxWidth(0.85f).height(14.dp),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                    ShimmerBox(
+                        modifier = Modifier.width(70.dp).height(11.dp),
+                        shape = RoundedCornerShape(4.dp)
+                    )
+                }
+            }
+
+            // Progress bar placeholder
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    ShimmerBox(
+                        modifier = Modifier.width(110.dp).height(12.dp),
+                        shape = RoundedCornerShape(3.dp)
+                    )
+                    ShimmerBox(
+                        modifier = Modifier.width(70.dp).height(12.dp),
+                        shape = RoundedCornerShape(3.dp)
+                    )
+                }
+                ShimmerBox(
+                    modifier = Modifier.fillMaxWidth().height(6.dp),
+                    shape = RoundedCornerShape(3.dp)
+                )
+            }
         }
     }
 }

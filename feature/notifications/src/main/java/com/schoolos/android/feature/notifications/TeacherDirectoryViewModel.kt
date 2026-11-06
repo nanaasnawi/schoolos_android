@@ -39,9 +39,26 @@ class TeacherDirectoryViewModel @Inject constructor(
                             name = t.fullName.trim(),
                             subject = subject.ifBlank { "Guru Mata Pelajaran" },
                             roleTitle = if (subject.isBlank()) "Tutor Pengampu" else "Tutor $subject",
+                            isPrincipal = false,
                         )
                     }.sortedBy { it.name.lowercase() }
-                    _state.update { it.copy(isLoading = false, teachers = contacts) }
+
+                    // Principal contact item for student inquiry / direct chat with school management
+                    val principalContact = TeacherContactItem(
+                        id = "principal-user",
+                        userId = "principal-user",
+                        name = "Kepala Sekolah PKBM",
+                        subject = "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar",
+                        roleTitle = "Kepala Sekolah / Pimpinan PKBM",
+                        isPrincipal = true,
+                    )
+
+                    _state.update {
+                        it.copy(
+                            isLoading = false,
+                            teachers = listOf(principalContact) + contacts
+                        )
+                    }
                 }
                 .onFailure { _state.update { it.copy(isLoading = false) } }
         }
