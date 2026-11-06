@@ -389,45 +389,6 @@ fun ChatDetailScreen(
                         )
                     }
                 }
-
-                // Status pill in header
-                if (thread != null) {
-                    val isAns = thread.status == InquiryStatus.ANSWERED
-                    val isWait = thread.status == InquiryStatus.WAITING_REPLY
-                    if (isAns) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(NeonSuccess.copy(alpha = 0.12f))
-                                .border(0.5.dp, NeonSuccess.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 7.dp, vertical = 3.dp),
-                        ) {
-                            Text(
-                                text = "Dijawab",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonSuccess,
-                            )
-                        }
-                    } else if (isWait) {
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(6.dp))
-                                .background(NeonWarning.copy(alpha = 0.12f))
-                                .border(0.5.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
-                                .padding(horizontal = 7.dp, vertical = 3.dp),
-                        ) {
-                            Text(
-                                text = "Menunggu Jawaban",
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = NeonWarning,
-                            )
-                        }
-                    }
-                }
-
-
             }
 
             // Topic Context Banner

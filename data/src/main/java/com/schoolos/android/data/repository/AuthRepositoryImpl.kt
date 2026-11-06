@@ -121,14 +121,27 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout() {
         withContext(Dispatchers.IO) {
+            // 1. Invalidate authentication token on server (gracefully with timeout)
+            try {
+                kotlinx.coroutines.withTimeoutOrNull(2500) {
+                    api.logout()
+                }
+            } catch (_: Exception) {
+                // Ignore if offline or server endpoint not present; local purge must proceed
+            }
+
+            // 2. Invalidate tokens in memory immediately
+            authManager.invalidateTokensInMemory()
+
+            // 3. Clear ChatManager state
             try {
                 chatManager.clearOnLogout()
             } catch (e: Exception) {
                 Timber.w(e, "Failed clearing ChatManager on logout")
             }
 
+            // 4. Purge all user-cached tables while preserving unsynced offline submissions in submission_queue
             try {
-                // Purge all user-cached tables while preserving unsynced offline submissions in submission_queue
                 appDatabase.gradeDao().clearAll()
                 appDatabase.assignmentDao().clearAll()
                 appDatabase.quizDao().clearAllQuestions()
@@ -143,12 +156,14 @@ class AuthRepositoryImpl @Inject constructor(
                 Timber.e(e, "Error clearing local database tables during logout")
             }
 
-            // Clear user-scoped SharedPreferences caches
+            // 5. Clear all user-scoped SharedPreferences & cached credentials
             val prefsToClear = listOf(
                 "schoolos_reading_history",
                 "schoolos_notif_sync",
                 "schoolos_notif_dedup",
                 "teacher_schedule_reminders",
+                "schoolos_fcm",
+                "schoolos_topics",
             )
             prefsToClear.forEach { prefName ->
                 try {
@@ -159,6 +174,19 @@ class AuthRepositoryImpl @Inject constructor(
                 } catch (_: Exception) {}
             }
 
+            // 6. Clear Coil image caches & application temp cache directory
+            try {
+                coil.Coil.imageLoader(context).diskCache?.clear()
+                coil.Coil.imageLoader(context).memoryCache?.clear()
+            } catch (_: Throwable) {}
+
+            try {
+                context.cacheDir.listFiles()?.forEach { file ->
+                    try { file.deleteRecursively() } catch (_: Exception) {}
+                }
+            } catch (_: Exception) {}
+
+            // 8. Clear all DataStore tokens, session keys, and locally stored user credentials
             authManager.clearSession()
         }
     }

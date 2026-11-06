@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -460,53 +461,61 @@ private fun AtRiskInteractiveStatBar(
     selectedCategory: String,
     onSelectCategory: (String) -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp)
-            .horizontalScroll(rememberScrollState()),
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        StatFilterTile(
-            count = stats.total,
-            label = "Semua",
-            icon = Icons.Default.Warning,
-            isSelected = selectedCategory == "ALL",
-            accentColor = NeonBlue,
-            onClick = { onSelectCategory("ALL") }
-        )
-        StatFilterTile(
-            count = stats.unreadMaterials,
-            label = "Materi",
-            icon = Icons.AutoMirrored.Filled.MenuBook,
-            isSelected = selectedCategory == "UNREAD_MATERIAL",
-            accentColor = AccentNeonAmber,
-            onClick = { onSelectCategory("UNREAD_MATERIAL") }
-        )
-        StatFilterTile(
-            count = stats.overdueAssignments,
-            label = "Tugas",
-            icon = Icons.AutoMirrored.Filled.Assignment,
-            isSelected = selectedCategory == "OVERDUE_ASSIGNMENT",
-            accentColor = NeonWarning,
-            onClick = { onSelectCategory("OVERDUE_ASSIGNMENT") }
-        )
-        StatFilterTile(
-            count = stats.quizAlerts,
-            label = "Kuis & CBT",
-            icon = Icons.Default.Quiz,
-            isSelected = selectedCategory == "QUIZ_ALERT",
-            accentColor = Color(0xFFA855F7),
-            onClick = { onSelectCategory("QUIZ_ALERT") }
-        )
-        StatFilterTile(
-            count = stats.lowScores,
-            label = "Di Bawah KKM",
-            icon = Icons.AutoMirrored.Filled.TrendingDown,
-            isSelected = selectedCategory == "LOW_SCORE",
-            accentColor = NeonError,
-            onClick = { onSelectCategory("LOW_SCORE") }
-        )
+        item {
+            StatFilterTile(
+                count = stats.total,
+                label = "Semua",
+                icon = Icons.Default.Warning,
+                isSelected = selectedCategory == "ALL",
+                accentColor = NeonBlue,
+                onClick = { onSelectCategory("ALL") }
+            )
+        }
+        item {
+            StatFilterTile(
+                count = stats.unreadMaterials,
+                label = "Materi",
+                icon = Icons.AutoMirrored.Filled.MenuBook,
+                isSelected = selectedCategory == "UNREAD_MATERIAL",
+                accentColor = AccentNeonAmber,
+                onClick = { onSelectCategory("UNREAD_MATERIAL") }
+            )
+        }
+        item {
+            StatFilterTile(
+                count = stats.overdueAssignments,
+                label = "Tugas",
+                icon = Icons.AutoMirrored.Filled.Assignment,
+                isSelected = selectedCategory == "OVERDUE_ASSIGNMENT",
+                accentColor = NeonWarning,
+                onClick = { onSelectCategory("OVERDUE_ASSIGNMENT") }
+            )
+        }
+        item {
+            StatFilterTile(
+                count = stats.quizAlerts,
+                label = "Kuis & CBT",
+                icon = Icons.Default.Quiz,
+                isSelected = selectedCategory == "QUIZ_ALERT",
+                accentColor = Color(0xFFA855F7),
+                onClick = { onSelectCategory("QUIZ_ALERT") }
+            )
+        }
+        item {
+            StatFilterTile(
+                count = stats.lowScores,
+                label = "Di Bawah KKM",
+                icon = Icons.AutoMirrored.Filled.TrendingDown,
+                isSelected = selectedCategory == "LOW_SCORE",
+                accentColor = NeonError,
+                onClick = { onSelectCategory("LOW_SCORE") }
+            )
+        }
     }
 }
 
@@ -585,15 +594,14 @@ private fun AtRiskFilterToolbar(
     val emeraldAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
 
     Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Compact Search Field
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
+                .padding(horizontal = 16.dp)
                 .height(44.dp),
             shape = RoundedCornerShape(14.dp),
             color = cardBg,
@@ -656,16 +664,15 @@ private fun AtRiskFilterToolbar(
             }
         }
 
-        // Rombel Selector Chips (Horizontal Scroll)
-        val rombelScroll = rememberScrollState()
+        // Rombel Selector Chips (LazyRow edge-to-edge scroll)
         val allRombelOptions = listOf("ALL") + classes
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .horizontalScroll(rombelScroll),
+        LazyRow(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            allRombelOptions.forEach { rombel ->
+            items(allRombelOptions.size) { index ->
+                val rombel = allRombelOptions[index]
                 val isSelected = selectedClass == rombel
                 val label = if (rombel == "ALL") "Semua Rombel" else rombel
 

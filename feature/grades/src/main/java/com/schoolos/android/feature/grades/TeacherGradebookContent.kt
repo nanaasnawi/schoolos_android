@@ -74,8 +74,6 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
     item {
         GradebookHeroBanner(
             selectedSubjectName = selectedSubjectName,
-            activeScheme = activeScheme,
-            onSelectScheme = onSelectScheme,
         )
     }
 
@@ -264,6 +262,14 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
         }
     }
 
+    // ── 5B. SKEMA PENILAIAN TOGGLE (ATS & SAS vs MURNI MODUL) ────────────
+    item {
+        GradebookSchemeSelector(
+            activeScheme = activeScheme,
+            onSelectScheme = onSelectScheme,
+        )
+    }
+
     // ── 6. SECTION HEADER ────────────────────────────────────────────────
     item {
         Row(
@@ -335,8 +341,6 @@ fun LazyListScope.kurikulumMerdekaGradebookContent(
 @Composable
 private fun GradebookHeroBanner(
     selectedSubjectName: String,
-    activeScheme: String,
-    onSelectScheme: (String) -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
     val heroGradient = if (isDark) {
@@ -369,7 +373,7 @@ private fun GradebookHeroBanner(
             )
             .padding(16.dp)
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Badge
             Box(
                 modifier = Modifier
@@ -392,113 +396,126 @@ private fun GradebookHeroBanner(
             }
 
             // Title & Subtitle
-            Column {
+            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
                 Text(
                     text = "Buku Nilai (Teacher Gradebook)",
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 15.sp,
+                    lineHeight = 18.sp,
+                    fontWeight = FontWeight.Bold,
                     color = TextPrimary
                 )
-                Spacer(Modifier.height(2.dp))
                 Text(
                     text = "Asesmen Sumatif Lingkup Materi & Evaluasi KKTP di PKBM AS-SALAFIYAH • ${DapodikPeriod.getFullPeriodLabel()}",
                     fontSize = 11.sp,
+                    lineHeight = 14.sp,
                     color = TextTertiary
                 )
             }
+        }
+    }
+}
 
-            // Scheme Switcher
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isDark) Color(0xFF18181B) else Color(0xFFF1F5F9))
-                    .border(0.5.dp, if (LocalIsDarkTheme.current) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(10.dp))
-                    .padding(3.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // Skema A
-                val isSchemeA = activeScheme == "A"
-                val tabABg = if (isSchemeA) {
-                    if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color.White
-                } else Color.Transparent
-                val tabABorder = if (isSchemeA) TeacherNeon else Color.Transparent
+@Composable
+private fun GradebookSchemeSelector(
+    activeScheme: String,
+    onSelectScheme: (String) -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val containerBg = if (isDark) Color(0xFF111113) else Color.White
+    val containerBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
 
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(tabABg)
-                        .border(
-                            if (isSchemeA) 1.dp else 0.dp,
-                            tabABorder,
-                            RoundedCornerShape(8.dp)
-                        )
-                        .clickable { onSelectScheme("A") }
-                        .padding(vertical = 7.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Skema A (ATS & SAS)",
-                        fontSize = 11.sp,
-                        fontWeight = if (isSchemeA) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSchemeA) TeacherNeon else TextTertiary
-                    )
-                }
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        // Scheme Switcher (Skema A & Skema B)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(12.dp))
+                .background(containerBg)
+                .border(1.dp, containerBorder, RoundedCornerShape(12.dp))
+                .padding(3.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            // Skema A
+            val isSchemeA = activeScheme == "A"
+            val tabABg = if (isSchemeA) {
+                if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color(0xFFECFDF5)
+            } else Color.Transparent
+            val tabABorder = if (isSchemeA) TeacherNeon else Color.Transparent
 
-                // Skema B
-                val isSchemeB = activeScheme == "B"
-                val tabBBg = if (isSchemeB) {
-                    if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color.White
-                } else Color.Transparent
-                val tabBBorder = if (isSchemeB) TeacherNeon else Color.Transparent
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(tabBBg)
-                        .border(
-                            if (isSchemeB) 1.dp else 0.dp,
-                            tabBBorder,
-                            RoundedCornerShape(8.dp)
-                        )
-                        .clickable { onSelectScheme("B") }
-                        .padding(vertical = 7.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "Skema B (Murni Modul)",
-                        fontSize = 11.sp,
-                        fontWeight = if (isSchemeB) FontWeight.Bold else FontWeight.Medium,
-                        color = if (isSchemeB) TeacherNeon else TextTertiary
-                    )
-                }
-            }
-
-            // Formula banner
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(if (isDark) TeacherNeon.copy(alpha = 0.08f) else Color(0xFFECFDF5))
+                    .weight(1f)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(tabABg)
                     .border(
-                        0.5.dp,
-                        if (isDark) TeacherNeon.copy(alpha = 0.25f) else Color(0xFFA7F3D0),
-                        RoundedCornerShape(8.dp)
+                        if (isSchemeA) 1.dp else 0.dp,
+                        tabABorder,
+                        RoundedCornerShape(9.dp)
                     )
-                    .padding(horizontal = 10.dp, vertical = 6.dp)
+                    .clickable { onSelectScheme("A") }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = if (activeScheme == "A")
-                        "Bobot Kemendikdasmen: Rata-Rata Modul (60%) • ATS (20%) • SAS (20%) | Formatif Kualitatif 0%"
-                    else
-                        "Bobot Kemendikdasmen: 100% Rata-Rata Sumatif Modul (Pendidikan Kesetaraan PKBM)",
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TeacherNeon
+                    text = "Skema A (ATS & SAS)",
+                    fontSize = 12.sp,
+                    fontWeight = if (isSchemeA) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSchemeA) TeacherNeon else (if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B))
                 )
             }
+
+            // Skema B
+            val isSchemeB = activeScheme == "B"
+            val tabBBg = if (isSchemeB) {
+                if (isDark) TeacherNeon.copy(alpha = 0.22f) else Color(0xFFECFDF5)
+            } else Color.Transparent
+            val tabBBorder = if (isSchemeB) TeacherNeon else Color.Transparent
+
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(9.dp))
+                    .background(tabBBg)
+                    .border(
+                        if (isSchemeB) 1.dp else 0.dp,
+                        tabBBorder,
+                        RoundedCornerShape(9.dp)
+                    )
+                    .clickable { onSelectScheme("B") }
+                    .padding(vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Skema B (Murni Modul)",
+                    fontSize = 12.sp,
+                    fontWeight = if (isSchemeB) FontWeight.Bold else FontWeight.Medium,
+                    color = if (isSchemeB) TeacherNeon else (if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B))
+                )
+            }
+        }
+
+        // Formula banner
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(8.dp))
+                .background(if (isDark) TeacherNeon.copy(alpha = 0.08f) else Color(0xFFECFDF5))
+                .border(
+                    0.5.dp,
+                    if (isDark) TeacherNeon.copy(alpha = 0.25f) else Color(0xFFA7F3D0),
+                    RoundedCornerShape(8.dp)
+                )
+                .padding(horizontal = 10.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = if (activeScheme == "A")
+                    "Bobot Kemendikdasmen: Rata-Rata Modul (60%) • ATS (20%) • SAS (20%) | Formatif Kualitatif 0%"
+                else
+                    "Bobot Kemendikdasmen: 100% Rata-Rata Sumatif Modul (Pendidikan Kesetaraan PKBM)",
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TeacherNeon
+            )
         }
     }
 }
