@@ -286,7 +286,68 @@ class ChatManager @Inject constructor(
     val threads: StateFlow<List<ChatThread>> = _threads.asStateFlow()
 
     fun getThreadById(threadId: String): ChatThread? {
-        return _threads.value.find { it.id == threadId }
+        val direct = _threads.value.find { it.id == threadId }
+        if (direct != null) return direct
+        return _threads.value.find { t -> t.messages.any { m -> m.threadId == threadId } }
+    }
+
+    fun consolidateAndDeduplicateThreads(threadList: List<ChatThread>): List<ChatThread> {
+        if (threadList.isEmpty()) return emptyList()
+
+        return threadList
+            .groupBy { thread ->
+                if (thread.id.startsWith("ai-")) {
+                    "ai_${thread.id}"
+                } else {
+                    val cleanStudent = cleanPersonName(thread.studentName).trim().lowercase()
+                    val cleanTeacher = cleanPersonName(thread.teacherName).trim().lowercase()
+                    val isPrincipal = thread.studentClass.contains("Kepala", ignoreCase = true) ||
+                        thread.studentName.contains("Kepala", ignoreCase = true)
+                    if (isPrincipal) {
+                        "principal_${cleanStudent}_${cleanTeacher}"
+                    } else {
+                        val sId = thread.studentId.trim().ifBlank { cleanStudent }
+                        "student_${sId}_${cleanStudent}_${cleanTeacher}"
+                    }
+                }
+            }
+            .map { (_, groupThreads) ->
+                if (groupThreads.size == 1) {
+                    groupThreads.first()
+                } else {
+                    val sorted = groupThreads.sortedByDescending { it.lastUpdated }
+                    val primary = sorted.first()
+                    val allMsgs = groupThreads.flatMap { it.messages }
+                        .distinctBy { it.id }
+                        .sortedBy { it.timestamp }
+                    val lastMsg = allMsgs.lastOrNull()
+                    val effectiveLastContent = lastMsg?.content
+                        ?: sorted.firstOrNull { !it.lastMessageContent.isNullOrBlank() }?.lastMessageContent
+                    val effectiveLastSender = lastMsg?.senderName
+                        ?: sorted.firstOrNull { !it.lastSenderName.isNullOrBlank() }?.lastSenderName
+                    val effectiveStatus = if (lastMsg?.isFromTeacher == true) {
+                        InquiryStatus.ANSWERED
+                    } else if (sorted.any { it.status == InquiryStatus.WAITING_REPLY }) {
+                        InquiryStatus.WAITING_REPLY
+                    } else {
+                        InquiryStatus.ANSWERED
+                    }
+                    val effectiveTeacherLastReadAt = sorted.mapNotNull { it.teacherLastReadAt }.maxOrNull() ?: 0L
+                    val effectiveStudentLastReadAt = sorted.mapNotNull { it.studentLastReadAt }.maxOrNull() ?: 0L
+
+                    primary.copy(
+                        messages = allMsgs,
+                        messageCount = if (allMsgs.isNotEmpty()) allMsgs.size else sorted.sumOf { it.messageCount }.coerceAtLeast(1),
+                        lastMessageContent = effectiveLastContent,
+                        lastSenderName = effectiveLastSender,
+                        status = effectiveStatus,
+                        lastUpdated = lastMsg?.timestamp ?: primary.lastUpdated,
+                        teacherLastReadAt = effectiveTeacherLastReadAt,
+                        studentLastReadAt = effectiveStudentLastReadAt,
+                    )
+                }
+            }
+            .sortedByDescending { it.lastUpdated }
     }
 
     private val _isLoading = MutableStateFlow(false)
@@ -363,7 +424,7 @@ class ChatManager @Inject constructor(
                 val rtdbIds = myRtdbThreads.map { it.id }.toSet()
                 val localOnly = _threads.value.filter { it.id !in rtdbIds && (it.id.startsWith("ai-") || it.messages.isNotEmpty()) }
 
-                val updatedList = (merged + localOnly).sortedByDescending { it.lastUpdated }
+                val updatedList = consolidateAndDeduplicateThreads(merged + localOnly)
                 _threads.value = updatedList
                 saveToDisk(updatedList, auth.userId)
             }
@@ -600,8 +661,8 @@ class ChatManager @Inject constructor(
 
             // Keep any local threads currently pending server persistence, strictly isolated
             val pendingLocal = filterThreadsForUser(_threads.value.filter { it.id !in dbIds }, auth)
-            val merged = (pendingLocal + consolidatedThreads).sortedByDescending { it.lastUpdated }
-            val strictlyFiltered = filterThreadsForUser(merged, auth)
+            val merged = pendingLocal + consolidatedThreads
+            val strictlyFiltered = consolidateAndDeduplicateThreads(filterThreadsForUser(merged, auth))
             _threads.value = strictlyFiltered
             saveToDisk(strictlyFiltered, auth.userId)
         }
