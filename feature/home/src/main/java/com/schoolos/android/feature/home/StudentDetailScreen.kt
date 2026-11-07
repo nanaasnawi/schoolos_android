@@ -100,8 +100,8 @@ fun StudentDetailScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding),
-            contentPadding = PaddingValues(bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+            contentPadding = PaddingValues(top = 14.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             // ── HERO PROFILE CARD (FLAT EXECUTIVE, ZERO GRADIENT) ───────────
             item {
@@ -232,8 +232,8 @@ private fun StudentHeroCard(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .padding(start = 16.dp, top = 14.dp, end = 16.dp, bottom = 12.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             // Top: Avatar + Identity + Active Status
             Row(
@@ -402,7 +402,7 @@ private fun ExecutiveMetricsStrip(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 4.dp),
+                .padding(vertical = 9.dp, horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             MetricColumnItem(
@@ -414,7 +414,7 @@ private fun ExecutiveMetricsStrip(
                 modifier = Modifier.weight(1f)
             )
 
-            Box(modifier = Modifier.width(0.5.dp).height(28.dp).background(GlassBorder))
+            Box(modifier = Modifier.width(0.5.dp).height(22.dp).background(GlassBorder))
 
             MetricColumnItem(
                 label = "Kuis",
@@ -425,7 +425,7 @@ private fun ExecutiveMetricsStrip(
                 modifier = Modifier.weight(1f)
             )
 
-            Box(modifier = Modifier.width(0.5.dp).height(28.dp).background(GlassBorder))
+            Box(modifier = Modifier.width(0.5.dp).height(22.dp).background(GlassBorder))
 
             MetricColumnItem(
                 label = "Tugas",
@@ -436,7 +436,7 @@ private fun ExecutiveMetricsStrip(
                 modifier = Modifier.weight(1f)
             )
 
-            Box(modifier = Modifier.width(0.5.dp).height(28.dp).background(GlassBorder))
+            Box(modifier = Modifier.width(0.5.dp).height(22.dp).background(GlassBorder))
 
             MetricColumnItem(
                 label = "Hadir",
@@ -531,7 +531,7 @@ private fun StudentTabRow(
         modifier = modifier
             .fillMaxWidth()
             .horizontalScroll(rememberScrollState())
-            .padding(horizontal = 16.dp, vertical = 2.dp),
+            .padding(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -555,7 +555,7 @@ private fun StudentTabRow(
                 ),
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 13.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
@@ -600,7 +600,7 @@ private fun DapodikDetailTab(
 
     Column(
         modifier = modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         // 1. Identitas Pokok
         DapodikSectionCard(
