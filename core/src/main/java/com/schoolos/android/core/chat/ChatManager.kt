@@ -183,17 +183,43 @@ class ChatManager @Inject constructor(
     }
 
     private fun isPrincipalThread(t: ChatThread, auth: AuthState): Boolean {
-        val myId = auth.userId.orEmpty()
-        val myName = auth.name.orEmpty()
-        return (myId.isNotBlank() && (t.teacherId == myId || t.studentId == myId)) ||
-               isSamePersonName(t.teacherName, myName) ||
-               isSamePersonName(t.studentName, myName) ||
-               t.teacherName.contains("Kepala Sekolah", ignoreCase = true) ||
-               t.studentName.contains("Kepala Sekolah", ignoreCase = true) ||
-               t.studentClass.contains("Kepala Sekolah", ignoreCase = true) ||
-               t.referenceTitle.contains("Koordinasi", ignoreCase = true) ||
-               t.subjectName.contains("Kepala Sekolah", ignoreCase = true) ||
-               t.id.startsWith("ai-principal")
+        val myId = auth.userId.orEmpty().trim()
+        val myName = auth.name.orEmpty().trim()
+
+        val idMatches = myId.isNotBlank() && (
+            t.teacherId.equals(myId, ignoreCase = true) ||
+            t.teacherId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true) ||
+            t.studentId.equals(myId, ignoreCase = true) ||
+            t.studentId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true)
+        )
+        if (idMatches) return true
+
+        if (isSamePersonName(t.teacherName, myName) || isSamePersonName(t.studentName, myName)) return true
+
+        val cleanTeacher = cleanPersonName(t.teacherName).lowercase()
+        val cleanStudent = cleanPersonName(t.studentName).lowercase()
+        val cleanMy = cleanPersonName(myName).lowercase()
+
+        val nameMatchesSubstr = cleanMy.isNotBlank() && (
+            (cleanTeacher.isNotBlank() && (cleanTeacher.contains(cleanMy) || cleanMy.contains(cleanTeacher))) ||
+            (cleanStudent.isNotBlank() && (cleanStudent.contains(cleanMy) || cleanMy.contains(cleanStudent)))
+        )
+        if (nameMatchesSubstr) return true
+
+        // Keyword matches for Principal consultations
+        val matchesPrincipalRole =
+            t.teacherName.contains("Kepala", ignoreCase = true) ||
+            t.studentName.contains("Kepala", ignoreCase = true) ||
+            t.studentClass.contains("Kepala", ignoreCase = true) ||
+            t.referenceTitle.contains("Koordinasi", ignoreCase = true) ||
+            t.referenceTitle.contains("Konsultasi Kebijakan", ignoreCase = true) ||
+            t.referenceTitle.contains("Pengaduan", ignoreCase = true) ||
+            t.subjectName.contains("Kepala", ignoreCase = true) ||
+            t.subjectName.contains("Konsultasi Kebijakan", ignoreCase = true) ||
+            t.subjectName.contains("Pengaduan", ignoreCase = true) ||
+            t.id.startsWith("ai-principal")
+
+        return matchesPrincipalRole
     }
 
     fun filterThreadsForUser(threadList: List<ChatThread>, auth: AuthState? = cachedAuth): List<ChatThread> {
@@ -281,65 +307,40 @@ class ChatManager @Inject constructor(
             }
         }
 
-        // Real-time listener scoped strictly to the user's known thread IDs (never root /inquiries)
+        // Real-time listener: Stream all inquiries from Firebase Realtime Database
+        // Automatically discovers new threads created by students, teachers, or principals in real time
         scope.launch {
-            @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-            _threads
-                .map { list -> list.map { it.id }.filter { it.isNotBlank() }.toSet() }
-                .distinctUntilChanged()
-                .flatMapLatest { ids ->
-                    firebaseRtdbManager.observeThreadSummaries(ids)
-                }
-                .collectLatest { rtdbMap: Map<String, Map<String, Any>> ->
-                    if (rtdbMap.isNotEmpty()) {
-                        val auth = cachedAuth ?: return@collectLatest
-                        if (!auth.isLoggedIn) return@collectLatest
-                        val currentList = _threads.value
-                        var hasChanges = false
-                        val updatedList = currentList.map { thread ->
-                            val rtdbData = rtdbMap[thread.id]
-                            if (rtdbData != null) {
-                                val rtdbStatusStr = rtdbData["status"] as? String
-                                val rtdbStatus = when (rtdbStatusStr?.uppercase()) {
-                                    "ANSWERED" -> InquiryStatus.ANSWERED
-                                    "WAITING_REPLY", "OPEN" -> InquiryStatus.WAITING_REPLY
-                                    else -> thread.status
-                                }
-                                val rtdbLastMsg = rtdbData["lastMessageContent"] as? String
-                                val rtdbLastMsgAt = (rtdbData["lastMessageAt"] as? Number)?.toLong() ?: thread.lastUpdated
-                                val rtdbLastSender = rtdbData["lastSenderName"] as? String
-                                val rtdbTeacherReadAt = (rtdbData["teacherLastReadAt"] as? Number)?.toLong()
-                                val rtdbReadStatusLabel = rtdbData["readStatusLabel"] as? String
+            firebaseRtdbManager.observeAllInquiries().collectLatest { rtdbThreads ->
+                val auth = cachedAuth ?: return@collectLatest
+                if (!auth.isLoggedIn) return@collectLatest
 
-                                val isStatusChanged = thread.status != rtdbStatus
-                                val isMsgChanged = rtdbLastMsg != null && thread.lastMessage?.content != rtdbLastMsg
-                                val isReadChanged = rtdbTeacherReadAt != null && rtdbTeacherReadAt != thread.teacherLastReadAt
-                                val isLabelChanged = rtdbReadStatusLabel != null && rtdbReadStatusLabel != thread.readStatusLabel
+                // Strictly filter for current authenticated user under ADR-0011 isolation rules
+                val myRtdbThreads = filterThreadsForUser(rtdbThreads, auth)
+                if (myRtdbThreads.isEmpty() && _threads.value.isEmpty()) return@collectLatest
 
-                                if (isStatusChanged || isMsgChanged || isReadChanged || isLabelChanged) {
-                                    hasChanges = true
-                                    thread.copy(
-                                        status = rtdbStatus,
-                                        lastUpdated = rtdbLastMsgAt.coerceAtLeast(thread.lastUpdated),
-                                        lastMessageContent = rtdbLastMsg ?: thread.lastMessageContent,
-                                        lastSenderName = rtdbLastSender ?: thread.lastSenderName,
-                                        teacherLastReadAt = rtdbTeacherReadAt ?: thread.teacherLastReadAt,
-                                        readStatusLabel = rtdbReadStatusLabel ?: thread.readStatusLabel,
-                                        messageCount = if (thread.messages.isNotEmpty()) thread.messages.size else (thread.messageCount.coerceAtLeast(if (rtdbLastMsg != null) 1 else 0)),
-                                    )
-                                } else {
-                                    thread
-                                }
-                            } else {
-                                thread
-                            }
-                        }
-                        if (hasChanges) {
-                            _threads.value = updatedList
-                            saveToDisk(updatedList, auth.userId)
-                        }
+                val currentMap = _threads.value.associateBy { it.id }
+                val merged = myRtdbThreads.map { rtdbTh ->
+                    val existing = currentMap[rtdbTh.id]
+                    if (existing != null) {
+                        rtdbTh.copy(
+                            messages = if (existing.messages.isNotEmpty()) existing.messages else rtdbTh.messages,
+                            messageCount = if (existing.messages.isNotEmpty()) existing.messages.size else rtdbTh.messageCount,
+                            studentAvatarUrl = existing.studentAvatarUrl ?: rtdbTh.studentAvatarUrl,
+                            teacherAvatarUrl = existing.teacherAvatarUrl ?: rtdbTh.teacherAvatarUrl,
+                        )
+                    } else {
+                        rtdbTh
                     }
                 }
+
+                // Preserve local-only threads like AI Tutor / AI Copilot
+                val rtdbIds = myRtdbThreads.map { it.id }.toSet()
+                val localOnly = _threads.value.filter { it.id !in rtdbIds && (it.id.startsWith("ai-") || it.messages.isNotEmpty()) }
+
+                val updatedList = (merged + localOnly).sortedByDescending { it.lastUpdated }
+                _threads.value = updatedList
+                saveToDisk(updatedList, auth.userId)
+            }
         }
 
         // Initial fetch from database
@@ -578,25 +579,51 @@ class ChatManager @Inject constructor(
             threadDetailJob = scope.launch {
                 firebaseRtdbManager.observeThreadMessages(threadId).collect { rtdbMsgs ->
                     val cleanMsgs = rtdbMsgs.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() }
-                    _threads.value = _threads.value.map { th ->
-                        if (th.id == threadId) {
-                            val lastMsg = cleanMsgs.lastOrNull()
-                            val updatedStatus = if (lastMsg?.isFromTeacher == true) {
-                                InquiryStatus.ANSWERED
-                            } else if (cleanMsgs.isNotEmpty()) {
-                                InquiryStatus.WAITING_REPLY
-                            } else {
-                                th.status
-                            }
-                            th.copy(
-                                messages = cleanMsgs,
-                                status = updatedStatus,
-                                lastUpdated = lastMsg?.timestamp ?: th.lastUpdated,
-                                lastMessageContent = lastMsg?.content ?: th.lastMessageContent,
-                                lastSenderName = lastMsg?.senderName ?: th.lastSenderName,
-                                messageCount = cleanMsgs.size,
-                            )
-                        } else th
+                    val currentList = _threads.value
+                    val threadExists = currentList.any { it.id == threadId }
+                    if (threadExists) {
+                        _threads.value = currentList.map { th ->
+                            if (th.id == threadId) {
+                                val lastMsg = cleanMsgs.lastOrNull()
+                                val updatedStatus = if (lastMsg?.isFromTeacher == true) {
+                                    InquiryStatus.ANSWERED
+                                } else if (cleanMsgs.isNotEmpty()) {
+                                    InquiryStatus.WAITING_REPLY
+                                } else {
+                                    th.status
+                                }
+                                th.copy(
+                                    messages = cleanMsgs,
+                                    status = updatedStatus,
+                                    lastUpdated = lastMsg?.timestamp ?: th.lastUpdated,
+                                    lastMessageContent = lastMsg?.content ?: th.lastMessageContent,
+                                    lastSenderName = lastMsg?.senderName ?: th.lastSenderName,
+                                    messageCount = cleanMsgs.size,
+                                )
+                            } else th
+                        }
+                    } else if (cleanMsgs.isNotEmpty()) {
+                        val lastMsg = cleanMsgs.lastOrNull()
+                        val newPlaceholder = ChatThread(
+                            id = threadId,
+                            studentId = lastMsg?.senderId.orEmpty(),
+                            studentName = lastMsg?.senderName.orEmpty(),
+                            studentClass = "Konsultasi",
+                            teacherId = "",
+                            teacherName = "",
+                            subjectName = "Umum",
+                            inquiryType = InquiryType.GENERAL,
+                            referenceTitle = "Konsultasi Langsung",
+                            referenceId = null,
+                            messages = cleanMsgs,
+                            status = if (lastMsg?.isFromTeacher == true) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
+                            lastUpdated = lastMsg?.timestamp ?: System.currentTimeMillis(),
+                            lastMessageContent = lastMsg?.content,
+                            lastSenderName = lastMsg?.senderName,
+                            messageCount = cleanMsgs.size,
+                            readStatusLabel = "Pesan Real-time",
+                        )
+                        _threads.value = listOf(newPlaceholder) + currentList
                     }
                 }
             }
@@ -839,11 +866,30 @@ class ChatManager @Inject constructor(
 
         // Determine if this is the first message in the thread on the server
         val isFirstMessageInThread = currentThread == null || currentThread.messages.isEmpty()
-        val targetTeacherId = currentThread?.teacherId?.takeIf { it.isNotBlank() && it.contains("-") && it.length == 36 }
-        val targetTeacherName = updatedTeacherName.ifBlank { currentThread?.teacherName ?: "Guru Mata Pelajaran" }
-        val targetSubject = currentThread?.subjectName ?: "Umum"
+        val isThreadPrincipal = currentThread?.teacherName?.contains("Kepala", ignoreCase = true) == true ||
+            currentThread?.subjectName?.contains("Konsultasi Kebijakan", ignoreCase = true) == true
+        val targetTeacherId = if (isThreadPrincipal) {
+            currentThread?.teacherId?.takeIf { it.isNotBlank() && it.contains("-") && it.length == 36 }
+                ?: "01a092fc-af59-76b2-85f2-cca8b8d8d515"
+        } else {
+            currentThread?.teacherId?.takeIf { it.isNotBlank() && it.contains("-") && it.length == 36 }
+        }
+        val targetTeacherName = if (isThreadPrincipal) {
+            "Kepala Sekolah PKBM"
+        } else {
+            updatedTeacherName.ifBlank { currentThread?.teacherName ?: "Guru Mata Pelajaran" }
+        }
+        val targetSubject = if (isThreadPrincipal) {
+            "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar"
+        } else {
+            currentThread?.subjectName ?: "Umum"
+        }
         val targetClass = currentThread?.studentClass ?: "Siswa"
-        val targetTitle = currentThread?.referenceTitle ?: "Konsultasi $targetSubject"
+        val targetTitle = if (isThreadPrincipal) {
+            "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar"
+        } else {
+            currentThread?.referenceTitle ?: "Konsultasi $targetSubject"
+        }
         val targetRefId = currentThread?.referenceId
         val targetType = currentThread?.inquiryType ?: InquiryType.GENERAL
 
@@ -1153,6 +1199,18 @@ class ChatManager @Inject constructor(
         subjectName: String,
     ): ChatThread {
         val auth = cachedAuth
+        val isTargetPrincipal = teacherName.contains("Kepala", ignoreCase = true) ||
+            subjectName.contains("Konsultasi Kebijakan", ignoreCase = true) ||
+            subjectName.contains("Pengaduan", ignoreCase = true)
+
+        val effectiveTeacherName = if (isTargetPrincipal) "Kepala Sekolah PKBM" else teacherName
+        val effectiveSubjectName = if (isTargetPrincipal) "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar" else subjectName
+        val effectiveTeacherId = if (isTargetPrincipal && (teacherId.isBlank() || teacherId == "principal-user")) {
+            "01a092fc-af59-76b2-85f2-cca8b8d8d515"
+        } else {
+            teacherId
+        }
+
         val effectiveStudentName = if (!auth?.name.isNullOrBlank()) auth.name!! else "Siswa"
         val effectiveStudentId = if (!auth?.userId.isNullOrBlank()) auth.userId!! else UUID.randomUUID().toString()
         val effectiveStudentClass = if (!auth?.className.isNullOrBlank()) {
@@ -1164,12 +1222,26 @@ class ChatManager @Inject constructor(
         } else {
             "Siswa"
         }
-        val refTitle = if (auth?.isPrincipal == true) "Koordinasi $subjectName" else "Konsultasi $subjectName"
+        val refTitle = if (auth?.isPrincipal == true) {
+            "Koordinasi $effectiveSubjectName"
+        } else if (isTargetPrincipal) {
+            "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar"
+        } else {
+            "Konsultasi $effectiveSubjectName"
+        }
 
         // Check if an active thread already exists for this teacher
         val existing = _threads.value.firstOrNull { t ->
-            val matchesTeacher = (t.teacherId.isNotBlank() && t.teacherId.equals(teacherId, ignoreCase = true)) ||
-                (teacherName.isNotBlank() && isSamePersonName(t.teacherName, teacherName))
+            val matchesTeacher = if (isTargetPrincipal) {
+                t.teacherName.contains("Kepala", ignoreCase = true) ||
+                t.subjectName.contains("Konsultasi Kebijakan", ignoreCase = true) ||
+                (effectiveTeacherId.isNotBlank() && t.teacherId.equals(effectiveTeacherId, ignoreCase = true))
+            } else {
+                !t.teacherName.contains("Kepala", ignoreCase = true) &&
+                !t.subjectName.contains("Konsultasi Kebijakan", ignoreCase = true) &&
+                ((t.teacherId.isNotBlank() && t.teacherId.equals(effectiveTeacherId, ignoreCase = true)) ||
+                 (effectiveTeacherName.isNotBlank() && isSamePersonName(t.teacherName, effectiveTeacherName)))
+            }
             val matchesStudent = auth == null || isSameStudentIdentity(t.studentId, t.studentName, auth.userId, auth.name)
             matchesTeacher && matchesStudent
         }
@@ -1186,9 +1258,9 @@ class ChatManager @Inject constructor(
             studentId = effectiveStudentId,
             studentName = effectiveStudentName,
             studentClass = effectiveStudentClass,
-            teacherId = teacherId,
-            teacherName = teacherName,
-            subjectName = subjectName,
+            teacherId = effectiveTeacherId,
+            teacherName = effectiveTeacherName,
+            subjectName = effectiveSubjectName,
             inquiryType = InquiryType.GENERAL,
             referenceTitle = refTitle,
             referenceId = null,

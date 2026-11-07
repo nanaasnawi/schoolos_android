@@ -2139,22 +2139,19 @@ private fun PrincipalSupervisionChatContent(
                     .weight(1f),
             ) {
                 if (studentThreads.isEmpty()) {
-                    Surface(
+                    Box(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 24.dp),
-                        shape = RoundedCornerShape(20.dp),
-                        color = cardBg,
-                        border = BorderStroke(1.dp, cardBorder),
+                            .fillMaxSize()
+                            .padding(horizontal = 24.dp),
+                        contentAlignment = Alignment.Center,
                     ) {
                         Column(
-                            modifier = Modifier.padding(28.dp),
                             horizontalAlignment = Alignment.CenterHorizontally,
-                            verticalArrangement = Arrangement.spacedBy(10.dp)
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
                             Box(
                                 modifier = Modifier
-                                    .size(50.dp)
+                                    .size(64.dp)
                                     .clip(CircleShape)
                                     .background(Color(0xFF38BDF8).copy(alpha = 0.12f)),
                                 contentAlignment = Alignment.Center
@@ -2163,12 +2160,12 @@ private fun PrincipalSupervisionChatContent(
                                     imageVector = Icons.Default.Forum,
                                     contentDescription = null,
                                     tint = Color(0xFF38BDF8),
-                                    modifier = Modifier.size(24.dp)
+                                    modifier = Modifier.size(32.dp)
                                 )
                             }
                             Text(
-                                text = if (searchQuery.isNotBlank()) "Tidak Ditemukan" else "Belum ada pertanyaan dari siswa",
-                                fontSize = 15.sp,
+                                text = if (searchQuery.isNotBlank()) "Tidak Ditemukan" else "Belum Ada Konsultasi Siswa",
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = textPrimary,
                                 textAlign = TextAlign.Center
@@ -2178,10 +2175,10 @@ private fun PrincipalSupervisionChatContent(
                                     "Tidak ada pesan siswa yang cocok dengan \"$searchQuery\""
                                 else
                                     "Pertanyaan dan konsultasi langsung dari warga belajar akan muncul di sini secara real-time.",
-                                fontSize = 12.sp,
+                                fontSize = 12.5.sp,
                                 color = textSecondary,
                                 textAlign = TextAlign.Center,
-                                lineHeight = 17.sp
+                                lineHeight = 18.sp
                             )
                         }
                     }

@@ -23,13 +23,20 @@ import javax.inject.Singleton
 @Singleton
 class FirebaseRealtimeDatabaseManager @Inject constructor() {
 
-    companion object {
-        const val DATABASE_URL = "https://akselerasi-edu-default-rtdb.asia-southeast1.firebasedatabase.app/"
-    }
-
     private val database: FirebaseDatabase by lazy {
         try {
-            val instance = FirebaseDatabase.getInstance(DATABASE_URL)
+            val app = com.google.firebase.FirebaseApp.getInstance()
+            val configuredUrl = app.options.databaseUrl?.takeIf { it.isNotBlank() }
+            val instance = if (configuredUrl != null) {
+                FirebaseDatabase.getInstance(app, configuredUrl)
+            } else {
+                val projectId = app.options.projectId?.takeIf { it.isNotBlank() }
+                if (projectId != null) {
+                    FirebaseDatabase.getInstance("https://$projectId-default-rtdb.asia-southeast1.firebasedatabase.app")
+                } else {
+                    FirebaseDatabase.getInstance()
+                }
+            }
             try {
                 instance.setPersistenceEnabled(true)
             } catch (e: Exception) {
@@ -458,8 +465,98 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
         }
     }
 
-    @Deprecated("Avoid unscoped root /inquiries listener; use observeThreadSummaries(threadIds) instead")
-    fun observeAllInquiries(): Flow<Map<String, Map<String, Any>>> = kotlinx.coroutines.flow.flowOf(emptyMap())
+    /**
+     * Observe all active inquiries from Firebase Realtime Database in real time.
+     * Guaranteed instant discovery of new threads and cross-role communication.
+     */
+    fun observeAllInquiries(): Flow<List<ChatThread>> = callbackFlow {
+        val inquiriesRef = rootRef.child("inquiries")
+
+        val listener = object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val threadList = mutableListOf<ChatThread>()
+                for (threadSnap in snapshot.children) {
+                    val threadId = threadSnap.key ?: continue
+                    if (threadId == "presence") continue
+
+                    val metaSnap = threadSnap.child("metadata")
+                    val summarySnap = threadSnap.child("summary")
+
+                    val studentId = metaSnap.child("studentId").getValue(String::class.java)
+                        ?: summarySnap.child("studentId").getValue(String::class.java)
+                        ?: ""
+                    val studentName = metaSnap.child("studentName").getValue(String::class.java)
+                        ?: summarySnap.child("studentName").getValue(String::class.java)
+                        ?: ""
+                    val studentClass = metaSnap.child("studentClass").getValue(String::class.java) ?: "Siswa"
+                    val teacherId = metaSnap.child("teacherId").getValue(String::class.java)
+                        ?: summarySnap.child("teacherId").getValue(String::class.java)
+                        ?: ""
+                    val teacherName = metaSnap.child("teacherName").getValue(String::class.java)
+                        ?: summarySnap.child("teacherName").getValue(String::class.java)
+                        ?: ""
+                    val subjectName = metaSnap.child("subjectName").getValue(String::class.java) ?: "Umum"
+                    val refTitle = metaSnap.child("referenceTitle").getValue(String::class.java) ?: "Konsultasi $subjectName"
+                    val refId = metaSnap.child("referenceId").getValue(String::class.java)
+                    val inquiryTypeStr = metaSnap.child("inquiryType").getValue(String::class.java) ?: "GENERAL"
+                    val inquiryType = when (inquiryTypeStr.uppercase()) {
+                        "ASSIGNMENT" -> InquiryType.ASSIGNMENT
+                        "MATERIAL" -> InquiryType.MATERIAL
+                        else -> InquiryType.GENERAL
+                    }
+
+                    val statusStr = summarySnap.child("status").getValue(String::class.java)
+                        ?: metaSnap.child("status").getValue(String::class.java)
+                        ?: "WAITING_REPLY"
+                    val status = if (statusStr.uppercase() == "ANSWERED") InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY
+
+                    val lastMsgContent = summarySnap.child("lastMessageContent").getValue(String::class.java)
+                    val lastMsgAt = summarySnap.child("lastMessageAt").getValue(Long::class.java)
+                        ?: metaSnap.child("lastUpdated").getValue(Long::class.java)
+                        ?: 0L
+                    val lastSenderName = summarySnap.child("lastSenderName").getValue(String::class.java)
+                    val readStatusLabel = summarySnap.child("readStatusLabel").getValue(String::class.java)
+                        ?: if (status == InquiryStatus.ANSWERED) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong"
+                    val teacherLastReadAt = summarySnap.child("teacherLastReadAt").getValue(Long::class.java) ?: 0L
+
+                    if (studentName.isNotBlank() || teacherName.isNotBlank() || lastMsgContent != null) {
+                        threadList.add(
+                            ChatThread(
+                                id = threadId,
+                                studentId = studentId,
+                                studentName = studentName,
+                                studentClass = studentClass,
+                                teacherId = teacherId,
+                                teacherName = teacherName,
+                                subjectName = subjectName,
+                                inquiryType = inquiryType,
+                                referenceTitle = refTitle,
+                                referenceId = refId,
+                                messages = emptyList(),
+                                status = status,
+                                lastUpdated = lastMsgAt,
+                                lastMessageContent = lastMsgContent,
+                                lastSenderName = lastSenderName,
+                                messageCount = 0,
+                                readStatusLabel = readStatusLabel,
+                                teacherLastReadAt = teacherLastReadAt,
+                            )
+                        )
+                    }
+                }
+                trySend(threadList)
+            }
+
+            override fun onCancelled(error: DatabaseError) {
+                Timber.w("Firebase RTDB observeAllInquiries cancelled: ${error.message}")
+            }
+        }
+
+        inquiriesRef.addValueEventListener(listener)
+        awaitClose {
+            inquiriesRef.removeEventListener(listener)
+        }
+    }
 
     /**
      * Observe real-time system maintenance status node.
