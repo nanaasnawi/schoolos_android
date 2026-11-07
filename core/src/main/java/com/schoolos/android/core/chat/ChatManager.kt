@@ -126,9 +126,20 @@ class ChatManager @Inject constructor(
     private var cachedAuth: AuthState? = null
     val currentAuth: AuthState? get() = cachedAuth
 
-    private fun normalizePersonName(name: String?): String {
+    fun cleanPersonName(name: String?): String {
         if (name.isNullOrBlank()) return ""
-        return name.trim().lowercase().replace(Regex("\\s+"), " ")
+        var cleaned = name.trim().lowercase().replace(Regex("[,.]"), " ")
+        val titleTokens = setOf(
+            "spd", "mpd", "spdsd", "sag", "skom", "se", "st", "msi", "mm",
+            "ssi", "ssos", "lc", "ma", "phd", "psi", "drs", "dra", "dr",
+            "prof", "h", "hj", "guru", "tutor", "kepala", "sekolah", "pkbm"
+        )
+        val tokens = cleaned.split(Regex("\\s+")).filter { it.isNotBlank() && it !in titleTokens }
+        return tokens.joinToString(" ")
+    }
+
+    private fun normalizePersonName(name: String?): String {
+        return cleanPersonName(name)
     }
 
     private fun isSameStudentIdentity(
@@ -144,16 +155,31 @@ class ChatManager @Inject constructor(
                 cleanCandidateId.replace("-", "").equals(cleanMyUid.replace("-", ""), ignoreCase = true)
             )
         if (matchesId) return true
-        // Only fall back to exact normalized full-name match if studentId is missing/non-UUID
-        val normCandidate = normalizePersonName(candidateName)
-        val normMyName = normalizePersonName(myName)
-        return normMyName.isNotBlank() && normCandidate.isNotBlank() && normCandidate == normMyName
+        val normCandidate = cleanPersonName(candidateName)
+        val normMyName = cleanPersonName(myName)
+        return normMyName.isNotBlank() && normCandidate.isNotBlank() && (
+            normCandidate == normMyName ||
+            normCandidate.startsWith(normMyName) ||
+            normMyName.startsWith(normCandidate)
+        )
     }
 
-    private fun isSamePersonName(candidateName: String?, myName: String?): Boolean {
-        val normCandidate = normalizePersonName(candidateName)
-        val normMyName = normalizePersonName(myName)
-        return normMyName.isNotBlank() && normCandidate.isNotBlank() && normCandidate == normMyName
+    fun isSamePersonName(candidateName: String?, myName: String?): Boolean {
+        if (candidateName.isNullOrBlank() || myName.isNullOrBlank()) return false
+        val cleanCandidate = cleanPersonName(candidateName)
+        val cleanMy = cleanPersonName(myName)
+        if (cleanCandidate.isBlank() || cleanMy.isBlank()) return false
+        if (cleanCandidate == cleanMy) return true
+        if (cleanCandidate.startsWith(cleanMy) || cleanMy.startsWith(cleanCandidate)) return true
+        val tokensA = cleanCandidate.split(" ")
+        val tokensB = cleanMy.split(" ")
+        if (tokensA.isNotEmpty() && tokensB.isNotEmpty() && tokensA[0] == tokensB[0]) {
+            if (tokensA.size >= 2 && tokensB.size >= 2) {
+                return tokensA[1] == tokensB[1]
+            }
+            return true
+        }
+        return false
     }
 
     private fun isPrincipalThread(t: ChatThread, auth: AuthState): Boolean {
@@ -164,6 +190,8 @@ class ChatManager @Inject constructor(
                isSamePersonName(t.studentName, myName) ||
                t.teacherName.contains("Kepala Sekolah", ignoreCase = true) ||
                t.studentName.contains("Kepala Sekolah", ignoreCase = true) ||
+               t.studentClass.contains("Kepala Sekolah", ignoreCase = true) ||
+               t.referenceTitle.contains("Koordinasi", ignoreCase = true) ||
                t.subjectName.contains("Kepala Sekolah", ignoreCase = true) ||
                t.id.startsWith("ai-principal")
     }
@@ -181,7 +209,7 @@ class ChatManager @Inject constructor(
             val myId = auth.userId.orEmpty()
             val myName = auth.name.orEmpty()
             return threadList.filter { t ->
-                (myId.isNotBlank() && t.teacherId == myId) ||
+                (myId.isNotBlank() && (t.teacherId == myId || t.teacherId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true))) ||
                 isSamePersonName(t.teacherName, myName)
             }
         }
@@ -199,7 +227,7 @@ class ChatManager @Inject constructor(
         if (auth.isTeacher) {
             val myId = auth.userId.orEmpty()
             val myName = auth.name.orEmpty()
-            return (myId.isNotBlank() && thread.teacherId == myId) ||
+            return (myId.isNotBlank() && (thread.teacherId == myId || thread.teacherId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true))) ||
                    isSamePersonName(thread.teacherName, myName)
         }
         return isSameStudentIdentity(thread.studentId, thread.studentName, auth.userId, auth.name)
@@ -1141,8 +1169,7 @@ class ChatManager @Inject constructor(
         // Check if an active thread already exists for this teacher
         val existing = _threads.value.firstOrNull { t ->
             val matchesTeacher = (t.teacherId.isNotBlank() && t.teacherId.equals(teacherId, ignoreCase = true)) ||
-                (teacherName.isNotBlank() && t.teacherName.contains(teacherName.take(6), ignoreCase = true)) ||
-                (teacherName.isNotBlank() && teacherName.contains(t.teacherName.take(6), ignoreCase = true))
+                (teacherName.isNotBlank() && isSamePersonName(t.teacherName, teacherName))
             val matchesStudent = auth == null || isSameStudentIdentity(t.studentId, t.studentName, auth.userId, auth.name)
             matchesTeacher && matchesStudent
         }

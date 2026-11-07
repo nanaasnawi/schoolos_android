@@ -47,10 +47,20 @@ class TeacherDirectoryViewModel @Inject constructor(
                     }.sortedBy { it.name.lowercase() }
 
                     // Principal contact item for student inquiry / direct chat with school management
+                    val principalUser = list.firstOrNull { t ->
+                        t.fullName.contains("Kepala Sekolah", ignoreCase = true) ||
+                        t.subject?.contains("Kepala Sekolah", ignoreCase = true) == true
+                    }
+                    val principalId = principalUser?.userId?.takeIf { it.isNotBlank() }
+                        ?: principalUser?.id
+                        ?: "01a092fc-af59-76b2-85f2-cca8b8d8d515"
+                    val principalName = principalUser?.fullName?.trim()?.takeIf { it.isNotBlank() }
+                        ?: "Kepala Sekolah PKBM"
+
                     val principalContact = TeacherContactItem(
-                        id = "principal-user",
-                        userId = "principal-user",
-                        name = "Kepala Sekolah PKBM",
+                        id = principalId,
+                        userId = principalId,
+                        name = principalName,
                         subject = "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar",
                         roleTitle = "Kepala Sekolah / Pimpinan PKBM",
                         isPrincipal = true,
