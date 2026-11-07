@@ -224,8 +224,14 @@ fun ChatDetailScreen(
         isTeacherAi -> "Asisten Pedagogik & Administrasi Guru • Kurikulum Merdeka"
         isAiThread -> "Asisten Pintar 24 Jam • NVIDIA NIM"
         amITeacherInThread -> {
-            val studentClass = thread?.studentClass?.ifBlank { "Warga Belajar" } ?: "Warga Belajar"
-            "Siswa • $studentClass • $statusText"
+            val isPrincipalContact = thread?.studentClass?.contains("Kepala Sekolah", ignoreCase = true) == true ||
+                thread?.studentName?.contains("Kepala Sekolah", ignoreCase = true) == true
+            if (isPrincipalContact) {
+                "Kepala Sekolah • Koordinasi Internal • $statusText"
+            } else {
+                val studentClass = thread?.studentClass?.ifBlank { "Warga Belajar" } ?: "Warga Belajar"
+                "Siswa • $studentClass • $statusText"
+            }
         }
         else -> {
             val subject = thread?.subjectName?.ifBlank { "Mata Pelajaran" } ?: "Mata Pelajaran"
@@ -499,12 +505,15 @@ fun ChatDetailScreen(
                 itemsIndexed(messages, key = { _, msg -> msg.id }) { index, msg ->
                     val isMe = when {
                         // 1. Direct ID match
-                        myId.isNotBlank() && msg.senderId.isNotBlank() && msg.senderId == myId -> true
+                        myId.isNotBlank() && msg.senderId.isNotBlank() && (
+                            msg.senderId == myId ||
+                            msg.senderId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true)
+                        ) -> true
                         // 2. Direct Name match
                         myName.isNotBlank() && msg.senderName.isNotBlank() && isSamePersonName(msg.senderName, myName) -> true
-                        // 3. Current user is Teacher -> Teacher / Principal messages are mine
-                        amITeacherInThread -> msg.isFromTeacher || msg.senderRole.equals("TEACHER", ignoreCase = true) || msg.senderRole.equals("PRINCIPAL", ignoreCase = true)
-                        // 4. Current user is Student -> Student messages are mine
+                        // 3. Fallback when ID/Name is missing: check role alignment
+                        isPrincipal -> msg.senderRole.equals("PRINCIPAL", ignoreCase = true)
+                        amITeacherInThread -> (msg.isFromTeacher || msg.senderRole.equals("TEACHER", ignoreCase = true)) && !msg.senderRole.equals("PRINCIPAL", ignoreCase = true)
                         else -> !msg.isFromTeacher && !msg.senderRole.equals("TEACHER", ignoreCase = true) && !msg.senderRole.equals("PRINCIPAL", ignoreCase = true)
                     }
                     val prevMsg = if (index > 0) messages[index - 1] else null
@@ -1175,13 +1184,17 @@ private fun MessageBubble(
             Column {
                 // Incoming sender label
                 if (!isMe) {
+                    val isPrincipalSender = message.senderRole.equals("PRINCIPAL", ignoreCase = true) ||
+                        message.senderName.contains("Kepala Sekolah", ignoreCase = true)
                     val senderColor = when {
                         isAi -> if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                        isPrincipalSender -> if (isDark) Color(0xFFA855F7) else Color(0xFF7C3AED)
                         message.isFromTeacher -> if (isDark) Color(0xFF10B981) else Color(0xFF059669)
                         else -> roleNeon
                     }
                     val roleLabel = when {
                         isAi -> "Asisten Pintar"
+                        isPrincipalSender -> "Kepala Sekolah"
                         message.isFromTeacher -> "Guru"
                         else -> "Siswa"
                     }
@@ -1413,15 +1426,38 @@ private fun PrincipalChatSuggestionChip(
     }
 }
 
-private fun normalizePersonName(name: String?): String {
+private fun cleanPersonName(name: String?): String {
     if (name.isNullOrBlank()) return ""
-    return name.trim().lowercase().replace(Regex("\\s+"), " ")
+    var cleaned = name.trim().lowercase().replace(Regex("[,.]"), " ")
+    val titleTokens = setOf(
+        "spd", "mpd", "spdsd", "sag", "skom", "se", "st", "msi", "mm",
+        "ssi", "ssos", "lc", "ma", "phd", "psi", "drs", "dra", "dr",
+        "prof", "h", "hj", "guru", "tutor", "kepala", "sekolah", "pkbm"
+    )
+    val tokens = cleaned.split(Regex("\\s+")).filter { it.isNotBlank() && it !in titleTokens }
+    return tokens.joinToString(" ")
+}
+
+private fun normalizePersonName(name: String?): String {
+    return cleanPersonName(name)
 }
 
 private fun isSamePersonName(a: String?, b: String?): Boolean {
-    val normA = normalizePersonName(a)
-    val normB = normalizePersonName(b)
-    return normA.isNotBlank() && normB.isNotBlank() && normA == normB
+    if (a.isNullOrBlank() || b.isNullOrBlank()) return false
+    val cleanA = cleanPersonName(a)
+    val cleanB = cleanPersonName(b)
+    if (cleanA.isBlank() || cleanB.isBlank()) return false
+    if (cleanA == cleanB) return true
+    if (cleanA.startsWith(cleanB) || cleanB.startsWith(cleanA)) return true
+    val tokensA = cleanA.split(" ")
+    val tokensB = cleanB.split(" ")
+    if (tokensA.isNotEmpty() && tokensB.isNotEmpty() && tokensA[0] == tokensB[0]) {
+        if (tokensA.size >= 2 && tokensB.size >= 2) {
+            return tokensA[1] == tokensB[1]
+        }
+        return true
+    }
+    return false
 }
 
 private fun compressImageUri(

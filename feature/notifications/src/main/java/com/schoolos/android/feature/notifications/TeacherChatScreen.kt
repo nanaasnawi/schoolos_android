@@ -195,15 +195,13 @@ fun TeacherChatScreen(
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             ExecutiveTopBar(
-                title = if (isPrincipal) "Tanya Jawab & Konsultasi"
-                    else if (isTeacherMode) "Tanya Jawab Siswa"
-                    else "Tanya Jawab Guru",
+                title = "Tanya Jawab & Konsultasi",
                 subtitle = if (isPrincipal) {
                     if (waitingCount > 0) "$waitingCount pesan konsultasi langsung"
                     else "Konsultasi langsung Dewan Guru & Siswa"
                 } else if (isTeacherMode) {
-                    if (waitingCount > 0) "$waitingCount pertanyaan menunggu tanggapan"
-                    else "Semua pertanyaan siswa telah dijawab"
+                    if (waitingCount > 0) "$waitingCount pesan menunggu tanggapan"
+                    else "Semua pesan konsultasi telah dijawab"
                 } else {
                     "Pesan & Konsultasi Mata Pelajaran PKBM"
                 },
@@ -271,7 +269,7 @@ fun TeacherChatScreen(
                         placeholder = {
                             Text(
                                 text = if (isPrincipal) "Cari nama guru, rombel, atau siswa..."
-                                else if (isTeacherMode) "Cari siswa, kelas, topik tugas/materi..."
+                                else if (isTeacherMode) "Cari nama pengirim, rombel, atau topik..."
                                 else "Cari nama guru atau mata pelajaran...",
                                 fontSize = 12.5.sp,
                                 color = textTertiary,
@@ -477,7 +475,7 @@ fun TeacherChatScreen(
                                             else if (selectedFilter != ChatFilter.ALL)
                                                 "Tidak ada pertanyaan dalam kategori ini"
                                             else if (isTeacherMode)
-                                                "Pertanyaan siswa seputar materi dan tugas akan muncul di sini"
+                                                "Pesan konsultasi dari siswa maupun kepala sekolah akan muncul di sini"
                                             else
                                                 "Ajukan pertanyaan kepada bapak/ibu guru langsung melalui modul materi atau tugas pembelajaran.",
                                             fontSize = 12.sp,
@@ -1272,7 +1270,7 @@ private fun ChatOverviewCard(
             // 3. Kontak
             OverviewStatItem(
                 value = "$contactCount",
-                label = if (isTeacherMode) "Siswa Aktif" else "Guru Pengampu",
+                label = if (isTeacherMode) "Kontak Aktif" else "Guru Pengampu",
                 valueColor = if (isTeacherMode) studentAccent else teacherAccent,
                 isSelected = false,
                 onClick = {},
@@ -1676,16 +1674,18 @@ private fun ThreadCard(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
+                        val isPrincipalSender = thread.studentClass.contains("Kepala Sekolah", ignoreCase = true) ||
+                            thread.studentName.contains("Kepala Sekolah", ignoreCase = true)
                         Surface(
                             shape = RoundedCornerShape(4.dp),
-                            color = innerCardBg,
-                            border = BorderStroke(0.5.dp, innerCardBorder)
+                            color = if (isPrincipalSender) (if (isDark) Color(0xFF581C87) else Color(0xFFF3E8FF)) else innerCardBg,
+                            border = BorderStroke(0.5.dp, if (isPrincipalSender) (if (isDark) Color(0xFFA855F7) else Color(0xFFD8B4FE)) else innerCardBorder)
                         ) {
                             Text(
-                                text = if (isTeacherMode) thread.studentClass.ifBlank { "Siswa" } else "Guru",
+                                text = if (isPrincipalSender) "Kepala Sekolah" else if (isTeacherMode) thread.studentClass.ifBlank { "Siswa" } else "Guru",
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = textSecondary,
+                                color = if (isPrincipalSender) (if (isDark) Color(0xFFD8B4FE) else Color(0xFF7E22CE)) else textSecondary,
                                 modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp)
                             )
                         }
@@ -2443,13 +2443,36 @@ private fun PrincipalStudentThreadRowItem(
     }
 }
 
-private fun normalizePersonName(name: String?): String {
+private fun cleanPersonName(name: String?): String {
     if (name.isNullOrBlank()) return ""
-    return name.trim().lowercase().replace(Regex("\\s+"), " ")
+    var cleaned = name.trim().lowercase().replace(Regex("[,.]"), " ")
+    val titleTokens = setOf(
+        "spd", "mpd", "spdsd", "sag", "skom", "se", "st", "msi", "mm",
+        "ssi", "ssos", "lc", "ma", "phd", "psi", "drs", "dra", "dr",
+        "prof", "h", "hj", "guru", "tutor", "kepala", "sekolah", "pkbm"
+    )
+    val tokens = cleaned.split(Regex("\\s+")).filter { it.isNotBlank() && it !in titleTokens }
+    return tokens.joinToString(" ")
+}
+
+private fun normalizePersonName(name: String?): String {
+    return cleanPersonName(name)
 }
 
 private fun isSamePersonName(a: String?, b: String?): Boolean {
-    val normA = normalizePersonName(a)
-    val normB = normalizePersonName(b)
-    return normA.isNotBlank() && normB.isNotBlank() && normA == normB
+    if (a.isNullOrBlank() || b.isNullOrBlank()) return false
+    val cleanA = cleanPersonName(a)
+    val cleanB = cleanPersonName(b)
+    if (cleanA.isBlank() || cleanB.isBlank()) return false
+    if (cleanA == cleanB) return true
+    if (cleanA.startsWith(cleanB) || cleanB.startsWith(cleanA)) return true
+    val tokensA = cleanA.split(" ")
+    val tokensB = cleanB.split(" ")
+    if (tokensA.isNotEmpty() && tokensB.isNotEmpty() && tokensA[0] == tokensB[0]) {
+        if (tokensA.size >= 2 && tokensB.size >= 2) {
+            return tokensA[1] == tokensB[1]
+        }
+        return true
+    }
+    return false
 }
