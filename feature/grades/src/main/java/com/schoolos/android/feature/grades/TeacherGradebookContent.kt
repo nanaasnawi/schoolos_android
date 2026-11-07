@@ -405,7 +405,7 @@ private fun GradebookHeroBanner(
                     color = TextPrimary
                 )
                 Text(
-                    text = "Asesmen Sumatif Lingkup Materi & Evaluasi KKTP di PKBM AS-SALAFIYAH • ${DapodikPeriod.getFullPeriodLabel()}",
+                    text = "Asesmen Sumatif Lingkup Materi & Evaluasi KKTP • ${DapodikPeriod.getFullPeriodLabel()}",
                     fontSize = 11.sp,
                     lineHeight = 14.sp,
                     color = TextTertiary
@@ -1513,7 +1513,7 @@ private fun TeacherClassHeroHeader(
     val avgScore = if (hasGrades) gradedSubjects.map { it.finalScore }.average() else 0.0
 
     val headerBadgeText = when {
-        isPrincipal -> "KEPALA PKBM • EKSEKUTIF LEGER KESETARAAN"
+        isPrincipal -> "KEPALA SEKOLAH • EKSEKUTIF LEGER"
         !teacherSubject.isNullOrBlank() -> "GURU MAPEL ${teacherSubject.uppercase()} • ${DapodikPeriod.getActiveSemester().uppercase()}"
         className.isNotBlank() -> "TUTOR PAMONG • ${DapodikPeriod.getActiveSemester().uppercase()}"
         else -> "TUTOR MODUL / MAPEL • ${DapodikPeriod.getActiveSemester().uppercase()}"

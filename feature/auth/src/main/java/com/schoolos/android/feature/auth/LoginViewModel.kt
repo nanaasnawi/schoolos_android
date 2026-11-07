@@ -60,10 +60,17 @@ class LoginViewModel @Inject constructor(
 
         viewModelScope.launch {
             authManager.authState.collect { authState ->
-                _state.value = _state.value.copy(
-                    schoolName = authState.schoolName,
-                    schoolLogoUrl = authState.schoolLogoUrl,
-                )
+                if (authState.hasEverLoggedIn && !authState.schoolName.isNullOrBlank()) {
+                    _state.value = _state.value.copy(
+                        schoolName = authState.schoolName,
+                        schoolLogoUrl = authState.schoolLogoUrl,
+                    )
+                } else {
+                    _state.value = _state.value.copy(
+                        schoolName = "Akselerasi Edu",
+                        schoolLogoUrl = null,
+                    )
+                }
             }
         }
 
@@ -71,24 +78,6 @@ class LoginViewModel @Inject constructor(
         viewModelScope.launch {
             delay(300)
             syncWithCommandCenter(silent = true)
-        }
-
-        // Fetch school public info to show school name on login screen before login
-        viewModelScope.launch {
-            try {
-                val response = api.getSchoolPublicInfo(npsn = null)
-                response.data?.let { info ->
-                    _state.value = _state.value.copy(
-                        schoolName = info.name,
-                        schoolLogoUrl = info.logoUrl,
-                        schoolNpsn = info.npsn,
-                    )
-                    // Persist so it survives restarts even without login
-                    authManager.saveSchoolProfile(name = info.name, logoUrl = info.logoUrl)
-                }
-            } catch (_: Exception) {
-                // Silently ignore — cached value from DataStore will be used
-            }
         }
     }
 
@@ -188,18 +177,6 @@ class LoginViewModel @Inject constructor(
                     serverSyncSuccess = true,
                     serverSyncMessage = if (!silent) "Sinkron berhasil: ${serverName ?: "Command Center"} ($updated)" else null
                 )
-                // Refresh school public info
-                try {
-                    val response = api.getSchoolPublicInfo(npsn = null)
-                    response.data?.let { info ->
-                        _state.value = _state.value.copy(
-                            schoolName = info.name,
-                            schoolLogoUrl = info.logoUrl,
-                            schoolNpsn = info.npsn,
-                        )
-                        authManager.saveSchoolProfile(name = info.name, logoUrl = info.logoUrl)
-                    }
-                } catch (_: Exception) {}
             } else if (!silent) {
                 _state.value = _state.value.copy(
                     isSyncingServer = false,
@@ -246,21 +223,6 @@ class LoginViewModel @Inject constructor(
                 serverSyncSuccess = success,
                 serverSyncMessage = testMsg
             )
-
-            // Try re-fetching school public info
-            try {
-                val response = api.getSchoolPublicInfo(npsn = null)
-                response.data?.let { info ->
-                    _state.value = _state.value.copy(
-                        schoolName = info.name,
-                        schoolLogoUrl = info.logoUrl,
-                        schoolNpsn = info.npsn,
-                    )
-                    authManager.saveSchoolProfile(name = info.name, logoUrl = info.logoUrl)
-                }
-            } catch (_: Exception) {
-                // ignore
-            }
         }
     }
 

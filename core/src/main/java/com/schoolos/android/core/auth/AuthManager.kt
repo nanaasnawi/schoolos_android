@@ -51,7 +51,7 @@ fun isSubjectLockedTeacher(role: String?): Boolean {
 }
 
 fun isPkbmInstitution(schoolName: String?): Boolean {
-    if (schoolName.isNullOrBlank()) return true // default in this context
+    if (schoolName.isNullOrBlank()) return false
     val l = schoolName.lowercase()
     return l.contains("pkbm") || l.contains("pusat kegiatan belajar") || l.contains("kesetaraan")
 }
@@ -64,14 +64,14 @@ fun resolveRoleDisplay(role: String?, schoolName: String? = null, isFormalUpper:
 
     return if (isFormalUpper) {
         when {
-            isPrin -> if (isPkbm) "KEPALA PKBM" else "KEPALA SEKOLAH"
+            isPrin -> "KEPALA SEKOLAH"
             isTeach -> if (isPkbm) "TUTOR" else "GURU"
             isPar -> if (isPkbm) "WALI WARGA BELAJAR" else "WALI MURID"
             else -> if (isPkbm) "WARGA BELAJAR" else "SISWA"
         }
     } else {
         when {
-            isPrin -> if (isPkbm) "Kepala PKBM" else "Kepala Sekolah"
+            isPrin -> "Kepala Sekolah"
             isTeach -> if (isPkbm) "Tutor" else "Guru"
             isPar -> if (isPkbm) "Wali WB" else "Wali Murid"
             else -> if (isPkbm) "Warga Belajar" else "Siswa"
@@ -99,6 +99,7 @@ data class AuthState(
     val childId: String? = null,
     val avatarUrl: String? = null,
     val subject: String? = null,
+    val hasEverLoggedIn: Boolean = false,
 ) {
     val isParent: Boolean get() = isParentRole(role)
     val isPrincipal: Boolean get() = isPrincipalRole(role)
@@ -128,6 +129,7 @@ class AuthManager @Inject constructor(
         private val KEY_CHILD_ID = stringPreferencesKey("user_child_id")
         private val KEY_AVATAR_URL = stringPreferencesKey("user_avatar_url")
         private val KEY_IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
+        private val KEY_HAS_EVER_LOGGED_IN = booleanPreferencesKey("has_ever_logged_in")
         private val KEY_SCHOOL_NAME = stringPreferencesKey("school_name")
         private val KEY_SCHOOL_LOGO_URL = stringPreferencesKey("school_logo_url")
         private val KEY_CUSTOM_SERVER_URL = stringPreferencesKey("custom_server_url")
@@ -155,7 +157,12 @@ class AuthManager @Inject constructor(
             schoolName = prefs[KEY_SCHOOL_NAME],
             schoolLogoUrl = prefs[KEY_SCHOOL_LOGO_URL],
             subject = prefs[KEY_SUBJECT],
+            hasEverLoggedIn = prefs[KEY_HAS_EVER_LOGGED_IN] ?: false,
         )
+    }.distinctUntilChanged()
+
+    val hasEverLoggedIn: Flow<Boolean> = context.dataStore.data.map {
+        it[KEY_HAS_EVER_LOGGED_IN] ?: false
     }.distinctUntilChanged()
 
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
@@ -287,6 +294,7 @@ class AuthManager @Inject constructor(
             if (!avatarUrl.isNullOrBlank()) prefs[KEY_AVATAR_URL] = avatarUrl
             if (!subject.isNullOrBlank()) prefs[KEY_SUBJECT] = subject
             prefs[KEY_IS_LOGGED_IN] = true
+            prefs[KEY_HAS_EVER_LOGGED_IN] = true
         }
     }
 
@@ -351,6 +359,7 @@ class AuthManager @Inject constructor(
     suspend fun saveSchoolProfile(name: String, logoUrl: String?) {
         context.dataStore.edit { prefs ->
             prefs[KEY_SCHOOL_NAME] = name
+            prefs[KEY_HAS_EVER_LOGGED_IN] = true
             if (logoUrl != null) {
                 prefs[KEY_SCHOOL_LOGO_URL] = logoUrl
             } else {
@@ -371,6 +380,7 @@ class AuthManager @Inject constructor(
                 prefs[KEY_REFRESH_TOKEN] = refreshToken
             }
             prefs[KEY_IS_LOGGED_IN] = true
+            prefs[KEY_HAS_EVER_LOGGED_IN] = true
         }
     }
 

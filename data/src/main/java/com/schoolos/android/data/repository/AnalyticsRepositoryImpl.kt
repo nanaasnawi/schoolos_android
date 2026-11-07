@@ -176,9 +176,9 @@ class AnalyticsRepositoryImpl @Inject constructor(
             }
 
             val summaryText = when (level) {
-                SchoolStabilityLevel.CRITICAL -> "Operasional PKBM Memerlukan Intervensi Cepat (${anomalies.size} Catatan Terdeteksi)"
-                SchoolStabilityLevel.WARNING -> "Kondisi Waspada: Diperlukan Perhatian Kepala PKBM (${anomalies.size} Catatan)"
-                SchoolStabilityLevel.STABLE -> "Operasional PKBM Berjalan Kondusif & Terkelola Baik"
+                SchoolStabilityLevel.CRITICAL -> "Operasional Sekolah Memerlukan Intervensi Cepat (${anomalies.size} Catatan Terdeteksi)"
+                SchoolStabilityLevel.WARNING -> "Kondisi Waspada: Diperlukan Perhatian Kepala Sekolah (${anomalies.size} Catatan)"
+                SchoolStabilityLevel.STABLE -> "Operasional Sekolah Berjalan Kondusif & Terkelola Baik"
             }
 
             val academicMasteryRate = if (subjectSummaries.isNotEmpty()) {
@@ -191,6 +191,27 @@ class AnalyticsRepositoryImpl @Inject constructor(
             }
 
             val hasRealData = overviewDto != null || complianceDto != null || dashboardDto != null
+
+            val teacherWeeklyTrend = (dashboardDto?.teacherUploadTrend ?: emptyList()).map { trend ->
+                val total = (trend.materi + trend.tugas).toInt()
+                ActivityTrendPoint(
+                    day = trend.day,
+                    value = total.toFloat(),
+                    rawCount = total,
+                )
+            }
+
+            val studentWeeklyTrend = (dashboardDto?.studentEngagementTrend ?: emptyList()).map { trend ->
+                val total = (trend.pembaca + trend.submisi).toInt()
+                ActivityTrendPoint(
+                    day = trend.day,
+                    value = total.toFloat(),
+                    rawCount = total,
+                )
+            }
+
+            val completedSessions = (complianceDto?.completedCount ?: 0).toInt()
+            val totalScheduled = (complianceDto?.totalScheduled ?: 0).toInt()
 
             SchoolHealthMetrics(
                 stabilityScore = score,
@@ -208,6 +229,10 @@ class AnalyticsRepositoryImpl @Inject constructor(
                 anomalies = anomalies,
                 subjectPerformances = subjectSummaries,
                 hasRealData = hasRealData,
+                teacherWeeklyTrend = teacherWeeklyTrend,
+                studentWeeklyTrend = studentWeeklyTrend,
+                completedSessionsCount = completedSessions,
+                totalScheduledSessions = totalScheduled,
             )
         }.onFailure { error ->
             Timber.e(error, "Failed to compute school stability metrics")
@@ -226,38 +251,38 @@ class AnalyticsRepositoryImpl @Inject constructor(
                 ExecutiveDecisionType.DISPATCH_SUBSTITUTE_TUTOR -> {
                     notificationRepository.broadcastNotification(
                         classId = targetId,
-                        title = "[INSTRUKSI KEPALA PKBM] Penugasan Tutor Pendamping Tutorial",
-                        body = "Kepala PKBM menginstruksikan penugasan tutor pendamping untuk $targetName: $instructions",
+                        title = "[INSTRUKSI KEPALA SEKOLAH] Penugasan Guru Pendamping",
+                        body = "Kepala Sekolah menginstruksikan penugasan guru pendamping untuk $targetName: $instructions",
                         targetRoles = listOf("teacher", "staff")
                     )
-                    "Penugasan tutor pendamping tutorial berhasil diterbitkan ke dewan tutor pamong."
+                    "Penugasan guru pendamping berhasil diterbitkan ke dewan guru."
                 }
                 ExecutiveDecisionType.ISSUE_KKTP_GUIDANCE -> {
                     notificationRepository.broadcastNotification(
                         classId = "",
-                        title = "[INSTRUKSI KEPALA PKBM] Penguatan Modul & Pendampingan KKTP",
-                        body = "Instruksi Kepala PKBM untuk mata pelajaran/modul $targetName: $instructions. Harap segera berikan bimbingan ketercapaian KKTP.",
+                        title = "[INSTRUKSI KEPALA SEKOLAH] Penguatan Materi & Pendampingan KKTP",
+                        body = "Instruksi Kepala Sekolah untuk mata pelajaran/modul $targetName: $instructions. Harap segera berikan bimbingan ketercapaian KKTP.",
                         targetRoles = listOf("teacher")
                     )
-                    "Instruksi penguatan ketercapaian KKTP berhasil disampaikan ke tutor pengampu modul."
+                    "Instruksi penguatan ketercapaian KKTP berhasil disampaikan ke guru pengampu."
                 }
                 ExecutiveDecisionType.ORDER_HOMEROOM_FOLLOW_UP -> {
                     notificationRepository.broadcastNotification(
                         classId = "",
-                        title = "[INSTRUKSI KEPALA PKBM] Tindak Lanjut Tutor Pamong",
-                        body = "Instruksi Pimpinan PKBM terkait $targetName: $instructions. Lakukan verifikasi dan pendampingan warga belajar.",
+                        title = "[INSTRUKSI KEPALA SEKOLAH] Tindak Lanjut Wali Kelas",
+                        body = "Instruksi Pimpinan Sekolah terkait $targetName: $instructions. Lakukan verifikasi dan pendampingan siswa.",
                         targetRoles = listOf("teacher", "staff")
                     )
-                    "Instruksi pendampingan warga belajar berhasil disampaikan ke tutor pamong."
+                    "Instruksi pendampingan siswa berhasil disampaikan ke wali kelas & guru pamong."
                 }
                 ExecutiveDecisionType.BROADCAST_PRINCIPAL_MEMO -> {
                     notificationRepository.broadcastNotification(
                         classId = "",
-                        title = "[MAKLUMAT KEPALA PKBM] $title",
+                        title = "[MAKLUMAT KEPALA SEKOLAH] $title",
                         body = instructions,
                         targetRoles = listOf("teacher", "student", "parent")
                     )
-                    "Maklumat resmi Kepala PKBM berhasil disiarkan ke seluruh tutor, warga belajar, dan wali."
+                    "Maklumat resmi Kepala Sekolah berhasil disiarkan ke seluruh guru, siswa, dan wali."
                 }
                 ExecutiveDecisionType.INSPECT_ROMBEL -> {
                     "Navigasi ke rombel $targetName untuk supervisi modul dan presensi warga belajar."

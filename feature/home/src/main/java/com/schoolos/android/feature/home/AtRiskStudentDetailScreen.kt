@@ -1022,7 +1022,7 @@ private fun PedagogicalInterventionCard(
                     )
                 }
                 Text(
-                    text = "Panduan Tindakan Pedagogis Tutor / Kepala PKBM",
+                    text = "Panduan Tindakan Pedagogis Guru / Kepala Sekolah",
                     fontSize = 13.5.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary

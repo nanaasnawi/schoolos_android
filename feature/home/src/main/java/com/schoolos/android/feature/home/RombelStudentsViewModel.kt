@@ -40,6 +40,8 @@ data class RombelStudentsUiState(
     val isLoadingDetail: Boolean = false,
     val isPrincipal: Boolean = false,
     val isRefreshing: Boolean = false,
+    val isPkbm: Boolean = false,
+    val schoolName: String = "",
 ) {
     val filteredStudents: List<ClassStudent>
         get() {
@@ -95,7 +97,12 @@ class RombelStudentsViewModel @Inject constructor(
         viewModelScope.launch {
             authManager.authState.collect { auth ->
                 val isPrin = auth.isPrincipal || isPrincipalRole(auth.role)
-                _uiState.update { it.copy(isPrincipal = isPrin) }
+                val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(auth.schoolName)
+                _uiState.update { it.copy(
+                    isPrincipal = isPrin,
+                    isPkbm = isPkbm,
+                    schoolName = auth.schoolName ?: ""
+                ) }
             }
         }
         loadStudents(normalizedClass)

@@ -270,7 +270,7 @@ fun ProfileHeaderCard(
                 val isPkbm = isPkbmInstitution(schoolName)
                 val pillData: List<Pair<String, String>> = when {
                     isPrincipal -> listOf(
-                        "ROLE" to if (isPkbm) "Kepala PKBM" else "Kepala Sekolah",
+                        "ROLE" to "Kepala Sekolah",
                         "LEMBAGA" to if (isPkbm) "PKBM" else "Sekolah",
                         "STATUS" to "Aktif",
                     )
