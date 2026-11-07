@@ -52,6 +52,12 @@ data class AcademicPerformanceSummary(
     val passRate: Double,
 )
 
+data class ActivityTrendPoint(
+    val day: String,
+    val value: Float,
+    val rawCount: Int = 0,
+)
+
 data class SchoolHealthMetrics(
     val stabilityScore: Int, // 0 - 100
     val stabilityLevel: SchoolStabilityLevel,
@@ -68,5 +74,9 @@ data class SchoolHealthMetrics(
     val anomalies: List<SchoolAnomaly> = emptyList(),
     val subjectPerformances: List<AcademicPerformanceSummary> = emptyList(),
     val hasRealData: Boolean = true,
+    val teacherWeeklyTrend: List<ActivityTrendPoint> = emptyList(),
+    val studentWeeklyTrend: List<ActivityTrendPoint> = emptyList(),
+    val completedSessionsCount: Int = 0,
+    val totalScheduledSessions: Int = 0,
 )
 

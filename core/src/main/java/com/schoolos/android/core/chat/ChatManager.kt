@@ -1214,7 +1214,7 @@ class ChatManager @Inject constructor(
             else -> "student-default"
         }
         val studentName = auth?.name ?: when {
-            isPrincipal -> "Kepala PKBM"
+            isPrincipal -> "Kepala Sekolah"
             isTeacher -> "Guru Pengampu"
             else -> "Siswa"
         }
@@ -1238,7 +1238,7 @@ class ChatManager @Inject constructor(
             else -> "Guru AI"
         }
         val initialContent = when {
-            isPrincipal -> "Halo Bapak/Ibu Kepala PKBM! 🏛️\n\nSaya **AI Analitik Kepala Sekolah** didukung komputasi cerdas NVIDIA AI.\n\nSaya siap menganalisis data operasional dan mutu akademik PKBM secara real-time:\n• **Keaktifan Guru/Tutor**: Pengunggahan materi/modul pembelajaran, penugasan mandiri warga belajar, & kuis asesmen CBT.\n• **Keterlaksanaan Pembelajaran**: Kehadiran warga belajar pada sesi tutorial & pemantauan jalannya rombel.\n• **Kualitas & Mutu Akademik**: Analisis ketercapaian KKTP rombel serta deteksi dini warga belajar butuh intervensi (Early Warning System).\n\nSilakan ajukan telaah analitik atau gunakan tombol pintasan di bawah ini!"
+            isPrincipal -> "Halo Bapak/Ibu Kepala Sekolah! 🏛️\n\nSaya **AI Analitik Kepala Sekolah** didukung komputasi cerdas NVIDIA AI.\n\nSaya siap menganalisis data operasional dan mutu akademik sekolah secara real-time:\n• **Keaktifan Guru**: Pengunggahan materi pembelajaran, penugasan mandiri siswa, & kuis asesmen CBT.\n• **Keterlaksanaan Pembelajaran**: Kehadiran pada sesi kelas & pemantauan jalannya rombel.\n• **Kualitas & Mutu Akademik**: Analisis ketercapaian KKTP rombel serta deteksi dini siswa butuh intervensi (Early Warning System).\n\nSilakan ajukan telaah analitik atau gunakan tombol pintasan di bawah ini!"
             isTeacher -> "Halo Bapak/Ibu Guru ${studentName.substringBefore(" ")}! 🎓\n\nSaya **AI Copilot Guru** (Asisten Pedagogik & Administrasi Guru didukung NVIDIA NIM).\n\nSaya siap membantu mempermudah tugas mengajar dan administrasi Kurikulum Merdeka PKBM:\n• 📝 **Penyusunan Modul Ajar**: Bantuan merancang Modul Ajar & RPP tematik (Paket A, B, C).\n• 🎯 **Bank Soal & Asesmen CBT**: Pembuatan butir soal PG & essay HOTS lengkap kunci jawaban & rubrik skor.\n• 💬 **Saran Koreksi Tugas**: Rekomendasi feedback evaluatif yang membangun bagi warga belajar.\n• 🧩 **Strategi Pembelajaran & Remedial**: Solusi diferensiasi belajar dan penanganan siswa yang memerlukan perhatian khusus.\n\nSilakan ketik pertanyaan Anda atau gunakan tombol pintasan cepat di bawah!"
             else -> "Halo ${studentName.substringBefore(" ")}! 👋 Saya Guru AI (Asisten Belajar Pintar didukung NVIDIA AI).\n\nAda materi, rumus, konsep, atau tugas yang ingin kamu tanyakan hari ini? Ketik pertanyaanmu atau kirimkan foto soal/materi ya!"
         }

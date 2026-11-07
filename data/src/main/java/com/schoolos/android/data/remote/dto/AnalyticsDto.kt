@@ -17,10 +17,26 @@ data class AnalyticsOverviewDto(
 )
 
 @Serializable
+data class TeacherUploadTrendDto(
+    val day: String = "",
+    val materi: Long = 0,
+    val tugas: Long = 0,
+)
+
+@Serializable
+data class StudentEngagementTrendDto(
+    val day: String = "",
+    val pembaca: Long = 0,
+    val submisi: Long = 0,
+)
+
+@Serializable
 data class DashboardDataResponseDto(
     val metrics: DashboardMetricsDto? = null,
     @SerialName("rombel_distribution") val rombelDistribution: List<RombelDistributionDto> = emptyList(),
     @SerialName("academic_performance") val academicPerformance: List<AcademicPerformanceDto> = emptyList(),
+    @SerialName("teacher_upload_trend") val teacherUploadTrend: List<TeacherUploadTrendDto> = emptyList(),
+    @SerialName("student_engagement_trend") val studentEngagementTrend: List<StudentEngagementTrendDto> = emptyList(),
 )
 
 @Serializable

@@ -120,12 +120,13 @@ fun HomeScreen(
     val isParent    = com.schoolos.android.core.auth.isParentRole(state.userRole)
     val isTeacher   = com.schoolos.android.core.auth.isTeacherRole(state.userRole) && !isPrincipal
 
+    val isPkbm      = com.schoolos.android.core.auth.isPkbmInstitution(state.schoolName)
     val userName = if (state.userName.isNotBlank()) state.userName
                    else when {
-                       isPrincipal -> "Kepala PKBM"
-                       isTeacher   -> "Tutor / Pamong Belajar"
-                       isParent    -> "Wali Warga Belajar"
-                       else        -> "Warga Belajar"
+                       isPrincipal -> "Kepala Sekolah"
+                       isTeacher   -> if (isPkbm) "Tutor / Pamong Belajar" else "Guru"
+                       isParent    -> if (isPkbm) "Wali Warga Belajar" else "Wali Murid"
+                       else        -> if (isPkbm) "Warga Belajar" else "Siswa"
                    }
 
     val roleAccent = when {
@@ -141,12 +142,11 @@ fun HomeScreen(
         else      -> Icons.Default.School
     }
 
-    val roleLabel = when {
-        isPrincipal -> "KEPALA PKBM"
-        isTeacher   -> "TUTOR"
-        isParent    -> "WALI"
-        else        -> "WARGA BELAJAR"
-    }
+    val roleLabel = com.schoolos.android.core.auth.resolveRoleDisplay(
+        role = state.userRole,
+        schoolName = state.schoolName,
+        isFormalUpper = true
+    )
 
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -407,6 +407,7 @@ fun HomeScreen(
                             scheduleCount               = state.teacherScheduleCount,
                             quizzesCount                = state.teacherQuizzesCount,
                             schoolHealthMetrics         = state.schoolHealthMetrics,
+                            schoolName                  = state.schoolName,
                         )
                     }
                     isTeacher -> {

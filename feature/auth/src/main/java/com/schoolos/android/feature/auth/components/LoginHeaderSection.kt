@@ -71,7 +71,7 @@ fun LoginHeaderSection(
         label = "headerPulse",
     )
 
-    val displaySchoolName = schoolName?.takeIf { it.isNotBlank() } ?: "PKBM AS-SALAFIYAH"
+    val displaySchoolName = schoolName?.takeIf { it.isNotBlank() } ?: "Akselerasi Edu"
 
     Column(
         modifier = modifier.fillMaxWidth(),
@@ -178,8 +178,13 @@ fun LoginHeaderSection(
                         .size(144.dp)
                         .clip(CircleShape),
                     fallback = {
+                        val fallbackPainter = if (schoolLogoUrl.isNullOrBlank() && (schoolName.isNullOrBlank() || displaySchoolName == "Akselerasi Edu")) {
+                            painterResource(id = CoreR.drawable.mascot_akselerasi_edu)
+                        } else {
+                            painterResource(id = CoreR.drawable.img_school_logo_default)
+                        }
                         Image(
-                            painter = painterResource(id = CoreR.drawable.img_school_logo_default),
+                            painter = fallbackPainter,
                             contentDescription = displaySchoolName,
                             modifier = Modifier
                                 .size(144.dp)

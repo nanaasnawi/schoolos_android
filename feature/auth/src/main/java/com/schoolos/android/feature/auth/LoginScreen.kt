@@ -130,7 +130,7 @@ fun LoginScreen(
 
                 // 3. Trust & Security Footer with real app version
                 Text(
-                    text = "© 2026 ${state.schoolName ?: "PKBM AS-SALAFIYAH"} • v$realAppVersion",
+                    text = "© 2026 ${state.schoolName ?: "Akselerasi Edu"} • v$realAppVersion",
                     color = TextTertiary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,

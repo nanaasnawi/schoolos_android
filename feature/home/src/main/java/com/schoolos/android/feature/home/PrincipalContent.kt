@@ -40,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.schoolos.android.core.auth.isPkbmInstitution
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.Assignment
@@ -125,15 +126,24 @@ fun LazyListScope.principalContent(
     scheduleCount: String = "0",
     quizzesCount: String = "0",
     schoolHealthMetrics: SchoolHealthMetrics? = null,
+    schoolName: String = "",
 ) {
+    val isPkbm = isPkbmInstitution(schoolName)
+    val principalRole = "Kepala Sekolah"
+    val greetingSubtitle = if (isPkbm) {
+        "Pantau operasional PKBM, keaktifan tutor, dan mutu pembelajaran hari ini."
+    } else {
+        "Pantau operasional sekolah, keaktifan guru, dan mutu pembelajaran hari ini."
+    }
+
     // ── 0. KARTU SAPAAN (SAMA DENGAN PORTAL SISWA) ──────────────────────────
     item {
         StudentGreetingHeroCard(
-            studentName = principalName.ifBlank { "Kepala PKBM" },
-            studentClass = "Kepala PKBM",
+            studentName = principalName.ifBlank { principalRole },
+            studentClass = principalRole,
             studentNisn = "",
             streakDays = 0,
-            subtitle = "Pantau operasional PKBM, keaktifan tutor, dan mutu pembelajaran hari ini.",
+            subtitle = greetingSubtitle,
             showStreak = false,
         )
     }
@@ -257,7 +267,7 @@ fun LazyListScope.principalContent(
                 HomeMenuGridCard(
                     modifier = Modifier.weight(1f),
                     title = "Tugas Sekolah",
-                    subtitle = "Pantau penugasan mandiri dari para tutor",
+                    subtitle = if (isPkbm) "Pantau penugasan mandiri dari para tutor" else "Pantau penugasan mandiri dari para guru",
                     badgeText = assBadge,
                     badgeBg = tugasBadgeBg,
                     badgeColor = tugasColor,
@@ -296,7 +306,7 @@ fun LazyListScope.principalContent(
                 HomeMenuGridCard(
                     modifier = Modifier.weight(1f),
                     title = "Materi Belajar",
-                    subtitle = "Modul & bahan ajar yang diunggah tutor",
+                    subtitle = if (isPkbm) "Modul & bahan ajar yang diunggah tutor" else "Modul & bahan ajar yang diunggah guru",
                     badgeText = materiBadge,
                     badgeBg = materiBadgeBg,
                     badgeColor = materiColor,
@@ -414,7 +424,7 @@ fun LazyListScope.principalContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     MicroHealthStat(
-                        label = "Modul Tutor",
+                        label = if (isPkbm) "Modul Tutor" else "Modul Guru",
                         value = if (materialsCount.isNotBlank()) materialsCount else "0",
                         accent = NeonSuccess,
                     )
@@ -514,7 +524,7 @@ fun LazyListScope.principalContent(
                             .padding(horizontal = 8.dp, vertical = 3.dp),
                     ) {
                         Text(
-                            text = "PENGAWASAN ROMBEL PKBM",
+                            text = if (isPkbm) "PENGAWASAN ROMBEL PKBM" else "PENGAWASAN ROMBEL",
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
                             color = TeacherNeon,
@@ -565,7 +575,7 @@ fun LazyListScope.principalContent(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Supervisi $classCount Rombel PKBM",
+                            text = if (isPkbm) "Supervisi $classCount Rombel PKBM" else "Supervisi $classCount Rombel",
                             fontSize = 15.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary,
@@ -574,7 +584,11 @@ fun LazyListScope.principalContent(
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = "Akses rekapitulasi data Warga Belajar, keaktifan belajar, dan progres modul",
+                            text = if (isPkbm) {
+                                "Akses rekapitulasi data Warga Belajar, keaktifan belajar, dan progres modul"
+                            } else {
+                                "Akses rekapitulasi data Siswa, keaktifan belajar, dan progres materi"
+                            },
                             fontSize = 11.5.sp,
                             color = textSecondary,
                             maxLines = 2,
@@ -690,7 +704,7 @@ fun LazyListScope.principalContent(
                                 )
                                 Spacer(Modifier.height(2.dp))
                                 Text(
-                                    text = "Asesmen Sumatif & Evaluasi KKTP PKBM",
+                                    text = if (isPkbm) "Asesmen Sumatif & Evaluasi KKTP PKBM" else "Asesmen Sumatif & Evaluasi KKTP",
                                     fontSize = 11.sp,
                                     color = textSecondary,
                                     maxLines = 1,
@@ -827,14 +841,20 @@ fun LazyListScope.principalContent(
 
     // ── 6. GRAFIK KEAKTIFAN GURU 1 MINGGU (REAL-TIME LINE CHART) ──────────────
     item {
-        PrincipalTeacherWeeklyActivityCard(sessionsCount = todaySessions.size)
+        PrincipalTeacherWeeklyActivityCard(
+            metrics = schoolHealthMetrics,
+            isPkbm = isPkbm,
+            sessionsCount = todaySessions.size,
+        )
     }
 
     // ── 7. GRAFIK KEAKTIFAN MURID 1 MINGGU (REAL-TIME ROUNDED BAR CHART) ──────
     item {
         PrincipalStudentWeeklyActivityCard(
+            metrics = schoolHealthMetrics,
             assignmentsCount = teacherAssignments.size,
-            totalStudents = totalStudentsCount
+            totalStudents = totalStudentsCount,
+            isPkbm = isPkbm,
         )
     }
 
@@ -1328,7 +1348,11 @@ private fun PrincipalAssignmentItemCard(
 // ─────────────────────────────────────────────────────────────────────────────
 
 @Composable
-private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
+private fun PrincipalTeacherWeeklyActivityCard(
+    metrics: SchoolHealthMetrics? = null,
+    isPkbm: Boolean = false,
+    sessionsCount: Int = 0,
+) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
     val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
@@ -1339,8 +1363,50 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
     val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
 
     val emerald = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
-    val days = listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
-    val dataPoints = listOf(92f, 95f, 91f, 98f, 94f, 89f, 96f)
+
+    // Data points & Days from real metrics
+    val rawTrends = metrics?.teacherWeeklyTrend.orEmpty()
+    val fallbackDays = listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
+    val days = if (rawTrends.isNotEmpty()) rawTrends.map { it.day } else fallbackDays
+    val dataPoints = if (rawTrends.isNotEmpty()) {
+        rawTrends.map { it.value }
+    } else {
+        val baseVal = (metrics?.complianceRate?.toFloat() ?: 0f).coerceIn(0f, 100f)
+        if (baseVal > 0f) {
+            List(7) { baseVal }
+        } else {
+            List(7) { 0f }
+        }
+    }
+
+    val maxVal = dataPoints.maxOrNull() ?: 0f
+    val peakIndex = if (maxVal > 0f) dataPoints.indexOfFirst { it == maxVal } else -1
+
+    val compliancePct = metrics?.complianceRate ?: 0.0
+    val avgKeaktifanStr = if (compliancePct > 0.0) {
+        String.format(java.util.Locale.US, "%.1f%%", compliancePct)
+    } else {
+        "0%"
+    }
+
+    val onTimeStr = if (metrics != null && metrics.totalScheduledSessions > 0) {
+        val pct = (metrics.completedSessionsCount * 100 / metrics.totalScheduledSessions).coerceIn(0, 100)
+        "$pct%"
+    } else if (metrics != null && metrics.overdueSessionsCount == 0 && metrics.totalActiveTeachers > 0) {
+        "100%"
+    } else if (sessionsCount > 0) {
+        "100%"
+    } else {
+        "0%"
+    }
+
+    val teacherHadirStr = if (metrics != null && metrics.totalActiveTeachers > 0) {
+        "${metrics.totalActiveTeachers} Aktif"
+    } else if (sessionsCount > 0) {
+        "$sessionsCount Sesi"
+    } else {
+        "0 Hadir"
+    }
 
     Box(
         modifier = Modifier
@@ -1378,14 +1444,18 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
 
                     Column {
                         Text(
-                            text = "Tren Keaktifan Guru (7 Hari)",
+                            text = if (isPkbm) "Tren Keaktifan Tutor (7 Hari)" else "Tren Keaktifan Guru (7 Hari)",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary,
                         )
                         Spacer(Modifier.height(1.dp))
                         Text(
-                            text = "Monitoring presensi, unggah modul & review tugas",
+                            text = if (isPkbm) {
+                                "Monitoring presensi, unggah modul & review tugas"
+                            } else {
+                                "Monitoring presensi, unggah materi & review tugas"
+                            },
                             fontSize = 11.sp,
                             color = textTertiary,
                         )
@@ -1401,7 +1471,7 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
                 PrincipalMicroMetric(
                     modifier = Modifier.weight(1f),
                     label = "Rerata Keaktifan",
-                    value = "95.4%",
+                    value = avgKeaktifanStr,
                     color = emerald,
                     innerCardBg = innerCardBg,
                     innerCardBorder = innerCardBorder,
@@ -1410,7 +1480,7 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
                 PrincipalMicroMetric(
                     modifier = Modifier.weight(1f),
                     label = "Sesi Tepat Waktu",
-                    value = "100%",
+                    value = onTimeStr,
                     color = Color(0xFF38BDF8),
                     innerCardBg = innerCardBg,
                     innerCardBorder = innerCardBorder,
@@ -1418,8 +1488,8 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
                 )
                 PrincipalMicroMetric(
                     modifier = Modifier.weight(1f),
-                    label = "Tutor Hadir",
-                    value = "12/12",
+                    label = if (isPkbm) "Tutor Hadir" else "Guru Hadir",
+                    value = teacherHadirStr,
                     color = Color(0xFFA78BFA),
                     innerCardBg = innerCardBg,
                     innerCardBorder = innerCardBorder,
@@ -1443,8 +1513,8 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
                     val w = size.width
                     val h = size.height
                     val n = dataPoints.size
-                    val stepX = w / (n - 1)
-                    val minY = 80f
+                    val stepX = if (n > 1) w / (n - 1) else w
+                    val minY = 0f
                     val maxY = 100f
                     val range = maxY - minY
 
@@ -1505,7 +1575,7 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
 
                     // Draw node circles
                     points.forEachIndexed { idx, pt ->
-                        val isPeak = idx == 3 // Kamis 98%
+                        val isPeak = idx == peakIndex
                         drawCircle(
                             color = if (isPeak) emerald.copy(alpha = 0.35f) else emerald.copy(alpha = 0.15f),
                             radius = if (isPeak) 7.dp.toPx() else 4.dp.toPx(),
@@ -1531,7 +1601,7 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 days.forEachIndexed { idx, day ->
-                    val isPeak = idx == 3
+                    val isPeak = idx == peakIndex
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
                             text = day,
@@ -1539,9 +1609,9 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
                             fontWeight = if (isPeak) FontWeight.ExtraBold else FontWeight.Medium,
                             color = if (isPeak) emerald else textTertiary,
                         )
-                        if (isPeak) {
+                        if (isPeak && dataPoints.getOrNull(idx) != null && dataPoints[idx] > 0f) {
                             Text(
-                                text = "98%",
+                                text = "${dataPoints[idx].toInt()}%",
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = emerald,
@@ -1560,8 +1630,10 @@ private fun PrincipalTeacherWeeklyActivityCard(sessionsCount: Int) {
 
 @Composable
 private fun PrincipalStudentWeeklyActivityCard(
-    assignmentsCount: Int,
-    totalStudents: String,
+    metrics: SchoolHealthMetrics? = null,
+    assignmentsCount: Int = 0,
+    totalStudents: String = "0",
+    isPkbm: Boolean = false,
 ) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -1573,8 +1645,36 @@ private fun PrincipalStudentWeeklyActivityCard(
     val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
 
     val skyBlue = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
-    val days = listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
-    val dataPoints = listOf(88f, 94f, 91f, 97f, 95f, 82f, 90f)
+
+    val attendancePct = metrics?.attendanceRate ?: 0.0
+    val avgAttendanceStr = if (attendancePct > 0.0) {
+        String.format(java.util.Locale.US, "%.1f%%", attendancePct)
+    } else {
+        "0%"
+    }
+
+    val cbtPartStr = if (metrics != null && metrics.academicMasteryRate > 0.0) {
+        String.format(java.util.Locale.US, "%.1f%%", metrics.academicMasteryRate)
+    } else {
+        "0%"
+    }
+
+    val rawTrends = metrics?.studentWeeklyTrend.orEmpty()
+    val fallbackDays = listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
+    val days = if (rawTrends.isNotEmpty()) rawTrends.map { it.day } else fallbackDays
+    val dataPoints = if (rawTrends.isNotEmpty()) {
+        rawTrends.map { it.value }
+    } else {
+        val baseVal = (attendancePct.toFloat()).coerceIn(0f, 100f)
+        if (baseVal > 0f) {
+            List(7) { baseVal }
+        } else {
+            List(7) { 0f }
+        }
+    }
+
+    val maxVal = dataPoints.maxOrNull() ?: 0f
+    val peakIndex = if (maxVal > 0f) dataPoints.indexOfFirst { it == maxVal } else -1
 
     Box(
         modifier = Modifier
@@ -1612,14 +1712,18 @@ private fun PrincipalStudentWeeklyActivityCard(
 
                     Column {
                         Text(
-                            text = "Keaktifan Warga Belajar (7 Hari)",
+                            text = if (isPkbm) "Keaktifan Warga Belajar (7 Hari)" else "Keaktifan Siswa (7 Hari)",
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             color = textPrimary,
                         )
                         Spacer(Modifier.height(1.dp))
                         Text(
-                            text = "Kehadiran tutorial, submisi tugas & asesmen CBT",
+                            text = if (isPkbm) {
+                                "Kehadiran tutorial, submisi tugas & asesmen CBT"
+                            } else {
+                                "Kehadiran kelas, submisi tugas & asesmen CBT"
+                            },
                             fontSize = 11.sp,
                             color = textTertiary,
                         )
@@ -1635,7 +1739,7 @@ private fun PrincipalStudentWeeklyActivityCard(
                 PrincipalMicroMetric(
                     modifier = Modifier.weight(1f),
                     label = "Rerata Kehadiran",
-                    value = "92.8%",
+                    value = avgAttendanceStr,
                     color = skyBlue,
                     innerCardBg = innerCardBg,
                     innerCardBorder = innerCardBorder,
@@ -1653,7 +1757,7 @@ private fun PrincipalStudentWeeklyActivityCard(
                 PrincipalMicroMetric(
                     modifier = Modifier.weight(1f),
                     label = "Partisipasi CBT",
-                    value = "94.5%",
+                    value = cbtPartStr,
                     color = Color(0xFFA78BFA),
                     innerCardBg = innerCardBg,
                     innerCardBorder = innerCardBorder,
@@ -1679,7 +1783,7 @@ private fun PrincipalStudentWeeklyActivityCard(
                 ) {
                     days.forEachIndexed { idx, day ->
                         val pct = dataPoints[idx]
-                        val isPeak = idx == 3 // Kamis 97%
+                        val isPeak = idx == peakIndex
 
                         Column(
                             horizontalAlignment = Alignment.CenterHorizontally,
@@ -1702,18 +1806,18 @@ private fun PrincipalStudentWeeklyActivityCard(
                                     .background(if (isDark) Color(0xFF222226) else Color(0xFFE2E8F0)),
                                 contentAlignment = Alignment.BottomCenter,
                             ) {
-                                val fillHeight = (pct / 100f * 95f).dp
+                                val fillHeight = (pct.coerceIn(0f, 100f) / 100f * 95f).dp.coerceAtLeast(4.dp)
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .height(fillHeight)
                                         .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp, bottomStart = 4.dp, bottomEnd = 4.dp))
-                                        .background(
-                                            Brush.verticalGradient(
-                                                if (isPeak) listOf(Color(0xFF38BDF8), Color(0xFF0284C7))
-                                                else listOf(Color(0xFF818CF8), Color(0xFF4F46E5))
-                                            )
+                                    .background(
+                                        Brush.verticalGradient(
+                                            if (isPeak) listOf(Color(0xFF38BDF8), Color(0xFF0284C7))
+                                            else listOf(Color(0xFF818CF8), Color(0xFF4F46E5))
                                         )
+                                    )
                                 )
                             }
 
