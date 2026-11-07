@@ -160,7 +160,7 @@ fun QuizListScreen(
                                 shape = RoundedCornerShape(8.dp),
                                 color = speedDialCardBg,
                                 border = BorderStroke(1.dp, speedDialBorder),
-                                shadowElevation = 2.dp,
+                                shadowElevation = 0.dp,
                             ) {
                                 Text(
                                     text = "Buat Kuis",
@@ -174,7 +174,7 @@ fun QuizListScreen(
                                 shape = CircleShape,
                                 color = primaryColor,
                                 border = BorderStroke(1.dp, primaryBorder),
-                                shadowElevation = 4.dp,
+                                shadowElevation = 0.dp,
                                 modifier = Modifier.size(42.dp),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
@@ -195,7 +195,7 @@ fun QuizListScreen(
                         shape = CircleShape,
                         color = if (isSpeedDialOpen) (if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)) else primaryColor,
                         border = BorderStroke(1.dp, if (isSpeedDialOpen) speedDialBorder else primaryBorder),
-                        shadowElevation = 6.dp,
+                        shadowElevation = 0.dp,
                         modifier = Modifier.size(52.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {

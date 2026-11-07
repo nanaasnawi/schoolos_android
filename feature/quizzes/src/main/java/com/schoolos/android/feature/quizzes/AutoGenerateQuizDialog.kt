@@ -79,7 +79,7 @@ fun AutoGenerateQuizDialog(
                 1.dp,
                 if (isGenerating) Color(0x3376B900) else colorScheme.outlineVariant
             ),
-            shadowElevation = 16.dp
+            shadowElevation = 0.dp
         ) {
             if (isGenerating) {
                 AiGenerationLoadingOverlay(
