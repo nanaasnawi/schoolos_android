@@ -232,11 +232,22 @@ class ChatManager @Inject constructor(
             }
         }
         if (auth.isTeacher) {
-            val myId = auth.userId.orEmpty()
-            val myName = auth.name.orEmpty()
+            val myId = auth.userId.orEmpty().trim()
+            val myName = auth.name.orEmpty().trim()
+            val cleanMyName = cleanPersonName(myName).lowercase()
             return threadList.filter { t ->
-                (myId.isNotBlank() && (t.teacherId == myId || t.teacherId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true))) ||
-                isSamePersonName(t.teacherName, myName)
+                val idMatches = myId.isNotBlank() && (
+                    t.teacherId.equals(myId, ignoreCase = true) ||
+                    t.teacherId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true)
+                )
+                val cleanTeacher = cleanPersonName(t.teacherName).lowercase()
+                val nameMatches = isSamePersonName(t.teacherName, myName) ||
+                    (cleanMyName.isNotBlank() && cleanTeacher.isNotBlank() && (
+                        cleanTeacher == cleanMyName ||
+                        cleanTeacher.contains(cleanMyName) ||
+                        cleanMyName.contains(cleanTeacher)
+                    ))
+                idMatches || nameMatches
             }
         }
         return threadList.filter { t ->
@@ -251,10 +262,21 @@ class ChatManager @Inject constructor(
             return isPrincipalThread(thread, auth)
         }
         if (auth.isTeacher) {
-            val myId = auth.userId.orEmpty()
-            val myName = auth.name.orEmpty()
-            return (myId.isNotBlank() && (thread.teacherId == myId || thread.teacherId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true))) ||
-                   isSamePersonName(thread.teacherName, myName)
+            val myId = auth.userId.orEmpty().trim()
+            val myName = auth.name.orEmpty().trim()
+            val cleanMyName = cleanPersonName(myName).lowercase()
+            val idMatches = myId.isNotBlank() && (
+                thread.teacherId.equals(myId, ignoreCase = true) ||
+                thread.teacherId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true)
+            )
+            val cleanTeacher = cleanPersonName(thread.teacherName).lowercase()
+            val nameMatches = isSamePersonName(thread.teacherName, myName) ||
+                (cleanMyName.isNotBlank() && cleanTeacher.isNotBlank() && (
+                    cleanTeacher == cleanMyName ||
+                    cleanTeacher.contains(cleanMyName) ||
+                    cleanMyName.contains(cleanTeacher)
+                ))
+            return idMatches || nameMatches
         }
         return isSameStudentIdentity(thread.studentId, thread.studentName, auth.userId, auth.name)
     }
@@ -262,6 +284,10 @@ class ChatManager @Inject constructor(
     // Clean initial state to avoid cross-user bleed before auth resolution
     private val _threads = MutableStateFlow<List<ChatThread>>(emptyList())
     val threads: StateFlow<List<ChatThread>> = _threads.asStateFlow()
+
+    fun getThreadById(threadId: String): ChatThread? {
+        return _threads.value.find { it.id == threadId }
+    }
 
     private val _isLoading = MutableStateFlow(false)
     val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
@@ -451,11 +477,22 @@ class ChatManager @Inject constructor(
                     isSameStudentIdentity(dto.studentId, dto.studentName, auth.userId, auth.name)
                 }
             } else if (auth.isTeacher) {
-                val myId = auth.userId.orEmpty()
-                val myName = auth.name.orEmpty()
+                val myId = auth.userId.orEmpty().trim()
+                val myName = auth.name.orEmpty().trim()
+                val cleanMyName = cleanPersonName(myName).lowercase()
                 rawDbThreads.filter { dto ->
-                    (myId.isNotBlank() && dto.teacherId == myId) ||
-                    isSamePersonName(dto.teacherName, myName)
+                    val idMatches = myId.isNotBlank() && (
+                        dto.teacherId?.equals(myId, ignoreCase = true) == true ||
+                        dto.teacherId?.replace("-", "")?.equals(myId.replace("-", ""), ignoreCase = true) == true
+                    )
+                    val cleanTeacher = cleanPersonName(dto.teacherName).lowercase()
+                    val nameMatches = isSamePersonName(dto.teacherName, myName) ||
+                        (cleanMyName.isNotBlank() && cleanTeacher.isNotBlank() && (
+                            cleanTeacher == cleanMyName ||
+                            cleanTeacher.contains(cleanMyName) ||
+                            cleanMyName.contains(cleanTeacher)
+                        ))
+                    idMatches || nameMatches
                 }
             } else if (auth.isPrincipal) {
                 rawDbThreads.filter { dto ->
@@ -841,30 +878,6 @@ class ChatManager @Inject constructor(
             teacherName = updatedTeacherName,
         )
 
-        // Optimistically update in-memory thread
-        _threads.value = _threads.value.map { thread ->
-            if (thread.id == threadId) {
-                val alreadyHas = thread.messages.any { it.id == clientUuid }
-                val updatedMsgs = if (alreadyHas) thread.messages else thread.messages + localMsg
-                val effectiveSnippet = if (content.isNotBlank()) content.trim() else if (!attachmentUrl.isNullOrBlank()) "📷 [Foto Lampiran]" else ""
-                thread.copy(
-                    messages = updatedMsgs,
-                    status = if (isFromTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
-                    lastUpdated = now,
-                    teacherName = updatedTeacherName,
-                    lastMessageContent = effectiveSnippet,
-                    lastSenderName = effectiveSenderName,
-                    messageCount = updatedMsgs.size,
-                    readStatusLabel = if (isFromTeacher) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong",
-                    teacherLastReadAt = if (isFromTeacher) now else 0L,
-                )
-            } else {
-                thread
-            }
-        }
-        saveToDisk(_threads.value, auth?.userId)
-
-        // Determine if this is the first message in the thread on the server
         val isFirstMessageInThread = currentThread == null || currentThread.messages.isEmpty()
         val isThreadPrincipal = currentThread?.teacherName?.contains("Kepala", ignoreCase = true) == true ||
             currentThread?.subjectName?.contains("Konsultasi Kebijakan", ignoreCase = true) == true
@@ -892,6 +905,54 @@ class ChatManager @Inject constructor(
         }
         val targetRefId = currentThread?.referenceId
         val targetType = currentThread?.inquiryType ?: InquiryType.GENERAL
+
+        // Optimistically update in-memory thread
+        val found = _threads.value.any { it.id == threadId }
+        val effectiveSnippet = if (content.isNotBlank()) content.trim() else if (!attachmentUrl.isNullOrBlank()) "📷 [Foto Lampiran]" else ""
+        _threads.value = if (found) {
+            _threads.value.map { thread ->
+                if (thread.id == threadId) {
+                    val alreadyHas = thread.messages.any { it.id == clientUuid }
+                    val updatedMsgs = if (alreadyHas) thread.messages else thread.messages + localMsg
+                    thread.copy(
+                        messages = updatedMsgs,
+                        status = if (isFromTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
+                        lastUpdated = now,
+                        teacherName = updatedTeacherName.ifBlank { thread.teacherName },
+                        lastMessageContent = effectiveSnippet,
+                        lastSenderName = effectiveSenderName,
+                        messageCount = updatedMsgs.size,
+                        readStatusLabel = if (isFromTeacher) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong",
+                        teacherLastReadAt = if (isFromTeacher) now else 0L,
+                    )
+                } else {
+                    thread
+                }
+            }
+        } else {
+            val fallbackThread = ChatThread(
+                id = threadId,
+                studentId = effectiveSenderId,
+                studentName = effectiveSenderName,
+                studentClass = if (auth?.isPrincipal == true) "Kepala Sekolah" else if (auth?.isTeacher == true) "Guru" else "Siswa",
+                teacherId = targetTeacherId ?: "",
+                teacherName = targetTeacherName,
+                subjectName = targetSubject,
+                inquiryType = targetType,
+                referenceTitle = targetTitle,
+                referenceId = targetRefId,
+                messages = listOf(localMsg),
+                status = if (isFromTeacher) InquiryStatus.ANSWERED else InquiryStatus.WAITING_REPLY,
+                lastUpdated = now,
+                lastMessageContent = effectiveSnippet,
+                lastSenderName = effectiveSenderName,
+                messageCount = 1,
+                readStatusLabel = if (isFromTeacher) "Dijawab Tutor Pamong" else "Menunggu Ditinjau Tutor Pamong",
+                teacherLastReadAt = if (isFromTeacher) now else 0L,
+            )
+            listOf(fallbackThread) + _threads.value
+        }
+        saveToDisk(_threads.value, auth?.userId)
 
         // Asynchronously persist to backend API so PostgreSQL stays 100% synchronized
         scope.launch {

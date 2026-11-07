@@ -104,6 +104,7 @@ enum class ChatFilter {
     WAITING,
     ASSIGNMENT,
     MATERIAL,
+    GENERAL,
     ANSWERED,
 }
 
@@ -155,8 +156,9 @@ fun TeacherChatScreen(
     val answeredCount = threads.count { it.status == InquiryStatus.ANSWERED }
     val materialCount = threads.count { it.inquiryType == InquiryType.MATERIAL }
     val assignmentCount = threads.count { it.inquiryType == InquiryType.ASSIGNMENT }
+    val generalCount = threads.count { it.inquiryType == InquiryType.GENERAL }
     val uniqueContacts = if (isTeacherMode) {
-        threads.map { it.studentId }.distinct().size
+        threads.map { it.studentId.ifBlank { it.studentName } }.distinct().size
     } else {
         threads.map { it.teacherName }.distinct().size
     }
@@ -167,6 +169,7 @@ fun TeacherChatScreen(
             ChatFilter.WAITING    -> thread.status == InquiryStatus.WAITING_REPLY
             ChatFilter.ASSIGNMENT -> thread.inquiryType == InquiryType.ASSIGNMENT
             ChatFilter.MATERIAL   -> thread.inquiryType == InquiryType.MATERIAL
+            ChatFilter.GENERAL    -> thread.inquiryType == InquiryType.GENERAL
             ChatFilter.ANSWERED   -> thread.status == InquiryStatus.ANSWERED
         }
         val matchesSearch = searchQuery.isBlank() ||
@@ -392,6 +395,7 @@ fun TeacherChatScreen(
                             waitingCount = waitingCount,
                             assignmentCount = assignmentCount,
                             materialCount = materialCount,
+                            generalCount = generalCount,
                             answeredCount = answeredCount,
                             isDark = isDark,
                             textPrimary = textPrimary,
@@ -1340,6 +1344,7 @@ private fun ChatFilterRow(
     waitingCount: Int,
     assignmentCount: Int,
     materialCount: Int,
+    generalCount: Int = 0,
     answeredCount: Int,
     isDark: Boolean,
     textPrimary: Color,
@@ -1434,6 +1439,28 @@ private fun ChatFilterRow(
                     onClick = {
                         onFilterSelected(
                             if (selectedFilter == ChatFilter.MATERIAL) ChatFilter.ALL else ChatFilter.MATERIAL
+                        )
+                    },
+                )
+            }
+        }
+        if (generalCount > 0) {
+            item {
+                FilterPill(
+                    label = "Konsultasi",
+                    count = generalCount,
+                    isSelected = selectedFilter == ChatFilter.GENERAL,
+                    accentColor = if (isDark) Color(0xFFA855F7) else Color(0xFF7C3AED),
+                    isDark = isDark,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                    cardBg = cardBg,
+                    cardBorder = cardBorder,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
+                    onClick = {
+                        onFilterSelected(
+                            if (selectedFilter == ChatFilter.GENERAL) ChatFilter.ALL else ChatFilter.GENERAL
                         )
                     },
                 )
@@ -1923,8 +1950,12 @@ private fun PrincipalSupervisionChatContent(
 
             !isMeAsStudent && t.studentName.isNotBlank()
         }
-        if (searchQuery.isBlank()) realStudentThreads
-        else realStudentThreads.filter { t ->
+        val deduplicatedStudents = realStudentThreads
+            .sortedByDescending { it.lastUpdated }
+            .distinctBy { it.studentId.ifBlank { it.studentName.trim().lowercase() } }
+
+        if (searchQuery.isBlank()) deduplicatedStudents
+        else deduplicatedStudents.filter { t ->
             t.studentName.contains(searchQuery, ignoreCase = true) ||
             t.studentClass.contains(searchQuery, ignoreCase = true) ||
             t.referenceTitle.contains(searchQuery, ignoreCase = true) ||

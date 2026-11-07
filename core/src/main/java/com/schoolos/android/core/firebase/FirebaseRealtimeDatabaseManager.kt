@@ -30,12 +30,7 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
             val instance = if (configuredUrl != null) {
                 FirebaseDatabase.getInstance(app, configuredUrl)
             } else {
-                val projectId = app.options.projectId?.takeIf { it.isNotBlank() }
-                if (projectId != null) {
-                    FirebaseDatabase.getInstance("https://$projectId-default-rtdb.asia-southeast1.firebasedatabase.app")
-                } else {
-                    FirebaseDatabase.getInstance()
-                }
+                FirebaseDatabase.getInstance()
             }
             try {
                 instance.setPersistenceEnabled(true)
