@@ -663,6 +663,7 @@ fun NavGraph(
 
             // Dedicated Guru AI Screen (Akselerasi Mascot & NVIDIA NIM)
             composable(Screen.AiChat.route) {
+                val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(authState?.schoolName)
                 val isPrincipal = authState?.isPrincipal == true
                 val isTeacher = authState?.isTeacher == true && !isPrincipal
                 val aiThread = remember { chatManager.getOrCreateAiThread() }
@@ -670,7 +671,7 @@ fun NavGraph(
                     threadId = aiThread.id,
                     initialRecipientName = when {
                         isPrincipal -> "AI Analitik Kepala Sekolah"
-                        isTeacher -> "AI Copilot Guru"
+                        isTeacher -> if (isPkbm) "AI Copilot Tutor" else "AI Copilot Guru"
                         else -> "Guru AI Akselerasi"
                     },
                     chatManager = chatManager,

@@ -179,6 +179,7 @@ fun ChatDetailScreen(
     }
 
     val auth = chatManager.currentAuth
+    val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(auth?.schoolName)
     val myName = auth?.name.orEmpty().trim()
     val myId = auth?.userId.orEmpty().trim()
     val isPrincipal = auth?.isPrincipal == true
@@ -201,19 +202,19 @@ fun ChatDetailScreen(
 
     val contactName = when {
         isPrincipalAi -> "AI Analitik Kepala Sekolah"
-        isTeacherAi -> "AI Copilot Guru"
+        isTeacherAi -> if (isPkbm) "AI Copilot Tutor" else "AI Copilot Guru"
         isAiThread -> "Guru AI Akselerasi"
         amITeacherInThread -> {
             // I am the teacher -> The other party is the STUDENT!
             rawThreadStudent.takeIf { it.isNotBlank() }
                 ?: initialRecipientName.takeIf { it.isNotBlank() && !isSamePersonName(it, myName) }
-                ?: "Warga Belajar"
+                ?: if (isPkbm) "Warga Belajar" else "Siswa"
         }
         else -> {
             // I am the student -> The other party is the TEACHER!
             rawThreadTeacher.takeIf { it.isNotBlank() && !it.equals("Guru Pengampu", ignoreCase = true) }
                 ?: initialRecipientName.takeIf { it.isNotBlank() && !isSamePersonName(it, myName) }
-                ?: "Guru Mata Pelajaran"
+                ?: if (isPkbm) "Tutor Pengampu" else "Guru Mata Pelajaran"
         }
     }
     val contactInitial = contactName.trim().take(1).uppercase().ifBlank { "?" }
@@ -221,7 +222,7 @@ fun ChatDetailScreen(
 
     val contactSubtitle = when {
         isPrincipalAi -> "Asisten Eksekutif Supervisi & Analitik Real-Time • NVIDIA NIM"
-        isTeacherAi -> "Asisten Pedagogik & Administrasi Guru • Kurikulum Merdeka"
+        isTeacherAi -> if (isPkbm) "Asisten Pedagogik & Administrasi Tutor • Kurikulum Merdeka PKBM" else "Asisten Pedagogik & Administrasi Guru • Kurikulum Merdeka"
         isAiThread -> "Asisten Pintar 24 Jam • NVIDIA NIM"
         amITeacherInThread -> {
             val isPrincipalContact = thread?.studentClass?.contains("Kepala Sekolah", ignoreCase = true) == true ||
@@ -229,8 +230,9 @@ fun ChatDetailScreen(
             if (isPrincipalContact) {
                 "Kepala Sekolah • Koordinasi Internal • $statusText"
             } else {
-                val studentClass = thread?.studentClass?.ifBlank { "Warga Belajar" } ?: "Warga Belajar"
-                "Siswa • $studentClass • $statusText"
+                val studentClass = thread?.studentClass?.ifBlank { if (isPkbm) "Warga Belajar" else "Siswa" } ?: if (isPkbm) "Warga Belajar" else "Siswa"
+                val studentLabel = if (isPkbm) "Warga Belajar" else "Siswa"
+                "$studentLabel • $studentClass • $statusText"
             }
         }
         else -> {
@@ -252,7 +254,7 @@ fun ChatDetailScreen(
         } else null
     }
 
-    val isPermitted = amITeacherInThread || thread == null || chatManager.isThreadOwnedByCurrentStudent(thread)
+    val isPermitted = isAiThread || threadId.startsWith("ai-") || amITeacherInThread || thread == null || chatManager.isThreadOwnedByCurrentStudent(thread)
 
     val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -504,6 +506,7 @@ fun ChatDetailScreen(
             ) {
                 itemsIndexed(messages, key = { _, msg -> msg.id }) { index, msg ->
                     val isMe = when {
+                        isAiThread -> msg.senderId != "ai-tutor" && msg.senderId != "ai-principal" && msg.senderId != "ai-teacher"
                         // 1. Direct ID match
                         myId.isNotBlank() && msg.senderId.isNotBlank() && (
                             msg.senderId == myId ||
@@ -560,7 +563,7 @@ fun ChatDetailScreen(
                                         color = if (isDark) Color(0xFF818CF8) else Color(0xFF4F46E5)
                                     )
                                     Text(
-                                        text = if (isPrincipalAi) "AI Analitik sedang menganalisis data PKBM..." else if (isTeacherAi) "AI Copilot sedang menyusun saran pembelajaran..." else "Guru AI sedang meracik penjelasan...",
+                                        text = if (isPrincipalAi) (if (isPkbm) "AI Analitik sedang menganalisis data PKBM..." else "AI Analitik sedang menganalisis data sekolah...") else if (isTeacherAi) "AI Copilot sedang menyusun saran pembelajaran..." else "Guru AI sedang meracik penjelasan...",
                                         fontSize = 12.sp,
                                         color = if (isDark) Color(0xFFA5B4FC) else Color(0xFF4338CA),
                                         fontWeight = FontWeight.Medium
@@ -608,7 +611,7 @@ fun ChatDetailScreen(
                             PrincipalChatSuggestionChip(
                                 label = "📝 Rekap Tugas & Kuis CBT",
                                 onClick = {
-                                    inputText = "Bagaimana rekapitulasi penugasan mandiri dan asesmen CBT yang sedang aktif di seluruh rombel PKBM?"
+                                    inputText = if (isPkbm) "Bagaimana rekapitulasi penugasan mandiri dan asesmen CBT yang sedang aktif di seluruh rombel PKBM?" else "Bagaimana rekapitulasi penugasan mandiri dan asesmen CBT yang sedang aktif di seluruh rombel?"
                                 }
                             )
                         }

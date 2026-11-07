@@ -53,7 +53,11 @@ class AnalyticsRepositoryImpl @Inject constructor(
             val totalClasses = overviewDto?.totalClasses?.toInt()
                 ?: classes.size
 
-            val complianceRate = complianceDto?.complianceRate ?: 0.0
+            val complianceRate = if ((complianceDto?.totalScheduled ?: 0) > 0) {
+                complianceDto?.complianceRate ?: 0.0
+            } else {
+                0.0
+            }
             val attendanceRate = overviewDto?.attendanceRate ?: 0.0
             val atRiskStudents = overviewDto?.atRiskStudents?.toInt() ?: 0
             val overdueSessionsCount = complianceDto?.overdueUnrecordedCount?.toInt() ?: 0
