@@ -254,7 +254,7 @@ fun AssignmentCreatorScreen(
                 Surface(
                     color = surfaceBg,
                     tonalElevation = 0.dp,
-                    shadowElevation = 12.dp,
+                    shadowElevation = 0.dp,
                     border = BorderStroke(1.dp, surfaceBorder),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1100,7 +1100,7 @@ private fun AssignmentReviewAndPublishScreen(
             Surface(
                 color = cardBg,
                 tonalElevation = 0.dp,
-                shadowElevation = 12.dp,
+                shadowElevation = 0.dp,
                 border = BorderStroke(1.dp, cardBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {

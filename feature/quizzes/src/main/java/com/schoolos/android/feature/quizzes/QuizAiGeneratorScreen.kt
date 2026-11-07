@@ -190,8 +190,8 @@ fun QuizAiGeneratorScreen(
                     },
                     bottomBar = {
                         Surface(
-                            tonalElevation = 8.dp,
-                            shadowElevation = 12.dp,
+                            tonalElevation = 0.dp,
+                            shadowElevation = 0.dp,
                             color = cardBg,
                             border = BorderStroke(1.dp, cardBorder),
                             modifier = Modifier.fillMaxWidth()
@@ -642,8 +642,8 @@ fun QuizAiGeneratorScreen(
                         },
                         bottomBar = {
                             Surface(
-                                tonalElevation = 8.dp,
-                                shadowElevation = 12.dp,
+                                tonalElevation = 0.dp,
+                                shadowElevation = 0.dp,
                                 color = cardBg,
                                 border = BorderStroke(1.dp, cardBorder),
                                 modifier = Modifier.fillMaxWidth()

@@ -494,7 +494,7 @@ fun TeacherChatScreen(
                                                 onClick = { showPrincipalConsultDialog = true },
                                                 shape = RoundedCornerShape(12.dp),
                                                 color = teacherAccent,
-                                                shadowElevation = 2.dp
+                                                shadowElevation = 0.dp
                                             ) {
                                                 Row(
                                                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp),
@@ -613,7 +613,7 @@ fun TeacherChatScreen(
                 shape = RoundedCornerShape(24.dp),
                 color = dialogCardBg,
                 border = BorderStroke(1.dp, dialogCardBorder),
-                shadowElevation = 8.dp,
+                shadowElevation = 0.dp,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp)
@@ -860,7 +860,7 @@ fun TeacherChatScreen(
                             },
                             shape = RoundedCornerShape(12.dp),
                             color = dialogAccent,
-                            shadowElevation = 2.dp,
+                            shadowElevation = 0.dp,
                             modifier = Modifier.weight(1.3f)
                         ) {
                             Row(
@@ -1984,7 +1984,7 @@ private fun PrincipalSupervisionChatContent(
                 shape = RoundedCornerShape(10.dp),
                 color = if (selectedTab == 0) (if (isDark) Color(0xFF27272A) else Color.White) else Color.Transparent,
                 border = if (selectedTab == 0) BorderStroke(1.dp, if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)) else null,
-                shadowElevation = if (selectedTab == 0 && !isDark) 1.dp else 0.dp,
+                shadowElevation = 0.dp,
                 modifier = Modifier.weight(1f)
             ) {
                 Row(
@@ -2014,7 +2014,7 @@ private fun PrincipalSupervisionChatContent(
                 shape = RoundedCornerShape(10.dp),
                 color = if (selectedTab == 1) (if (isDark) Color(0xFF27272A) else Color.White) else Color.Transparent,
                 border = if (selectedTab == 1) BorderStroke(1.dp, if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)) else null,
-                shadowElevation = if (selectedTab == 1 && !isDark) 1.dp else 0.dp,
+                shadowElevation = 0.dp,
                 modifier = Modifier.weight(1f)
             ) {
                 Row(

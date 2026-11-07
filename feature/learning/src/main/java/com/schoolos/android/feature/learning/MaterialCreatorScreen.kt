@@ -426,7 +426,7 @@ fun MaterialCreatorScreen(
                 Surface(
                     color = surfaceBg,
                     tonalElevation = 0.dp,
-                    shadowElevation = 12.dp,
+                    shadowElevation = 0.dp,
                     border = BorderStroke(1.dp, surfaceBorder),
                     modifier = Modifier.fillMaxWidth()
                 ) {
@@ -1641,8 +1641,8 @@ private fun MaterialReviewAndPublishScreen(
         bottomBar = {
             Surface(
                 color = cardBg,
-                tonalElevation = 8.dp,
-                shadowElevation = 12.dp,
+                tonalElevation = 0.dp,
+                shadowElevation = 0.dp,
                 border = BorderStroke(1.dp, cardBorder),
                 modifier = Modifier.fillMaxWidth()
             ) {
