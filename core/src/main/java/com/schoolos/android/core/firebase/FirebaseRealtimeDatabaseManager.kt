@@ -112,8 +112,14 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
 
             threadRef.child("summary").updateChildren(summaryMap)
 
-            // If teacher replied, ensure metadata also holds the correct teacher name & ID
-            if (message.isFromTeacher && message.senderName.isNotBlank() &&
+            // Preserve authoritative teacher assignment; NEVER allow foreign replies to hijack metadata
+            val hasAuthoritativeTeacher = !teacherName.isNullOrBlank() &&
+                !teacherName.equals("Guru Pengampu", ignoreCase = true) &&
+                !teacherName.equals("Bapak/Ibu Guru", ignoreCase = true) &&
+                !teacherName.equals("Guru Mata Pelajaran", ignoreCase = true) &&
+                !teacherName.equals("Tutor Pamong", ignoreCase = true)
+
+            if (!hasAuthoritativeTeacher && message.isFromTeacher && message.senderName.isNotBlank() &&
                 !message.senderName.equals("Bapak/Ibu Guru", ignoreCase = true) &&
                 !message.senderName.equals("Guru Pengampu", ignoreCase = true) &&
                 !message.senderName.equals("Tutor Pamong", ignoreCase = true)
@@ -122,6 +128,14 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
                     mapOf(
                         "teacherName" to message.senderName,
                         "teacherId" to message.senderId,
+                        "lastUpdated" to message.timestamp,
+                    )
+                )
+            } else if (hasAuthoritativeTeacher) {
+                threadRef.child("metadata").updateChildren(
+                    mapOf(
+                        "teacherName" to teacherName!!,
+                        "teacherId" to (teacherId ?: ""),
                         "lastUpdated" to message.timestamp,
                     )
                 )

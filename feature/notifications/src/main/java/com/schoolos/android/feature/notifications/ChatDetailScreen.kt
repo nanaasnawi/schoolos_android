@@ -124,8 +124,8 @@ fun ChatDetailScreen(
     val threads by chatManager.threads.collectAsState()
     val thread = threads.find { it.id == threadId }
 
-    val isPrincipalAi = threadId.startsWith("ai-principal") || thread?.teacherName?.contains("Kepala Sekolah") == true || initialRecipientName.contains("Kepala Sekolah")
-    val isTeacherAi = threadId.startsWith("ai-teacher") || (isTeacherMode && (threadId.startsWith("ai-tutor") || threadId.startsWith("ai-teacher") || initialRecipientName.contains("Copilot") || initialRecipientName.contains("AI Copilot")))
+    val isPrincipalAi = threadId.startsWith("ai-principal") || thread?.teacherName?.equals("AI Analitik", ignoreCase = true) == true || initialRecipientName.equals("AI Analitik", ignoreCase = true)
+    val isTeacherAi = threadId.startsWith("ai-teacher") || initialRecipientName.contains("AI Copilot", ignoreCase = true)
     val isAiThread = threadId.startsWith("ai-tutor") || threadId.startsWith("ai-principal") || threadId.startsWith("ai-teacher") || thread?.teacherName?.contains("Guru AI") == true || isPrincipalAi || isTeacherAi
     var isAiThinking by remember { mutableStateOf(false) }
     var selectedImageUri by remember { mutableStateOf<android.net.Uri?>(null) }
@@ -524,10 +524,9 @@ fun ChatDetailScreen(
                     val isMe = when {
                         myId.isNotBlank() && msg.senderId.isNotBlank() -> msg.senderId == myId
                         myName.isNotBlank() && msg.senderName.isNotBlank() -> isSamePersonName(msg.senderName, myName)
-                        isStudentInitiator -> !msg.isFromTeacher
-                        isTeacherRecipient -> msg.isFromTeacher
-                        isTeacherMode -> msg.isFromTeacher
-                        else -> !msg.isFromTeacher
+                        isStudentInitiator -> !msg.isFromTeacher && !msg.senderRole.contains("TEACHER", ignoreCase = true)
+                        isTeacherRecipient -> msg.isFromTeacher && !msg.senderRole.contains("STUDENT", ignoreCase = true)
+                        else -> false
                     }
                     val prevMsg = if (index > 0) messages[index - 1] else null
                     val isNewDay = prevMsg == null || !isSameDay(prevMsg.timestamp, msg.timestamp)
@@ -1137,7 +1136,16 @@ private fun MessageBubble(
         RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp, bottomEnd = 16.dp, bottomStart = 4.dp)
     }
 
-    val isAi = !isMe && (message.senderRole.contains("AI", ignoreCase = true) || message.senderName.contains("AI", ignoreCase = true))
+    val isAi = !isMe && (
+        message.senderRole.equals("AI", ignoreCase = true) ||
+        message.senderRole.equals("BOT", ignoreCase = true) ||
+        message.senderId.equals("guru-ai-bot", ignoreCase = true) ||
+        message.senderId.startsWith("ai-", ignoreCase = true) ||
+        message.senderName.equals("Guru AI", ignoreCase = true) ||
+        message.senderName.equals("Guru AI Akselerasi", ignoreCase = true) ||
+        message.senderName.equals("AI Analitik", ignoreCase = true) ||
+        message.senderName.equals("Asisten Pintar", ignoreCase = true)
+    )
 
     val bubbleBg = when {
         isMe -> if (isDark) roleNeon.copy(alpha = 0.20f) else roleNeon.copy(alpha = 0.12f)

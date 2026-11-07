@@ -31,7 +31,10 @@ class TeacherDirectoryViewModel @Inject constructor(
         viewModelScope.launch {
             authRepository.getTeacherDirectory()
                 .onSuccess { list ->
-                    val contacts = list.map { t ->
+                    val contacts = list.filterNot { t ->
+                        t.fullName.contains("Kepala Sekolah", ignoreCase = true) ||
+                        t.subject?.contains("Kepala Sekolah", ignoreCase = true) == true
+                    }.map { t ->
                         val subject = t.subject?.trim().orEmpty()
                         TeacherContactItem(
                             id = t.id,

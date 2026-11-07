@@ -178,7 +178,12 @@ class ChatManager @Inject constructor(
             }
         }
         if (auth.isTeacher) {
-            return threadList
+            val myId = auth.userId.orEmpty()
+            val myName = auth.name.orEmpty()
+            return threadList.filter { t ->
+                (myId.isNotBlank() && t.teacherId == myId) ||
+                isSamePersonName(t.teacherName, myName)
+            }
         }
         return threadList.filter { t ->
             isSameStudentIdentity(t.studentId, t.studentName, auth.userId, auth.name)
@@ -191,7 +196,12 @@ class ChatManager @Inject constructor(
         if (auth.isPrincipal) {
             return isPrincipalThread(thread, auth)
         }
-        if (auth.isTeacher) return true
+        if (auth.isTeacher) {
+            val myId = auth.userId.orEmpty()
+            val myName = auth.name.orEmpty()
+            return (myId.isNotBlank() && thread.teacherId == myId) ||
+                   isSamePersonName(thread.teacherName, myName)
+        }
         return isSameStudentIdentity(thread.studentId, thread.studentName, auth.userId, auth.name)
     }
 
@@ -406,10 +416,27 @@ class ChatManager @Inject constructor(
         )
         if (response.success && response.data != null) {
             val rawDbThreads = response.data
-            // Strictly filter server response if student to guarantee isolation
+            // Strictly filter server response for current user to guarantee isolation
             val dbThreads = if (auth.isStudent) {
                 rawDbThreads.filter { dto ->
                     isSameStudentIdentity(dto.studentId, dto.studentName, auth.userId, auth.name)
+                }
+            } else if (auth.isTeacher) {
+                val myId = auth.userId.orEmpty()
+                val myName = auth.name.orEmpty()
+                rawDbThreads.filter { dto ->
+                    (myId.isNotBlank() && dto.teacherId == myId) ||
+                    isSamePersonName(dto.teacherName, myName)
+                }
+            } else if (auth.isPrincipal) {
+                rawDbThreads.filter { dto ->
+                    val myId = auth.userId.orEmpty()
+                    val myName = auth.name.orEmpty()
+                    (myId.isNotBlank() && (dto.teacherId == myId || dto.studentId == myId)) ||
+                    isSamePersonName(dto.teacherName, myName) ||
+                    isSamePersonName(dto.studentName, myName) ||
+                    dto.teacherName.contains("Kepala Sekolah", ignoreCase = true) ||
+                    dto.studentName.contains("Kepala Sekolah", ignoreCase = true)
                 }
             } else {
                 rawDbThreads
@@ -506,12 +533,11 @@ class ChatManager @Inject constructor(
                 }
 
             // Keep any local threads currently pending server persistence, strictly isolated
-            val pendingLocal = _threads.value.filter { it.id !in dbIds }.let { list ->
-                if (auth.isStudent) filterThreadsForUser(list, auth) else list
-            }
+            val pendingLocal = filterThreadsForUser(_threads.value.filter { it.id !in dbIds }, auth)
             val merged = (pendingLocal + consolidatedThreads).sortedByDescending { it.lastUpdated }
-            _threads.value = merged
-            saveToDisk(merged, auth.userId)
+            val strictlyFiltered = filterThreadsForUser(merged, auth)
+            _threads.value = strictlyFiltered
+            saveToDisk(strictlyFiltered, auth.userId)
         }
     }
 

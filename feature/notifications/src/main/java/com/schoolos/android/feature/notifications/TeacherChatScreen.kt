@@ -133,11 +133,7 @@ fun TeacherChatScreen(
 
     val rawThreads by chatManager.threads.collectAsState()
     val threads = remember(rawThreads, isTeacherMode, isPrincipal, auth) {
-        val userThreads = if (isPrincipal || !isTeacherMode) {
-            chatManager.filterThreadsForUser(rawThreads, auth)
-        } else {
-            rawThreads
-        }
+        val userThreads = chatManager.filterThreadsForUser(rawThreads, auth)
         // Exclude AI thread from teacher consultation list so they are completely separated
         userThreads.filterNot { it.id.startsWith("ai-tutor") || it.id.startsWith("ai-principal") }
     }
@@ -213,34 +209,6 @@ fun TeacherChatScreen(
                 },
                 onBack = onBack,
                 actions = {
-                    if (isPrincipal) {
-                        Surface(
-                            onClick = { showPrincipalConsultDialog = true },
-                            shape = RoundedCornerShape(8.dp),
-                            color = if (isDark) Color(0xFF064E3B) else Color(0xFFECFDF5),
-                            border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0)),
-                            modifier = Modifier.padding(end = 4.dp)
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.Add,
-                                    contentDescription = null,
-                                    tint = if (isDark) Color(0xFF34D399) else Color(0xFF047857),
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Text(
-                                    text = "Konsultasi Baru",
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = if (isDark) Color(0xFF34D399) else Color(0xFF047857)
-                                )
-                            }
-                        }
-                    }
                     if (!isOnline) {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
@@ -347,8 +315,16 @@ fun TeacherChatScreen(
                 if (isPrincipal) {
                     val directoryVm: TeacherDirectoryViewModel = hiltViewModel()
                     val directory by directoryVm.state.collectAsState()
+                    val myUid = auth?.userId.orEmpty().trim()
+                    val myName = auth?.name.orEmpty().trim()
                     PrincipalSupervisionChatContent(
-                        teachers = directory.teachers.filterNot { it.isPrincipal },
+                        teachers = directory.teachers.filterNot { t ->
+                            t.isPrincipal ||
+                            (myUid.isNotBlank() && (t.id == myUid || t.userId == myUid)) ||
+                            isSamePersonName(t.name, myName) ||
+                            t.name.contains("Kepala Sekolah", ignoreCase = true) ||
+                            t.roleTitle.contains("Kepala Sekolah", ignoreCase = true)
+                        },
                         isDirectoryLoading = directory.isLoading,
                         threads = threads,
                         searchQuery = searchQuery,
