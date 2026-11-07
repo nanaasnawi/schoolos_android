@@ -55,12 +55,13 @@ fun StudentOfficialProfileScreen(
     val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
     val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(state.schoolName)
 
     Scaffold(
         containerColor = screenBg,
         topBar = {
             ExecutiveTopBar(
-                title = "Biodata Pokok Warga Belajar",
+                title = if (isPkbm) "Biodata Pokok Warga Belajar" else "Biodata Pokok Siswa",
                 subtitle = "Sinkronisasi Pangkalan Data Pokok Pendidikan",
                 onBack = onBack,
                 actions = {
@@ -368,7 +369,11 @@ fun StudentOfficialProfileScreen(
                                         modifier = Modifier.size(18.dp)
                                     )
                                     Text(
-                                        text = "Sesuai regulasi sistem, hanya Email dan Nomor Telepon yang dapat diperbarui secara mandiri oleh warga belajar pada halaman Profil. Perubahan identitas pokok, domisili, orang tua, dan bantuan pendidikan wajib melalui Operator PKBM / Lembaga.",
+                                        text = if (isPkbm) {
+                                            "Sesuai regulasi sistem, hanya Email dan Nomor Telepon yang dapat diperbarui secara mandiri oleh warga belajar pada halaman Profil. Perubahan identitas pokok, domisili, orang tua, dan bantuan pendidikan wajib melalui Operator PKBM / Lembaga."
+                                        } else {
+                                            "Sesuai regulasi sistem, hanya Email dan Nomor Telepon yang dapat diperbarui secara mandiri oleh siswa pada halaman Profil. Perubahan identitas pokok, domisili, orang tua, dan bantuan pendidikan wajib melalui Operator Sekolah / Tata Usaha."
+                                        },
                                         style = MaterialTheme.typography.bodySmall.copy(fontSize = 11.5.sp, lineHeight = 16.sp),
                                         color = TextSecondary
                                     )

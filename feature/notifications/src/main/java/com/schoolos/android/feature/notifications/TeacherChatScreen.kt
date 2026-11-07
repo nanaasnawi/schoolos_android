@@ -2,6 +2,7 @@ package com.schoolos.android.feature.notifications
 
 import com.schoolos.android.core.R as CoreR
 import androidx.compose.ui.res.painterResource
+import androidx.compose.runtime.LaunchedEffect
 import com.schoolos.android.core.common.BuildConfig
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
@@ -129,14 +130,15 @@ fun TeacherChatScreen(
     val activeRoleAccent = if (isTeacherMode) teacherAccent else studentAccent
 
     val auth = chatManager.currentAuth
+    val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(auth?.schoolName)
     val isPrincipal = auth?.isPrincipal == true
     var showPrincipalConsultDialog by remember { mutableStateOf(false) }
 
     val rawThreads by chatManager.threads.collectAsState()
     val threads = remember(rawThreads, isTeacherMode, isPrincipal, auth) {
         val userThreads = chatManager.filterThreadsForUser(rawThreads, auth)
-        // Exclude AI thread from teacher consultation list so they are completely separated
-        val nonAi = userThreads.filterNot { it.id.startsWith("ai-tutor") || it.id.startsWith("ai-principal") }
+        // Exclude AI threads from teacher consultation list so they are completely separated
+        val nonAi = userThreads.filterNot { it.id.startsWith("ai-") }
         chatManager.consolidateAndDeduplicateThreads(nonAi)
     }
     val isLoading by chatManager.isLoading.collectAsState()
@@ -151,6 +153,10 @@ fun TeacherChatScreen(
         onDispose {
             chatManager.stopPolling()
         }
+    }
+
+    LaunchedEffect(Unit) {
+        chatManager.refresh()
     }
 
     val waitingCount = threads.count { it.status == InquiryStatus.WAITING_REPLY }
@@ -207,7 +213,8 @@ fun TeacherChatScreen(
                     if (waitingCount > 0) "$waitingCount pesan menunggu tanggapan"
                     else "Semua pesan konsultasi telah dijawab"
                 } else {
-                    "Pesan & Konsultasi Mata Pelajaran PKBM"
+                    if (isPkbm) "Pesan & Konsultasi Mata Pelajaran PKBM"
+                    else "Pesan & Konsultasi Mata Pelajaran"
                 },
                 onBack = onBack,
                 actions = {
@@ -1930,6 +1937,7 @@ private fun PrincipalSupervisionChatContent(
     var selectedTab by remember { mutableStateOf(0) } // 0: Dewan Guru, 1: Siswa
 
     val auth = chatManager.currentAuth
+    val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(auth?.schoolName)
     val myName = auth?.name.orEmpty().trim()
     val myId = auth?.userId.orEmpty().trim()
 
@@ -1953,7 +1961,7 @@ private fun PrincipalSupervisionChatContent(
         }
         val deduplicatedStudents = realStudentThreads
             .sortedByDescending { it.lastUpdated }
-            .distinctBy { it.studentId.ifBlank { it.studentName.trim().lowercase() } }
+            .distinctBy { chatManager.cleanPersonName(it.studentName).trim().lowercase().ifBlank { it.studentId } }
 
         if (searchQuery.isBlank()) deduplicatedStudents
         else deduplicatedStudents.filter { t ->
@@ -2151,15 +2159,17 @@ private fun PrincipalSupervisionChatContent(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                val studentGroupLabel = if (isPkbm) "WARGA BELAJAR" else "SISWA"
+                val studentSubLabel = if (isPkbm) "Pertanyaan dari warga belajar" else "Pertanyaan dari siswa"
                 Text(
-                    text = "PESAN WARGA BELAJAR (${studentThreads.size})",
+                    text = "PESAN $studentGroupLabel (${studentThreads.size})",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
                     letterSpacing = 0.5.sp,
                     color = Color(0xFF38BDF8),
                 )
                 Text(
-                    text = "Pertanyaan dari siswa",
+                    text = studentSubLabel,
                     fontSize = 10.5.sp,
                     color = textTertiary,
                 )

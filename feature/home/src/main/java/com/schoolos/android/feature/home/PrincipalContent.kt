@@ -1368,10 +1368,23 @@ private fun PrincipalTeacherWeeklyActivityCard(
     val rawTrends = metrics?.teacherWeeklyTrend.orEmpty()
     val fallbackDays = listOf("Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min")
     val days = if (rawTrends.isNotEmpty()) rawTrends.map { it.day } else fallbackDays
+
+    val hasTeacherActivity = (metrics?.totalScheduledSessions ?: 0) > 0 ||
+        (metrics?.completedSessionsCount ?: 0) > 0 ||
+        (metrics?.totalActiveTeachers ?: 0) > 0 ||
+        sessionsCount > 0 ||
+        (rawTrends.isNotEmpty() && rawTrends.any { it.value > 0f })
+
+    val compliancePct = if (hasTeacherActivity) {
+        metrics?.complianceRate ?: 0.0
+    } else {
+        0.0
+    }
+
     val dataPoints = if (rawTrends.isNotEmpty()) {
         rawTrends.map { it.value }
     } else {
-        val baseVal = (metrics?.complianceRate?.toFloat() ?: 0f).coerceIn(0f, 100f)
+        val baseVal = if (hasTeacherActivity) (compliancePct.toFloat()).coerceIn(0f, 100f) else 0f
         if (baseVal > 0f) {
             List(7) { baseVal }
         } else {
@@ -1382,7 +1395,6 @@ private fun PrincipalTeacherWeeklyActivityCard(
     val maxVal = dataPoints.maxOrNull() ?: 0f
     val peakIndex = if (maxVal > 0f) dataPoints.indexOfFirst { it == maxVal } else -1
 
-    val compliancePct = metrics?.complianceRate ?: 0.0
     val avgKeaktifanStr = if (compliancePct > 0.0) {
         String.format(java.util.Locale.US, "%.1f%%", compliancePct)
     } else {

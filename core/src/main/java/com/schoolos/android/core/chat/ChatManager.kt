@@ -256,6 +256,7 @@ class ChatManager @Inject constructor(
     }
 
     fun isThreadOwnedByCurrentStudent(thread: ChatThread): Boolean {
+        if (thread.id.startsWith("ai-")) return true
         val auth = cachedAuth ?: return false
         if (!auth.isLoggedIn) return false
         if (auth.isPrincipal) {
@@ -294,6 +295,8 @@ class ChatManager @Inject constructor(
     fun consolidateAndDeduplicateThreads(threadList: List<ChatThread>): List<ChatThread> {
         if (threadList.isEmpty()) return emptyList()
 
+        val auth = cachedAuth
+
         return threadList
             .groupBy { thread ->
                 if (thread.id.startsWith("ai-")) {
@@ -301,13 +304,56 @@ class ChatManager @Inject constructor(
                 } else {
                     val cleanStudent = cleanPersonName(thread.studentName).trim().lowercase()
                     val cleanTeacher = cleanPersonName(thread.teacherName).trim().lowercase()
-                    val isPrincipal = thread.studentClass.contains("Kepala", ignoreCase = true) ||
-                        thread.studentName.contains("Kepala", ignoreCase = true)
-                    if (isPrincipal) {
-                        "principal_${cleanStudent}_${cleanTeacher}"
-                    } else {
-                        val sId = thread.studentId.trim().ifBlank { cleanStudent }
-                        "student_${sId}_${cleanStudent}_${cleanTeacher}"
+                    val cleanSubject = thread.subjectName.trim().lowercase()
+                    val isTargetPrincipal = thread.teacherName.contains("Kepala", ignoreCase = true) ||
+                        thread.studentName.contains("Kepala", ignoreCase = true) ||
+                        thread.studentClass.contains("Kepala", ignoreCase = true) ||
+                        thread.subjectName.contains("Konsultasi Kebijakan", ignoreCase = true) ||
+                        thread.referenceTitle.contains("Konsultasi Kebijakan", ignoreCase = true)
+
+                    when {
+                        // If current user is Principal
+                        auth?.isPrincipal == true -> {
+                            val isStudentSender = !thread.studentClass.contains("Kepala", ignoreCase = true) &&
+                                !thread.studentName.contains("Kepala", ignoreCase = true) &&
+                                thread.studentName.isNotBlank()
+                            if (isStudentSender) {
+                                // Consolidate all inquiries from this student into one conversation thread
+                                "principal_student_${cleanStudent.ifBlank { thread.studentId }}"
+                            } else {
+                                // Consolidate all inquiries with this teacher into one conversation thread
+                                "principal_teacher_${cleanTeacher.ifBlank { thread.teacherId }}"
+                            }
+                        }
+                        // If current user is Teacher
+                        auth?.isTeacher == true -> {
+                            if (isTargetPrincipal) {
+                                "teacher_principal"
+                            } else {
+                                // Group by student identity + subject topic
+                                val subjKey = if (cleanSubject.isNotBlank() && cleanSubject != "umum" && cleanSubject != "general") cleanSubject else "all"
+                                "teacher_student_${cleanStudent.ifBlank { thread.studentId }}_$subjKey"
+                            }
+                        }
+                        // If current user is Student
+                        auth?.isStudent == true -> {
+                            if (isTargetPrincipal) {
+                                "student_principal"
+                            } else {
+                                val subjKey = if (cleanSubject.isNotBlank() && cleanSubject != "umum" && cleanSubject != "general") cleanSubject else "all"
+                                val teachKey = if (cleanTeacher.isNotBlank() && cleanTeacher != "mata pelajaran") cleanTeacher else "teacher"
+                                "student_${teachKey}_$subjKey"
+                            }
+                        }
+                        // Fallback
+                        else -> {
+                            if (isTargetPrincipal) {
+                                "principal_student_${cleanStudent.ifBlank { thread.studentId }}"
+                            } else {
+                                val subjKey = if (cleanSubject.isNotBlank() && cleanSubject != "umum") cleanSubject else "all"
+                                "student_${cleanStudent.ifBlank { thread.studentId }}_${cleanTeacher.ifBlank { "any" }}_$subjKey"
+                            }
+                        }
                     }
                 }
             }
@@ -478,6 +524,14 @@ class ChatManager @Inject constructor(
         activeSubscribers++
         if (pollingJob?.isActive == true) return
         pollingJob = scope.launch {
+            // Trigger instant sync on start so user doesn't wait for delay
+            if (isOnline.value && cachedAuth?.isLoggedIn == true) {
+                try {
+                    syncFromDatabase()
+                } catch (e: Exception) {
+                    Timber.w(e, "Immediate chat sync on polling start failed")
+                }
+            }
             while (isActive) {
                 delay(8000)
                 if (isOnline.value && cachedAuth?.isLoggedIn == true) {
@@ -948,19 +1002,22 @@ class ChatManager @Inject constructor(
         } else {
             currentThread?.teacherId?.takeIf { it.isNotBlank() && it.contains("-") && it.length == 36 }
         }
+        val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(cachedAuth?.schoolName)
         val targetTeacherName = if (isThreadPrincipal) {
-            "Kepala Sekolah PKBM"
+            "Kepala Sekolah"
         } else {
-            updatedTeacherName.ifBlank { currentThread?.teacherName ?: "Guru Mata Pelajaran" }
+            updatedTeacherName.ifBlank { currentThread?.teacherName ?: if (isPkbm) "Tutor Mata Pelajaran" else "Guru Mata Pelajaran" }
         }
         val targetSubject = if (isThreadPrincipal) {
-            "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar"
+            if (isPkbm) "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar"
+            else "Konsultasi Kebijakan, Akademik & Pengaduan Siswa"
         } else {
             currentThread?.subjectName ?: "Umum"
         }
-        val targetClass = currentThread?.studentClass ?: "Siswa"
+        val targetClass = currentThread?.studentClass ?: if (isPkbm) "Warga Belajar" else "Siswa"
         val targetTitle = if (isThreadPrincipal) {
-            "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar"
+            if (isPkbm) "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar"
+            else "Konsultasi Kebijakan, Akademik & Pengaduan Siswa"
         } else {
             currentThread?.referenceTitle ?: "Konsultasi $targetSubject"
         }
@@ -1115,22 +1172,28 @@ class ChatManager @Inject constructor(
                 com.schoolos.android.core.auth.isPrincipalRole(cachedAuth?.role ?: "")
             val isTeacherMode = (threadId.startsWith("ai-teacher") || cachedAuth?.isTeacher == true) && !isPrincipalMode
 
+            val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(cachedAuth?.schoolName)
             val finalSubject = when {
-                isPrincipalMode -> "Supervisi & Analitik PKBM"
-                isTeacherMode -> "Pedagogik & Administrasi Guru"
+                isPrincipalMode -> if (isPkbm) "Supervisi & Analitik PKBM" else "Supervisi & Analitik Sekolah"
+                isTeacherMode -> if (isPkbm) "Pedagogik & Administrasi Tutor" else "Pedagogik & Administrasi Guru"
                 else -> (subjectName ?: "Umum")
             }
             val finalGrade = when {
                 isPrincipalMode -> "KEPALA_SEKOLAH"
-                isTeacherMode -> "GURU_PENGAJAR"
+                isTeacherMode -> if (isPkbm) "TUTOR_PENGAJAR" else "GURU_PENGAJAR"
                 else -> (gradeLevel ?: "Siswa")
             }
 
             val finalQuestion = when {
                 isPrincipalMode && !principalContextSummary.isNullOrBlank() ->
                     "[KONTEKS DATA REAL-TIME SEKOLAH (PORTAL KEPALA SEKOLAH)]:\n$principalContextSummary\n\n[PERTANYAAN / INSTRUKSI KEPALA SEKOLAH]:\n$question"
-                isTeacherMode ->
-                    "[PERAN AI: ASISTEN PEDAGOGIK DAN ADMINISTRASI GURU / TUTOR PKBM]\nBantu guru/tutor dalam merancang pembelajaran Kurikulum Merdeka (Paket A/B/C), modul ajar, bank soal kuis/tugas HOTS & asesmen CBT, rubrik skor penilaian, catatan feedback koreksi tugas siswa, atau strategi pembelajaran diferensiasi dan remedial.\n\n[PERTANYAAN / INSTRUKSI GURU]:\n$question"
+                isTeacherMode -> {
+                    if (isPkbm) {
+                        "[PERAN AI: ASISTEN PEDAGOGIK DAN ADMINISTRASI TUTOR PKBM]\nBantu tutor dalam merancang pembelajaran Kurikulum Merdeka Kesetaraan (Paket A/B/C), modul ajar, bank soal kuis/tugas HOTS & asesmen CBT, rubrik skor penilaian, catatan feedback koreksi tugas warga belajar, atau strategi pembelajaran diferensiasi dan remedial.\n\n[PERTANYAAN / INSTRUKSI TUTOR]:\n$question"
+                    } else {
+                        "[PERAN AI: ASISTEN PEDAGOGIK DAN ADMINISTRASI GURU]\nBantu guru dalam merancang pembelajaran Kurikulum Merdeka, perangkat & modul ajar, bank soal kuis/tugas HOTS & asesmen CBT, rubrik skor penilaian, catatan feedback koreksi tugas siswa, atau strategi pembelajaran diferensiasi dan remedial.\n\n[PERTANYAAN / INSTRUKSI GURU]:\n$question"
+                    }
+                }
                 else -> question
             }
 
@@ -1206,6 +1269,7 @@ class ChatManager @Inject constructor(
 
     fun getOrCreateAiThread(): ChatThread {
         val auth = cachedAuth
+        val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(auth?.schoolName)
         val isPrincipal = auth?.isPrincipal == true || com.schoolos.android.core.auth.isPrincipalRole(auth?.role ?: "")
         val isTeacher = (auth?.isTeacher == true) && !isPrincipal
         val studentId = auth?.userId ?: when {
@@ -1215,12 +1279,12 @@ class ChatManager @Inject constructor(
         }
         val studentName = auth?.name ?: when {
             isPrincipal -> "Kepala Sekolah"
-            isTeacher -> "Guru Pengampu"
+            isTeacher -> if (isPkbm) "Tutor Pengampu" else "Guru Pengampu"
             else -> "Siswa"
         }
         val studentClass = auth?.className ?: when {
             isPrincipal -> "Manajerial"
-            isTeacher -> "Dewan Guru"
+            isTeacher -> if (isPkbm) "Dewan Tutor" else "Dewan Guru"
             else -> "Kelas"
         }
         val aiThreadId = when {
@@ -1230,16 +1294,40 @@ class ChatManager @Inject constructor(
         }
 
         val existing = _threads.value.find { it.id == aiThreadId }
-        if (existing != null) return existing
+        if (existing != null) {
+            val updated = existing.copy(
+                subjectName = when {
+                    isPrincipal -> if (isPkbm) "Supervisi & Analitik PKBM" else "Supervisi & Analitik Sekolah"
+                    isTeacher -> if (isPkbm) "Pedagogik & Modul Tutor" else "Pedagogik & Modul Guru"
+                    else -> "Tanya AI"
+                },
+                teacherName = when {
+                    isPrincipal -> "AI Analitik Kepala Sekolah (NVIDIA NIM)"
+                    isTeacher -> if (isPkbm) "AI Copilot Tutor (NVIDIA NIM)" else "AI Copilot Guru (NVIDIA NIM)"
+                    else -> "Guru AI (NVIDIA NIM)"
+                }
+            )
+            if (updated.subjectName != existing.subjectName || updated.teacherName != existing.teacherName) {
+                _threads.value = _threads.value.map { if (it.id == aiThreadId) updated else it }
+                saveToDisk(_threads.value, auth?.userId)
+            }
+            return updated
+        }
 
         val senderTitle = when {
             isPrincipal -> "AI Analitik Kepala Sekolah"
-            isTeacher -> "AI Copilot Guru"
+            isTeacher -> if (isPkbm) "AI Copilot Tutor" else "AI Copilot Guru"
             else -> "Guru AI"
         }
         val initialContent = when {
             isPrincipal -> "Halo Bapak/Ibu Kepala Sekolah! 🏛️\n\nSaya **AI Analitik Kepala Sekolah** didukung komputasi cerdas NVIDIA AI.\n\nSaya siap menganalisis data operasional dan mutu akademik sekolah secara real-time:\n• **Keaktifan Guru**: Pengunggahan materi pembelajaran, penugasan mandiri siswa, & kuis asesmen CBT.\n• **Keterlaksanaan Pembelajaran**: Kehadiran pada sesi kelas & pemantauan jalannya rombel.\n• **Kualitas & Mutu Akademik**: Analisis ketercapaian KKTP rombel serta deteksi dini siswa butuh intervensi (Early Warning System).\n\nSilakan ajukan telaah analitik atau gunakan tombol pintasan di bawah ini!"
-            isTeacher -> "Halo Bapak/Ibu Guru ${studentName.substringBefore(" ")}! 🎓\n\nSaya **AI Copilot Guru** (Asisten Pedagogik & Administrasi Guru didukung NVIDIA NIM).\n\nSaya siap membantu mempermudah tugas mengajar dan administrasi Kurikulum Merdeka PKBM:\n• 📝 **Penyusunan Modul Ajar**: Bantuan merancang Modul Ajar & RPP tematik (Paket A, B, C).\n• 🎯 **Bank Soal & Asesmen CBT**: Pembuatan butir soal PG & essay HOTS lengkap kunci jawaban & rubrik skor.\n• 💬 **Saran Koreksi Tugas**: Rekomendasi feedback evaluatif yang membangun bagi warga belajar.\n• 🧩 **Strategi Pembelajaran & Remedial**: Solusi diferensiasi belajar dan penanganan siswa yang memerlukan perhatian khusus.\n\nSilakan ketik pertanyaan Anda atau gunakan tombol pintasan cepat di bawah!"
+            isTeacher -> {
+                if (isPkbm) {
+                    "Halo Bapak/Ibu Tutor ${studentName.substringBefore(" ")}! 🎓\n\nSaya **AI Copilot Tutor** (Asisten Pedagogik & Administrasi Tutor didukung NVIDIA NIM).\n\nSaya siap membantu mempermudah tugas mengajar dan administrasi Kurikulum Merdeka PKBM:\n• 📝 **Penyusunan Modul Ajar**: Bantuan merancang Modul Ajar & RPP tematik (Paket A, B, C).\n• 🎯 **Bank Soal & Asesmen CBT**: Pembuatan butir soal PG & essay HOTS lengkap kunci jawaban & rubrik skor.\n• 💬 **Saran Koreksi Tugas**: Rekomendasi feedback evaluatif yang membangun bagi warga belajar.\n• 🧩 **Strategi Pembelajaran & Remedial**: Solusi diferensiasi belajar dan penanganan warga belajar yang memerlukan perhatian khusus.\n\nSilakan ketik pertanyaan Anda atau gunakan tombol pintasan cepat di bawah!"
+                } else {
+                    "Halo Bapak/Ibu Guru ${studentName.substringBefore(" ")}! 🎓\n\nSaya **AI Copilot Guru** (Asisten Pedagogik & Administrasi Guru didukung NVIDIA NIM).\n\nSaya siap membantu mempermudah tugas mengajar dan administrasi Kurikulum Merdeka:\n• 📝 **Penyusunan Modul & Perangkat Ajar**: Bantuan merancang Modul Ajar & RPP tematik/fase.\n• 🎯 **Bank Soal & Asesmen CBT**: Pembuatan butir soal PG & essay HOTS lengkap kunci jawaban & rubrik skor.\n• 💬 **Saran Koreksi Tugas**: Rekomendasi feedback evaluatif yang membangun bagi siswa.\n• 🧩 **Strategi Pembelajaran & Remedial**: Solusi diferensiasi belajar dan penanganan siswa yang memerlukan perhatian khusus.\n\nSilakan ketik pertanyaan Anda atau gunakan tombol pintasan cepat di bawah!"
+                }
+            }
             else -> "Halo ${studentName.substringBefore(" ")}! 👋 Saya Guru AI (Asisten Belajar Pintar didukung NVIDIA AI).\n\nAda materi, rumus, konsep, atau tugas yang ingin kamu tanyakan hari ini? Ketik pertanyaanmu atau kirimkan foto soal/materi ya!"
         }
 
@@ -1275,18 +1363,18 @@ class ChatManager @Inject constructor(
             },
             teacherName = when {
                 isPrincipal -> "AI Analitik Kepala Sekolah (NVIDIA NIM)"
-                isTeacher -> "AI Copilot Guru (NVIDIA NIM)"
+                isTeacher -> if (isPkbm) "AI Copilot Tutor (NVIDIA NIM)" else "AI Copilot Guru (NVIDIA NIM)"
                 else -> "Guru AI (NVIDIA NIM)"
             },
             subjectName = when {
-                isPrincipal -> "Supervisi & Analitik PKBM"
-                isTeacher -> "Pedagogik & Modul Ajar"
+                isPrincipal -> if (isPkbm) "Supervisi & Analitik PKBM" else "Supervisi & Analitik Sekolah"
+                isTeacher -> if (isPkbm) "Pedagogik & Modul Tutor" else "Pedagogik & Modul Guru"
                 else -> "Tanya AI"
             },
             inquiryType = InquiryType.GENERAL,
             referenceTitle = when {
                 isPrincipal -> "Asisten Eksekutif Supervisi & Analitik Real-Time"
-                isTeacher -> "Asisten Pedagogik & Administrasi Guru"
+                isTeacher -> if (isPkbm) "Asisten Pedagogik & Administrasi Tutor" else "Asisten Pedagogik & Administrasi Guru"
                 else -> "Asisten Belajar Pintar 24 Jam"
             },
             referenceId = null,
@@ -1298,7 +1386,7 @@ class ChatManager @Inject constructor(
             messageCount = 1,
             readStatusLabel = when {
                 isPrincipal -> "Siap Menganalisis Real-Time"
-                isTeacher -> "Siap Membantu Mengajar & Modul"
+                isTeacher -> if (isPkbm) "Siap Membantu Mengajar & Modul Tutor" else "Siap Membantu Mengajar & Modul Guru"
                 else -> "Siap Menjawab 24 Jam"
             },
             teacherLastReadAt = System.currentTimeMillis(),
@@ -1321,12 +1409,18 @@ class ChatManager @Inject constructor(
         subjectName: String,
     ): ChatThread {
         val auth = cachedAuth
+        val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(auth?.schoolName)
         val isTargetPrincipal = teacherName.contains("Kepala", ignoreCase = true) ||
             subjectName.contains("Konsultasi Kebijakan", ignoreCase = true) ||
             subjectName.contains("Pengaduan", ignoreCase = true)
 
-        val effectiveTeacherName = if (isTargetPrincipal) "Kepala Sekolah PKBM" else teacherName
-        val effectiveSubjectName = if (isTargetPrincipal) "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar" else subjectName
+        val effectiveTeacherName = if (isTargetPrincipal) "Kepala Sekolah" else teacherName
+        val effectiveSubjectName = if (isTargetPrincipal) {
+            if (isPkbm) "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar"
+            else "Konsultasi Kebijakan, Akademik & Pengaduan Siswa"
+        } else {
+            subjectName
+        }
         val effectiveTeacherId = if (isTargetPrincipal && (teacherId.isBlank() || teacherId == "principal-user")) {
             "01a092fc-af59-76b2-85f2-cca8b8d8d515"
         } else {

@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -20,6 +21,7 @@ data class TeacherDirectoryState(
 @HiltViewModel
 class TeacherDirectoryViewModel @Inject constructor(
     private val authRepository: AuthRepository,
+    private val authManager: com.schoolos.android.core.auth.AuthManager,
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(TeacherDirectoryState())
@@ -29,6 +31,8 @@ class TeacherDirectoryViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
+            val auth = authManager.authState.first()
+            val isPkbm = com.schoolos.android.core.auth.isPkbmInstitution(auth.schoolName)
             authRepository.getTeacherDirectory()
                 .onSuccess { list ->
                     val contacts = list.filterNot { t ->
@@ -40,8 +44,8 @@ class TeacherDirectoryViewModel @Inject constructor(
                             id = t.id,
                             userId = t.userId?.takeIf { it.isNotBlank() } ?: t.id,
                             name = t.fullName.trim(),
-                            subject = subject.ifBlank { "Guru Mata Pelajaran" },
-                            roleTitle = if (subject.isBlank()) "Tutor Pengampu" else "Tutor $subject",
+                            subject = subject.ifBlank { if (isPkbm) "Tutor Mata Pelajaran" else "Guru Mata Pelajaran" },
+                            roleTitle = if (subject.isBlank()) (if (isPkbm) "Tutor Pengampu" else "Guru Pengampu") else (if (isPkbm) "Tutor $subject" else "Guru $subject"),
                             isPrincipal = false,
                         )
                     }.sortedBy { it.name.lowercase() }
@@ -55,14 +59,14 @@ class TeacherDirectoryViewModel @Inject constructor(
                         ?: principalUser?.id
                         ?: "01a092fc-af59-76b2-85f2-cca8b8d8d515"
                     val principalName = principalUser?.fullName?.trim()?.takeIf { it.isNotBlank() }
-                        ?: "Kepala Sekolah PKBM"
+                        ?: "Kepala Sekolah"
 
                     val principalContact = TeacherContactItem(
                         id = principalId,
                         userId = principalId,
                         name = principalName,
-                        subject = "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar",
-                        roleTitle = "Kepala Sekolah / Pimpinan PKBM",
+                        subject = if (isPkbm) "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar" else "Konsultasi Kebijakan, Akademik & Pengaduan Siswa",
+                        roleTitle = "Kepala Sekolah",
                         isPrincipal = true,
                     )
 
