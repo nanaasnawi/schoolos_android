@@ -441,7 +441,7 @@ fun TeacherChatScreen(
                                     shape = RoundedCornerShape(22.dp),
                                     color = cardBg,
                                     border = BorderStroke(1.dp, cardBorder),
-                                    shadowElevation = if (isDark) 0.dp else 1.dp
+                                    shadowElevation = 0.dp
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(28.dp),
@@ -1219,7 +1219,7 @@ private fun ChatOverviewCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -1620,7 +1620,7 @@ private fun ThreadCard(
             1.dp,
             if (isWaiting) warningColor.copy(alpha = 0.5f) else cardBorder
         ),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

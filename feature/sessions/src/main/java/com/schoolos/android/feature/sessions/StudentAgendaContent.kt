@@ -109,7 +109,7 @@ private fun StudentAgendaEmptyCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp,
+        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.padding(24.dp),
@@ -310,7 +310,7 @@ private fun StudentTimelineItem(
                 width = if (isActive) 1.5.dp else 1.dp,
                 color = if (isActive) (if (isDark) successColor.copy(alpha = 0.7f) else successColor) else cardBorder
             ),
-            shadowElevation = if (isDark) 0.dp else 1.dp,
+            shadowElevation = 0.dp,
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 // Top Row: Subject + Status Pill

@@ -222,7 +222,7 @@ fun QuizAttemptScreen(
                                     shape = RoundedCornerShape(22.dp),
                                     color = cardBg,
                                     border = BorderStroke(1.dp, cardBorder),
-                                    shadowElevation = if (isDark) 0.dp else 1.dp,
+                                    shadowElevation = 0.dp,
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(18.dp),
@@ -612,7 +612,7 @@ private fun ModernAnswerBubble(
         shape = RoundedCornerShape(16.dp),
         color = targetBg,
         border = BorderStroke(if (isSelected) 1.5.dp else 1.dp, targetBorder),
-        shadowElevation = if (isSelected && !isDark) 2.dp else 0.dp,
+        shadowElevation = 0.dp,
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 14.dp, vertical = 13.dp),
@@ -754,7 +754,7 @@ private fun QuizBottomBar(
                         },
                     shape = RoundedCornerShape(14.dp),
                     color = if (isLastQuestion) (if (isDark) Color(0xFF10B981) else Color(0xFF059669)) else studentAccent,
-                    shadowElevation = if (isDark) 0.dp else 2.dp,
+                    shadowElevation = 0.dp,
                 ) {
                     if (isSubmitting) {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {

@@ -386,7 +386,7 @@ private fun AgendaHeroBanner(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -664,7 +664,7 @@ private fun WeeklyCalendarStrip(
                     isToday -> BorderStroke(1.dp, if (isDark) studentNameColor.copy(alpha = 0.5f) else Color(0xFFBAE6FD))
                     else -> BorderStroke(1.dp, cardBorder)
                 },
-                shadowElevation = if (isSelected && !isDark) 2.dp else 0.dp
+                shadowElevation = 0.dp
             ) {
                 Column(
                     modifier = Modifier.padding(vertical = 8.dp, horizontal = 2.dp),
@@ -962,7 +962,7 @@ private fun SkeletonSurface(
         shape = RoundedCornerShape(cornerRadius),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Box(modifier = Modifier.padding(14.dp)) {
             content()
