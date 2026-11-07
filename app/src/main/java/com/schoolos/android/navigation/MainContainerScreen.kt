@@ -148,16 +148,11 @@ fun MainContainerScreen(
                 // Flat Docked Modern Navigation Bar (Ordinary/Flat corners, subtle top divider)
                 Surface(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(
-                            elevation = 8.dp,
-                            shape = androidx.compose.ui.graphics.RectangleShape,
-                            spotColor = if (isDark) GlassOverlay else Color(0x14000000),
-                            ambientColor = if (isDark) GlassOverlay else Color(0x0A000000),
-                        ),
+                        .fillMaxWidth(),
                     shape = androidx.compose.ui.graphics.RectangleShape,
                     color = if (isDark) CosmicNavy else Color.White,
-                    tonalElevation = 2.dp,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
                 ) {
                     Box(
                         modifier = Modifier

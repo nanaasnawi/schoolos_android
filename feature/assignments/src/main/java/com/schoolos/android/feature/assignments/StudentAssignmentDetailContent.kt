@@ -281,7 +281,7 @@ fun StudentAssignmentDetailContent(
                     shape = RoundedCornerShape(24.dp),
                     color = askDialogCardBg,
                     border = BorderStroke(1.dp, askDialogCardBorder),
-                    shadowElevation = 8.dp,
+                    shadowElevation = 0.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp)
@@ -453,7 +453,7 @@ fun StudentAssignmentDetailContent(
                                 },
                                 shape = RoundedCornerShape(12.dp),
                                 color = askDialogAccent,
-                                shadowElevation = 2.dp,
+                                shadowElevation = 0.dp,
                                 modifier = Modifier.weight(1.3f)
                             ) {
                                 Row(

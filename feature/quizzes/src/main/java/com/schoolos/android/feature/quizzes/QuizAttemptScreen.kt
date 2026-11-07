@@ -690,7 +690,7 @@ private fun QuizBottomBar(
             .fillMaxWidth()
             .border(width = 1.dp, color = cardBorder, shape = RoundedCornerShape(0.dp)),
         color = cardBg,
-        shadowElevation = 8.dp,
+        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier

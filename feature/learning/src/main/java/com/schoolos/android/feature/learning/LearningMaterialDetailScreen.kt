@@ -267,7 +267,7 @@ fun LearningMaterialDetailScreen(
                                     shape = RoundedCornerShape(8.dp),
                                     color = speedDialCardBg,
                                     border = BorderStroke(1.dp, speedDialBorder),
-                                    shadowElevation = 2.dp,
+                                    shadowElevation = 0.dp,
                                 ) {
                                     Text(
                                         text = "Hapus Materi",
@@ -281,7 +281,7 @@ fun LearningMaterialDetailScreen(
                                     shape = CircleShape,
                                     color = deleteBg,
                                     border = BorderStroke(1.dp, deleteBorder),
-                                    shadowElevation = 4.dp,
+                                    shadowElevation = 0.dp,
                                     modifier = Modifier.size(42.dp),
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
@@ -310,7 +310,7 @@ fun LearningMaterialDetailScreen(
                                     shape = RoundedCornerShape(8.dp),
                                     color = speedDialCardBg,
                                     border = BorderStroke(1.dp, speedDialBorder),
-                                    shadowElevation = 2.dp,
+                                    shadowElevation = 0.dp,
                                 ) {
                                     Text(
                                         text = "Edit Materi",
@@ -324,7 +324,7 @@ fun LearningMaterialDetailScreen(
                                     shape = CircleShape,
                                     color = primaryColor,
                                     border = BorderStroke(1.dp, primaryBorder),
-                                    shadowElevation = 4.dp,
+                                    shadowElevation = 0.dp,
                                     modifier = Modifier.size(42.dp),
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
@@ -352,7 +352,7 @@ fun LearningMaterialDetailScreen(
                         shape = CircleShape,
                         color = if (isSpeedDialOpen) (if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)) else primaryColor,
                         border = BorderStroke(1.dp, if (isSpeedDialOpen) speedDialBorder else primaryBorder),
-                        shadowElevation = 6.dp,
+                        shadowElevation = 0.dp,
                         modifier = Modifier.size(52.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -1089,7 +1089,7 @@ fun LearningMaterialDetailScreen(
                     shape = RoundedCornerShape(24.dp),
                     color = askDialogCardBg,
                     border = BorderStroke(1.dp, askDialogCardBorder),
-                    shadowElevation = 8.dp,
+                    shadowElevation = 0.dp,
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 4.dp)
@@ -1261,7 +1261,7 @@ fun LearningMaterialDetailScreen(
                                 },
                                 shape = RoundedCornerShape(12.dp),
                                 color = askDialogAccent,
-                                shadowElevation = 2.dp,
+                                shadowElevation = 0.dp,
                                 modifier = Modifier.weight(1.3f)
                             ) {
                                 Row(
@@ -1500,7 +1500,7 @@ private fun EditMaterialDialog(
             shape = RoundedCornerShape(24.dp),
             color = CosmicNavy,
             border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder),
-            shadowElevation = 16.dp
+            shadowElevation = 0.dp
         ) {
             Column(
                 modifier = Modifier

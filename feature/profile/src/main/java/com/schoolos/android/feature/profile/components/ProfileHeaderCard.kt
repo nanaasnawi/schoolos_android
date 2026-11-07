@@ -199,7 +199,6 @@ fun ProfileHeaderCard(
                             modifier = Modifier
                                 .align(Alignment.BottomEnd)
                                 .size(26.dp)
-                                .shadow(3.dp, CircleShape)
                                 .clip(CircleShape)
                                 .background(cameraBadgeBg)
                                 .border(1.5.dp, roleNeon, CircleShape),
