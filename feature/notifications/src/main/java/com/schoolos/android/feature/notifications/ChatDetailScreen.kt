@@ -847,13 +847,33 @@ fun ChatDetailScreen(
                                 if (selectedImageUri != null) {
                                     isUploadingImage = true
                                     try {
-                                        val bytes = context.contentResolver.openInputStream(selectedImageUri!!)?.use { it.readBytes() }
-                                        if (bytes != null) {
-                                            val uploadRes = chatManager.uploadAttachment(bytes, "chat_photo_${System.currentTimeMillis()}.jpg", "image/jpeg")
+                                        val uri = selectedImageUri!!
+                                        val bytes = compressImageUri(context, uri)
+                                            ?: context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+
+                                        if (bytes != null && bytes.isNotEmpty()) {
+                                            val uploadRes = chatManager.uploadAttachment(
+                                                bytes,
+                                                "chat_photo_${System.currentTimeMillis()}.jpg",
+                                                "image/jpeg"
+                                            )
                                             uploadedUrl = uploadRes.getOrNull()
+
+                                            // Fallback to optimized Base64 Data URI if backend upload is unreachable
+                                            if (uploadedUrl.isNullOrBlank()) {
+                                                val b64 = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP)
+                                                uploadedUrl = "data:image/jpeg;base64,$b64"
+                                            }
                                         }
                                     } catch (e: Exception) {
                                         Timber.w(e, "Upload attachment failed")
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Gagal memproses gambar lampiran: ${e.message}",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
+                                        isUploadingImage = false
+                                        return@launch
                                     } finally {
                                         isUploadingImage = false
                                     }
@@ -861,32 +881,35 @@ fun ChatDetailScreen(
 
                                 val textToSend = inputText.trim()
                                 val imgToSend = uploadedUrl
-                                inputText = ""
-                                selectedImageUri = null
-                                focusManager.clearFocus()
 
-                                sendMessage(
-                                    text = textToSend,
-                                    attachmentUrl = imgToSend,
-                                    attachmentType = if (imgToSend != null) "image" else null,
-                                    thread = thread,
-                                    threadId = threadId,
-                                    initialRecipientName = contactName,
-                                    isTeacherMode = isTeacherMode,
-                                    chatManager = chatManager,
-                                    onSuccess = {}
-                                )
+                                if (textToSend.isNotBlank() || !imgToSend.isNullOrBlank()) {
+                                    inputText = ""
+                                    selectedImageUri = null
+                                    focusManager.clearFocus()
 
-                                if (isAiThread && textToSend.isNotBlank()) {
-                                    isAiThinking = true
-                                    chatManager.askAi(
+                                    sendMessage(
+                                        text = textToSend,
+                                        attachmentUrl = imgToSend,
+                                        attachmentType = if (imgToSend != null) "image" else null,
+                                        thread = thread,
                                         threadId = threadId,
-                                        question = textToSend,
-                                        subjectName = thread?.subjectName,
-                                        gradeLevel = thread?.studentClass,
-                                        history = messages
+                                        initialRecipientName = contactName,
+                                        isTeacherMode = isTeacherMode,
+                                        chatManager = chatManager,
+                                        onSuccess = {}
                                     )
-                                    isAiThinking = false
+
+                                    if (isAiThread && textToSend.isNotBlank()) {
+                                        isAiThinking = true
+                                        chatManager.askAi(
+                                            threadId = threadId,
+                                            question = textToSend,
+                                            subjectName = thread?.subjectName,
+                                            gradeLevel = thread?.studentClass,
+                                            history = messages
+                                        )
+                                        isAiThinking = false
+                                    }
                                 }
                             }
                         },
@@ -1215,7 +1238,12 @@ private fun MessageBubble(
                 if (!message.attachmentUrl.isNullOrBlank()) {
                     val rawUrl = message.attachmentUrl.orEmpty()
                     val fullUrl = remember(rawUrl) {
-                        if (rawUrl.startsWith("http") || rawUrl.startsWith("content:") || rawUrl.startsWith("file:")) {
+                        if (rawUrl.startsWith("http://", ignoreCase = true) ||
+                            rawUrl.startsWith("https://", ignoreCase = true) ||
+                            rawUrl.startsWith("content:", ignoreCase = true) ||
+                            rawUrl.startsWith("file:", ignoreCase = true) ||
+                            rawUrl.startsWith("data:", ignoreCase = true)
+                        ) {
                             rawUrl
                         } else {
                             val host = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.substringBefore("/api/").trimEnd('/')
@@ -1223,10 +1251,11 @@ private fun MessageBubble(
                             "$host$path"
                         }
                     }
+                    val hasExtraText = message.content.isNotBlank() && !message.content.equals("📷 [Foto Lampiran]", ignoreCase = true)
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(bottom = if (message.content.isNotBlank()) 6.dp else 0.dp)
+                            .padding(bottom = if (hasExtraText) 6.dp else 0.dp)
                             .clip(RoundedCornerShape(10.dp))
                             .background(innerCardBg)
                             .border(1.dp, innerCardBorder, RoundedCornerShape(10.dp))
@@ -1243,7 +1272,7 @@ private fun MessageBubble(
                     }
                 }
 
-                if (message.content.isNotBlank()) {
+                if (message.content.isNotBlank() && !message.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) {
                     Text(
                         text = message.content,
                         fontSize = 13.5.sp,
@@ -1326,12 +1355,13 @@ private fun sendMessage(
             ?: if (isPrincipal) "Kepala Sekolah" else if (isTeacher) targetThread.teacherName else targetThread.studentName
         val senderId = auth?.userId?.takeIf { it.isNotBlank() }
             ?: if (isPrincipal) "principal" else if (isTeacher) targetThread.teacherId else targetThread.studentId
+        val effectiveContent = if (text.isNotBlank()) text else "📷 [Foto Lampiran]"
         chatManager.sendMessage(
             threadId = targetThread.id,
             senderId = senderId,
             senderName = senderName,
             senderRole = senderRole,
-            content = text,
+            content = effectiveContent,
             attachmentUrl = attachmentUrl,
             attachmentType = attachmentType,
         )
@@ -1392,4 +1422,46 @@ private fun isSamePersonName(a: String?, b: String?): Boolean {
     val normA = normalizePersonName(a)
     val normB = normalizePersonName(b)
     return normA.isNotBlank() && normB.isNotBlank() && normA == normB
+}
+
+private fun compressImageUri(
+    context: android.content.Context,
+    uri: android.net.Uri,
+    maxDimension: Int = 1080,
+    quality: Int = 75
+): ByteArray? {
+    return try {
+        val inputStream = context.contentResolver.openInputStream(uri) ?: return null
+        val originalBitmap = android.graphics.BitmapFactory.decodeStream(inputStream)
+        inputStream.close()
+        if (originalBitmap == null) return null
+
+        val width = originalBitmap.width
+        val height = originalBitmap.height
+        val max = maxOf(width, height)
+        val scale = if (max > maxDimension) maxDimension.toFloat() / max else 1f
+
+        val targetBitmap = if (scale < 1f) {
+            android.graphics.Bitmap.createScaledBitmap(
+                originalBitmap,
+                (width * scale).toInt().coerceAtLeast(1),
+                (height * scale).toInt().coerceAtLeast(1),
+                true
+            )
+        } else {
+            originalBitmap
+        }
+
+        val baos = java.io.ByteArrayOutputStream()
+        targetBitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, quality, baos)
+        val result = baos.toByteArray()
+        if (targetBitmap != originalBitmap) {
+            targetBitmap.recycle()
+        }
+        originalBitmap.recycle()
+        result
+    } catch (e: Exception) {
+        Timber.e(e, "Failed to compress image URI")
+        null
+    }
 }
