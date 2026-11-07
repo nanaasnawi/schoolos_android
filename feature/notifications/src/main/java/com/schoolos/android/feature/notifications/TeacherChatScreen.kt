@@ -979,8 +979,11 @@ private fun StudentWhatsAppChatList(
                         val cleanMessages = remember(thread?.messages) {
                             thread?.messages?.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() } ?: emptyList()
                         }
-                        val lastMsg = cleanMessages.lastOrNull()?.content
-                            ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
+                        val lastMsg = cleanMessages.lastOrNull()?.let {
+                            if (it.content.isNotBlank() && !it.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) it.content
+                            else if (!it.attachmentUrl.isNullOrBlank() || it.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) "📷 [Foto Lampiran]"
+                            else it.content
+                        } ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
                         val lastMsgTime = cleanMessages.lastOrNull()?.timestamp
                             ?: thread?.lastUpdated?.takeIf { it > 0L && !lastMsg.isNullOrBlank() }
 
@@ -1812,8 +1815,15 @@ private fun ThreadCard(
                             fontWeight = FontWeight.SemiBold,
                             color = if (isWaiting) textPrimary else textTertiary,
                         )
+                        val effectiveText = if (lastMsg.content.isNotBlank() && !lastMsg.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) {
+                            lastMsg.content
+                        } else if (!lastMsg.attachmentUrl.isNullOrBlank() || lastMsg.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) {
+                            "📷 [Foto Lampiran]"
+                        } else {
+                            lastMsg.content
+                        }
                         Text(
-                            text = lastMsg.content,
+                            text = effectiveText,
                             fontSize = 12.sp,
                             fontWeight = if (isWaiting) FontWeight.Medium else FontWeight.Normal,
                             color = if (isWaiting) textPrimary else textSecondary,
@@ -2058,8 +2068,11 @@ private fun PrincipalSupervisionChatContent(
                             val cleanMessages = remember(thread?.messages) {
                                 thread?.messages?.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() } ?: emptyList()
                             }
-                            val lastMsg = cleanMessages.lastOrNull()?.content
-                                ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
+                            val lastMsg = cleanMessages.lastOrNull()?.let {
+                                if (it.content.isNotBlank() && !it.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) it.content
+                                else if (!it.attachmentUrl.isNullOrBlank() || it.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) "📷 [Foto Lampiran]"
+                                else it.content
+                            } ?: thread?.lastMessageContent?.takeIf { it.isNotBlank() }
                             val lastMsgTime = cleanMessages.lastOrNull()?.timestamp
                                 ?: thread?.lastUpdated?.takeIf { it > 0L && !lastMsg.isNullOrBlank() }
 
@@ -2181,8 +2194,11 @@ private fun PrincipalSupervisionChatContent(
                             val cleanMessages = remember(thread.messages) {
                                 thread.messages.filter { it.content.isNotBlank() || !it.attachmentUrl.isNullOrBlank() }
                             }
-                            val lastMsg = cleanMessages.lastOrNull()?.content
-                                ?: thread.lastMessageContent?.takeIf { it.isNotBlank() }
+                            val lastMsg = cleanMessages.lastOrNull()?.let {
+                                if (it.content.isNotBlank() && !it.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) it.content
+                                else if (!it.attachmentUrl.isNullOrBlank() || it.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) "📷 [Foto Lampiran]"
+                                else it.content
+                            } ?: thread.lastMessageContent?.takeIf { it.isNotBlank() }
                             val lastMsgTime = cleanMessages.lastOrNull()?.timestamp
                                 ?: thread.lastUpdated.takeIf { it > 0L && !lastMsg.isNullOrBlank() }
 
