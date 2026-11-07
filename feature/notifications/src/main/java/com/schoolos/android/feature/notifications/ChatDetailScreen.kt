@@ -1350,8 +1350,8 @@ private fun sendMessage(
 ) {
     if (text.isNotBlank() || !attachmentUrl.isNullOrBlank()) {
         val auth = chatManager.currentAuth
-        val targetThread = thread ?: chatManager.getOrCreateTeacherThread(
-            teacherId = threadId,
+        val targetThread = thread ?: chatManager.getThreadById(threadId) ?: chatManager.getOrCreateTeacherThread(
+            teacherId = "",
             teacherName = initialRecipientName.ifBlank { "Guru Mata Pelajaran" },
             subjectName = "Umum",
         )
