@@ -136,7 +136,8 @@ fun TeacherChatScreen(
     val threads = remember(rawThreads, isTeacherMode, isPrincipal, auth) {
         val userThreads = chatManager.filterThreadsForUser(rawThreads, auth)
         // Exclude AI thread from teacher consultation list so they are completely separated
-        userThreads.filterNot { it.id.startsWith("ai-tutor") || it.id.startsWith("ai-principal") }
+        val nonAi = userThreads.filterNot { it.id.startsWith("ai-tutor") || it.id.startsWith("ai-principal") }
+        chatManager.consolidateAndDeduplicateThreads(nonAi)
     }
     val isLoading by chatManager.isLoading.collectAsState()
     val isOnline by chatManager.isOnline.collectAsState()
