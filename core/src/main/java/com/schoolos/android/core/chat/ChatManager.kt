@@ -236,6 +236,9 @@ class ChatManager @Inject constructor(
             val myName = auth.name.orEmpty().trim()
             val cleanMyName = cleanPersonName(myName).lowercase()
             return threadList.filter { t ->
+                if (t.id.startsWith("ai-")) {
+                    return@filter t.id.startsWith("ai-teacher") || t.id.startsWith("ai-tutor")
+                }
                 val idMatches = myId.isNotBlank() && (
                     t.teacherId.equals(myId, ignoreCase = true) ||
                     t.teacherId.replace("-", "").equals(myId.replace("-", ""), ignoreCase = true)
@@ -251,6 +254,9 @@ class ChatManager @Inject constructor(
             }
         }
         return threadList.filter { t ->
+            if (t.id.startsWith("ai-")) {
+                return@filter t.id.startsWith("ai-tutor") || t.studentId == auth.userId
+            }
             isSameStudentIdentity(t.studentId, t.studentName, auth.userId, auth.name)
         }
     }
@@ -466,11 +472,11 @@ class ChatManager @Inject constructor(
                     }
                 }
 
-                // Preserve local-only threads like AI Tutor / AI Copilot
+                // Preserve ALL existing in-memory threads (from PostgreSQL, disk cache, AI, etc.) not currently emitted by RTDB
                 val rtdbIds = myRtdbThreads.map { it.id }.toSet()
-                val localOnly = _threads.value.filter { it.id !in rtdbIds && (it.id.startsWith("ai-") || it.messages.isNotEmpty()) }
+                val localOnly = _threads.value.filter { it.id !in rtdbIds }
 
-                val updatedList = consolidateAndDeduplicateThreads(merged + localOnly)
+                val updatedList = consolidateAndDeduplicateThreads(filterThreadsForUser(merged + localOnly, auth))
                 _threads.value = updatedList
                 saveToDisk(updatedList, auth.userId)
             }
@@ -724,6 +730,7 @@ class ChatManager @Inject constructor(
 
     fun loadThreadDetail(threadId: String) {
         if (threadId.isBlank()) return
+        if (threadId.startsWith("ai-")) return // AI conversations are handled locally / NVIDIA NIM, not in PostgreSQL or RTDB
         // Cancel any previous thread message listener before starting a new one
         if (activeDetailThreadId != threadId || threadDetailJob?.isActive != true) {
             threadDetailJob?.cancel()
@@ -744,13 +751,14 @@ class ChatManager @Inject constructor(
                                 } else {
                                     th.status
                                 }
+                                val effectiveMessages = if (cleanMsgs.isNotEmpty()) cleanMsgs else th.messages
                                 th.copy(
-                                    messages = cleanMsgs,
+                                    messages = effectiveMessages,
                                     status = updatedStatus,
                                     lastUpdated = lastMsg?.timestamp ?: th.lastUpdated,
                                     lastMessageContent = lastMsg?.content ?: th.lastMessageContent,
                                     lastSenderName = lastMsg?.senderName ?: th.lastSenderName,
-                                    messageCount = cleanMsgs.size,
+                                    messageCount = if (effectiveMessages.isNotEmpty()) effectiveMessages.size else th.messageCount,
                                 )
                             } else th
                         }
@@ -1072,43 +1080,11 @@ class ChatManager @Inject constructor(
         }
         saveToDisk(_threads.value, auth?.userId)
 
-        // Asynchronously persist to backend API so PostgreSQL stays 100% synchronized
-        scope.launch {
-            try {
-                if (isFirstMessageInThread) {
-                    val createReq = CreateInquiryRequestDto(
-                        id = threadId,
-                        studentId = if (effectiveSenderId.contains("-") && effectiveSenderId.length == 36) effectiveSenderId else null,
-                        studentName = effectiveSenderName,
-                        studentClass = targetClass,
-                        teacherId = targetTeacherId,
-                        teacherName = targetTeacherName,
-                        subjectName = targetSubject,
-                        inquiryType = targetType.name,
-                        referenceTitle = targetTitle,
-                        referenceId = targetRefId,
-                        initialMessage = content.trim(),
-                        clientMessageId = clientUuid,
-                    )
-                    val resp = api.createInquiry(createReq)
-                    if (resp.success && resp.data != null) {
-                        Timber.d("Inquiry created in PostgreSQL: ${resp.data.id}")
-                    }
-                } else {
-                    val resp = api.sendMessage(
-                        threadId = threadId,
-                        request = SendInquiryMessageRequestDto(
-                            clientMessageId = clientUuid,
-                            senderId = effectiveSenderId,
-                            senderName = effectiveSenderName,
-                            senderRole = effectiveRole,
-                            content = content.trim(),
-                            attachmentUrl = attachmentUrl,
-                            attachmentType = attachmentType,
-                        )
-                    )
-                    if (!resp.success && (resp.error?.code == "ResourceNotFound" || resp.error?.message?.contains("not found", ignoreCase = true) == true)) {
-                        // Fallback self-heal: create thread in database if missing
+        // Asynchronously persist to backend API so PostgreSQL stays 100% synchronized (skip AI threads)
+        if (!threadId.startsWith("ai-")) {
+            scope.launch {
+                try {
+                    if (isFirstMessageInThread) {
                         val createReq = CreateInquiryRequestDto(
                             id = threadId,
                             studentId = if (effectiveSenderId.contains("-") && effectiveSenderId.length == 36) effectiveSenderId else null,
@@ -1123,11 +1099,45 @@ class ChatManager @Inject constructor(
                             initialMessage = content.trim(),
                             clientMessageId = clientUuid,
                         )
-                        api.createInquiry(createReq)
+                        val resp = api.createInquiry(createReq)
+                        if (resp.success && resp.data != null) {
+                            Timber.d("Inquiry created in PostgreSQL: ${resp.data.id}")
+                        }
+                    } else {
+                        val resp = api.sendMessage(
+                            threadId = threadId,
+                            request = SendInquiryMessageRequestDto(
+                                clientMessageId = clientUuid,
+                                senderId = effectiveSenderId,
+                                senderName = effectiveSenderName,
+                                senderRole = effectiveRole,
+                                content = content.trim(),
+                                attachmentUrl = attachmentUrl,
+                                attachmentType = attachmentType,
+                            )
+                        )
+                        if (!resp.success && (resp.error?.code == "ResourceNotFound" || resp.error?.message?.contains("not found", ignoreCase = true) == true)) {
+                            // Fallback self-heal: create thread in database if missing
+                            val createReq = CreateInquiryRequestDto(
+                                id = threadId,
+                                studentId = if (effectiveSenderId.contains("-") && effectiveSenderId.length == 36) effectiveSenderId else null,
+                                studentName = effectiveSenderName,
+                                studentClass = targetClass,
+                                teacherId = targetTeacherId,
+                                teacherName = targetTeacherName,
+                                subjectName = targetSubject,
+                                inquiryType = targetType.name,
+                                referenceTitle = targetTitle,
+                                referenceId = targetRefId,
+                                initialMessage = content.trim(),
+                                clientMessageId = clientUuid,
+                            )
+                            api.createInquiry(createReq)
+                        }
                     }
+                } catch (e: Exception) {
+                    Timber.w(e, "Async persist of message to server database failed")
                 }
-            } catch (e: Exception) {
-                Timber.w(e, "Async persist of message to server database failed")
             }
         }
 
@@ -1293,27 +1303,6 @@ class ChatManager @Inject constructor(
             else -> "ai-tutor-$studentId"
         }
 
-        val existing = _threads.value.find { it.id == aiThreadId }
-        if (existing != null) {
-            val updated = existing.copy(
-                subjectName = when {
-                    isPrincipal -> if (isPkbm) "Supervisi & Analitik PKBM" else "Supervisi & Analitik Sekolah"
-                    isTeacher -> if (isPkbm) "Pedagogik & Modul Tutor" else "Pedagogik & Modul Guru"
-                    else -> "Tanya AI"
-                },
-                teacherName = when {
-                    isPrincipal -> "AI Analitik Kepala Sekolah (NVIDIA NIM)"
-                    isTeacher -> if (isPkbm) "AI Copilot Tutor (NVIDIA NIM)" else "AI Copilot Guru (NVIDIA NIM)"
-                    else -> "Guru AI (NVIDIA NIM)"
-                }
-            )
-            if (updated.subjectName != existing.subjectName || updated.teacherName != existing.teacherName) {
-                _threads.value = _threads.value.map { if (it.id == aiThreadId) updated else it }
-                saveToDisk(_threads.value, auth?.userId)
-            }
-            return updated
-        }
-
         val senderTitle = when {
             isPrincipal -> "AI Analitik Kepala Sekolah"
             isTeacher -> if (isPkbm) "AI Copilot Tutor" else "AI Copilot Guru"
@@ -1350,6 +1339,33 @@ class ChatManager @Inject constructor(
             isFromTeacher = true,
             isRead = true,
         )
+
+        val existing = _threads.value.find { it.id == aiThreadId }
+        if (existing != null) {
+            val hasValidMessages = existing.messages.isNotEmpty()
+            val effectiveMessages = if (hasValidMessages) existing.messages else listOf(initialAiMessage)
+            val updated = existing.copy(
+                subjectName = when {
+                    isPrincipal -> if (isPkbm) "Supervisi & Analitik PKBM" else "Supervisi & Analitik Sekolah"
+                    isTeacher -> if (isPkbm) "Pedagogik & Modul Tutor" else "Pedagogik & Modul Guru"
+                    else -> "Tanya AI"
+                },
+                teacherName = when {
+                    isPrincipal -> "AI Analitik Kepala Sekolah (NVIDIA NIM)"
+                    isTeacher -> if (isPkbm) "AI Copilot Tutor (NVIDIA NIM)" else "AI Copilot Guru (NVIDIA NIM)"
+                    else -> "Guru AI (NVIDIA NIM)"
+                },
+                messages = effectiveMessages,
+                messageCount = effectiveMessages.size,
+                lastMessageContent = effectiveMessages.lastOrNull()?.content ?: initialAiMessage.content,
+                lastSenderName = effectiveMessages.lastOrNull()?.senderName ?: senderTitle,
+            )
+            if (updated != existing) {
+                _threads.value = _threads.value.map { if (it.id == aiThreadId) updated else it }
+                saveToDisk(_threads.value, auth?.userId)
+            }
+            return updated
+        }
 
         val newAiThread = ChatThread(
             id = aiThreadId,

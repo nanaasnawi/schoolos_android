@@ -143,13 +143,21 @@ fun ChatDetailScreen(
     val listState = rememberLazyListState()
     val focusManager = LocalFocusManager.current
 
-    LaunchedEffect(threadId) { chatManager.loadThreadDetail(threadId) }
+    LaunchedEffect(threadId) {
+        if (!isAiThread && !threadId.startsWith("ai-")) {
+            chatManager.loadThreadDetail(threadId)
+        }
+    }
     androidx.compose.runtime.DisposableEffect(chatManager, threadId) {
-        chatManager.startPolling()
-        chatManager.setPresence(threadId, isOnline = true)
+        if (!isAiThread && !threadId.startsWith("ai-")) {
+            chatManager.startPolling()
+            chatManager.setPresence(threadId, isOnline = true)
+        }
         onDispose {
-            chatManager.stopPolling()
-            chatManager.setPresence(threadId, isOnline = false)
+            if (!isAiThread && !threadId.startsWith("ai-")) {
+                chatManager.stopPolling()
+                chatManager.setPresence(threadId, isOnline = false)
+            }
         }
     }
 

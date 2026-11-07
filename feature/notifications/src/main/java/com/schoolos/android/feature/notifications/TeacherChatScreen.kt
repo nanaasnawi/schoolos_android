@@ -155,10 +155,6 @@ fun TeacherChatScreen(
         }
     }
 
-    LaunchedEffect(Unit) {
-        chatManager.refresh()
-    }
-
     val waitingCount = threads.count { it.status == InquiryStatus.WAITING_REPLY }
     val answeredCount = threads.count { it.status == InquiryStatus.ANSWERED }
     val materialCount = threads.count { it.inquiryType == InquiryType.MATERIAL }
