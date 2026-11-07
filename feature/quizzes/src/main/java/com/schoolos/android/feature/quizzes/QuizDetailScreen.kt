@@ -264,7 +264,7 @@ fun QuizDetailScreen(
                                 shape = RoundedCornerShape(22.dp),
                                 color = cardBg,
                                 border = BorderStroke(1.dp, cardBorder),
-                                shadowElevation = if (isDark) 0.dp else 1.dp
+                                shadowElevation = 0.dp
                             ) {
                                 Text(
                                     text = q.description?.takeIf { it.isNotBlank() }
@@ -774,7 +774,7 @@ fun QuizDetailScreen(
                                         shape = RoundedCornerShape(22.dp),
                                         color = cardBg,
                                         border = BorderStroke(1.dp, cardBorder),
-                                        shadowElevation = if (isDark) 0.dp else 1.dp
+                                        shadowElevation = 0.dp
                                     ) {
                                         Column(
                                             modifier = Modifier.padding(18.dp),
@@ -919,7 +919,7 @@ private fun TeacherCbtGuideCard() {
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -974,7 +974,7 @@ private fun CosmicQuizHeroCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(18.dp),
@@ -1140,7 +1140,7 @@ private fun CbtRulesCard() {
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(18.dp),

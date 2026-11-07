@@ -121,7 +121,7 @@ fun ProfileQrCard(
             Box(
                 modifier = Modifier
                     .shadow(
-                        elevation = if (isDarkTheme) 0.dp else 2.dp,
+                        elevation = 0.dp,
                         shape = RoundedCornerShape(14.dp),
                         spotColor = Color(0x12000000)
                     )

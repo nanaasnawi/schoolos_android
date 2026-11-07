@@ -340,7 +340,7 @@ private fun LearningMaterialShimmerItem(modifier: Modifier = Modifier) {
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -398,7 +398,7 @@ private fun StudentMaterialHeroBanner(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -606,7 +606,7 @@ private fun TeacherLearningHeroBanner(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -878,7 +878,7 @@ private fun ModernMaterialCard(
             width = if (item.isCompleted) 1.5.dp else 1.dp,
             color = if (item.isCompleted) (if (isDark) successColor.copy(alpha = 0.7f) else successColor) else cardBorder
         ),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // ── TOP ROW: SUBJECT TAG & STATUS BADGE ──────────────────────────
@@ -1202,7 +1202,7 @@ private fun EmptyMaterialState(searchQuery: String) {
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(28.dp),

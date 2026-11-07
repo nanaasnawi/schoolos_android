@@ -331,7 +331,8 @@ fun StudentDossierScreen(
                         Card(
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = cardBg),
+                            elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
+                            colors = CardDefaults.cardColors(containerColor = cardBg),
                             border = androidx.compose.foundation.BorderStroke(1.dp, GlassBorder)
                         ) {
                             Column(modifier = Modifier.padding(18.dp)) {
@@ -614,6 +615,7 @@ fun DocumentCardItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
         colors = CardDefaults.cardColors(containerColor = cardBg),
         border = androidx.compose.foundation.BorderStroke(
             1.dp,

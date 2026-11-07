@@ -461,7 +461,7 @@ private fun StatCardWidget(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -548,7 +548,7 @@ private fun CompletionTrendCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 18.dp, vertical = 18.dp),
@@ -734,7 +734,7 @@ private fun HabitTaskJournalCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, if (isChecked) visual.accentColor.copy(alpha = 0.5f) else cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),

@@ -158,7 +158,7 @@ fun QuizResultScreen(
                             shape = RoundedCornerShape(22.dp),
                             color = cardBg,
                             border = BorderStroke(1.dp, cardBorder),
-                            shadowElevation = if (isDark) 0.dp else 1.dp
+                            shadowElevation = 0.dp
                         ) {
                             Column(
                                 modifier = Modifier.padding(20.dp),
@@ -271,7 +271,7 @@ fun QuizResultScreen(
                         shape = RoundedCornerShape(22.dp),
                         color = cardBg,
                         border = BorderStroke(1.dp, cardBorder),
-                        shadowElevation = if (isDark) 0.dp else 1.dp,
+                        shadowElevation = 0.dp,
                     ) {
                         Column(
                             modifier = Modifier.padding(18.dp),
@@ -453,7 +453,7 @@ fun QuizResultScreen(
                             .clickable(onClick = onBack),
                         shape = RoundedCornerShape(16.dp),
                         color = studentAccent,
-                        shadowElevation = if (isDark) 0.dp else 2.dp,
+                        shadowElevation = 0.dp,
                     ) {
                         Row(
                             modifier = Modifier.fillMaxSize(),

@@ -190,7 +190,7 @@ private fun StudentAssignmentCard(
             width = if (isOverdue) 1.5.dp else 1.dp,
             color = if (isOverdue) NeonWarning.copy(alpha = 0.6f) else cardBorder
         ),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             // TOP ROW: SUBJECT TAG & SCORE PILL
@@ -432,7 +432,7 @@ private fun EmptyAssignmentState(selectedTab: String) {
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(vertical = 32.dp, horizontal = 24.dp),

@@ -193,7 +193,7 @@ internal fun StudentGreetingHeroCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -457,7 +457,7 @@ internal fun HomeMenuGridCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(14.dp),
@@ -558,7 +558,7 @@ internal fun HomeTodayScheduleCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -750,7 +750,7 @@ private fun HomeAcademicPerformanceCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -924,7 +924,7 @@ private fun HomeSibiReadingCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -1127,7 +1127,7 @@ private fun HomeWeeklyActivityCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp
+        shadowElevation = 0.dp
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
