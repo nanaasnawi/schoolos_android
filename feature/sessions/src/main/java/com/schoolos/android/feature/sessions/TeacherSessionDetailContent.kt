@@ -121,7 +121,7 @@ fun TeacherSessionDetailContent(
             shape = RoundedCornerShape(22.dp),
             color = cardBg,
             border = BorderStroke(1.dp, cardBorder),
-            shadowElevation = 1.dp,
+            shadowElevation = 0.dp,
         ) {
             Column(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
@@ -211,7 +211,7 @@ fun TeacherSessionDetailContent(
             shape = RoundedCornerShape(22.dp),
             color = cardBg,
             border = BorderStroke(1.dp, cardBorder),
-            shadowElevation = if (isDark) 0.dp else 1.dp
+            shadowElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier
@@ -249,7 +249,7 @@ fun TeacherSessionDetailContent(
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp
+                shadowElevation = 0.dp
             ) {
                 Column(
                     modifier = Modifier
@@ -492,7 +492,7 @@ fun TeacherSessionDetailContent(
             shape = RoundedCornerShape(22.dp),
             color = cardBg,
             border = BorderStroke(1.dp, cardBorder),
-            shadowElevation = 1.dp,
+            shadowElevation = 0.dp,
         ) {
             if (effectiveStudents.isEmpty()) {
                 Column(
@@ -659,7 +659,7 @@ private fun ResourceActionCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = 1.dp,
+        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier

@@ -489,7 +489,7 @@ private fun StudentIdentityHeroCard(
                         containerColor = if (isDark) Color(0xFFDC2626) else Color(0xFFE11D48),
                         contentColor = Color.White
                     ),
-                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 2.dp)
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
                     if (isSendingAll) {
                         CircularProgressIndicator(

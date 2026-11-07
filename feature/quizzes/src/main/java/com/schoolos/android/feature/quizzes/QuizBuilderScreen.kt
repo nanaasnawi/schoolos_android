@@ -268,7 +268,7 @@ private fun QuizInfoForm(
                     )
                 )
             ),
-            shadowElevation = if (LocalIsDarkTheme.current) 0.dp else 2.dp
+            shadowElevation = 0.dp
         ) {
             Row(
                 modifier = Modifier

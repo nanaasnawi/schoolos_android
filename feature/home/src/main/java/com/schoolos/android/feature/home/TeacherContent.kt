@@ -340,7 +340,7 @@ fun LazyListScope.teacherContent(
             shape = RoundedCornerShape(22.dp),
             color = cardBg,
             border = BorderStroke(1.dp, cardBorder),
-            shadowElevation = if (isDark) 0.dp else 1.dp,
+            shadowElevation = 0.dp,
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -482,7 +482,7 @@ fun LazyListScope.teacherContent(
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
+                shadowElevation = 0.dp,
             ) {
                 Row(
                     modifier = Modifier
@@ -572,7 +572,7 @@ fun LazyListScope.teacherContent(
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
+                shadowElevation = 0.dp,
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -641,7 +641,7 @@ fun LazyListScope.teacherContent(
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
+                shadowElevation = 0.dp,
             ) {
                 Row(
                     modifier = Modifier
@@ -714,7 +714,7 @@ fun LazyListScope.teacherContent(
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
+                shadowElevation = 0.dp,
             ) {
                 Row(
                     modifier = Modifier
@@ -798,7 +798,7 @@ private fun TeacherKpiCard(
         shape = RoundedCornerShape(14.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp,
+        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.padding(12.dp),
@@ -875,7 +875,7 @@ private fun TeacherStudioConsole(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp,
+        shadowElevation = 0.dp,
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
             // 1. Buat Tugas
@@ -1158,7 +1158,7 @@ private fun TeacherScheduleAlertCard(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.2.dp, cardBorder),
-        shadowElevation = if (isDark) 0.dp else 1.dp,
+        shadowElevation = 0.dp,
     ) {
         Column(
             modifier = Modifier.padding(16.dp),

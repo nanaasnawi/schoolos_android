@@ -84,7 +84,7 @@ fun TeacherAssignmentDetailContent(
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
+                shadowElevation = 0.dp,
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -148,7 +148,7 @@ fun TeacherAssignmentDetailContent(
                 shape = RoundedCornerShape(14.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
+                shadowElevation = 0.dp,
             ) {
                 Row(
                     modifier = Modifier.padding(4.dp),
@@ -233,7 +233,7 @@ fun TeacherAssignmentDetailContent(
                     shape = RoundedCornerShape(22.dp),
                     color = cardBg,
                     border = BorderStroke(1.dp, cardBorder),
-                    shadowElevation = if (isDark) 0.dp else 1.dp,
+                    shadowElevation = 0.dp,
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -280,7 +280,7 @@ fun TeacherAssignmentDetailContent(
                     shape = RoundedCornerShape(22.dp),
                     color = cardBg,
                     border = BorderStroke(1.dp, cardBorder),
-                    shadowElevation = if (isDark) 0.dp else 1.dp,
+                    shadowElevation = 0.dp,
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -325,7 +325,7 @@ fun TeacherAssignmentDetailContent(
                         shape = RoundedCornerShape(22.dp),
                         color = cardBg,
                         border = BorderStroke(1.dp, cardBorder),
-                        shadowElevation = if (isDark) 0.dp else 1.dp,
+                        shadowElevation = 0.dp,
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
@@ -494,7 +494,7 @@ fun TeacherAssignmentDetailContent(
                     shape = RoundedCornerShape(22.dp),
                     color = cardBg,
                     border = BorderStroke(1.dp, cardBorder),
-                    shadowElevation = if (isDark) 0.dp else 1.dp,
+                    shadowElevation = 0.dp,
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -636,7 +636,7 @@ fun TeacherAssignmentDetailContent(
                     shape = RoundedCornerShape(22.dp),
                     color = cardBg,
                     border = BorderStroke(1.dp, cardBorder),
-                    shadowElevation = if (isDark) 0.dp else 1.dp,
+                    shadowElevation = 0.dp,
                 ) {
                     Column(
                         modifier = Modifier.padding(24.dp),
@@ -769,7 +769,7 @@ private fun TeacherSubmissionRow(
         shape = RoundedCornerShape(22.dp),
         color = cardBg,
         border = BorderStroke(1.dp, if (isUnsubmitted) cardBorder else accentColor.copy(alpha = 0.35f)),
-        shadowElevation = if (isDark) 0.dp else 1.dp
+        shadowElevation = 0.dp
     ) {
         Row(
             modifier = Modifier
@@ -975,7 +975,7 @@ private fun TeacherInlineGradingCard(
             shape = RoundedCornerShape(22.dp),
             color = cardBg,
             border = BorderStroke(1.dp, cardBorder),
-            shadowElevation = if (isDark) 0.dp else 1.dp,
+            shadowElevation = 0.dp,
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
@@ -1273,7 +1273,7 @@ private fun TeacherInlineGradingCard(
                     shape = RoundedCornerShape(22.dp),
                     color = cardBg,
                     border = BorderStroke(1.dp, cardBorder),
-                    shadowElevation = if (isDark) 0.dp else 1.dp,
+                    shadowElevation = 0.dp,
                 ) {
                     Column(
                         modifier = Modifier.padding(16.dp),
@@ -1426,7 +1426,7 @@ private fun TeacherInlineGradingCard(
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
                 border = BorderStroke(1.dp, cardBorder),
-                shadowElevation = if (isDark) 0.dp else 1.dp,
+                shadowElevation = 0.dp,
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp),
@@ -1564,7 +1564,7 @@ private fun TeacherInlineGradingCard(
             shape = RoundedCornerShape(22.dp),
             color = cardBg,
             border = BorderStroke(1.dp, cardBorder),
-            shadowElevation = if (isDark) 0.dp else 1.dp,
+            shadowElevation = 0.dp,
         ) {
             Row(
                 modifier = Modifier

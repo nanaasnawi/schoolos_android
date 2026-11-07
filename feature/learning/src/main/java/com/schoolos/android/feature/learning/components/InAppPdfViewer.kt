@@ -454,7 +454,7 @@ fun InAppPdfViewer(
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color.White),
                         shape = RoundedCornerShape(10.dp),
-                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable { fullscreenPageNumber = pageNum }
@@ -815,7 +815,7 @@ fun InAppPdfViewer(
                             Card(
                                 shape = RoundedCornerShape(8.dp),
                                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .wrapContentHeight()
@@ -906,7 +906,7 @@ fun InAppPdfViewer(
                     modifier = Modifier.fillMaxWidth(),
                     color = Color(0xFF0F172A),
                     border = BorderStroke(0.5.dp, Color.White.copy(alpha = 0.15f)),
-                    shadowElevation = 12.dp
+                    shadowElevation = 0.dp
                 ) {
                     Row(
                         modifier = Modifier
