@@ -179,7 +179,7 @@ fun LoginHeaderSection(
                         .clip(CircleShape),
                     fallback = {
                         val fallbackPainter = if (schoolLogoUrl.isNullOrBlank() && (schoolName.isNullOrBlank() || displaySchoolName == "Akselerasi Edu")) {
-                            painterResource(id = CoreR.drawable.mascot_akselerasi_edu)
+                            painterResource(id = CoreR.drawable.ic_tut_wuri_handayani)
                         } else {
                             painterResource(id = CoreR.drawable.img_school_logo_default)
                         }
