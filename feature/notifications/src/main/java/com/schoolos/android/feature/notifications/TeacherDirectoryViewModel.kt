@@ -40,15 +40,19 @@ class TeacherDirectoryViewModel @Inject constructor(
                         t.subject?.contains("Kepala Sekolah", ignoreCase = true) == true
                     }.map { t ->
                         val subject = t.subject?.trim().orEmpty()
+                        val canonicalName = t.fullName.trim()
+                            .replace(Regex(",\\s*(S\\.?\\s*Pd(\\.?\\s*I|\\.\\s*SD)?|M\\.?\\s*Pd|S\\.?\\s*Ag|S\\.?\\s*Kom|S\\.?\\s*E|S\\.?\\s*T|S\\.?\\s*Si|S\\.?\\s*Sos|M\\.?\\s*Si|M\\.?\\s*M)\\.?$", RegexOption.IGNORE_CASE), "")
+                            .trim()
                         TeacherContactItem(
                             id = t.id,
                             userId = t.userId?.takeIf { it.isNotBlank() } ?: t.id,
-                            name = t.fullName.trim(),
+                            name = canonicalName.ifBlank { t.fullName.trim() },
                             subject = subject.ifBlank { if (isPkbm) "Tutor Mata Pelajaran" else "Guru Mata Pelajaran" },
                             roleTitle = if (subject.isBlank()) (if (isPkbm) "Tutor Pengampu" else "Guru Pengampu") else (if (isPkbm) "Tutor $subject" else "Guru $subject"),
                             isPrincipal = false,
                         )
-                    }.sortedBy { it.name.lowercase() }
+                    }.distinctBy { it.name.lowercase().replace(Regex("[^a-z0-9 ]"), "").trim() }
+                     .sortedBy { it.name.lowercase() }
 
                     // Principal contact item for student inquiry / direct chat with school management
                     val principalUser = list.firstOrNull { t ->
