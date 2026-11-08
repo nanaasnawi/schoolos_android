@@ -16,6 +16,7 @@ import javax.inject.Inject
 data class QuizDetailUiState(
     val isLoading: Boolean = true,
     val error: String? = null,
+    val successMessage: String? = null,
     val quiz: Quiz? = null,
     val isStarting: Boolean = false,
     val isPublishing: Boolean = false,
@@ -49,9 +50,11 @@ class QuizDetailViewModel @Inject constructor(
         load()
     }
 
-    fun load() {
+    fun load(silent: Boolean = false) {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            if (!silent) {
+                _state.value = _state.value.copy(isLoading = true, error = null)
+            }
             repository.getQuiz(quizId)
                 .onSuccess { quiz ->
                     var hasCompleted = quiz.studentHasCompleted ||
@@ -133,7 +136,10 @@ class QuizDetailViewModel @Inject constructor(
         viewModelScope.launch {
             repository.gradeAttempt(quizId, attemptId, score, feedback)
                 .onSuccess {
-                    load()
+                    _state.value = _state.value.copy(
+                        successMessage = "Nilai kuis berhasil disimpan."
+                    )
+                    load(silent = true)
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
@@ -141,6 +147,10 @@ class QuizDetailViewModel @Inject constructor(
                     )
                 }
         }
+    }
+
+    fun dismissSuccessMessage() {
+        _state.value = _state.value.copy(successMessage = null)
     }
 
     fun startAttempt(token: String? = null) {
