@@ -117,6 +117,14 @@ fun QuizDetailScreen(
     val warningColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
     val successColor = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
 
+    val context = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(state.successMessage) {
+        state.successMessage?.let { msg ->
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+            viewModel.dismissSuccessMessage()
+        }
+    }
+
     LaunchedEffect(state.attempt) {
         state.attempt?.let { attempt ->
             viewModel.dismissAttempt()
@@ -143,14 +151,22 @@ fun QuizDetailScreen(
 
     if (attemptToGrade != null) {
         val attempt = attemptToGrade!!
+        val effMax = if (attempt.totalPoints > 0) attempt.totalPoints else (state.quiz?.maxScore ?: 100)
         TeacherGradeQuizDialog(
             attempt = attempt,
-            maxScore = state.quiz?.maxScore ?: attempt.totalPoints.takeIf { it > 0 } ?: 100,
+            maxScore = effMax,
             onDismiss = { attemptToGrade = null },
             onConfirm = { score, feedback ->
                 viewModel.gradeAttempt(attempt.id, score, feedback)
                 attemptToGrade = null
-            }
+            },
+            onViewAttemptDetail = if (attempt.status != "unsubmitted") {
+                {
+                    val curScore = attempt.score ?: 0
+                    attemptToGrade = null
+                    onViewResult(attempt.id, curScore, effMax)
+                }
+            } else null
         )
     }
 
@@ -592,125 +608,149 @@ fun QuizDetailScreen(
                                         )
                                     }
                                 } else {
-                                    filteredAttempts.forEach { attempt ->
-                                        val isDone = attempt.status in listOf("completed", "submitted", "graded")
-                                        val isInProgress = attempt.status == "in_progress"
-                                        val canGrade = attempt.status != "unsubmitted"
-                                        
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .padding(bottom = 8.dp)
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(if (isDark) Color(0xFF111113) else Color.White)
-                                                .border(
-                                                    1.dp,
-                                                    if (isInProgress) NeonBlue.copy(alpha = 0.4f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)),
-                                                    RoundedCornerShape(12.dp)
-                                                )
-                                                .clickable(enabled = canGrade) {
-                                                    attemptToGrade = attempt
-                                                }
-                                                .padding(12.dp),
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            // Avatar circle
-                                            Box(
+                                    Column(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                                    ) {
+                                        filteredAttempts.forEach { attempt ->
+                                            val isDone = attempt.status in listOf("completed", "submitted", "graded")
+                                            val isInProgress = attempt.status == "in_progress"
+                                            val canGrade = attempt.status != "unsubmitted"
+                                            
+                                            Row(
                                                 modifier = Modifier
-                                                    .size(36.dp)
-                                                    .clip(CircleShape)
-                                                    .background(
-                                                        if (isInProgress) Brush.linearGradient(listOf(NeonBlue, TeacherNeon))
-                                                        else if (isDone) Brush.linearGradient(listOf(NeonSuccess, NeonBlue))
-                                                        else Brush.linearGradient(listOf(if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0), if (isDark) Color(0xFF18181B) else Color(0xFFCBD5E1)))
-                                                    ),
-                                                contentAlignment = Alignment.Center
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(if (isDark) Color(0xFF111113) else Color.White)
+                                                    .border(
+                                                        1.dp,
+                                                        if (isInProgress) NeonBlue.copy(alpha = 0.4f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)),
+                                                        RoundedCornerShape(12.dp)
+                                                    )
+                                                    .clickable(enabled = canGrade) {
+                                                        attemptToGrade = attempt
+                                                    }
+                                                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                                                verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text(
-                                                    text = attempt.studentName?.firstOrNull()?.toString()?.uppercase() ?: "?",
-                                                    fontSize = 14.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    color = Color.White
-                                                )
-                                            }
+                                                // Avatar circle
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(36.dp)
+                                                        .clip(CircleShape)
+                                                        .background(
+                                                            if (isInProgress) Brush.linearGradient(listOf(NeonBlue, TeacherNeon))
+                                                            else if (isDone) Brush.linearGradient(listOf(NeonSuccess, NeonBlue))
+                                                            else Brush.linearGradient(listOf(if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0), if (isDark) Color(0xFF18181B) else Color(0xFFCBD5E1)))
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = attempt.studentName?.firstOrNull()?.toString()?.uppercase() ?: "?",
+                                                        fontSize = 14.sp,
+                                                        fontWeight = FontWeight.Black,
+                                                        color = Color.White
+                                                    )
+                                                }
 
-                                            Spacer(Modifier.width(10.dp))
+                                                Spacer(Modifier.width(10.dp))
 
-                                            Column(modifier = Modifier.weight(1f)) {
-                                                Text(
-                                                    attempt.studentName ?: "Siswa Tidak Diketahui",
-                                                    fontSize = 13.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = TextPrimary
-                                                )
-                                                Text(
-                                                    "NISN: ${attempt.studentNisn ?: "-"}",
-                                                    fontSize = 10.sp,
-                                                    color = TextTertiary
-                                                )
-                                            }
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        attempt.studentName ?: "Siswa Tidak Diketahui",
+                                                        fontSize = 13.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = TextPrimary
+                                                    )
+                                                    Text(
+                                                        "NISN: ${attempt.studentNisn ?: "-"}",
+                                                        fontSize = 10.sp,
+                                                        color = TextTertiary
+                                                    )
+                                                }
 
-                                            Spacer(Modifier.width(8.dp))
+                                                Spacer(Modifier.width(8.dp))
 
-                                            // Status / Action
-                                            when {
-                                                isInProgress -> {
-                                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                                // Status / Action
+                                                when {
+                                                    isInProgress -> {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .clip(RoundedCornerShape(8.dp))
+                                                                    .background(NeonBlue.copy(alpha = 0.15f))
+                                                                    .border(1.dp, NeonBlue.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                                                    .padding(horizontal = 8.dp, vertical = 4.dp)
+                                                            ) {
+                                                                Text(
+                                                                    "Sedang Ujian",
+                                                                    fontSize = 10.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    color = NeonBlue
+                                                                )
+                                                            }
+                                                            Spacer(Modifier.width(6.dp))
+                                                            Button(
+                                                                onClick = { attemptToGrade = attempt },
+                                                                contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                                                shape = RoundedCornerShape(8.dp),
+                                                                colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon.copy(alpha = 0.2f)),
+                                                                modifier = Modifier.height(28.dp)
+                                                            ) {
+                                                                Text("Koreksi", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TeacherNeon)
+                                                            }
+                                                        }
+                                                    }
+                                                    isDone -> {
+                                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                                            Column(horizontalAlignment = Alignment.End) {
+                                                                Text(
+                                                                    "${attempt.score ?: "-"} / ${attempt.totalPoints}",
+                                                                    fontSize = 13.sp,
+                                                                    fontWeight = FontWeight.ExtraBold,
+                                                                    color = if (attempt.score != null) NeonSuccess else NeonWarning
+                                                                )
+                                                                Text(
+                                                                    if (attempt.status == "graded") "Sudah Dinilai" else "Perlu Dinilai",
+                                                                    fontSize = 9.sp,
+                                                                    fontWeight = FontWeight.SemiBold,
+                                                                    color = if (attempt.status == "graded") NeonSuccess else NeonWarning
+                                                                )
+                                                            }
+                                                            Spacer(Modifier.width(8.dp))
+                                                            Button(
+                                                                onClick = { attemptToGrade = attempt },
+                                                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                                                shape = RoundedCornerShape(8.dp),
+                                                                colors = ButtonDefaults.buttonColors(
+                                                                    containerColor = if (attempt.status == "graded") (if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)) else TeacherNeon.copy(alpha = 0.2f),
+                                                                    contentColor = if (attempt.status == "graded") textSecondary else TeacherNeon
+                                                                ),
+                                                                modifier = Modifier.height(28.dp)
+                                                            ) {
+                                                                Text(
+                                                                    text = if (attempt.status == "graded") "Koreksi" else "Beri Nilai",
+                                                                    fontSize = 10.sp,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    else -> {
                                                         Box(
                                                             modifier = Modifier
                                                                 .clip(RoundedCornerShape(8.dp))
-                                                                .background(NeonBlue.copy(alpha = 0.15f))
-                                                                .border(1.dp, NeonBlue.copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                                                .background(if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
+                                                                .border(1.dp, if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
                                                                 .padding(horizontal = 8.dp, vertical = 4.dp)
                                                         ) {
                                                             Text(
-                                                                "Sedang Ujian",
+                                                                "Belum Mulai",
                                                                 fontSize = 10.sp,
-                                                                fontWeight = FontWeight.Bold,
-                                                                color = NeonBlue
+                                                                fontWeight = FontWeight.Medium,
+                                                                color = TextTertiary
                                                             )
                                                         }
-                                                        Spacer(Modifier.width(6.dp))
-                                                        Button(
-                                                            onClick = { attemptToGrade = attempt },
-                                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
-                                                            shape = RoundedCornerShape(8.dp),
-                                                            colors = ButtonDefaults.buttonColors(containerColor = TeacherNeon.copy(alpha = 0.2f)),
-                                                            modifier = Modifier.height(28.dp)
-                                                        ) {
-                                                            Text("Koreksi", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = TeacherNeon)
-                                                        }
-                                                    }
-                                                }
-                                                isDone -> {
-                                                    Column(horizontalAlignment = Alignment.End) {
-                                                        Text(
-                                                            "${attempt.score} / ${attempt.totalPoints}",
-                                                            fontSize = 14.sp,
-                                                            fontWeight = FontWeight.ExtraBold,
-                                                            color = NeonSuccess
-                                                        )
-                                                        Text(
-                                                            if (attempt.status == "graded") "Sudah Dinilai" else "Perlu Dinilai",
-                                                            fontSize = 9.sp,
-                                                            color = if (attempt.status == "graded") NeonSuccess else NeonWarning
-                                                        )
-                                                    }
-                                                }
-                                                else -> {
-                                                    Box(
-                                                        modifier = Modifier
-                                                            .clip(RoundedCornerShape(8.dp))
-                                                            .background(if (isDark) Color(0xFF1B1B1E) else Color(0xFFF1F5F9))
-                                                            .border(1.dp, if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0), RoundedCornerShape(8.dp))
-                                                            .padding(horizontal = 8.dp, vertical = 4.dp)
-                                                    ) {
-                                                        Text(
-                                                            "Belum Mulai",
-                                                            fontSize = 10.sp,
-                                                            fontWeight = FontWeight.Medium,
-                                                            color = TextTertiary
-                                                        )
                                                     }
                                                 }
                                             }
@@ -1194,6 +1234,7 @@ fun TeacherGradeQuizDialog(
     maxScore: Int,
     onDismiss: () -> Unit,
     onConfirm: (score: Int, feedback: String?) -> Unit,
+    onViewAttemptDetail: (() -> Unit)? = null,
 ) {
     val isDark = LocalIsDarkTheme.current
     val dialogBg = if (isDark) Color(0xFF111113) else Color.White
@@ -1203,7 +1244,8 @@ fun TeacherGradeQuizDialog(
     val inputBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
     val inputBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
 
-    var scoreText by remember { mutableStateOf(attempt.score.toString()) }
+    val effectiveMax = if (maxScore > 0) maxScore else (attempt.totalPoints.takeIf { it > 0 } ?: 100)
+    var scoreText by remember { mutableStateOf(attempt.score?.toString() ?: "") }
     var feedbackText by remember { mutableStateOf("") }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -1214,7 +1256,7 @@ fun TeacherGradeQuizDialog(
         title = {
             Column {
                 Text(
-                    text = "Koreksi Hasil Ujian",
+                    text = "Koreksi Hasil Ujian CBT",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = textPrimary
@@ -1243,24 +1285,67 @@ fun TeacherGradeQuizDialog(
                             color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
                         )
                     }
+                } else if (attempt.status in listOf("completed", "submitted")) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(if (isDark) NeonWarning.copy(alpha = 0.12f) else Color(0xFFFFFBEB))
+                            .border(1.dp, NeonWarning.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .padding(8.dp)
+                    ) {
+                        Text(
+                            "Status: Ujian telah diselesaikan oleh siswa (Perlu Dinilai).",
+                            fontSize = 11.sp,
+                            color = if (isDark) NeonWarning else Color(0xFFB45309)
+                        )
+                    }
+                }
+
+                if (onViewAttemptDetail != null) {
+                    OutlinedButton(
+                        onClick = onViewAttemptDetail,
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonBlue),
+                        modifier = Modifier.fillMaxWidth().height(36.dp)
+                    ) {
+                        Icon(Icons.AutoMirrored.Filled.List, contentDescription = null, modifier = Modifier.size(16.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Buka Lembar Jawaban Siswa", fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
 
                 Column {
-                    Text(
-                        text = "Nilai Skor (Maksimal: $maxScore)",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = textSecondary
-                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Nilai Skor (0 - $effectiveMax)",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = textSecondary
+                        )
+                        if (scoreText.isNotBlank()) {
+                            Text(
+                                text = "Skor: $scoreText / $effectiveMax",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (isDark) Color(0xFF34D399) else Color(0xFF059669)
+                            )
+                        }
+                    }
                     Spacer(Modifier.height(4.dp))
                     OutlinedTextField(
                         value = scoreText,
-                        onValueChange = {
-                            if (it.all { ch -> ch.isDigit() }) {
-                                scoreText = it
+                        onValueChange = { input ->
+                            if (input.isEmpty() || input.all { ch -> ch.isDigit() }) {
+                                scoreText = input
                                 errorMessage = null
                             }
                         },
+                        placeholder = { Text("Masukkan nilai (contoh: $effectiveMax)", fontSize = 12.sp, color = textTertiary) },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
@@ -1273,6 +1358,55 @@ fun TeacherGradeQuizDialog(
                         ),
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    // Quick Score Preset Chips
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        val kktpScore = (effectiveMax * 0.75).toInt()
+                        val halfScore = effectiveMax / 2
+                        val presets = listOf(
+                            "Penuh ($effectiveMax)" to effectiveMax,
+                            "KKTP ($kktpScore)" to kktpScore,
+                            "Setengah ($halfScore)" to halfScore,
+                            "0" to 0
+                        )
+                        presets.forEach { (label, value) ->
+                            val isSelected = scoreText == value.toString()
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(
+                                        if (isSelected) (if (isDark) Color(0xFF34D399).copy(alpha = 0.2f) else Color(0xFF059669).copy(alpha = 0.12f))
+                                        else (if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9))
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (isSelected) (if (isDark) Color(0xFF34D399) else Color(0xFF059669))
+                                        else (if (isDark) Color(0xFF3F3F46) else Color(0xFFE2E8F0)),
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable {
+                                        scoreText = value.toString()
+                                        errorMessage = null
+                                    }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = label,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isSelected) (if (isDark) Color(0xFF34D399) else Color(0xFF059669)) else textSecondary,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+
                     if (errorMessage != null) {
                         Text(
                             text = errorMessage!!,
@@ -1314,8 +1448,8 @@ fun TeacherGradeQuizDialog(
             Button(
                 onClick = {
                     val parsed = scoreText.toIntOrNull()
-                    if (parsed == null || parsed < 0 || parsed > maxScore) {
-                        errorMessage = "Masukkan skor valid antara 0 dan $maxScore"
+                    if (parsed == null || parsed < 0 || parsed > effectiveMax) {
+                        errorMessage = "Masukkan skor valid antara 0 dan $effectiveMax"
                     } else {
                         onConfirm(parsed, feedbackText.takeIf { it.isNotBlank() })
                     }
