@@ -334,13 +334,13 @@ fun QuizDetailScreen(
                                     if (scoreVal != null) {
                                         Text(
                                             text = "Skor Anda: $scoreVal poin.",
-                                            color = TextPrimary,
+                                            color = textPrimary,
                                             fontSize = 12.sp,
                                         )
                                     } else {
                                         Text(
                                             text = "Anda telah mencapai batas maksimal pengerjaan untuk kuis ini.",
-                                            color = TextSecondary,
+                                            color = textSecondary,
                                             fontSize = 12.sp,
                                         )
                                     }
@@ -649,7 +649,7 @@ fun QuizDetailScreen(
                                                         text = attempt.studentName?.firstOrNull()?.toString()?.uppercase() ?: "?",
                                                         fontSize = 14.sp,
                                                         fontWeight = FontWeight.Black,
-                                                        color = Color.White
+                                                        color = if (isInProgress || isDone) Color.White else textPrimary
                                                     )
                                                 }
 
@@ -748,7 +748,7 @@ fun QuizDetailScreen(
                                                                 "Belum Mulai",
                                                                 fontSize = 10.sp,
                                                                 fontWeight = FontWeight.Medium,
-                                                                color = TextTertiary
+                                                                color = textSecondary
                                                             )
                                                         }
                                                     }
@@ -783,7 +783,7 @@ fun QuizDetailScreen(
                                         .clip(RoundedCornerShape(14.dp))
                                         .border(
                                             width = 1.dp,
-                                            color = if (canViewResult) NeonSuccess.copy(alpha = 0.45f) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)),
+                                            color = if (canViewResult) (if (isDark) NeonSuccess.copy(alpha = 0.45f) else Color(0xFF10B981).copy(alpha = 0.6f)) else (if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)),
                                             shape = RoundedCornerShape(14.dp)
                                         )
                                 ) {
@@ -794,7 +794,7 @@ fun QuizDetailScreen(
                                         Icon(
                                             imageVector = Icons.Default.CheckCircle,
                                             contentDescription = null,
-                                            tint = if (canViewResult) NeonSuccess else TextTertiary,
+                                            tint = if (canViewResult) (if (isDark) NeonSuccess else Color(0xFF059669)) else textTertiary,
                                             modifier = Modifier.size(18.dp)
                                         )
                                         Spacer(Modifier.width(8.dp))
@@ -802,7 +802,7 @@ fun QuizDetailScreen(
                                             text = if (canViewResult) "LIHAT HASIL EVALUASI" else "SUDAH DIKERJAKAN",
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Black,
-                                            color = if (canViewResult) Color.White else TextTertiary,
+                                            color = if (canViewResult) textPrimary else textTertiary,
                                             letterSpacing = 0.5.sp
                                         )
                                     }
@@ -930,7 +930,7 @@ fun QuizDetailScreen(
                                             },
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.Black,
-                                            color = if (isAvailable) Color.White else TextTertiary,
+                                            color = if (canStartAttempt) Color.White else textTertiary,
                                             letterSpacing = 0.5.sp
                                         )
                                     }
