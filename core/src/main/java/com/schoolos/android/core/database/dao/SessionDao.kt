@@ -28,9 +28,18 @@ interface SessionDao {
     @Query("DELETE FROM learning_sessions")
     suspend fun clearAll()
 
+    @Query("DELETE FROM learning_sessions WHERE classId = :classId")
+    suspend fun deleteByClass(classId: String)
+
     @Transaction
     suspend fun replaceAll(sessions: List<SessionEntity>) {
         clearAll()
+        insertAll(sessions)
+    }
+
+    @Transaction
+    suspend fun replaceForClass(classId: String, sessions: List<SessionEntity>) {
+        deleteByClass(classId)
         insertAll(sessions)
     }
 }

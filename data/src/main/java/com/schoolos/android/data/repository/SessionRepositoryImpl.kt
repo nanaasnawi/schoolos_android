@@ -28,8 +28,8 @@ class SessionRepositoryImpl @Inject constructor(
                 val entities = sessions.map { it.toEntity() }
                 if (cleanClassId.isNullOrBlank()) {
                     sessionDao.replaceAll(entities)
-                } else if (entities.isNotEmpty()) {
-                    sessionDao.insertAll(entities)
+                } else {
+                    sessionDao.replaceForClass(cleanClassId, entities)
                 }
             } catch (_: Exception) {}
             return@runCatching sessions
