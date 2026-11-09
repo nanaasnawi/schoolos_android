@@ -142,6 +142,19 @@ fun LazyListScope.studentContent(
             onNavigateToProgress = onNavigateToProgress,
         )
     }
+
+    // ── 6. WIDGET SHORTCUT CAPAIAN & STATUS BELAJAR (Di Bawah Aktivitas Belajar Minggu Ini) ──
+    item {
+        HomeStudentStudyTrackerWidget(
+            weeklyActivity = weeklyActivity,
+            studentAssignments = studentAssignments,
+            activeReadingHistory = activeReadingHistory,
+            onNavigateToMaterials = onNavigateToLearning,
+            onNavigateToAssignments = onNavigateToAssignments,
+            onNavigateToQuizzes = onNavigateToQuizzes,
+            onNavigateToProgress = onNavigateToProgress,
+        )
+    }
 }
 
 // ── 0. KARTU SAPAAN PERSONAL (GREETING HERO CARD) ────────────────────────────
@@ -1352,5 +1365,520 @@ private fun formatSessionTime(rawTime: String?): String {
         out.format(parser.parse(rawTime.substringBefore(".")) ?: Date())
     } catch (_: Exception) {
         "08.00"
+    }
+}
+
+// ── 6. WIDGET SHORTCUT CAPAIAN & STATUS BELAJAR ───────────────────────────────
+
+private data class AndroidTrackerItem(
+    val id: String,
+    val title: String,
+    val subjectName: String,
+    val category: String, // "MATERIAL", "ASSIGNMENT", "QUIZ", "SESSION"
+    val subType: String = "",
+    val statusBadge: String,
+    val badgeColor: Color,
+    val progressPercent: Int? = null,
+    val timestampLabel: String,
+    val reasonNote: String? = null,
+    val actionLabel: String,
+)
+
+@Composable
+internal fun HomeStudentStudyTrackerWidget(
+    weeklyActivity: WeeklyActivity?,
+    studentAssignments: List<Assignment>,
+    activeReadingHistory: List<BookReadingItem>,
+    onNavigateToMaterials: () -> Unit,
+    onNavigateToAssignments: () -> Unit,
+    onNavigateToQuizzes: () -> Unit,
+    onNavigateToProgress: () -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    var activeTab by remember { mutableStateOf("history") } // "history", "missed", "in_progress"
+
+    val todayIso = remember {
+        try {
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+        } catch (_: Exception) { "" }
+    }
+
+    // 1. Riwayat Belajar (Selesai dipelajari / dikerjakan)
+    val historyItems = remember(weeklyActivity, studentAssignments, activeReadingHistory) {
+        val list = mutableListOf<AndroidTrackerItem>()
+
+        weeklyActivity?.days?.forEach { day ->
+            day.activities.forEach { act ->
+                val badge = when (act.category) {
+                    "MATERIAL" -> "Tuntas 100%"
+                    "ASSIGNMENT" -> "Sudah Dikumpulkan"
+                    "QUIZ" -> "Kuis Selesai"
+                    else -> "Selesai"
+                }
+                list.add(
+                    AndroidTrackerItem(
+                        id = act.id,
+                        title = act.title,
+                        subjectName = act.subjectName ?: "Mata Pelajaran",
+                        category = act.category,
+                        subType = act.subType,
+                        statusBadge = badge,
+                        badgeColor = Color(0xFF10B981),
+                        progressPercent = 100,
+                        timestampLabel = "${day.dayName} • ${act.time}",
+                        reasonNote = "Aktivitas belajar ini telah kamu selesaikan.",
+                        actionLabel = if (act.category == "MATERIAL") "Baca Lagi" else "Lihat Detail"
+                    )
+                )
+            }
+        }
+
+        studentAssignments.filter { it.status.equals("submitted", true) || it.status.equals("graded", true) }.forEach { a ->
+            if (list.none { it.id == a.id }) {
+                list.add(
+                    AndroidTrackerItem(
+                        id = a.id,
+                        title = a.title,
+                        subjectName = a.subjectName ?: "Mata Pelajaran",
+                        category = "ASSIGNMENT",
+                        subType = a.assignmentType,
+                        statusBadge = if (a.status.equals("graded", true)) "Dinilai Guru" else "Sudah Dikumpulkan",
+                        badgeColor = Color(0xFF10B981),
+                        progressPercent = 100,
+                        timestampLabel = a.updatedAt.take(10),
+                        reasonNote = "Lembar tugas sudah diserahkan kepada guru pengampu.",
+                        actionLabel = "Buka Tugas"
+                    )
+                )
+            }
+        }
+
+        list
+    }
+
+    // 2. Terlewat (Terisolasi dari aktivitas realtime hari ini)
+    val missedItems = remember(studentAssignments, todayIso) {
+        val list = mutableListOf<AndroidTrackerItem>()
+
+        studentAssignments.filter { a ->
+            val dueIso = a.dueAt?.take(10) ?: ""
+            val isPastDue = dueIso.isNotBlank() && dueIso < todayIso
+            val isCreatedBeforeToday = a.createdAt.take(10) < todayIso
+            val notCompleted = !a.status.equals("submitted", true) && !a.status.equals("graded", true) && !a.status.equals("returned", true)
+            (isPastDue || isCreatedBeforeToday) && notCompleted
+        }.forEach { a ->
+            val dueIso = a.dueAt?.take(10) ?: ""
+            val isPastDue = dueIso.isNotBlank() && dueIso < todayIso
+            list.add(
+                AndroidTrackerItem(
+                    id = a.id,
+                    title = a.title,
+                    subjectName = a.subjectName ?: "Mata Pelajaran",
+                    category = "ASSIGNMENT",
+                    subType = a.assignmentType,
+                    statusBadge = if (isPastDue) "Lewat Tenggat" else "Belum Dikerjakan",
+                    badgeColor = if (isPastDue) Color(0xFFEF4444) else Color(0xFFF59E0B),
+                    timestampLabel = if (dueIso.isNotBlank()) "Tenggat: $dueIso" else "Sebelum Hari Ini",
+                    reasonNote = if (isPastDue) "Tenggat waktu pengumpulan telah lewat. Segera kerjakan dan serahkan kepada guru." else "Tugas telah diberikan sebelum hari ini dan belum kamu kumpulkan.",
+                    actionLabel = "Kirim Tugas"
+                )
+            )
+        }
+
+        list
+    }
+
+    // 3. Belum Selesai (Materi dibaca sebagian & revisi guru)
+    val inProgressItems = remember(activeReadingHistory, studentAssignments) {
+        val list = mutableListOf<AndroidTrackerItem>()
+
+        activeReadingHistory.filter { !it.isCompleted && it.currentPage > 1 }.forEach { b ->
+            val pct = if (b.totalPages > 0) ((b.currentPage.toFloat() / b.totalPages.toFloat()) * 100f).toInt().coerceIn(10, 95) else 45
+            list.add(
+                AndroidTrackerItem(
+                    id = b.id,
+                    title = b.title,
+                    subjectName = b.subjectName ?: "Materi Bacaan",
+                    category = "MATERIAL",
+                    statusBadge = "Dibaca $pct%",
+                    badgeColor = Color(0xFF0284C7),
+                    progressPercent = pct,
+                    timestampLabel = "Halaman ${b.currentPage} dari ${b.totalPages}",
+                    reasonNote = "Materi baru kamu baca sebagian. Klik untuk melanjutkan membaca.",
+                    actionLabel = "Lanjutkan"
+                )
+            )
+        }
+
+        studentAssignments.filter { it.status.equals("returned", true) }.forEach { a ->
+            list.add(
+                AndroidTrackerItem(
+                    id = a.id,
+                    title = a.title,
+                    subjectName = a.subjectName ?: "Mata Pelajaran",
+                    category = "ASSIGNMENT",
+                    subType = a.assignmentType,
+                    statusBadge = "Perlu Perbaikan",
+                    badgeColor = Color(0xFFEF4444),
+                    timestampLabel = "Dikembalikan Guru",
+                    reasonNote = "Guru pengampu meminta kamu memperbaiki lembar tugas ini dan mengirimkannya kembali.",
+                    actionLabel = "Perbaiki"
+                )
+            )
+        }
+
+        list
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
+        shadowElevation = 0.dp
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF6366F1).copy(alpha = 0.12f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.AutoAwesome,
+                            contentDescription = null,
+                            tint = Color(0xFF6366F1),
+                            modifier = Modifier.size(15.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+                        Text(
+                            text = "Pusat Belajar & Status Tugas",
+                            fontSize = 14.5.sp,
+                            lineHeight = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary
+                        )
+                        Text(
+                            text = "Terpisah dari jadwal aktif hari ini",
+                            fontSize = 11.sp,
+                            lineHeight = 14.sp,
+                            color = textSecondary
+                        )
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
+                ) {
+                    Text(
+                        text = "Mandiri",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textSecondary,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            // 3 Shortcut Tabs (Riwayat Belajar, Terlewat, Belum Selesai)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Shortcut 1: Riwayat Belajar
+                TrackerShortcutTab(
+                    title = "Riwayat Belajar",
+                    subtitle = "Sudah tuntas",
+                    count = historyItems.size,
+                    isSelected = activeTab == "history",
+                    accentColor = Color(0xFF10B981),
+                    modifier = Modifier.weight(1f),
+                    onClick = { activeTab = "history" }
+                )
+
+                // Shortcut 2: Terlewat
+                TrackerShortcutTab(
+                    title = "Terlewat",
+                    subtitle = "Perlu dikejar",
+                    count = missedItems.size,
+                    isSelected = activeTab == "missed",
+                    accentColor = Color(0xFFEF4444),
+                    modifier = Modifier.weight(1f),
+                    onClick = { activeTab = "missed" }
+                )
+
+                // Shortcut 3: Belum Selesai
+                TrackerShortcutTab(
+                    title = "Belum Selesai",
+                    subtitle = "Lanjut belajar",
+                    count = inProgressItems.size,
+                    isSelected = activeTab == "in_progress",
+                    accentColor = Color(0xFFF59E0B),
+                    modifier = Modifier.weight(1f),
+                    onClick = { activeTab = "in_progress" }
+                )
+            }
+
+            // Tab Content List
+            val currentItems = when (activeTab) {
+                "history" -> historyItems
+                "missed" -> missedItems
+                else -> inProgressItems
+            }
+
+            val emptyMessage = when (activeTab) {
+                "history" -> "Belum ada riwayat aktivitas belajar yang tercatat. Yuk mulai baca materi pertamamu!"
+                "missed" -> "Hebat! Tidak ada materi atau tugas yang terlewat. Pertahankan kedisiplinan belajarmu! 🎉"
+                else -> "Bagus sekali! Semua materi dan tugas yang kamu mulai sudah selesai. ✨"
+            }
+
+            if (currentItems.isEmpty()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
+                    border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Text(
+                            text = emptyMessage,
+                            fontSize = 12.sp,
+                            color = textSecondary,
+                            lineHeight = 16.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    currentItems.take(5).forEach { item ->
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(14.dp))
+                                .clickable {
+                                    when (item.category) {
+                                        "MATERIAL" -> onNavigateToMaterials()
+                                        "ASSIGNMENT" -> onNavigateToAssignments()
+                                        "QUIZ" -> onNavigateToQuizzes()
+                                        else -> onNavigateToProgress()
+                                    }
+                                },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(12.dp),
+                                verticalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        modifier = Modifier.weight(1f, fill = false)
+                                    ) {
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = if (isDark) Color(0xFF222226) else Color(0xFFE2E8F0)
+                                        ) {
+                                            Text(
+                                                text = item.subjectName,
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = textPrimary,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(6.dp),
+                                            color = item.badgeColor.copy(alpha = 0.14f)
+                                        ) {
+                                            Text(
+                                                text = item.statusBadge,
+                                                fontSize = 9.5.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = item.badgeColor,
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                            )
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = item.badgeColor.copy(alpha = 0.15f)
+                                    ) {
+                                        Text(
+                                            text = item.actionLabel,
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = item.badgeColor,
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                        )
+                                    }
+                                }
+
+                                Text(
+                                    text = item.title,
+                                    fontSize = 12.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = textPrimary,
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    lineHeight = 16.sp
+                                )
+
+                                if (item.progressPercent != null && item.progressPercent > 0 && item.progressPercent < 100) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        LinearProgressIndicator(
+                                            progress = { item.progressPercent / 100f },
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(4.dp)
+                                                .clip(RoundedCornerShape(2.dp)),
+                                            color = Color(0xFF0284C7),
+                                            trackColor = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+                                        )
+                                    }
+                                }
+
+                                if (!item.reasonNote.isNullOrBlank()) {
+                                    Surface(
+                                        shape = RoundedCornerShape(8.dp),
+                                        color = if (isDark) Color(0xFF1E1E22) else Color(0xFFF1F5F9),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+                                            verticalAlignment = Alignment.Top,
+                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                        ) {
+                                            Text(text = "💡", fontSize = 10.sp)
+                                            Text(
+                                                text = item.reasonNote,
+                                                fontSize = 10.5.sp,
+                                                color = textSecondary,
+                                                lineHeight = 14.sp
+                                            )
+                                        }
+                                    }
+                                }
+
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = item.timestampLabel,
+                                        fontSize = 10.sp,
+                                        color = textSecondary
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrackerShortcutTab(
+    title: String,
+    subtitle: String,
+    count: Int,
+    isSelected: Boolean,
+    accentColor: Color,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    val isDark = LocalIsDarkTheme.current
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+
+    Surface(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(14.dp),
+        color = if (isSelected) accentColor.copy(alpha = 0.12f) else if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
+        border = BorderStroke(
+            1.dp,
+            if (isSelected) accentColor else if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (isSelected) accentColor else accentColor.copy(alpha = 0.16f)
+                ) {
+                    Text(
+                        text = "$count",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Black,
+                        color = if (isSelected) Color.White else accentColor,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 1.dp)
+                    )
+                }
+            }
+
+            Text(
+                text = title,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.Bold,
+                color = textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Text(
+                text = subtitle,
+                fontSize = 9.5.sp,
+                color = textSecondary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
