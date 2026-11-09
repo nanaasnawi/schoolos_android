@@ -312,17 +312,36 @@ class SessionDetailViewModel @Inject constructor(
     }
 
     private fun isMaterialMatchingDate(m: com.schoolos.android.domain.model.LearningMaterial, targetDate: java.time.LocalDate): Boolean {
-        val iso = m.releaseAt?.takeIf { it.isNotBlank() } ?: m.createdAt?.takeIf { it.isNotBlank() } ?: return true
-        val d = parseDate(iso)
-        // Allow released materials up to and including today's session date (do not hide active materials)
-        return d == null || !d.isAfter(targetDate)
+        // Material must NOT be scheduled for the future or a draft
+        if (m.isScheduled) return false
+        if (m.visibility?.equals("draft", ignoreCase = true) == true) return false
+
+        // Extract the release / publish date (in Asia/Jakarta WIB)
+        val iso = m.releaseAt?.takeIf { it.isNotBlank() } ?: m.createdAt?.takeIf { it.isNotBlank() } ?: return false
+        val d = parseDate(iso) ?: return false
+
+        // STRICT: Only match today's session date (targetDate)! Do NOT show materials from previous weeks or dates!
+        return d == targetDate
     }
 
     private fun isAssignmentMatchingDate(a: com.schoolos.android.domain.model.Assignment, targetDate: java.time.LocalDate): Boolean {
-        val iso = a.releaseAt?.takeIf { it.isNotBlank() } ?: a.createdAt.takeIf { it.isNotBlank() } ?: return true
-        val d = parseDate(iso)
-        // Allow released assignments up to and including today's session date
-        return d == null || !d.isAfter(targetDate)
+        // Assignment must be active, not archived, not draft, not cancelled
+        if (!a.isActive) return false
+        if (a.status.equals("archived", ignoreCase = true) || a.status.equals("draft", ignoreCase = true) || a.status.equals("cancelled", ignoreCase = true)) return false
+        if (a.isScheduled) return false
+
+        // Do not show overdue / expired assignments as active session tasks
+        val isOverdue = !a.dueAt.isNullOrBlank() && try {
+            java.time.Instant.parse(a.dueAt).isBefore(java.time.Instant.now())
+        } catch (_: Exception) { false }
+        if (isOverdue) return false
+
+        // Extract the release / publish date (in Asia/Jakarta WIB)
+        val iso = a.releaseAt?.takeIf { it.isNotBlank() } ?: a.createdAt.takeIf { it.isNotBlank() } ?: return false
+        val d = parseDate(iso) ?: return false
+
+        // STRICT: Only match today's session date (targetDate)! Do NOT show assignments from previous weeks or dates!
+        return d == targetDate
     }
 
     private fun extractSessionLocalDate(s: LearningSession): java.time.LocalDate? {
