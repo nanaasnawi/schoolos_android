@@ -51,13 +51,34 @@ class AssignmentListViewModel @Inject constructor(
     /** Optional date filter passed via navigation (e.g. "2026-11-02" or "today"). */
     private var dateFilter: String? = savedStateHandle.get<String>("date")?.takeIf { it.isNotBlank() }
 
+    /** Enrolled class of the logged-in student (strictly enforced so other classes never leak). */
+    private var studentEnrolledClass: String? = null
+
+    /** Taught subject(s) of the logged-in teacher (e.g. "IPS, Geografi") for automatic subject isolation. */
+    private var teacherSubject: String? = null
+    private var isTeacher: Boolean = false
+    private var isPrincipal: Boolean = false
+
     init {
         viewModelScope.launch {
             authManager.authState.collect { auth ->
+                val role = auth.role ?: "student"
+                isPrincipal = auth.isPrincipal || com.schoolos.android.core.auth.isPrincipalRole(role)
+                isTeacher = !isPrincipal && com.schoolos.android.core.auth.isTeacherRole(role)
+                val isStudent = !isTeacher && !isPrincipal
+                studentEnrolledClass = if (isStudent) {
+                    auth.className?.trim()?.takeIf { it.isNotBlank() && !it.equals("ALL", ignoreCase = true) }
+                } else {
+                    null
+                }
+                teacherSubject = if (isTeacher) auth.subject?.trim()?.takeIf { it.isNotBlank() } else null
                 _state.value = _state.value.copy(
-                    userRole = auth.role ?: "student",
+                    userRole = role,
                     childName = auth.childName ?: ""
                 )
+                if (hasLoadedInitialData) {
+                    load()
+                }
             }
         }
         load()
@@ -81,18 +102,29 @@ class AssignmentListViewModel @Inject constructor(
                 .onSuccess { assignments ->
                     hasLoadedInitialData = true
                     var filtered = assignments
-                    subjectFilter?.let { filter ->
+
+                    // 1. Strict class scoping for students (prevents cross-class leakage) or explicit class filter
+                    val effectiveClass = classFilter ?: studentEnrolledClass
+                    if (effectiveClass != null) {
                         filtered = filtered.filter { a ->
-                            com.schoolos.android.core.designsystem.matchesSubjectFilter(a.subjectName, filter) ||
-                            (a.subjectName.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesSubjectFilter(a.title, filter))
+                            com.schoolos.android.core.designsystem.matchesClassFilter(a.className, effectiveClass) ||
+                            (a.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(a.title, effectiveClass))
                         }
                     }
-                    classFilter?.let { filter ->
+
+                    // 2. Subject filter from nav or teacher taught subjects scoping
+                    if (subjectFilter != null) {
                         filtered = filtered.filter { a ->
-                            com.schoolos.android.core.designsystem.matchesClassFilter(a.className, filter) ||
-                            (a.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(a.title, filter))
+                            com.schoolos.android.core.designsystem.matchesSubjectFilter(a.subjectName, subjectFilter) ||
+                            (a.subjectName.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesSubjectFilter(a.title, subjectFilter))
+                        }
+                    } else if (isTeacher && !isPrincipal && !teacherSubject.isNullOrBlank()) {
+                        filtered = filtered.filter { a ->
+                            com.schoolos.android.core.designsystem.matchesTeacherTaughtSubjects(a.subjectName ?: a.title, teacherSubject)
                         }
                     }
+
+                    // 3. Optional date filter
                     dateFilter?.let { dFilter ->
                         val targetDate = if (dFilter.equals("today", ignoreCase = true)) {
                             java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta"))

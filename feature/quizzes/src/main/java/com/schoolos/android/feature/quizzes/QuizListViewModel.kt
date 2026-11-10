@@ -45,10 +45,31 @@ class QuizListViewModel @Inject constructor(
     /** Optional date filter passed via navigation (e.g. "2026-11-02" or "today"). */
     private var dateFilter: String? = savedStateHandle.get<String>("date")?.takeIf { it.isNotBlank() }
 
+    /** Enrolled class of the logged-in student (strictly enforced so other classes never leak). */
+    private var studentEnrolledClass: String? = null
+
+    /** Taught subject(s) of the logged-in teacher (e.g. "IPS, Geografi") for automatic subject isolation. */
+    private var teacherSubject: String? = null
+    private var isTeacher: Boolean = false
+    private var isPrincipal: Boolean = false
+
     init {
         viewModelScope.launch {
             authManager.authState.collect { auth ->
-                _state.value = _state.value.copy(userRole = auth.role ?: "student")
+                val role = auth.role ?: "student"
+                isPrincipal = auth.isPrincipal || com.schoolos.android.core.auth.isPrincipalRole(role)
+                isTeacher = !isPrincipal && com.schoolos.android.core.auth.isTeacherRole(role)
+                val isStudent = !isTeacher && !isPrincipal
+                studentEnrolledClass = if (isStudent) {
+                    auth.className?.trim()?.takeIf { it.isNotBlank() && !it.equals("ALL", ignoreCase = true) }
+                } else {
+                    null
+                }
+                teacherSubject = if (isTeacher) auth.subject?.trim()?.takeIf { it.isNotBlank() } else null
+                _state.value = _state.value.copy(userRole = role)
+                if (hasLoadedInitialData) {
+                    load()
+                }
             }
         }
         load()
@@ -101,16 +122,25 @@ class QuizListViewModel @Inject constructor(
                     }
 
                     var filtered = updatedQuizzes
-                    subjectFilter?.let { filter ->
+
+                    // 1. Strict class scoping for students (prevents cross-class leakage) or explicit class filter
+                    val effectiveClass = classFilter ?: studentEnrolledClass
+                    if (effectiveClass != null) {
                         filtered = filtered.filter { q ->
-                            com.schoolos.android.core.designsystem.matchesSubjectFilter(q.subjectName, filter) ||
-                            (q.subjectName.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesSubjectFilter(q.title, filter))
+                            com.schoolos.android.core.designsystem.matchesClassFilter(q.className, effectiveClass) ||
+                            (q.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(q.title, effectiveClass))
                         }
                     }
-                    classFilter?.let { filter ->
+
+                    // 2. Subject filter from nav or teacher taught subjects scoping
+                    if (subjectFilter != null) {
                         filtered = filtered.filter { q ->
-                            com.schoolos.android.core.designsystem.matchesClassFilter(q.className, filter) ||
-                            (q.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(q.title, filter))
+                            com.schoolos.android.core.designsystem.matchesSubjectFilter(q.subjectName, subjectFilter) ||
+                            (q.subjectName.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesSubjectFilter(q.title, subjectFilter))
+                        }
+                    } else if (isTeacher && !isPrincipal && !teacherSubject.isNullOrBlank()) {
+                        filtered = filtered.filter { q ->
+                            com.schoolos.android.core.designsystem.matchesTeacherTaughtSubjects(q.subjectName ?: q.title, teacherSubject)
                         }
                     }
                     dateFilter?.let { dFilter ->

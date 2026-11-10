@@ -84,6 +84,9 @@ class LearningViewModel @Inject constructor(
     /** Enrolled class of the logged-in student (strictly enforced so other classes never leak). */
     private var studentEnrolledClass: String? = null
 
+    /** Taught subject(s) of the logged-in teacher (e.g. "IPS, Geografi") for automatic subject isolation. */
+    private var teacherSubject: String? = null
+
     /** Optional date filter passed via navigation (e.g. "2026-11-02" or "today"). */
     private var dateFilter: String? = savedStateHandle.get<String>("date")?.takeIf { it.isNotBlank() }
 
@@ -102,14 +105,15 @@ class LearningViewModel @Inject constructor(
         viewModelScope.launch {
             authManager.authState.collect { auth ->
                 val role = auth.role ?: "student"
-                val isStudent = !com.schoolos.android.core.auth.isTeacherRole(role) &&
-                    !com.schoolos.android.core.auth.isPrincipalRole(role) &&
-                    !auth.isPrincipal
+                val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(role) || auth.isPrincipal
+                val isTeacher = !isPrincipal && com.schoolos.android.core.auth.isTeacherRole(role)
+                val isStudent = !isTeacher && !isPrincipal
                 studentEnrolledClass = if (isStudent) {
                     auth.className?.trim()?.takeIf { it.isNotBlank() && !it.equals("ALL", ignoreCase = true) }
                 } else {
                     null
                 }
+                teacherSubject = if (isTeacher) auth.subject?.trim()?.takeIf { it.isNotBlank() } else null
                 _state.value = _state.value.copy(userRole = role)
                 if (allMaterials.isNotEmpty()) {
                     filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
@@ -386,11 +390,19 @@ class LearningViewModel @Inject constructor(
     }
 
     private fun filterMaterials(query: String, category: String) {
-        val roleScopedMaterials = studentEnrolledClass?.let { enrolledClass ->
-            allMaterials.filter { item ->
-                com.schoolos.android.core.designsystem.matchesClassFilter(item.className, enrolledClass)
+        val roleScopedMaterials = when {
+            studentEnrolledClass != null -> {
+                allMaterials.filter { item ->
+                    com.schoolos.android.core.designsystem.matchesClassFilter(item.className, studentEnrolledClass)
+                }
             }
-        } ?: allMaterials
+            teacherSubject != null && subjectFilter == null -> {
+                allMaterials.filter { item ->
+                    com.schoolos.android.core.designsystem.matchesTeacherTaughtSubjects(item.subject, teacherSubject)
+                }
+            }
+            else -> allMaterials
+        }
 
         var filtered = roleScopedMaterials
 
