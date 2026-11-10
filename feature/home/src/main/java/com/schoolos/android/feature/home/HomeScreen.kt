@@ -501,6 +501,7 @@ fun HomeScreen(
                         },
                         xpCount                  = state.xpCount,
                         assignmentsCount         = state.assignmentsCount,
+                        materialsCount           = state.teacherMaterialsCount,
                         weeklyActivity           = state.weeklyActivity,
                         studentName              = state.userName,
                         studentClass             = state.homeroomClass,
