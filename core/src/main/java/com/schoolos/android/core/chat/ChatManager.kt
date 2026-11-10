@@ -1221,19 +1221,20 @@ class ChatManager @Inject constructor(
                     history = historyDtos,
                 )
             )
+            val senderTitle = when {
+                isPrincipalMode -> "AI Analitik Kepala Sekolah"
+                isTeacherMode -> if (isPkbm) "AI Copilot Tutor" else "AI Copilot Guru"
+                else -> "Guru AI"
+            }
+            val senderIdVal = when {
+                isPrincipalMode -> "ai-principal"
+                isTeacherMode -> "ai-teacher"
+                else -> "ai-tutor"
+            }
+
             if (resp.success && resp.data != null) {
                 val replyText = resp.data.reply
                 val now = System.currentTimeMillis()
-                val senderTitle = when {
-                    isPrincipalMode -> "AI Analitik Kepala Sekolah"
-                    isTeacherMode -> "AI Copilot Guru"
-                    else -> "Guru AI"
-                }
-                val senderIdVal = when {
-                    isPrincipalMode -> "ai-principal"
-                    isTeacherMode -> "ai-teacher"
-                    else -> "ai-tutor"
-                }
                 val aiMsg = ChatMessage(
                     id = UUID.randomUUID().toString(),
                     threadId = threadId,
@@ -1267,12 +1268,68 @@ class ChatManager @Inject constructor(
                         thread
                     }
                 }
+                saveToDisk(_threads.value, cachedAuth?.userId)
                 Result.success(replyText)
             } else {
-                Result.failure(Exception(resp.error?.message ?: "Gagal mendapatkan respon AI"))
+                val errorMsg = resp.error?.message ?: "Gagal mendapatkan respon dari Guru AI"
+                val errorAiMsg = ChatMessage(
+                    id = UUID.randomUUID().toString(),
+                    threadId = threadId,
+                    senderId = senderIdVal,
+                    senderName = senderTitle,
+                    senderRole = "TEACHER",
+                    content = "Maaf, $errorMsg. Silakan coba kembali sesaat lagi.",
+                    timestamp = System.currentTimeMillis(),
+                    isFromTeacher = true,
+                    isRead = true,
+                )
+                _threads.value = _threads.value.map { thread ->
+                    if (thread.id == threadId) {
+                        val updated = thread.messages + errorAiMsg
+                        thread.copy(
+                            messages = updated,
+                            status = InquiryStatus.ANSWERED,
+                            lastUpdated = System.currentTimeMillis(),
+                            lastMessageContent = errorAiMsg.content,
+                            lastSenderName = senderTitle,
+                            messageCount = updated.size,
+                        )
+                    } else {
+                        thread
+                    }
+                }
+                saveToDisk(_threads.value, cachedAuth?.userId)
+                Result.failure(Exception(errorMsg))
             }
         } catch (e: Exception) {
             Timber.e(e, "askAi failed")
+            val fallbackMsg = ChatMessage(
+                id = UUID.randomUUID().toString(),
+                threadId = threadId,
+                senderId = "ai-tutor",
+                senderName = "Guru AI",
+                senderRole = "TEACHER",
+                content = "Maaf, koneksi ke Guru AI sedang mengalami gangguan jaringan. Silakan periksa koneksi internet Anda dan coba lagi.",
+                timestamp = System.currentTimeMillis(),
+                isFromTeacher = true,
+                isRead = true,
+            )
+            _threads.value = _threads.value.map { thread ->
+                if (thread.id == threadId) {
+                    val updated = thread.messages + fallbackMsg
+                    thread.copy(
+                        messages = updated,
+                        status = InquiryStatus.ANSWERED,
+                        lastUpdated = System.currentTimeMillis(),
+                        lastMessageContent = fallbackMsg.content,
+                        lastSenderName = "Guru AI",
+                        messageCount = updated.size,
+                    )
+                } else {
+                    thread
+                }
+            }
+            saveToDisk(_threads.value, cachedAuth?.userId)
             Result.failure(e)
         }
     }
@@ -1657,8 +1714,26 @@ class ChatManager @Inject constructor(
                     put("teacherLastReadAt", thread.teacherLastReadAt ?: JSONObject.NULL)
                     put("studentLastReadAt", thread.studentLastReadAt ?: JSONObject.NULL)
 
-                    // Chat messages are managed exclusively via Firebase RTDB (no disk cache)
-                    put("messages", JSONArray())
+                    // Persist messages: strictly required for local AI conversations and offline resiliency
+                    val msgsArray = JSONArray()
+                    for (m in thread.messages) {
+                        val mObj = JSONObject().apply {
+                            put("id", m.id)
+                            put("threadId", m.threadId)
+                            put("senderId", m.senderId)
+                            put("senderName", m.senderName)
+                            put("senderRole", m.senderRole)
+                            put("content", m.content)
+                            put("timestamp", m.timestamp)
+                            put("isFromTeacher", m.isFromTeacher)
+                            put("isRead", m.isRead)
+                            put("readAt", m.readAt ?: JSONObject.NULL)
+                            put("attachmentUrl", m.attachmentUrl ?: JSONObject.NULL)
+                            put("attachmentType", m.attachmentType ?: JSONObject.NULL)
+                        }
+                        msgsArray.put(mObj)
+                    }
+                    put("messages", msgsArray)
                 }
                 jsonArray.put(tObj)
             }
@@ -1687,7 +1762,32 @@ class ChatManager @Inject constructor(
             val result = ArrayList<ChatThread>(jsonArray.length())
             for (i in 0 until jsonArray.length()) {
                 val tObj = jsonArray.getJSONObject(i)
-                val msgs = emptyList<ChatMessage>() // Real-time messages are streamed directly from Firebase RTDB
+                val rawMsgsArray = tObj.optJSONArray("messages")
+                val msgs = if (rawMsgsArray != null && rawMsgsArray.length() > 0) {
+                    val list = ArrayList<ChatMessage>(rawMsgsArray.length())
+                    for (j in 0 until rawMsgsArray.length()) {
+                        val mObj = rawMsgsArray.getJSONObject(j)
+                        list.add(
+                            ChatMessage(
+                                id = mObj.optString("id", UUID.randomUUID().toString()),
+                                threadId = mObj.optString("threadId", tObj.optString("id")),
+                                senderId = mObj.optString("senderId", ""),
+                                senderName = mObj.optString("senderName", ""),
+                                senderRole = mObj.optString("senderRole", "STUDENT"),
+                                content = mObj.optString("content", ""),
+                                timestamp = mObj.optLong("timestamp", System.currentTimeMillis()),
+                                isFromTeacher = mObj.optBoolean("isFromTeacher", false),
+                                isRead = mObj.optBoolean("isRead", false),
+                                readAt = if (mObj.isNull("readAt")) null else mObj.optLong("readAt"),
+                                attachmentUrl = if (mObj.isNull("attachmentUrl")) null else mObj.optString("attachmentUrl"),
+                                attachmentType = if (mObj.isNull("attachmentType")) null else mObj.optString("attachmentType"),
+                            )
+                        )
+                    }
+                    list
+                } else {
+                    emptyList<ChatMessage>()
+                }
                 val inqType = try {
                     InquiryType.valueOf(tObj.optString("inquiryType", "MATERIAL"))
                 } catch (_: Exception) {
