@@ -65,6 +65,12 @@ fun StudentSessionDetailContent(
     var selectedExcuseType by remember { mutableStateOf("sick") }
     var excuseReason by remember { mutableStateOf("") }
 
+    val isTodaySession = remember(session) {
+        val todayStr = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")).toString()
+        val sessDate = session.sessionDate?.substringBefore(" ")?.substringBefore("T")
+        sessDate == todayStr || session.scheduledAt?.startsWith(todayStr) == true
+    }
+
     if (showExcuseDialog && onSubmitExcuse != null) {
         androidx.compose.material3.AlertDialog(
             onDismissRequest = { showExcuseDialog = false },
@@ -322,7 +328,7 @@ fun StudentSessionDetailContent(
                             border = BorderStroke(1.dp, if (isDark) successColor.copy(alpha = 0.40f) else Color(0xFF86EFAC))
                         ) {
                             Text(
-                                text = "Real-Time Hari Ini",
+                                text = if (isTodaySession) "Real-Time Hari Ini" else "Sesuai Jadwal Sesi",
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isDark) successColor else Color(0xFF15803D),
@@ -385,7 +391,12 @@ fun StudentSessionDetailContent(
                                         )
                                         Spacer(Modifier.height(1.dp))
                                         Text(
-                                            text = if (isVideo) "Tayang: Hari Ini • Video Pembelajaran" else "Tayang: Hari Ini • Modul Bacaan",
+                                            text = when {
+                                                isTodaySession && isVideo -> "Tayang: Hari Ini • Video Pembelajaran"
+                                                isTodaySession -> "Tayang: Hari Ini • Modul Bacaan"
+                                                isVideo -> "Tayang Sesi Ini • Video Pembelajaran"
+                                                else -> "Tayang Sesi Ini • Modul Bacaan"
+                                            },
                                             fontSize = 10.5.sp,
                                             color = if (isVideo) Color(0xFFEF4444) else warningColor,
                                             fontWeight = FontWeight.Medium
@@ -449,7 +460,7 @@ fun StudentSessionDetailContent(
                                         )
                                         Spacer(Modifier.height(1.dp))
                                         Text(
-                                            text = "Tugas Sesi Hari Ini • Maks ${assign.maxScore} Poin",
+                                            text = if (isTodaySession) "Tugas Sesi Hari Ini • Maks ${assign.maxScore} Poin" else "Tugas Sesi Ini • Maks ${assign.maxScore} Poin",
                                             fontSize = 10.5.sp,
                                             color = studentAccent,
                                             fontWeight = FontWeight.Medium

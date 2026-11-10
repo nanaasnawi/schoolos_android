@@ -320,8 +320,8 @@ class SessionDetailViewModel @Inject constructor(
         val iso = m.releaseAt?.takeIf { it.isNotBlank() } ?: m.createdAt?.takeIf { it.isNotBlank() } ?: return false
         val d = parseDate(iso) ?: return false
 
-        // Match session date: must be released on or before target date (never future scheduled)
-        return !d.isAfter(targetDate)
+        // Strict match session date: must match the session's exact date (never display materials from other dates/weeks)
+        return d.isEqual(targetDate)
     }
 
     private fun isAssignmentMatchingDate(a: com.schoolos.android.domain.model.Assignment, targetDate: java.time.LocalDate): Boolean {
@@ -340,16 +340,13 @@ class SessionDetailViewModel @Inject constructor(
         val iso = a.releaseAt?.takeIf { it.isNotBlank() } ?: a.createdAt.takeIf { it.isNotBlank() } ?: return false
         val d = parseDate(iso) ?: return false
 
-        // Match session date: must be released on or before target date (never future scheduled)
-        return !d.isAfter(targetDate)
+        // Strict match session date: must match the session's exact date (never display assignments from other dates/weeks)
+        return d.isEqual(targetDate)
     }
 
     private fun extractSessionLocalDate(s: LearningSession): java.time.LocalDate? {
-        val fromSessionDate = s.sessionDate?.let { dateStr ->
-            val clean = dateStr.trim().substringBefore(" ").substringBefore("T")
-            try { java.time.LocalDate.parse(clean) } catch (_: Exception) { null }
-        }
-        return fromSessionDate ?: s.scheduledAt?.let { parseDate(it) } ?: s.startedAt?.let { parseDate(it) }
+        val fromSessionDate = s.sessionDate?.takeIf { it.isNotBlank() }?.let { parseDate(it) }
+        return fromSessionDate ?: s.scheduledAt?.takeIf { it.isNotBlank() }?.let { parseDate(it) } ?: s.startedAt?.takeIf { it.isNotBlank() }?.let { parseDate(it) }
     }
 
     private fun parseDate(iso: String): java.time.LocalDate? {

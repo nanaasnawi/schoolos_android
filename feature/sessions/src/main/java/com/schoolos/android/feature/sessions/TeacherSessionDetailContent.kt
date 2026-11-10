@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +71,12 @@ fun TeacherSessionDetailContent(
     val amberFg = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
     val redBg = if (isDark) Color(0xFF3A0F14) else Color(0xFFFEE2E2)
     val redFg = if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
+
+    val isTodaySession = remember(session) {
+        val todayStr = java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")).toString()
+        val sessDate = session.sessionDate?.substringBefore(" ")?.substringBefore("T")
+        sessDate == todayStr || session.scheduledAt?.startsWith(todayStr) == true
+    }
 
     val effectiveStudents = if (students.isNotEmpty()) {
         students
@@ -276,7 +283,7 @@ fun TeacherSessionDetailContent(
                             border = BorderStroke(1.dp, if (isDark) greenFg.copy(alpha = 0.40f) else Color(0xFF86EFAC))
                         ) {
                             Text(
-                                text = "Real-Time Hari Ini",
+                                text = if (isTodaySession) "Real-Time Hari Ini" else "Sesuai Jadwal Sesi",
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = if (isDark) greenFg else Color(0xFF15803D),
@@ -339,7 +346,12 @@ fun TeacherSessionDetailContent(
                                         )
                                         Spacer(Modifier.height(1.dp))
                                         Text(
-                                            text = if (isVideo) "Tayang: Hari Ini • Video Pembelajaran" else "Tayang: Hari Ini • Modul Bacaan",
+                                            text = when {
+                                                isTodaySession && isVideo -> "Tayang: Hari Ini • Video Pembelajaran"
+                                                isTodaySession -> "Tayang: Hari Ini • Modul Bacaan"
+                                                isVideo -> "Tayang Sesi Ini • Video Pembelajaran"
+                                                else -> "Tayang Sesi Ini • Modul Bacaan"
+                                            },
                                             fontSize = 10.5.sp,
                                             color = if (isVideo) Color(0xFFEF4444) else amberFg,
                                             fontWeight = FontWeight.Medium
@@ -403,7 +415,7 @@ fun TeacherSessionDetailContent(
                                         )
                                         Spacer(Modifier.height(1.dp))
                                         Text(
-                                            text = "Tugas Sesi Hari Ini • Maks ${assign.maxScore} Poin",
+                                            text = if (isTodaySession) "Tugas Sesi Hari Ini • Maks ${assign.maxScore} Poin" else "Tugas Sesi Ini • Maks ${assign.maxScore} Poin",
                                             fontSize = 10.5.sp,
                                             color = skyFg,
                                             fontWeight = FontWeight.Medium
