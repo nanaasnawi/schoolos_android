@@ -176,6 +176,9 @@ class MainActivity : ComponentActivity() {
         } catch (t: Throwable) {
             timber.log.Timber.w(t, "In-app update onResume skipped: %s", t.message)
         }
+        lifecycleScope.launch {
+            authManager.validateSessionOnResume()
+        }
     }
 
     override fun onNewIntent(intent: android.content.Intent) {

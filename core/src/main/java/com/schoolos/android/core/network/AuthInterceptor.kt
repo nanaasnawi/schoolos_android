@@ -49,9 +49,9 @@ class AuthInterceptor @Inject constructor(
         // 1. Fail-fast: If access token is present but already expired,
         // and refresh token is also empty or expired, force-clear session immediately
         // to avoid sending zombie requests that trigger gateway timeouts.
-        if (!token.isNullOrBlank() && isJwtExpired(token)) {
+        if (!token.isNullOrBlank() && authManager.isJwtExpired(token)) {
             val refreshToken = authManager.getRefreshTokenSync()
-            if (refreshToken.isNullOrBlank() || isJwtExpired(refreshToken)) {
+            if (refreshToken.isNullOrBlank() || authManager.isJwtExpired(refreshToken)) {
                 authManager.clearSessionSync()
             }
         }
@@ -65,6 +65,14 @@ class AuthInterceptor @Inject constructor(
             original
         }
 
-        return chain.proceed(request)
+        val response = chain.proceed(request)
+
+        // 2. Automatic logout on 401: If server rejects request with 401 Unauthorized
+        // on a protected endpoint, clear session immediately so the app navigates to the login screen.
+        if (response.code == 401 && !path.contains("/auth/")) {
+            authManager.clearSessionSync()
+        }
+
+        return response
     }
 }

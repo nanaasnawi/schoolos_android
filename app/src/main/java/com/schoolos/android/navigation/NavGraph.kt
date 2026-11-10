@@ -188,10 +188,11 @@ fun NavGraph(
     val authState by authManager.authState.collectAsState(initial = null)
     LaunchedEffect(authState?.isLoggedIn) {
         if (startCheck && authState != null && !authState!!.isLoggedIn) {
-            val currentRoute = navController.currentBackStackEntry?.destination?.route
-            if (currentRoute != null && currentRoute != Screen.Auth.route && currentRoute != Screen.Maintenance.route) {
+            val currentRoute = navController.currentBackStackEntry?.destination?.route ?: navController.currentDestination?.route
+            if (currentRoute != Screen.Auth.route && currentRoute != Screen.Maintenance.route) {
                 navController.navigate(Screen.Auth.route) {
                     popUpTo(0) { inclusive = true }
+                    launchSingleTop = true
                 }
             }
         }
