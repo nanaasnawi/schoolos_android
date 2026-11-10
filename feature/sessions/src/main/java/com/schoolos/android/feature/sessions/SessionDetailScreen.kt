@@ -134,6 +134,8 @@ fun SessionDetailScreen(
                                 onOpenAssignments = openAssignments,
                                 onOpenQuizzes = openQuizzes,
                                 onOpenMaterials = openMaterials,
+                                onOpenMaterialDetail = onOpenMaterialDetail,
+                                onOpenAssignmentDetail = onOpenAssignmentDetail,
                                 todayMaterials = state.todayMaterials,
                                 todayAssignments = state.todayAssignments,
                                 accentColor = accentColor,
