@@ -101,6 +101,29 @@ fun matchesSubjectFilter(itemSubject: String?, filter: String?): Boolean {
 }
 
 /**
+ * Matches an item's subject against a teacher's assigned/taught subjects string.
+ * Supports composite subjects such as "IPS, Geografi", "Ilmu Pengetahuan Sosial & Geografi",
+ * "IPS / Geografi", etc.
+ */
+fun matchesTeacherTaughtSubjects(itemSubject: String?, teacherSubjectStr: String?): Boolean {
+    if (teacherSubjectStr.isNullOrBlank()) return true
+    val cleanTeacherStr = teacherSubjectStr.trim()
+    if (cleanTeacherStr.equals("GURU", ignoreCase = true) ||
+        cleanTeacherStr.equals("TUTOR", ignoreCase = true) ||
+        cleanTeacherStr.equals("PENDIDIK & GTK", ignoreCase = true) ||
+        cleanTeacherStr.equals("UMUM", ignoreCase = true)) {
+        return true
+    }
+    val tokens = cleanTeacherStr.split(Regex("[,;/|&]"))
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+    if (tokens.isEmpty()) return true
+    return tokens.any { token ->
+        matchesSubjectFilter(itemSubject, token)
+    }
+}
+
+/**
  * Checks if two subject representations belong to the same pedagogical domain.
  * Prevents false positives between unrelated subjects while bridging naming variations
  * (e.g. "IPS", "Ilmu Pengetahuan Sosial", "IPAS", "Sosial").

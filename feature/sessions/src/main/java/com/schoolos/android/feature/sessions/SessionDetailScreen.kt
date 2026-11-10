@@ -96,11 +96,11 @@ fun SessionDetailScreen(
                         } ?: java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")).toString()
                     }
 
-                    // Wrap callbacks to pass subject name, class name, and session date for real-time scoping
+                    // Wrap callbacks to pass subject name and class name (pass date = null so catalog lists display all modules/tasks throughout the semester)
                     val sessionClassName = session.className?.trim()?.takeIf { it.isNotBlank() }
-                    val openAssignments: (String) -> Unit = { onOpenAssignments(subject, sessionClassName, sessionDateStr) }
-                    val openQuizzes: (String) -> Unit = { onOpenQuizzes(subject, sessionClassName, sessionDateStr) }
-                    val openMaterials: (String) -> Unit = { onOpenMaterials(subject, sessionClassName, sessionDateStr) }
+                    val openAssignments: (String) -> Unit = { onOpenAssignments(subject, sessionClassName, null) }
+                    val openQuizzes: (String) -> Unit = { onOpenQuizzes(subject, sessionClassName, null) }
+                    val openMaterials: (String) -> Unit = { onOpenMaterials(subject, sessionClassName, null) }
 
                     Column(
                         modifier = Modifier
@@ -122,6 +122,8 @@ fun SessionDetailScreen(
                                 onOpenAssignments = openAssignments,
                                 onOpenQuizzes = openQuizzes,
                                 onOpenMaterials = openMaterials,
+                                onOpenMaterialDetail = onOpenMaterialDetail,
+                                onOpenAssignmentDetail = onOpenAssignmentDetail,
                                 todayMaterials = state.todayMaterials,
                                 todayAssignments = state.todayAssignments,
                                 accentColor = accentColor,
