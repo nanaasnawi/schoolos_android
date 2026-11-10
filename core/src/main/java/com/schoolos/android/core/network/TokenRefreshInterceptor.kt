@@ -108,10 +108,8 @@ class TokenRefreshInterceptor @Inject constructor(
 
                 refreshClient.newCall(refreshRequest).execute().use { refreshResponse ->
                     if (!refreshResponse.isSuccessful) {
-                        // Only clear session if server explicitly rejects with 400, 401, or 403 (invalid/expired refresh token)
-                        if (refreshResponse.code in listOf(400, 401, 403)) {
-                            authManager.clearSessionSync()
-                        }
+                        // Any failed refresh attempt means the session token cannot be refreshed; force clear session to redirect to login
+                        authManager.clearSessionSync()
                         return null
                     }
 

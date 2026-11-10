@@ -136,10 +136,42 @@ class AuthManager @Inject constructor(
         private val KEY_SUBJECT = stringPreferencesKey("user_subject")
     }
 
+    fun isJwtExpired(token: String?): Boolean {
+        if (token.isNullOrBlank()) return true
+        val parts = token.split(".")
+        if (parts.size < 2) return true
+        return try {
+            val payloadBytes = android.util.Base64.decode(
+                parts[1],
+                android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
+            )
+            val json = org.json.JSONObject(String(payloadBytes, Charsets.UTF_8))
+            val exp = json.optLong("exp", 0L)
+            if (exp > 0L) {
+                val nowSeconds = System.currentTimeMillis() / 1000
+                exp <= nowSeconds
+            } else {
+                false
+            }
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     val authState: Flow<AuthState> = context.dataStore.data.map { prefs ->
+        val rawIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
+        val token = prefs[KEY_ACCESS_TOKEN]
+        val refreshToken = prefs[KEY_REFRESH_TOKEN]
+        val isExpired = rawIsLoggedIn && !token.isNullOrBlank() && isJwtExpired(token) && (refreshToken.isNullOrBlank() || isJwtExpired(refreshToken))
+        if (isExpired) {
+            cachedIsLoggedIn = false
+            scope.launch { clearSession() }
+        }
+        val effectiveIsLoggedIn = rawIsLoggedIn && !isExpired
+
         AuthState(
-            accessToken = prefs[KEY_ACCESS_TOKEN],
-            refreshToken = prefs[KEY_REFRESH_TOKEN],
+            accessToken = token,
+            refreshToken = refreshToken,
             userId = prefs[KEY_USER_ID],
             tenantId = prefs[KEY_TENANT_ID],
             name = prefs[KEY_NAME],
@@ -153,7 +185,7 @@ class AuthManager @Inject constructor(
             childName = prefs[KEY_CHILD_NAME],
             childId = prefs[KEY_CHILD_ID],
             avatarUrl = prefs[KEY_AVATAR_URL],
-            isLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false,
+            isLoggedIn = effectiveIsLoggedIn,
             schoolName = prefs[KEY_SCHOOL_NAME],
             schoolLogoUrl = prefs[KEY_SCHOOL_LOGO_URL],
             subject = prefs[KEY_SUBJECT],
@@ -177,7 +209,9 @@ class AuthManager @Inject constructor(
                 context.dataStore.data.collect { prefs ->
                     cachedAccessToken = prefs[KEY_ACCESS_TOKEN]
                     cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
-                    cachedIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
+                    val rawLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
+                    val expired = rawLoggedIn && !cachedAccessToken.isNullOrBlank() && isJwtExpired(cachedAccessToken) && (cachedRefreshToken.isNullOrBlank() || isJwtExpired(cachedRefreshToken))
+                    cachedIsLoggedIn = rawLoggedIn && !expired
                     cachedCustomServerUrl = prefs[KEY_CUSTOM_SERVER_URL]
                 }
             } catch (e: Exception) {
@@ -190,9 +224,24 @@ class AuthManager @Inject constructor(
         val prefs = context.dataStore.data.first()
         cachedAccessToken = prefs[KEY_ACCESS_TOKEN]
         cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
-        cachedIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
+        val savedIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
         cachedCustomServerUrl = prefs[KEY_CUSTOM_SERVER_URL]
+
+        // Validate token expiration: if token is expired and refresh token is also expired or missing, session is dead!
+        if (savedIsLoggedIn && !cachedAccessToken.isNullOrBlank() && isJwtExpired(cachedAccessToken)) {
+            if (cachedRefreshToken.isNullOrBlank() || isJwtExpired(cachedRefreshToken)) {
+                clearSession()
+                cachedIsLoggedIn = false
+                return false
+            }
+        }
+
+        cachedIsLoggedIn = savedIsLoggedIn
         return cachedIsLoggedIn
+    }
+
+    suspend fun validateSessionOnResume(): Boolean {
+        return checkIsLoggedIn()
     }
 
     val isLoggedIn: Boolean

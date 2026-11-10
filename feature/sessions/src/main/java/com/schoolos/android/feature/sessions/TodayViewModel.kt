@@ -141,6 +141,8 @@ class TodayViewModel @Inject constructor(
             allSessions
         }
 
+        val isTeacherOrPrincipal = isTeacher || isPrincipal
+
         // Compute schedule count per date for weekly calendar indicator dots
         val dateCounts = mutableMapOf<LocalDate, Int>()
         scopedSessions.forEach { s ->
@@ -155,23 +157,27 @@ class TodayViewModel @Inject constructor(
             extractSessionDate(s) == targetDate
         }
 
-        val grouped = groupSessions(targetSessions)
+        val grouped = groupSessions(targetSessions, isTeacherOrPrincipal)
 
         // Apply tab filter
         val displayed = when (filter) {
             "ACTIVE" -> grouped.active
             "UPCOMING" -> grouped.upcoming
             "COMPLETED" -> grouped.completed
-            else -> targetSessions.sortedWith(
-                compareBy<LearningSession> {
-                    when (it.status.lowercase()) {
-                        "active" -> 0
-                        "scheduled" -> 1
-                        "completed" -> 2
-                        else -> 3
-                    }
-                }.thenBy { it.scheduledAt ?: it.startedAt ?: "" }
-            )
+            else -> if (isTeacherOrPrincipal) {
+                targetSessions.sortedWith { a, b -> compareSessionsForTeacherOrPrincipal(a, b) }
+            } else {
+                targetSessions.sortedWith(
+                    compareBy<LearningSession> {
+                        when (it.status.lowercase()) {
+                            "active" -> 0
+                            "scheduled" -> 1
+                            "completed" -> 2
+                            else -> 3
+                        }
+                    }.thenBy { it.scheduledAt ?: it.startedAt ?: "" }
+                )
+            }
         }
 
         _state.value = _state.value.copy(
@@ -186,7 +192,7 @@ class TodayViewModel @Inject constructor(
         )
     }
 
-    private fun groupSessions(sessions: List<LearningSession>): Grouped {
+    private fun groupSessions(sessions: List<LearningSession>, isTeacherOrPrincipal: Boolean = false): Grouped {
         val active = mutableListOf<LearningSession>()
         val upcoming = mutableListOf<LearningSession>()
         val completed = mutableListOf<LearningSession>()
@@ -199,11 +205,84 @@ class TodayViewModel @Inject constructor(
             }
         }
 
-        return Grouped(
-            active = active.sortedBy { it.scheduledAt },
-            upcoming = upcoming.sortedBy { it.scheduledAt },
-            completed = completed.sortedByDescending { it.endedAt ?: it.scheduledAt ?: "" },
-        )
+        return if (isTeacherOrPrincipal) {
+            Grouped(
+                active = active.sortedWith { a, b -> compareSessionsForTeacherOrPrincipal(a, b) },
+                upcoming = upcoming.sortedWith { a, b -> compareSessionsForTeacherOrPrincipal(a, b) },
+                completed = completed.sortedWith { a, b -> compareSessionsForTeacherOrPrincipal(a, b) },
+            )
+        } else {
+            Grouped(
+                active = active.sortedBy { it.scheduledAt },
+                upcoming = upcoming.sortedBy { it.scheduledAt },
+                completed = completed.sortedByDescending { it.endedAt ?: it.scheduledAt ?: "" },
+            )
+        }
+    }
+
+    private fun compareSessionsForTeacherOrPrincipal(a: LearningSession, b: LearningSession): Int {
+        val classCmp = compareClassNames(a.className, b.className)
+        if (classCmp != 0) return classCmp
+
+        val timeA = extractSessionTime(a)
+        val timeB = extractSessionTime(b)
+        val timeCmp = timeA.compareTo(timeB)
+        if (timeCmp != 0) return timeCmp
+
+        return a.id.compareTo(b.id)
+    }
+
+    private fun compareClassNames(a: String?, b: String?): Int {
+        if (a.isNullOrBlank() && b.isNullOrBlank()) return 0
+        if (a.isNullOrBlank()) return 1
+        if (b.isNullOrBlank()) return -1
+
+        fun rankCategory(name: String): Int {
+            val upper = name.uppercase()
+            return when {
+                upper.contains("PAKET A") || upper.contains("SD") -> 10
+                upper.contains("PAKET B") || upper.contains("SMP") -> 20
+                upper.contains("PAKET C") || upper.contains("SMA") || upper.contains("SMK") -> 30
+                else -> 50
+            }
+        }
+
+        val rankA = rankCategory(a)
+        val rankB = rankCategory(b)
+        if (rankA != rankB) return rankA.compareTo(rankB)
+
+        val numRegex = Regex("(\\d+)")
+        val numA = numRegex.find(a)?.value?.toIntOrNull() ?: 0
+        val numB = numRegex.find(b)?.value?.toIntOrNull() ?: 0
+        if (numA != numB) return numA.compareTo(numB)
+
+        return a.compareTo(b, ignoreCase = true)
+    }
+
+    private fun extractSessionTime(s: LearningSession): String {
+        val rawTime = s.startTime?.trim()
+        if (!rawTime.isNullOrBlank()) {
+            return rawTime.take(5)
+        }
+        val iso = s.scheduledAt ?: s.startedAt ?: ""
+        if (iso.isBlank()) return "00:00"
+        val clean = iso.trim()
+        val zone = ZoneId.of("Asia/Jakarta")
+        return try {
+            val zdt = Instant.parse(clean).atZone(zone)
+            String.format(java.util.Locale.US, "%02d:%02d", zdt.hour, zdt.minute)
+        } catch (_: Exception) {
+            try {
+                val zdt = ZonedDateTime.parse(clean).withZoneSameInstant(zone)
+                String.format(java.util.Locale.US, "%02d:%02d", zdt.hour, zdt.minute)
+            } catch (_: Exception) {
+                if (clean.length >= 16 && clean.contains("T")) {
+                    clean.substringAfter("T").take(5)
+                } else {
+                    "00:00"
+                }
+            }
+        }
     }
 
     private fun extractSessionDate(s: LearningSession): LocalDate? {
