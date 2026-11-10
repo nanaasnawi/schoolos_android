@@ -35,7 +35,7 @@ fun LazyListScope.studentAssignmentListContent(
     onAssignmentClick: (String) -> Unit,
 ) {
     val showAll = selectedTab == "Semua"
-    val showDueSoon = showAll || selectedTab == "Segera"
+    val showDueSoon = showAll || selectedTab == "Segera" || selectedTab == "Aktif"
     val showActive = showAll || selectedTab == "Aktif"
     val showCompleted = showAll || selectedTab == "Selesai"
 

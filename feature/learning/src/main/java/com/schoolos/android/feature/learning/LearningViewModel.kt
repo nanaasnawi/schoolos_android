@@ -117,6 +117,8 @@ class LearningViewModel @Inject constructor(
                 _state.value = _state.value.copy(userRole = role)
                 if (allMaterials.isNotEmpty()) {
                     filterMaterials(_state.value.searchQuery, _state.value.selectedCategory)
+                } else if (!hasLoadedInitialData) {
+                    loadMaterials()
                 }
             }
         }
@@ -393,7 +395,8 @@ class LearningViewModel @Inject constructor(
         val roleScopedMaterials = when {
             studentEnrolledClass != null -> {
                 allMaterials.filter { item ->
-                    com.schoolos.android.core.designsystem.matchesClassFilter(item.className, studentEnrolledClass)
+                    com.schoolos.android.core.designsystem.matchesClassFilter(item.className, studentEnrolledClass) ||
+                    (item.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(item.title, studentEnrolledClass))
                 }
             }
             teacherSubject != null && subjectFilter == null -> {
@@ -424,7 +427,10 @@ class LearningViewModel @Inject constructor(
         }
 
         classFilter?.let { filter ->
-            filtered = filtered.filter { com.schoolos.android.core.designsystem.matchesClassFilter(it.className, filter) }
+            filtered = filtered.filter {
+                com.schoolos.android.core.designsystem.matchesClassFilter(it.className, filter) ||
+                (it.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(it.title, filter))
+            }
         }
 
         if (query.isNotBlank()) {
@@ -454,7 +460,8 @@ class LearningViewModel @Inject constructor(
         val scopedBase = if (subjectFilter != null || classFilter != null || dateFilter != null) {
             roleScopedMaterials.filter { item ->
                 (subjectFilter == null || com.schoolos.android.core.designsystem.matchesSubjectFilter(item.subject, subjectFilter)) &&
-                (classFilter == null || com.schoolos.android.core.designsystem.matchesClassFilter(item.className, classFilter)) &&
+                (classFilter == null || com.schoolos.android.core.designsystem.matchesClassFilter(item.className, classFilter) ||
+                    (item.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(item.title, classFilter))) &&
                 (dateFilter == null || run {
                     val targetDate = if (dateFilter!!.equals("today", ignoreCase = true)) {
                         java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta"))

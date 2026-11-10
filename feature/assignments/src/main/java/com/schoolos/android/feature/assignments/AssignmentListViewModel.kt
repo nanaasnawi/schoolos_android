@@ -76,12 +76,9 @@ class AssignmentListViewModel @Inject constructor(
                     userRole = role,
                     childName = auth.childName ?: ""
                 )
-                if (hasLoadedInitialData) {
-                    load()
-                }
+                load()
             }
         }
-        load()
     }
 
     fun refresh(isPullRefresh: Boolean = false) {

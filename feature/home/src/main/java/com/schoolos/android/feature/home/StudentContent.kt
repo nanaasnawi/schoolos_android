@@ -70,6 +70,7 @@ fun LazyListScope.studentContent(
     onStartReadingSibi: (LibraryBook) -> Unit = {},
     xpCount: String = "0",
     assignmentsCount: String = "0",
+    materialsCount: String = "0",
     weeklyActivity: WeeklyActivity? = null,
     studentName: String = "",
     studentClass: String = "",
@@ -96,6 +97,7 @@ fun LazyListScope.studentContent(
     item {
         HomeAksesUtamaGrid(
             assignmentsCount = assignmentsCount,
+            materialsCount = materialsCount,
             gradeAverage = gradeAverage,
             onNavigateToAssignments = onNavigateToAssignments,
             onNavigateToQuizzes = onNavigateToQuizzes,
@@ -337,6 +339,7 @@ internal fun HomeAksesUtamaSectionHeader() {
 @Composable
 private fun HomeAksesUtamaGrid(
     assignmentsCount: String,
+    materialsCount: String = "0",
     gradeAverage: String,
     onNavigateToAssignments: () -> Unit,
     onNavigateToQuizzes: () -> Unit,
@@ -350,6 +353,7 @@ private fun HomeAksesUtamaGrid(
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
     val assBadge = if (assignmentsCount.isNotBlank() && assignmentsCount != "0") "$assignmentsCount Tugas" else "Aktif"
+    val materiBadge = if (materialsCount.isNotBlank() && materialsCount != "0") "$materialsCount Modul" else "Modul"
     val gradeBadge = if (gradeAverage.isNotBlank() && gradeAverage != "-") "Rata-rata $gradeAverage" else "Transkrip"
 
     // Theme-adaptive badge and icon backgrounds (dark translucent in dark mode, gentle pastel in light mode)
@@ -417,7 +421,7 @@ private fun HomeAksesUtamaGrid(
                 modifier = Modifier.weight(1f),
                 title = "Materi Belajar",
                 subtitle = "Buku teks resmi SIBI, modul & video",
-                badgeText = "Modul SIBI",
+                badgeText = materiBadge,
                 badgeBg = materiBadgeBg,
                 badgeColor = materiColor,
                 icon = Icons.AutoMirrored.Filled.MenuBook,
@@ -1594,20 +1598,6 @@ internal fun HomeStudentStudyTrackerWidget(
                             color = textSecondary
                         )
                     }
-                }
-
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (isDark) Color(0xFF161618) else Color(0xFFF1F5F9),
-                    border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
-                ) {
-                    Text(
-                        text = "Mandiri",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = textSecondary,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                    )
                 }
             }
 

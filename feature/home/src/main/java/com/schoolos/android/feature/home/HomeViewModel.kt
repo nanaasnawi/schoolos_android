@@ -540,8 +540,16 @@ class HomeViewModel @Inject constructor(
                 timber.log.Timber.w(err, "Failed to load student weekly activity")
             }
 
+            val studentEnrolledClass = (currentAuth.className ?: auth.className)?.trim()?.takeIf { it.isNotBlank() && !it.equals("ALL", ignoreCase = true) }
+
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
-                _state.update { it.copy(assignmentsCount = assignments.size.toString(), studentAssignments = assignments) }
+                val scopedAssignments = if (studentEnrolledClass != null) {
+                    assignments.filter { a ->
+                        com.schoolos.android.core.designsystem.matchesClassFilter(a.className, studentEnrolledClass) ||
+                        (a.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(a.title, studentEnrolledClass))
+                    }
+                } else assignments
+                _state.update { it.copy(assignmentsCount = scopedAssignments.size.toString(), studentAssignments = scopedAssignments) }
             }
 
             achievementRepository.getAchievements().onSuccess { achievements ->
@@ -569,6 +577,15 @@ class HomeViewModel @Inject constructor(
 
             // Check assigned school learning materials for in-progress assigned books
             val assignedMaterialsResult = learningMaterialRepository.getMaterials()
+            val scopedMaterials = assignedMaterialsResult.getOrNull()?.let { list ->
+                if (studentEnrolledClass != null) {
+                    list.filter { m ->
+                        com.schoolos.android.core.designsystem.matchesClassFilter(m.className, studentEnrolledClass) ||
+                        (m.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(m.title, studentEnrolledClass))
+                    }
+                } else list
+            } ?: emptyList()
+            _state.update { it.copy(teacherMaterialsCount = scopedMaterials.size.toString()) }
             val assignedBookItems = assignedMaterialsResult.getOrNull()?.filter { mat ->
                 (mat.startPage != null || mat.materialType == MaterialType.DOCUMENT) && !mat.isCompleted
             }?.map { mat ->

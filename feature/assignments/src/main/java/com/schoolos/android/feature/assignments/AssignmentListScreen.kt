@@ -112,7 +112,7 @@ fun AssignmentListScreen(
         mapOf(
             "Semua" to (state.active.size + state.dueSoon.size + state.completed.size),
             "Segera" to state.dueSoon.size,
-            "Aktif" to state.active.size,
+            "Aktif" to (state.active.size + state.dueSoon.size),
             "Selesai" to state.completed.size
         )
     }
