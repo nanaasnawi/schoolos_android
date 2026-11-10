@@ -42,11 +42,14 @@ fun LazyListScope.studentContent(
     onNavigateToSessions: () -> Unit,
     onNavigateToSessionDetail: (String) -> Unit = {},
     onNavigateToAssignments: () -> Unit,
+    onNavigateToAssignmentDetail: (String) -> Unit = {},
     onNavigateToQuizzes: () -> Unit,
+    onNavigateToQuizDetail: (String) -> Unit = {},
     onNavigateToGrades: () -> Unit,
     onNavigateToProgress: () -> Unit,
     onNavigateToAchievements: () -> Unit,
     onNavigateToLearning: () -> Unit,
+    onNavigateToMaterialDetail: (String) -> Unit = {},
     onNavigateToAssignmentWithSubject: (String) -> Unit = {},
     onNavigateToQuizWithSubject: (String) -> Unit = {},
     onNavigateToMaterialWithSubject: (String) -> Unit = {},
@@ -153,6 +156,10 @@ fun LazyListScope.studentContent(
             onNavigateToAssignments = onNavigateToAssignments,
             onNavigateToQuizzes = onNavigateToQuizzes,
             onNavigateToProgress = onNavigateToProgress,
+            onNavigateToAssignmentDetail = onNavigateToAssignmentDetail,
+            onNavigateToMaterialDetail = onNavigateToMaterialDetail,
+            onNavigateToQuizDetail = onNavigateToQuizDetail,
+            onOpenBookReading = onOpenBookReading,
         )
     }
 }
@@ -1382,6 +1389,7 @@ private data class AndroidTrackerItem(
     val timestampLabel: String,
     val reasonNote: String? = null,
     val actionLabel: String,
+    val rawBook: BookReadingItem? = null,
 )
 
 @Composable
@@ -1393,6 +1401,10 @@ internal fun HomeStudentStudyTrackerWidget(
     onNavigateToAssignments: () -> Unit,
     onNavigateToQuizzes: () -> Unit,
     onNavigateToProgress: () -> Unit,
+    onNavigateToAssignmentDetail: ((String) -> Unit)? = null,
+    onNavigateToMaterialDetail: ((String) -> Unit)? = null,
+    onNavigateToQuizDetail: ((String) -> Unit)? = null,
+    onOpenBookReading: ((BookReadingItem) -> Unit)? = null,
 ) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -1400,7 +1412,7 @@ internal fun HomeStudentStudyTrackerWidget(
     val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
-    var activeTab by remember { mutableStateOf("history") } // "history", "missed", "in_progress"
+    var activeTab by remember { mutableStateOf("missed") } // "missed", "in_progress", "history"
 
     val todayIso = remember {
         try {
@@ -1461,16 +1473,13 @@ internal fun HomeStudentStudyTrackerWidget(
         list
     }
 
-    // 2. Terlewat (Terisolasi dari aktivitas realtime hari ini)
+    // 2. Terlewat / Belum Dikerjakan (Semua tugas yang belum tuntas, baik yang lalu maupun yang sekarang)
     val missedItems = remember(studentAssignments, todayIso) {
         val list = mutableListOf<AndroidTrackerItem>()
 
         studentAssignments.filter { a ->
-            val dueIso = a.dueAt?.take(10) ?: ""
-            val isPastDue = dueIso.isNotBlank() && dueIso < todayIso
-            val isCreatedBeforeToday = a.createdAt.take(10) < todayIso
             val notCompleted = !a.status.equals("submitted", true) && !a.status.equals("graded", true) && !a.status.equals("returned", true)
-            (isPastDue || isCreatedBeforeToday) && notCompleted
+            notCompleted
         }.forEach { a ->
             val dueIso = a.dueAt?.take(10) ?: ""
             val isPastDue = dueIso.isNotBlank() && dueIso < todayIso
@@ -1483,13 +1492,14 @@ internal fun HomeStudentStudyTrackerWidget(
                     subType = a.assignmentType,
                     statusBadge = if (isPastDue) "Lewat Tenggat" else "Belum Dikerjakan",
                     badgeColor = if (isPastDue) Color(0xFFEF4444) else Color(0xFFF59E0B),
-                    timestampLabel = if (dueIso.isNotBlank()) "Tenggat: $dueIso" else "Sebelum Hari Ini",
-                    reasonNote = if (isPastDue) "Tenggat waktu pengumpulan telah lewat. Segera kerjakan dan serahkan kepada guru." else "Tugas telah diberikan sebelum hari ini dan belum kamu kumpulkan.",
+                    timestampLabel = if (dueIso.isNotBlank()) "Tenggat: $dueIso" else "Aktif",
+                    reasonNote = if (isPastDue) "Tenggat waktu pengumpulan telah lewat. Segera kerjakan dan serahkan kepada guru." else "Tugas belum kamu kumpulkan. Klik untuk melihat detail dan petunjuk tugas.",
                     actionLabel = "Kirim Tugas"
                 )
             )
         }
 
+        list.sortBy { item -> if (item.statusBadge == "Lewat Tenggat") 0 else 1 }
         list
     }
 
@@ -1501,7 +1511,7 @@ internal fun HomeStudentStudyTrackerWidget(
             val pct = if (b.totalPages > 0) ((b.currentPage.toFloat() / b.totalPages.toFloat()) * 100f).toInt().coerceIn(10, 95) else 45
             list.add(
                 AndroidTrackerItem(
-                    id = b.id,
+                    id = b.materialId ?: b.id,
                     title = b.title,
                     subjectName = b.subjectName ?: "Materi Bacaan",
                     category = "MATERIAL",
@@ -1510,7 +1520,8 @@ internal fun HomeStudentStudyTrackerWidget(
                     progressPercent = pct,
                     timestampLabel = "Halaman ${b.currentPage} dari ${b.totalPages}",
                     reasonNote = "Materi baru kamu baca sebagian. Klik untuk melanjutkan membaca.",
-                    actionLabel = "Lanjutkan"
+                    actionLabel = "Lanjutkan",
+                    rawBook = b,
                 )
             )
         }
@@ -1577,7 +1588,7 @@ internal fun HomeStudentStudyTrackerWidget(
                             color = textPrimary
                         )
                         Text(
-                            text = "Terpisah dari jadwal aktif hari ini",
+                            text = "Semua materi & tugas dari yang lalu hingga sekarang",
                             fontSize = 11.sp,
                             lineHeight = 14.sp,
                             color = textSecondary
@@ -1600,23 +1611,12 @@ internal fun HomeStudentStudyTrackerWidget(
                 }
             }
 
-            // 3 Shortcut Tabs (Riwayat Belajar, Terlewat, Belum Selesai)
+            // 3 Shortcut Tabs: Terlewat (Kiri), Belum Selesai (Tengah), Riwayat Belajar (Kanan)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Shortcut 1: Riwayat Belajar
-                TrackerShortcutTab(
-                    title = "Riwayat Belajar",
-                    subtitle = "Sudah tuntas",
-                    count = historyItems.size,
-                    isSelected = activeTab == "history",
-                    accentColor = Color(0xFF10B981),
-                    modifier = Modifier.weight(1f),
-                    onClick = { activeTab = "history" }
-                )
-
-                // Shortcut 2: Terlewat
+                // Shortcut 1: Terlewat (KIRI)
                 TrackerShortcutTab(
                     title = "Terlewat",
                     subtitle = "Perlu dikejar",
@@ -1627,7 +1627,7 @@ internal fun HomeStudentStudyTrackerWidget(
                     onClick = { activeTab = "missed" }
                 )
 
-                // Shortcut 3: Belum Selesai
+                // Shortcut 2: Belum Selesai (TENGAH)
                 TrackerShortcutTab(
                     title = "Belum Selesai",
                     subtitle = "Lanjut belajar",
@@ -1637,19 +1637,30 @@ internal fun HomeStudentStudyTrackerWidget(
                     modifier = Modifier.weight(1f),
                     onClick = { activeTab = "in_progress" }
                 )
+
+                // Shortcut 3: Riwayat Belajar (KANAN)
+                TrackerShortcutTab(
+                    title = "Riwayat Belajar",
+                    subtitle = "Sudah tuntas",
+                    count = historyItems.size,
+                    isSelected = activeTab == "history",
+                    accentColor = Color(0xFF10B981),
+                    modifier = Modifier.weight(1f),
+                    onClick = { activeTab = "history" }
+                )
             }
 
             // Tab Content List
             val currentItems = when (activeTab) {
-                "history" -> historyItems
                 "missed" -> missedItems
-                else -> inProgressItems
+                "in_progress" -> inProgressItems
+                else -> historyItems
             }
 
             val emptyMessage = when (activeTab) {
-                "history" -> "Belum ada riwayat aktivitas belajar yang tercatat. Yuk mulai baca materi pertamamu!"
                 "missed" -> "Hebat! Tidak ada materi atau tugas yang terlewat. Pertahankan kedisiplinan belajarmu! 🎉"
-                else -> "Bagus sekali! Semua materi dan tugas yang kamu mulai sudah selesai. ✨"
+                "in_progress" -> "Bagus sekali! Semua materi dan tugas yang kamu mulai sudah selesai. ✨"
+                else -> "Belum ada riwayat aktivitas belajar yang tercatat. Yuk mulai baca materi pertamamu!"
             }
 
             if (currentItems.isEmpty()) {
@@ -1682,9 +1693,29 @@ internal fun HomeStudentStudyTrackerWidget(
                                 .clip(RoundedCornerShape(14.dp))
                                 .clickable {
                                     when (item.category) {
-                                        "MATERIAL" -> onNavigateToMaterials()
-                                        "ASSIGNMENT" -> onNavigateToAssignments()
-                                        "QUIZ" -> onNavigateToQuizzes()
+                                        "MATERIAL" -> {
+                                            if (item.rawBook != null && onOpenBookReading != null) {
+                                                onOpenBookReading(item.rawBook)
+                                            } else if (onNavigateToMaterialDetail != null) {
+                                                onNavigateToMaterialDetail(item.id)
+                                            } else {
+                                                onNavigateToMaterials()
+                                            }
+                                        }
+                                        "ASSIGNMENT" -> {
+                                            if (onNavigateToAssignmentDetail != null) {
+                                                onNavigateToAssignmentDetail(item.id)
+                                            } else {
+                                                onNavigateToAssignments()
+                                            }
+                                        }
+                                        "QUIZ" -> {
+                                            if (onNavigateToQuizDetail != null) {
+                                                onNavigateToQuizDetail(item.id)
+                                            } else {
+                                                onNavigateToQuizzes()
+                                            }
+                                        }
                                         else -> onNavigateToProgress()
                                     }
                                 },

@@ -43,6 +43,7 @@ fun cleanSubjectName(raw: String): String {
  * Strict and tolerant subject matcher that prevents umbrella "Umum" contamination.
  * A specific subject like "Matematika" or "Matematika (Umum)" will NEVER match a generic "Umum" item,
  * and vice-versa.
+ * Also intelligently maps aliases and curriculum phases (e.g. IPS <-> IPAS, IPA <-> IPAS).
  */
 fun matchesSubjectFilter(itemSubject: String?, filter: String?): Boolean {
     if (filter.isNullOrBlank()) return true
@@ -61,18 +62,24 @@ fun matchesSubjectFilter(itemSubject: String?, filter: String?): Boolean {
     if (cleanItem == cleanFilter) return true
 
     // 3. Strict barrier for "Umum":
-    // If either side is "umum", they ONLY match if BOTH are "umum"
+    // If either side is pure "umum", they ONLY match if BOTH are "umum"
     val isItemUmum = cleanItem.equals("umum", ignoreCase = true)
     val isFilterUmum = cleanFilter.equals("umum", ignoreCase = true)
     if (isItemUmum || isFilterUmum) {
         return isItemUmum && isFilterUmum
     }
 
-    // 4. Standard Indonesian curriculum alias mapping
+    // 4. Domain-level curriculum matching (handles Kurikulum Merdeka phases & acronyms)
+    if (isSameSubjectDomain(cleanItem, cleanFilter)) {
+        return true
+    }
+
+    // 5. Standard Indonesian curriculum alias mapping
     val aliases = mapOf(
         "pai" to "pendidikan agama islam",
         "ipa" to "ilmu pengetahuan alam",
         "ips" to "ilmu pengetahuan sosial",
+        "ipas" to "ilmu pengetahuan alam dan sosial",
         "ppkn" to "pendidikan pancasila",
         "pkn" to "pendidikan pancasila",
         "pjok" to "pendidikan jasmani",
@@ -82,13 +89,84 @@ fun matchesSubjectFilter(itemSubject: String?, filter: String?): Boolean {
 
     if (resolvedItem == resolvedFilter) return true
 
-    // 5. Meaningful substring matching (must be at least 4 chars long)
+    // 6. Meaningful substring matching (must be at least 4 chars long)
     if (resolvedItem.length >= 4 && resolvedFilter.length >= 4) {
         if (resolvedItem.contains(resolvedFilter, ignoreCase = true) ||
             resolvedFilter.contains(resolvedItem, ignoreCase = true)) {
             return true
         }
     }
+
+    return false
+}
+
+/**
+ * Checks if two subject representations belong to the same pedagogical domain.
+ * Prevents false positives between unrelated subjects while bridging naming variations
+ * (e.g. "IPS", "Ilmu Pengetahuan Sosial", "IPAS", "Sosial").
+ */
+private fun isSameSubjectDomain(c1: String, c2: String): Boolean {
+    // Barrier: do not mix pure general "umum"
+    if (c1.contains("umum") xor c2.contains("umum")) {
+        // Exception: "matematika" vs "matematika umum" is fine
+        val isBothMath = c1.contains("matematika") && c2.contains("matematika")
+        if (!isBothMath) return false
+    }
+
+    // 1. Sosial / IPS / IPAS
+    val is1Sosial = c1.contains("sosial") || c1.contains("ips") || c1.contains("ipas")
+    val is2Sosial = c2.contains("sosial") || c2.contains("ips") || c2.contains("ipas")
+    if (is1Sosial && is2Sosial) {
+        return true
+    }
+
+    // 2. Alam / IPA / IPAS (only if neither is strictly IPS)
+    val is1PureIps = (c1.contains("ips") || c1.contains("sosial")) && !c1.contains("alam") && !c1.contains("ipas")
+    val is2PureIps = (c2.contains("ips") || c2.contains("sosial")) && !c2.contains("alam") && !c2.contains("ipas")
+    if (!is1PureIps && !is2PureIps) {
+        val is1Alam = c1.contains("alam") || c1.contains("ipa") || c1.contains("ipas")
+        val is2Alam = c2.contains("alam") || c2.contains("ipa") || c2.contains("ipas")
+        if (is1Alam && is2Alam) return true
+    }
+
+    // 3. Geografi
+    if (c1.contains("geografi") && c2.contains("geografi")) return true
+
+    // 4. Matematika
+    val is1Math = c1.contains("matematika") || c1.contains("mtk")
+    val is2Math = c2.contains("matematika") || c2.contains("mtk")
+    if (is1Math && is2Math) return true
+
+    // 5. Bahasa Indonesia
+    if (c1.contains("indonesia") && c2.contains("indonesia")) return true
+
+    // 6. Bahasa Inggris
+    val is1Eng = c1.contains("inggris") || c1.contains("english")
+    val is2Eng = c2.contains("inggris") || c2.contains("english")
+    if (is1Eng && is2Eng) return true
+
+    // 7. Bahasa Daerah / Cirebon
+    if (c1.contains("cirebon") && c2.contains("cirebon")) return true
+
+    // 8. Pendidikan Agama Islam / PAI
+    val is1Pai = c1.contains("agama") || c1.contains("pai") || c1.contains("islam")
+    val is2Pai = c2.contains("agama") || c2.contains("pai") || c2.contains("islam")
+    if (is1Pai && is2Pai) return true
+
+    // 9. Pendidikan Pancasila / PKn / PPKn
+    val is1Pkn = c1.contains("pancasila") || c1.contains("ppkn") || c1.contains("pkn")
+    val is2Pkn = c2.contains("pancasila") || c2.contains("ppkn") || c2.contains("pkn")
+    if (is1Pkn && is2Pkn) return true
+
+    // 10. PJOK / Jasmani / Olahraga
+    val is1Pjok = c1.contains("jasmani") || c1.contains("pjok") || c1.contains("olahraga")
+    val is2Pjok = c2.contains("jasmani") || c2.contains("pjok") || c2.contains("olahraga")
+    if (is1Pjok && is2Pjok) return true
+
+    // 11. Seni Budaya
+    val is1Seni = c1.contains("seni") || c1.contains("budaya")
+    val is2Seni = c2.contains("seni") || c2.contains("budaya")
+    if (is1Seni && is2Seni) return true
 
     return false
 }

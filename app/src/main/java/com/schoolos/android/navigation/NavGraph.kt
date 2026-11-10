@@ -252,13 +252,16 @@ fun NavGraph(
                     onNavigateToSessions = { navController.navigate(Screen.Sessions.route) },
                     onNavigateToSessionDetail = { sessionId -> navController.navigate(Screen.SessionDetail.createRoute(sessionId)) },
                     onNavigateToAssignments = { navController.navigate(Screen.Assignments.route) },
+                    onNavigateToAssignmentDetail = { assignmentId -> navController.navigate(Screen.AssignmentDetail.createRoute(assignmentId)) },
                     onNavigateToQuizzes = { navController.navigate(Screen.Quizzes.route) },
+                    onNavigateToQuizDetail = { quizId -> navController.navigate(Screen.QuizDetail.createRoute(quizId)) },
                     onNavigateToNotifications = { navController.navigate(Screen.Notifications.route) },
                     onNavigateToGrades = { navController.navigate(Screen.Grades.route) },
                     onNavigateToProgress = { navController.navigate(Screen.Progress.route) },
                     onNavigateToAchievements = { navController.navigate(Screen.Achievements.route) },
                     onNavigateToProfile = { navController.navigate(Screen.Profile.route) },
                     onNavigateToLearning = { navController.navigate(Screen.Learning.route) },
+                    onNavigateToMaterialDetail = { materialId -> navController.navigate(Screen.LearningDetail.createRoute(materialId)) },
                     onNavigateToAssignmentCreator = { navController.navigate(Screen.AssignmentCreator.route) },
                     onNavigateToQuizBuilder = { navController.navigate(Screen.QuizBuilder.route) },
                     onNavigateToBroadcastCenter = { navController.navigate(Screen.BroadcastCenter.route) },
@@ -373,7 +376,9 @@ fun NavGraph(
                     onOpenMaterials = { subject, className, date ->
                         if (subject.isNotBlank()) navController.navigate(Screen.LearningBySubject.createRoute(subject, className, date))
                         else navController.navigate(Screen.Learning.route)
-                    }
+                    },
+                    onOpenAssignmentDetail = { id -> navController.navigate(Screen.AssignmentDetail.createRoute(id)) },
+                    onOpenMaterialDetail = { id -> navController.navigate(Screen.LearningDetail.createRoute(id)) },
                 )
             }
 

@@ -42,6 +42,8 @@ fun StudentSessionDetailContent(
     onOpenAssignments: (String) -> Unit,
     onOpenQuizzes: (String) -> Unit,
     onOpenMaterials: (String) -> Unit,
+    onOpenMaterialDetail: (String) -> Unit = {},
+    onOpenAssignmentDetail: (String) -> Unit = {},
     todayMaterials: List<com.schoolos.android.domain.model.LearningMaterial> = emptyList(),
     todayAssignments: List<com.schoolos.android.domain.model.Assignment> = emptyList(),
     accentColor: Color,
@@ -341,7 +343,7 @@ fun StudentSessionDetailContent(
                             border = BorderStroke(1.dp, innerCardBorder),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onOpenMaterials(session.subjectName?.trim().orEmpty()) }
+                                .clickable { onOpenMaterialDetail(mat.id) }
                         ) {
                             Row(
                                 modifier = Modifier
@@ -407,7 +409,7 @@ fun StudentSessionDetailContent(
                             border = BorderStroke(1.dp, innerCardBorder),
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { onOpenAssignments(session.subjectName?.trim().orEmpty()) }
+                                .clickable { onOpenAssignmentDetail(assign.id) }
                         ) {
                             Row(
                                 modifier = Modifier
