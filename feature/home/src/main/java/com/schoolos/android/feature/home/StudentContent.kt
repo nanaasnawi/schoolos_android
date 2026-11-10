@@ -1739,7 +1739,8 @@ internal fun HomeStudentStudyTrackerWidget(
                                     ) {
                                         Surface(
                                             shape = RoundedCornerShape(6.dp),
-                                            color = if (isDark) Color(0xFF222226) else Color(0xFFE2E8F0)
+                                            color = if (isDark) Color(0xFF222226) else Color(0xFFE2E8F0),
+                                            modifier = Modifier.weight(1f, fill = false)
                                         ) {
                                             Text(
                                                 text = item.subjectName,
@@ -1748,7 +1749,8 @@ internal fun HomeStudentStudyTrackerWidget(
                                                 color = textPrimary,
                                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                                                 maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                overflow = TextOverflow.Ellipsis,
+                                                softWrap = false
                                             )
                                         }
 
@@ -1761,10 +1763,14 @@ internal fun HomeStudentStudyTrackerWidget(
                                                 fontSize = 9.5.sp,
                                                 fontWeight = FontWeight.Bold,
                                                 color = item.badgeColor,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                maxLines = 1,
+                                                softWrap = false
                                             )
                                         }
                                     }
+
+                                    Spacer(modifier = Modifier.width(6.dp))
 
                                     Surface(
                                         shape = RoundedCornerShape(8.dp),
@@ -1772,10 +1778,12 @@ internal fun HomeStudentStudyTrackerWidget(
                                     ) {
                                         Text(
                                             text = item.actionLabel,
-                                            fontSize = 10.5.sp,
+                                            fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
                                             color = item.badgeColor,
-                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.5.dp),
+                                            maxLines = 1,
+                                            softWrap = false
                                         )
                                     }
                                 }
@@ -1872,8 +1880,8 @@ private fun TrackerShortcutTab(
         )
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 7.dp),
+            verticalArrangement = Arrangement.spacedBy(3.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1896,16 +1904,18 @@ private fun TrackerShortcutTab(
 
             Text(
                 text = title,
-                fontSize = 11.sp,
+                fontSize = 10.5.sp,
+                lineHeight = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = textPrimary,
-                maxLines = 1,
+                maxLines = 2,
                 overflow = TextOverflow.Ellipsis
             )
 
             Text(
                 text = subtitle,
-                fontSize = 9.5.sp,
+                fontSize = 9.sp,
+                lineHeight = 11.sp,
                 color = textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
