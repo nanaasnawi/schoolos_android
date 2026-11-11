@@ -23,6 +23,15 @@ class AuthInterceptor @Inject constructor(
                 Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
             )
             val json = JSONObject(String(payloadBytes, Charsets.UTF_8))
+            val role = json.optString("role", "")
+            // Students keep permanent sessions on their device until explicit logout
+            if (role.equals("Siswa", ignoreCase = true) || role.equals("Student", ignoreCase = true)) {
+                return false
+            }
+            val storedRole = authManager.getUserRoleSync()
+            if (storedRole?.equals("Siswa", ignoreCase = true) == true || storedRole?.equals("Student", ignoreCase = true) == true) {
+                return false
+            }
             val exp = json.optLong("exp", 0L)
             if (exp > 0L) {
                 val nowSeconds = System.currentTimeMillis() / 1000
