@@ -59,15 +59,22 @@ class TokenRefreshInterceptor @Inject constructor(
     override fun authenticate(route: Route?, response: Response): Request? {
         if (response.code != 401) return null
 
+        val userRole = authManager.getUserRoleSync()
+        val isStudent = userRole?.equals("Siswa", ignoreCase = true) == true || userRole?.equals("Student", ignoreCase = true) == true
+
         // Prevent infinite retry loops when authorization is denied
         if (responseCount(response) >= 2) {
-            authManager.clearSessionSync()
+            if (!isStudent) {
+                authManager.clearSessionSync()
+            }
             return null
         }
 
         // Prevent infinite retry loops if the failing request is the refresh endpoint itself
         if (response.request.url.encodedPath.contains("/auth/refresh")) {
-            authManager.clearSessionSync()
+            if (!isStudent) {
+                authManager.clearSessionSync()
+            }
             return null
         }
 
@@ -86,7 +93,9 @@ class TokenRefreshInterceptor @Inject constructor(
 
             val refreshToken = authManager.getRefreshTokenSync()
             if (refreshToken.isNullOrBlank()) {
-                authManager.clearSessionSync()
+                if (!isStudent) {
+                    authManager.clearSessionSync()
+                }
                 return null
             }
 
@@ -109,7 +118,9 @@ class TokenRefreshInterceptor @Inject constructor(
                 refreshClient.newCall(refreshRequest).execute().use { refreshResponse ->
                     if (!refreshResponse.isSuccessful) {
                         // Any failed refresh attempt means the session token cannot be refreshed; force clear session to redirect to login
-                        authManager.clearSessionSync()
+                        if (!isStudent) {
+                            authManager.clearSessionSync()
+                        }
                         return null
                     }
 
@@ -134,7 +145,7 @@ class TokenRefreshInterceptor @Inject constructor(
                 }
             } catch (e: Exception) {
                 // If it's a network error (IOException/timeout), NEVER clear session so user is not logged out during bad signal!
-                if (e !is java.io.IOException) {
+                if (e !is java.io.IOException && !isStudent) {
                     authManager.clearSessionSync()
                 }
                 null

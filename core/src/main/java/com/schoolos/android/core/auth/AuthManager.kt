@@ -146,6 +146,15 @@ class AuthManager @Inject constructor(
                 android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
             )
             val json = org.json.JSONObject(String(payloadBytes, Charsets.UTF_8))
+            val role = json.optString("role", "")
+            // Students keep permanent sessions on their device until explicit logout
+            if (role.equals("Siswa", ignoreCase = true) || role.equals("Student", ignoreCase = true)) {
+                return false
+            }
+            val storedRole = getUserRoleSync()
+            if (storedRole?.equals("Siswa", ignoreCase = true) == true || storedRole?.equals("Student", ignoreCase = true) == true) {
+                return false
+            }
             val exp = json.optLong("exp", 0L)
             if (exp > 0L) {
                 val nowSeconds = System.currentTimeMillis() / 1000
@@ -271,6 +280,17 @@ class AuthManager @Inject constructor(
                 val prefs = context.dataStore.data.first()
                 cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
                 cachedRefreshToken
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun getUserRoleSync(): String? {
+        return try {
+            kotlinx.coroutines.runBlocking(Dispatchers.IO) {
+                val prefs = context.dataStore.data.first()
+                prefs[KEY_ROLE]
             }
         } catch (_: Exception) {
             null
