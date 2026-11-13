@@ -12,11 +12,14 @@ import com.schoolos.android.domain.model.DailyQuestGameMode
 import com.schoolos.android.domain.model.DailyQuestLeaderboardEntry
 import com.schoolos.android.domain.model.DailyQuestModeInfo
 import com.schoolos.android.domain.model.DailyQuestSubmitResult
+import com.schoolos.android.domain.model.MapPinItem
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
+import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 
 private fun JsonObject.str(key: String): String =
@@ -31,9 +34,29 @@ private fun JsonObject.bool(key: String, default: Boolean = false): Boolean =
 private fun JsonObject.intVal(key: String, default: Int = 0): Int =
     runCatching { this[key]?.jsonPrimitive?.intOrNull }.getOrNull() ?: default
 
+private fun JsonObject.floatVal(key: String, default: Float = 0.5f): Float =
+    runCatching { this[key]?.jsonPrimitive?.floatOrNull }.getOrNull() ?: default
+
 private fun JsonObject.strList(key: String): List<String> =
     runCatching {
         this[key]?.jsonArray?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }.orEmpty()
+    }.getOrDefault(emptyList())
+
+private fun JsonObject.pinList(key: String): List<MapPinItem> =
+    runCatching {
+        this[key]?.jsonArray?.mapIndexedNotNull { idx, elem ->
+            val obj = elem.jsonObject
+            val label = obj.str("label")
+            if (label.isBlank()) null
+            else MapPinItem(
+                id = obj.str("id").ifBlank { "pin_$idx" },
+                label = label,
+                stepLabel = obj.strOrNull("step_label"),
+                x = obj.floatVal("x", 0.5f).coerceIn(0.08f, 0.92f),
+                y = obj.floatVal("y", 0.5f).coerceIn(0.10f, 0.90f),
+                isTarget = obj.bool("is_target", false),
+            )
+        }.orEmpty()
     }.getOrDefault(emptyList())
 
 private fun JsonObject.toChallenge(mode: DailyQuestGameMode, fallbackIndex: Int): DailyQuestChallenge? {
@@ -42,6 +65,20 @@ private fun JsonObject.toChallenge(mode: DailyQuestGameMode, fallbackIndex: Int)
     val topicTag = strOrNull("topic_tag")
 
     return when (mode) {
+        DailyQuestGameMode.MAP_PIN_HUNT -> {
+            val prompt = str("prompt")
+            val pins = pinList("pins")
+            if (prompt.isBlank() || pins.isEmpty()) null
+            else DailyQuestChallenge.MapPinHunt(
+                id = id,
+                sceneId = str("scene_id").ifBlank { "cirebon_keraton_map" },
+                interactionType = str("interaction_type").ifBlank { "MAP_TAGS" },
+                prompt = prompt,
+                pins = pins,
+                explanation = explanation,
+                topicTag = topicTag,
+            )
+        }
         DailyQuestGameMode.FACT_OR_MYTH -> {
             val statement = str("statement")
             if (statement.isBlank()) null
@@ -160,4 +197,3 @@ fun SubmitDailyQuestResponseDto.toDomain() = DailyQuestSubmitResult(
     isPreviewAccount = isPreviewAccount,
     message = message,
 )
-

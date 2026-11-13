@@ -1,13 +1,15 @@
 package com.schoolos.android.domain.model
 
 enum class DailyQuestGameMode(val code: String, val displayLabel: String) {
-    FACT_OR_MYTH("FACT_OR_MYTH", "Fakta atau Mitos"),
-    CASE_DETECTIVE("CASE_DETECTIVE", "Detektif Kasus"),
-    SEQUENCE_ORDER("SEQUENCE_ORDER", "Susun Urutan"),
+    MAP_PIN_HUNT("MAP_PIN_HUNT", "Peta & Lokasi"),
+    FACT_OR_MYTH("FACT_OR_MYTH", "Geser Fakta/Mitos"),
+    SEQUENCE_ORDER("SEQUENCE_ORDER", "Susun Langkah"),
+    CASE_DETECTIVE("CASE_DETECTIVE", "Komik Kasus"),
     CONCEPT_GUESS("CONCEPT_GUESS", "Tebak Istilah");
 
     companion object {
         fun fromCode(raw: String?): DailyQuestGameMode = when (raw?.trim()?.uppercase()) {
+            "MAP_PIN_HUNT" -> MAP_PIN_HUNT
             "CASE_DETECTIVE" -> CASE_DETECTIVE
             "SEQUENCE_ORDER" -> SEQUENCE_ORDER
             "CONCEPT_GUESS" -> CONCEPT_GUESS
@@ -16,10 +18,29 @@ enum class DailyQuestGameMode(val code: String, val displayLabel: String) {
     }
 }
 
+data class MapPinItem(
+    val id: String,
+    val label: String,
+    val stepLabel: String? = null,
+    val x: Float,
+    val y: Float,
+    val isTarget: Boolean = false,
+)
+
 sealed class DailyQuestChallenge {
     abstract val id: String
     abstract val topicTag: String?
     abstract val explanation: String?
+
+    data class MapPinHunt(
+        override val id: String,
+        val sceneId: String,
+        val interactionType: String,
+        val prompt: String,
+        val pins: List<MapPinItem>,
+        override val explanation: String? = null,
+        override val topicTag: String? = null,
+    ) : DailyQuestChallenge()
 
     data class FactOrMyth(
         override val id: String,
@@ -118,4 +139,3 @@ data class DailyQuestSubmitResult(
     val isPreviewAccount: Boolean,
     val message: String,
 )
-

@@ -43,6 +43,8 @@ data class DailyQuestUiState(
     val combo: Int = 0,
     val maxCombo: Int = 0,
     val hearts: Int = 3,
+    val liveScore: Int = 0,
+    val hadStageMistake: Boolean = false,
     val elapsedSeconds: Int = 0,
     val isPlaying: Boolean = true,
     val isSubmitting: Boolean = false,
@@ -107,6 +109,8 @@ class DailyQuestViewModel @Inject constructor(
                         combo = 0,
                         maxCombo = 0,
                         hearts = 3,
+                        liveScore = 0,
+                        hadStageMistake = false,
                         elapsedSeconds = 0,
                         isPlaying = true,
                         isSubmitting = false,
@@ -169,7 +173,7 @@ class DailyQuestViewModel @Inject constructor(
         val ok = optionIndex == challenge.correctIndex
         val letter = ('A' + challenge.correctIndex.coerceAtLeast(0))
         val msg = if (ok) {
-            "Analisis detektif tepat sekali!"
+            "Keputusan tepat! Analisis ceritamu cerdas."
         } else {
             "Kurang tepat. Jawaban benar adalah opsi $letter."
         }
@@ -181,57 +185,24 @@ class DailyQuestViewModel @Inject constructor(
         )
     }
 
-    fun tapSequenceCard(index: Int) {
-        val current = _state.value
-        if (current.feedback != null) return
-        val list = current.orderedSteps
-        if (index !in list.indices) return
-        playSfx(SfxKind.TAP)
-        val source = current.swapSourceIndex
-        when {
-            source == null -> _state.update { it.copy(swapSourceIndex = index) }
-            source == index -> _state.update { it.copy(swapSourceIndex = null) }
-            source in list.indices -> {
-                val mutable = list.toMutableList()
-                val tmp = mutable[source]
-                mutable[source] = mutable[index]
-                mutable[index] = tmp
-                _state.update { it.copy(orderedSteps = mutable, swapSourceIndex = null) }
-            }
+    fun onWrongStageTap() {
+        playSfx(SfxKind.WRONG)
+        _state.update {
+            it.copy(
+                hadStageMistake = true,
+                hearts = (it.hearts - 1).coerceAtLeast(0),
+                combo = 0,
+            )
         }
     }
 
-    fun moveSequenceStep(index: Int, delta: Int) {
+    fun completeInteractiveStage(message: String, explanation: String?) {
         val current = _state.value
         if (current.feedback != null) return
-        val target = index + delta
-        val list = current.orderedSteps
-        if (index !in list.indices || target !in list.indices) return
-        playSfx(SfxKind.TAP)
-        val mutable = list.toMutableList()
-        val tmp = mutable[index]
-        mutable[index] = mutable[target]
-        mutable[target] = tmp
-        _state.update { it.copy(orderedSteps = mutable, swapSourceIndex = null) }
-    }
-
-    fun checkSequenceOrder() {
-        val current = _state.value
-        if (current.feedback != null) return
-        val challenge = current.quest?.challenges?.getOrNull(current.currentIndex) as? DailyQuestChallenge.SequenceOrder ?: return
-        val list = current.orderedSteps
-        if (list.isEmpty()) return
-        val isAllCorrect = list.indices.all { idx -> list[idx].origIdx == idx }
-        val matchedCount = list.indices.count { idx -> list[idx].origIdx == idx }
-        val msg = if (isAllCorrect) {
-            "Urutan 100% sempurna! Logikamu tajam."
-        } else {
-            "$matchedCount dari ${list.size} langkah sudah di posisi tepat."
-        }
         registerAnswer(
-            isCorrect = isAllCorrect,
-            message = msg,
-            explanation = challenge.explanation,
+            isCorrect = true,
+            message = message,
+            explanation = explanation,
         )
     }
 
@@ -292,10 +263,14 @@ class DailyQuestViewModel @Inject constructor(
         val current = _state.value
         if (current.feedback != null) return
 
-        val nextCorrect = if (isCorrect) current.correctCount + 1 else current.correctCount
-        val nextCombo = if (isCorrect) current.combo + 1 else 0
+        val cleanSolve = isCorrect && !current.hadStageMistake
+        val nextCorrect = if (cleanSolve) current.correctCount + 1 else current.correctCount
+        val nextCombo = if (cleanSolve) current.combo + 1 else 0
         val nextMaxCombo = maxOf(current.maxCombo, nextCombo)
         val nextHearts = if (isCorrect) current.hearts else (current.hearts - 1).coerceAtLeast(0)
+        val addedScore = if (isCorrect) {
+            if (current.hadStageMistake) 15 else (25 + nextCombo * 5)
+        } else 0
 
         playSfx(if (isCorrect) SfxKind.CORRECT else SfxKind.WRONG)
 
@@ -305,6 +280,7 @@ class DailyQuestViewModel @Inject constructor(
                 combo = nextCombo,
                 maxCombo = nextMaxCombo,
                 hearts = nextHearts,
+                liveScore = it.liveScore + addedScore,
                 feedback = QuestFeedback(
                     isCorrect = isCorrect,
                     message = message,
@@ -329,6 +305,7 @@ class DailyQuestViewModel @Inject constructor(
                 it.copy(
                     currentIndex = nextIndex,
                     feedback = null,
+                    hadStageMistake = false,
                     orderedSteps = nextSteps,
                     swapSourceIndex = null,
                     revealedClues = 1,
@@ -363,7 +340,6 @@ class DailyQuestViewModel @Inject constructor(
                         submitResult = submitRes,
                     )
                 }
-                // Silently refresh quest leaderboard & status in background
                 gamificationRepository.getDailyQuest(quest.gameMode.code).onSuccess { refreshed ->
                     _state.update { it.copy(quest = refreshed) }
                 }
@@ -402,6 +378,8 @@ class DailyQuestViewModel @Inject constructor(
                 combo = 0,
                 maxCombo = 0,
                 hearts = 3,
+                liveScore = 0,
+                hadStageMistake = false,
                 elapsedSeconds = 0,
                 isPlaying = true,
                 isSubmitting = false,
@@ -476,4 +454,3 @@ class DailyQuestViewModel @Inject constructor(
         }
     }
 }
-
