@@ -321,6 +321,12 @@ interface SchoolOsApi {
     @POST("gamification")
     suspend fun awardStudentXp(@Body request: AwardXpRequestDto): ApiResponse<AwardXpResponseDto>
 
+    @GET("gamification/daily-quest")
+    suspend fun getDailyQuest(@Query("mode") mode: String? = null): ApiResponse<com.schoolos.android.data.remote.dto.DailyQuestResponseDto>
+
+    @POST("gamification/daily-quest/submit")
+    suspend fun submitDailyQuest(@Body request: com.schoolos.android.data.remote.dto.SubmitDailyQuestRequestDto): ApiResponse<com.schoolos.android.data.remote.dto.SubmitDailyQuestResponseDto>
+
     // Notifications
     @GET("notifications")
     suspend fun getNotifications(@Query("page") page: Int = 1): ApiResponse<com.schoolos.android.data.remote.dto.PaginatedNotificationResponse>

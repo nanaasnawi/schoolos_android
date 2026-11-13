@@ -13,6 +13,7 @@ import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.AcademicSubject
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.BookReadingItem
+import com.schoolos.android.domain.model.DailyQuest
 import com.schoolos.android.domain.model.LearningSession
 import com.schoolos.android.domain.model.LibraryBook
 import com.schoolos.android.domain.model.MaterialType
@@ -79,6 +80,7 @@ data class HomeUiState(
     val weeklyActivity: WeeklyActivity? = null,
     val assignmentsCount: String = "0",
     val xpCount: String = "0",
+    val dailyQuestSummary: DailyQuest? = null,
     val badgeCount: String = "0",
     val teacherScheduleCount: String = "0",
     val teacherAttendanceRate: String = "-",
@@ -568,6 +570,12 @@ class HomeViewModel @Inject constructor(
                         xpCount = gamification.totalXp.toString(),
                         streakDays = gamification.streakDays,
                     )
+                }
+            }
+
+            gamificationRepository.getDailyQuest().onSuccess { quest ->
+                _state.update { current ->
+                    current.copy(dailyQuestSummary = quest)
                 }
             }
 

@@ -49,6 +49,7 @@ fun LazyListScope.studentContent(
     onNavigateToProgress: () -> Unit,
     onNavigateToAchievements: () -> Unit,
     onNavigateToLearning: () -> Unit,
+    onNavigateToDailyQuest: () -> Unit = {},
     onNavigateToMaterialDetail: (String) -> Unit = {},
     onNavigateToAssignmentWithSubject: (String) -> Unit = {},
     onNavigateToQuizWithSubject: (String) -> Unit = {},
@@ -69,6 +70,7 @@ fun LazyListScope.studentContent(
     onOpenBookReading: (BookReadingItem) -> Unit = {},
     onStartReadingSibi: (LibraryBook) -> Unit = {},
     xpCount: String = "0",
+    dailyQuestSummary: DailyQuest? = null,
     assignmentsCount: String = "0",
     materialsCount: String = "0",
     weeklyActivity: WeeklyActivity? = null,
@@ -85,6 +87,14 @@ fun LazyListScope.studentContent(
             studentClass = studentClass,
             studentNisn = studentNisn,
             streakDays = streakDays,
+        )
+    }
+
+    // ── 0.5. MISI HARIAN DINAMIS (GAME QUEST ARENA BANNER) ────────────────────
+    item {
+        HomeDailyQuestGameCard(
+            dailyQuest = dailyQuestSummary,
+            onClick = onNavigateToDailyQuest,
         )
     }
 
@@ -163,6 +173,162 @@ fun LazyListScope.studentContent(
             onNavigateToQuizDetail = onNavigateToQuizDetail,
             onOpenBookReading = onOpenBookReading,
         )
+    }
+}
+
+// ── 0.5. MISI HARIAN DINAMIS (GAME QUEST ARENA BANNER) ───────────────────────
+
+@Composable
+internal fun HomeDailyQuestGameCard(
+    dailyQuest: DailyQuest?,
+    onClick: () -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val lipColor = if (isDark) Color(0xFF0369A1) else Color(0xFF0284C7)
+    val cardBg = if (isDark) Color(0xFF0E1729) else Color(0xFFF0F9FF)
+    val cardBorder = if (isDark) Color(0xFF0EA5E9).copy(alpha = 0.55f) else Color(0xFF7DD3FC)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF475569)
+
+    val completed = dailyQuest?.alreadyCompleted == true
+    val xpReward = dailyQuest?.xpReward ?: 80
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
+        shape = RoundedCornerShape(22.dp),
+        color = lipColor.copy(alpha = 0.7f),
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 3.dp),
+            shape = RoundedCornerShape(22.dp),
+            color = cardBg,
+            border = BorderStroke(1.5.dp, cardBorder),
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFF0369A1),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .padding(bottom = 3.dp)
+                            .size(46.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(Color(0xFF0EA5E9)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SportsEsports,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(24.dp),
+                        )
+                    }
+                }
+
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFF0EA5E9)) {
+                            Text(
+                                text = "GAME HARIAN",
+                                color = Color.White,
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = Color(0xFFF59E0B).copy(alpha = 0.18f),
+                            border = BorderStroke(0.5.dp, Color(0xFFF59E0B).copy(alpha = 0.45f)),
+                        ) {
+                            Text(
+                                text = "+$xpReward XP",
+                                color = Color(0xFFF59E0B),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            )
+                        }
+                        if (completed) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = Color(0xFF10B981).copy(alpha = 0.18f),
+                            ) {
+                                Text(
+                                    text = "✓ TUNTAS",
+                                    color = Color(0xFF10B981),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                        }
+                    }
+
+                    Text(
+                        text = dailyQuest?.title ?: "Tantangan Belajar Seru Hari Ini (3 Menit)",
+                        color = textPrimary,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = dailyQuest?.subjectName ?: "Fakta/Mitos • Detektif Kasus • Rangkai Logika",
+                        color = textSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = Color(0xFF0369A1),
+                ) {
+                    Surface(
+                        modifier = Modifier.padding(bottom = 2.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        color = Color(0xFF0EA5E9),
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp),
+                        ) {
+                            Text(
+                                text = if (completed) "LATIHAN" else "MAIN",
+                                color = Color.White,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                            )
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(15.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

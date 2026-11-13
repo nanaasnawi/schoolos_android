@@ -4,7 +4,10 @@ import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.data.mapper.toDomain
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.data.remote.dto.AwardXpRequestDto
+import com.schoolos.android.data.remote.dto.SubmitDailyQuestRequestDto
 import com.schoolos.android.domain.model.AwardXpResult
+import com.schoolos.android.domain.model.DailyQuest
+import com.schoolos.android.domain.model.DailyQuestSubmitResult
 import com.schoolos.android.domain.model.GamificationStatus
 import com.schoolos.android.domain.repository.GamificationRepository
 import javax.inject.Inject
@@ -67,5 +70,37 @@ class GamificationRepositoryImpl @Inject constructor(
         } else {
             throw Exception(response.error?.message ?: "Gagal memproses perolehan XP.")
         }
+    }
+
+    override suspend fun getDailyQuest(mode: String?): Result<DailyQuest> = runCatching {
+        val response = api.getDailyQuest(mode = mode)
+        val dto = response.data
+        if (dto != null) {
+            return@runCatching dto.toDomain()
+        }
+        throw Exception(response.error?.message ?: "Gagal memuat misi harian dinamis.")
+    }
+
+    override suspend fun submitDailyQuest(
+        questId: String,
+        correctCount: Int,
+        totalCount: Int,
+        maxCombo: Int,
+        durationSeconds: Int,
+    ): Result<DailyQuestSubmitResult> = runCatching {
+        val response = api.submitDailyQuest(
+            SubmitDailyQuestRequestDto(
+                questId = questId,
+                correctCount = correctCount,
+                totalCount = totalCount,
+                maxCombo = maxCombo,
+                durationSeconds = durationSeconds,
+            )
+        )
+        val dto = response.data
+        if (dto != null) {
+            return@runCatching dto.toDomain()
+        }
+        throw Exception(response.error?.message ?: "Gagal menyimpan hasil misi harian.")
     }
 }
