@@ -114,6 +114,7 @@ fun HomeScreen(
     onNavigateToLearningWithSubject: (String) -> Unit = {},
     onNavigateToRombelStudents: (String) -> Unit = {},
     onNavigateToAiChat: () -> Unit = {},
+    onNavigateToDailyQuest: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -471,6 +472,7 @@ fun HomeScreen(
                         onNavigateToProgress     = onNavigateToProgress,
                         onNavigateToAchievements = onNavigateToAchievements,
                         onNavigateToLearning     = onNavigateToLearning,
+                        onNavigateToDailyQuest   = onNavigateToDailyQuest,
                         onNavigateToMaterialDetail = onNavigateToMaterialDetail,
                         onNavigateToAssignmentWithSubject = onNavigateToAssignmentsWithSubject,
                         onNavigateToQuizWithSubject      = onNavigateToQuizzesWithSubject,
@@ -500,6 +502,7 @@ fun HomeScreen(
                             activeReadingBook = item
                         },
                         xpCount                  = state.xpCount,
+                        dailyQuestSummary        = state.dailyQuestSummary,
                         assignmentsCount         = state.assignmentsCount,
                         materialsCount           = state.teacherMaterialsCount,
                         weeklyActivity           = state.weeklyActivity,

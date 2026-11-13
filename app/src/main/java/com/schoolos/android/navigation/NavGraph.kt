@@ -285,7 +285,8 @@ fun NavGraph(
                             navController.navigate(Screen.RombelStudents.createRoute(className))
                         }
                     },
-                    onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) }
+                    onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) },
+                    onNavigateToDailyQuest = { navController.navigate(Screen.DailyQuest.route) }
                 )
             }
 
@@ -388,6 +389,13 @@ fun NavGraph(
                 HabitsScreen(
                     onBack = null,
                     onNavigateToAssignments = { navController.navigate(Screen.Assignments.route) }
+                )
+            }
+
+            // Daily Dynamic Quest Arena (4 Rotating Mini-Games)
+            composable(Screen.DailyQuest.route) {
+                com.schoolos.android.feature.quizzes.dailyquest.DailyQuestScreen(
+                    onBack = { navController.popBackStack() }
                 )
             }
 
