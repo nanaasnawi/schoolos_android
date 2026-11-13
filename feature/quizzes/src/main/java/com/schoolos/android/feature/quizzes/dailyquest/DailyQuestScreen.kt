@@ -141,15 +141,15 @@ fun DailyQuestScreen(
     viewModel: DailyQuestViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val isDark = LocalIsDarkTheme.current
     val haptic = LocalHapticFeedback.current
 
-    val pageBg = if (isDark) Color(0xFF0B0E14) else Color(0xFFF1F5F9)
-    val surfaceColor = if (isDark) Color(0xFF131823) else Color.White
-    val elevatedColor = if (isDark) Color(0xFF1C2333) else Color(0xFFF8FAFC)
-    val borderColor = if (isDark) Color(0xFF273147) else Color(0xFFE2E8F0)
-    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
-    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+    // Dedicated crisp sunlit Game Palette matching Mockup References 1-4
+    val pageBg = Color(0xFFEDF3FA)
+    val surfaceColor = Color.White
+    val elevatedColor = Color(0xFFF7FAFE)
+    val borderColor = Color(0xFFE2E8F0)
+    val textPrimary = Color(0xFF0F172A)
+    val textSecondary = Color(0xFF475569)
 
     val activeVisual = resolveModeVisual(state.quest?.gameMode ?: state.selectedMode ?: DailyQuestGameMode.MAP_PIN_HUNT)
 
@@ -181,32 +181,57 @@ fun DailyQuestScreen(
         ) {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // ── 1. 5 GAME CARTRIDGE STRIP ──
+                // ── 1. CLEAN MODE PILL SWITCHER ──
                 val modes = state.quest?.availableModes.orEmpty()
                 if (modes.isNotEmpty()) {
                     item {
                         LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                         ) {
                             items(modes) { modeInfo ->
-                                GameModeCartridgeCard(
-                                    label = modeInfo.label,
-                                    isSelected = state.selectedMode == modeInfo.code,
-                                    isFeaturedToday = modeInfo.isFeaturedToday,
-                                    isCompletedToday = modeInfo.completedToday,
-                                    visual = resolveModeVisual(modeInfo.code),
-                                    surfaceColor = surfaceColor,
-                                    borderColor = borderColor,
-                                    textPrimary = textPrimary,
-                                    textSecondary = textSecondary,
-                                    onClick = {
-                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                        viewModel.loadQuest(modeInfo.code)
-                                    },
-                                )
+                                val isSel = state.selectedMode == modeInfo.code
+                                val modeVis = resolveModeVisual(modeInfo.code)
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = if (isSel) Color(0xFF0EA5E9) else Color.White,
+                                    border = BorderStroke(1.dp, if (isSel) Color(0xFF0284C7) else borderColor),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.loadQuest(modeInfo.code)
+                                        },
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = modeVis.icon,
+                                            contentDescription = null,
+                                            tint = if (isSel) Color.White else modeVis.primaryColor,
+                                            modifier = Modifier.size(13.dp),
+                                        )
+                                        Text(
+                                            text = modeInfo.label,
+                                            color = if (isSel) Color.White else textPrimary,
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.ExtraBold,
+                                        )
+                                        if (modeInfo.completedToday) {
+                                            Icon(
+                                                imageVector = Icons.Default.CheckCircle,
+                                                contentDescription = null,
+                                                tint = if (isSel) Color.White else Color(0xFF10B981),
+                                                modifier = Modifier.size(12.dp),
+                                            )
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -268,73 +293,7 @@ fun DailyQuestScreen(
                 } else if (state.quest != null) {
                     val quest = state.quest!!
 
-                    // ── 3. COMPACT GRADIENT MISSION PILL ──
-                    item {
-                        Surface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(18.dp),
-                            color = activeVisual.darkLipColor,
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .padding(bottom = 3.dp)
-                                    .clip(RoundedCornerShape(18.dp))
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            listOf(activeVisual.primaryColor, activeVisual.secondaryColor)
-                                        )
-                                    )
-                                    .padding(horizontal = 14.dp, vertical = 10.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                    verticalAlignment = Alignment.CenterVertically,
-                                ) {
-                                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                                        Text(
-                                            text = "${quest.dayLabel} • ${quest.subjectName}".uppercase(),
-                                            color = Color.White.copy(alpha = 0.9f),
-                                            fontSize = 9.sp,
-                                            fontWeight = FontWeight.Black,
-                                        )
-                                        Text(
-                                            text = quest.title,
-                                            color = Color.White,
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Black,
-                                            maxLines = 1,
-                                            overflow = TextOverflow.Ellipsis,
-                                        )
-                                    }
-                                    Spacer(modifier = Modifier.width(8.dp))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                        Surface(shape = RoundedCornerShape(8.dp), color = Color.Black.copy(alpha = 0.25f)) {
-                                            Row(
-                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                                                verticalAlignment = Alignment.CenterVertically,
-                                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                            ) {
-                                                Icon(Icons.Default.Timer, contentDescription = null, tint = Color.White, modifier = Modifier.size(11.dp))
-                                                Text(formatQuestTimer(state.elapsedSeconds), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                            }
-                                        }
-                                        Surface(shape = RoundedCornerShape(8.dp), color = Color(0xFFFACC15)) {
-                                            Text(
-                                                text = "+${quest.xpReward} XP",
-                                                color = Color(0xFF0F172A),
-                                                fontSize = 10.sp,
-                                                fontWeight = FontWeight.Black,
-                                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 4.dp),
-                                            )
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // ── 4. VICTORY / SUBMITTING / VISUAL STAGE ARENA ──
+                    // ── 3. VICTORY / SUBMITTING / VISUAL STAGE ARENA ──
                     when {
                         state.submitResult != null -> {
                             item {
@@ -396,52 +355,23 @@ fun DailyQuestScreen(
                         else -> {
                             val currentChallenge = quest.challenges.getOrNull(state.currentIndex)
                             item {
-                                ArcadePanel(surfaceColor = surfaceColor, borderColor = borderColor) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                                        // Stage Pill + Combo Flame
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically,
-                                        ) {
-                                            Surface(
-                                                shape = RoundedCornerShape(10.dp),
-                                                color = elevatedColor,
-                                                border = BorderStroke(1.dp, borderColor),
-                                            ) {
-                                                Text(
-                                                    text = "STAGE ${state.currentIndex + 1} / ${quest.challenges.size}",
-                                                    color = textPrimary,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Black,
-                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                                )
-                                            }
-                                            if (state.combo >= 2) {
-                                                Surface(shape = RoundedCornerShape(10.dp), color = Color(0xFFF59E0B)) {
-                                                    Row(
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                                        verticalAlignment = Alignment.CenterVertically,
-                                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
-                                                    ) {
-                                                        Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                                                        Text("${state.combo}x COMBO!", color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black)
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        // Mini-Game Stage Content
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(22.dp),
+                                    color = elevatedColor,
+                                    border = BorderStroke(1.5.dp, Color.White),
+                                    shadowElevation = 4.dp,
+                                ) {
+                                    Column(
+                                        modifier = Modifier.padding(12.dp),
+                                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                                    ) {
+                                        // Mini-Game Stage Content (Direct Clean Mockup Stage!)
                                         when (currentChallenge) {
                                             is DailyQuestChallenge.MapPinHunt -> {
                                                 MapPinHuntArenaCompose(
                                                     challenge = currentChallenge,
                                                     disabled = state.feedback != null,
-                                                    surfaceColor = surfaceColor,
-                                                    elevatedColor = elevatedColor,
-                                                    borderColor = borderColor,
-                                                    textPrimary = textPrimary,
-                                                    textSecondary = textSecondary,
                                                     onWrongTap = {
                                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                         viewModel.onWrongStageTap()
@@ -456,10 +386,6 @@ fun DailyQuestScreen(
                                                 SwipeCardArenaCompose(
                                                     challenge = currentChallenge,
                                                     feedback = state.feedback,
-                                                    elevatedColor = elevatedColor,
-                                                    borderColor = borderColor,
-                                                    textPrimary = textPrimary,
-                                                    textSecondary = textSecondary,
                                                     onSwipeAnswer = { isFact ->
                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                         viewModel.answerFactOrMyth(isFact)
@@ -471,11 +397,6 @@ fun DailyQuestScreen(
                                                     challenge = currentChallenge,
                                                     shuffledPool = state.orderedSteps,
                                                     disabled = state.feedback != null,
-                                                    surfaceColor = surfaceColor,
-                                                    elevatedColor = elevatedColor,
-                                                    borderColor = borderColor,
-                                                    textPrimary = textPrimary,
-                                                    textSecondary = textSecondary,
                                                     onWrongTap = {
                                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                         viewModel.onWrongStageTap()
@@ -493,11 +414,6 @@ fun DailyQuestScreen(
                                                 StoryComicArenaCompose(
                                                     challenge = currentChallenge,
                                                     feedback = state.feedback,
-                                                    surfaceColor = surfaceColor,
-                                                    elevatedColor = elevatedColor,
-                                                    borderColor = borderColor,
-                                                    textPrimary = textPrimary,
-                                                    textSecondary = textSecondary,
                                                     onChooseOption = { idx ->
                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                                         viewModel.answerCaseDetective(idx)
@@ -647,8 +563,14 @@ private fun MockupArcadeHudTopBar(
         ((currentIdx + if (hasFeedback) 1 else 0).toFloat() / totalChallenges.toFloat()).coerceIn(0.10f, 1f)
     } else 0.15f
 
+    val headerSubject = when (quest?.gameMode) {
+        DailyQuestGameMode.SEQUENCE_ORDER -> "Matematika"
+        DailyQuestGameMode.MAP_PIN_HUNT -> "Geografi & Sejarah"
+        else -> quest?.subjectName ?: "Game Belajar"
+    }
+
     Surface(
-        color = surfaceColor,
+        color = Color.White,
         border = BorderStroke(1.dp, borderColor),
         shadowElevation = 2.dp,
     ) {
@@ -659,32 +581,39 @@ private fun MockupArcadeHudTopBar(
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Top Utility Row: Back + Title + Streak + Sound
+            // Top Utility Row: Back + "Akselerasi Edu CBT - <Mapel>" + Streak + Sound
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
                     Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = borderColor.copy(alpha = 0.35f),
+                        shape = RoundedCornerShape(50),
+                        color = elevatedColor,
+                        border = BorderStroke(1.dp, borderColor),
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
+                            .clip(RoundedCornerShape(50))
                             .clickable { onBack() },
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Kembali",
                             tint = textPrimary,
-                            modifier = Modifier.padding(7.dp).size(17.dp),
+                            modifier = Modifier.padding(6.dp).size(16.dp),
                         )
                     }
                     Text(
-                        text = "Akselerasi-Edu Game Arena",
+                        text = "Akselerasi Edu CBT - $headerSubject",
                         color = textPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
 
@@ -744,7 +673,7 @@ private fun MockupArcadeHudTopBar(
                         .weight(1f)
                         .height(14.dp)
                         .clip(RoundedCornerShape(50))
-                        .background(elevatedColor)
+                        .background(Color(0xFFDCE4EE))
                         .padding(2.dp),
                 ) {
                     Box(
@@ -752,15 +681,17 @@ private fun MockupArcadeHudTopBar(
                             .fillMaxWidth(progressFrac)
                             .fillMaxHeight()
                             .clip(RoundedCornerShape(50))
-                            .background(Brush.horizontalGradient(listOf(Color(0xFF34D399), Color(0xFF10B981)))),
+                            .background(Brush.horizontalGradient(listOf(Color(0xFF4ADE80), Color(0xFF16A34A)))),
                     )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text("SCORE", color = textSecondary, fontSize = 8.sp, fontWeight = FontWeight.Black)
-                        Text("$liveScore", color = textPrimary, fontSize = 13.sp, fontWeight = FontWeight.Black)
-                    }
+                    Text(
+                        text = "SCORE: $liveScore",
+                        color = textPrimary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                    )
                     ShibaMascotAvatar(size = 34.dp, happy = stars > 0)
                 }
             }
