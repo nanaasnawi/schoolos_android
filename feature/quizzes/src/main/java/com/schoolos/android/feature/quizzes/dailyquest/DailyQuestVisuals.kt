@@ -2,15 +2,16 @@ package com.schoolos.android.feature.quizzes.dailyquest
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -43,6 +44,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
@@ -57,6 +59,8 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +73,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.schoolos.android.domain.model.DailyQuestChallenge
 import com.schoolos.android.domain.model.MapPinItem
+import com.schoolos.android.feature.quizzes.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlin.math.cos
@@ -213,101 +218,89 @@ fun TopicCartoonIllustrationCanvas(
                 }
             ),
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            when (kind) {
-                "CLOCK" -> {
-                    // Striped wallpaper & sunny window
-                    for (i in 1..8) {
-                        val x = w * (i / 9f)
-                        drawLine(Color(0xFFC5E1F8), Offset(x, 0f), Offset(x, h * 0.72f), strokeWidth = 10f)
+        when (kind) {
+            "CLOCK" -> {
+                Image(
+                    painter = painterResource(id = R.drawable.dq_morning_room),
+                    contentDescription = "Ilustrasi rutinitas pagi",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            "CLASS" -> {
+                Image(
+                    painter = painterResource(id = R.drawable.dq_student_tablet),
+                    contentDescription = "Ilustrasi siswa belajar dengan tablet",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            else -> {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
+                    when (kind) {
+                        "LEAF" -> {
+                            drawRect(Color(0xFF86EFAC), topLeft = Offset(0f, h * 0.72f), size = Size(w, h * 0.28f))
+                            drawCircle(Color(0xFFFACC15), radius = h * 0.16f, center = Offset(w * 0.17f, h * 0.24f))
+                            for (deg in listOf(0f, 35f, 70f, 105f, 320f)) {
+                                val rad = Math.toRadians(deg.toDouble())
+                                drawLine(
+                                    Color(0xFFFBBF24),
+                                    Offset(w * 0.17f, h * 0.24f),
+                                    Offset(w * 0.17f + cos(rad).toFloat() * h * 0.26f, h * 0.24f + sin(rad).toFloat() * h * 0.26f),
+                                    strokeWidth = 4f,
+                                    cap = StrokeCap.Round,
+                                )
+                            }
+                            val leaf = Path().apply {
+                                moveTo(w * 0.42f, h * 0.68f)
+                                cubicTo(w * 0.40f, h * 0.34f, w * 0.66f, h * 0.22f, w * 0.84f, h * 0.32f)
+                                cubicTo(w * 0.80f, h * 0.68f, w * 0.58f, h * 0.82f, w * 0.42f, h * 0.68f)
+                            }
+                            drawPath(leaf, Color(0xFF22C55E))
+                            drawPath(leaf, Color(0xFF14532D), style = Stroke(width = 4f))
+                            drawLine(Color(0xFFDCFCE7), Offset(w * 0.42f, h * 0.68f), Offset(w * 0.80f, h * 0.35f), strokeWidth = 4f, cap = StrokeCap.Round)
+                        }
+                        "ECON" -> {
+                            drawRoundRect(Color.White, topLeft = Offset(w * 0.08f, h * 0.14f), size = Size(w * 0.52f, h * 0.52f), cornerRadius = CornerRadius(14f, 14f))
+                            val chart = Path().apply {
+                                moveTo(w * 0.14f, h * 0.52f)
+                                lineTo(w * 0.26f, h * 0.38f)
+                                lineTo(w * 0.36f, h * 0.45f)
+                                lineTo(w * 0.52f, h * 0.25f)
+                            }
+                            drawPath(chart, color = Color(0xFF10B981), style = Stroke(width = 6f, cap = StrokeCap.Round))
+                            drawCircle(Color(0xFFFACC15), radius = h * 0.13f, center = Offset(w * 0.22f, h * 0.80f))
+                            drawCircle(Color(0xFFFDBA74), radius = h * 0.14f, center = Offset(w * 0.78f, h * 0.36f))
+                            drawRoundRect(Color(0xFF0EA5E9), topLeft = Offset(w * 0.69f, h * 0.52f), size = Size(w * 0.18f, h * 0.38f), cornerRadius = CornerRadius(12f, 12f))
+                        }
                     }
-                    drawRoundRect(Color(0xFF93C5FD), topLeft = Offset(w * 0.75f, h * 0.10f), size = Size(w * 0.20f, h * 0.36f), cornerRadius = CornerRadius(8f, 8f))
-                    drawCircle(Color.White, radius = h * 0.14f, center = Offset(w * 0.17f, h * 0.25f))
-                    drawCircle(Color(0xFF475569), radius = h * 0.14f, center = Offset(w * 0.17f, h * 0.25f), style = Stroke(width = 4f))
-                    // Bed + blanket + digital 05.00
-                    drawRoundRect(Color(0xFF3B82F6), topLeft = Offset(w * 0.08f, h * 0.60f), size = Size(w * 0.84f, h * 0.36f), cornerRadius = CornerRadius(14f, 14f))
-                    drawRoundRect(Color.White, topLeft = Offset(w * 0.26f, h * 0.48f), size = Size(w * 0.48f, h * 0.16f), cornerRadius = CornerRadius(10f, 10f))
-                    drawRoundRect(Color(0xFF1E293B), topLeft = Offset(w * 0.06f, h * 0.65f), size = Size(w * 0.22f, h * 0.16f), cornerRadius = CornerRadius(8f, 8f))
-                    // Stretching kid
-                    drawCircle(Color(0xFFFDBA74), radius = h * 0.14f, center = Offset(w * 0.50f, h * 0.34f))
-                    drawArc(Color(0xFF1E293B), startAngle = 180f, sweepAngle = 180f, useCenter = true, topLeft = Offset(w * 0.50f - h * 0.14f, h * 0.19f), size = Size(h * 0.28f, h * 0.20f))
-                    drawRoundRect(Color.White, topLeft = Offset(w * 0.41f, h * 0.48f), size = Size(w * 0.18f, h * 0.20f), cornerRadius = CornerRadius(10f, 10f))
-                }
-                "LEAF" -> {
-                    // Hills + Sun rays + Detailed Leaf
-                    drawRect(Color(0xFF86EFAC), topLeft = Offset(0f, h * 0.72f), size = Size(w, h * 0.28f))
-                    drawCircle(Color(0xFFFACC15), radius = h * 0.16f, center = Offset(w * 0.17f, h * 0.24f))
-                    for (deg in listOf(0f, 35f, 70f, 105f, 320f)) {
-                        val rad = Math.toRadians(deg.toDouble())
-                        drawLine(
-                            Color(0xFFFBBF24),
-                            Offset(w * 0.17f, h * 0.24f),
-                            Offset(w * 0.17f + cos(rad).toFloat() * h * 0.26f, h * 0.24f + sin(rad).toFloat() * h * 0.26f),
-                            strokeWidth = 4f,
-                            cap = StrokeCap.Round,
-                        )
-                    }
-                    val leaf = Path().apply {
-                        moveTo(w * 0.42f, h * 0.68f)
-                        cubicTo(w * 0.40f, h * 0.34f, w * 0.66f, h * 0.22f, w * 0.84f, h * 0.32f)
-                        cubicTo(w * 0.80f, h * 0.68f, w * 0.58f, h * 0.82f, w * 0.42f, h * 0.68f)
-                    }
-                    drawPath(leaf, Color(0xFF22C55E))
-                    drawPath(leaf, Color(0xFF14532D), style = Stroke(width = 4f))
-                    drawLine(Color(0xFFDCFCE7), Offset(w * 0.42f, h * 0.68f), Offset(w * 0.80f, h * 0.35f), strokeWidth = 4f, cap = StrokeCap.Round)
-                }
-                "ECON" -> {
-                    drawRoundRect(Color.White, topLeft = Offset(w * 0.08f, h * 0.14f), size = Size(w * 0.52f, h * 0.52f), cornerRadius = CornerRadius(14f, 14f))
-                    val chart = Path().apply {
-                        moveTo(w * 0.14f, h * 0.52f)
-                        lineTo(w * 0.26f, h * 0.38f)
-                        lineTo(w * 0.36f, h * 0.45f)
-                        lineTo(w * 0.52f, h * 0.25f)
-                    }
-                    drawPath(chart, color = Color(0xFF10B981), style = Stroke(width = 6f, cap = StrokeCap.Round))
-                    drawCircle(Color(0xFFFACC15), radius = h * 0.13f, center = Offset(w * 0.22f, h * 0.80f))
-                    drawCircle(Color(0xFFFDBA74), radius = h * 0.14f, center = Offset(w * 0.78f, h * 0.36f))
-                    drawRoundRect(Color(0xFF0EA5E9), topLeft = Offset(w * 0.69f, h * 0.52f), size = Size(w * 0.18f, h * 0.38f), cornerRadius = CornerRadius(12f, 12f))
-                }
-                else -> {
-                    // Mockup 3 Top: Speech Board + Indonesian Schoolboy holding tablet!
-                    drawRoundRect(Color(0xFFFEF9C3), topLeft = Offset(w * 0.06f, h * 0.10f), size = Size(w * 0.54f, h * 0.56f), cornerRadius = CornerRadius(14f, 14f))
-                    drawRoundRect(Color(0xFF94A3B8), topLeft = Offset(w * 0.06f, h * 0.10f), size = Size(w * 0.54f, h * 0.56f), cornerRadius = CornerRadius(14f, 14f), style = Stroke(width = 3f))
-                    drawCircle(Color(0xFFFDBA74), radius = h * 0.14f, center = Offset(w * 0.78f, h * 0.33f))
-                    drawArc(Color(0xFF1E293B), startAngle = 180f, sweepAngle = 180f, useCenter = true, topLeft = Offset(w * 0.78f - h * 0.14f, h * 0.18f), size = Size(h * 0.28f, h * 0.20f))
-                    drawRoundRect(Color.White, topLeft = Offset(w * 0.69f, h * 0.48f), size = Size(w * 0.18f, h * 0.28f), cornerRadius = CornerRadius(10f, 10f))
-                    drawRoundRect(Color(0xFF0284C7), topLeft = Offset(w * 0.75f, h * 0.48f), size = Size(w * 0.06f, h * 0.20f), cornerRadius = CornerRadius(4f, 4f))
-                    drawRoundRect(Color(0xFF334155), topLeft = Offset(w * 0.70f, h * 0.74f), size = Size(w * 0.16f, h * 0.26f), cornerRadius = CornerRadius(4f, 4f))
-                    drawRoundRect(Color(0xFF64748B), topLeft = Offset(w * 0.65f, h * 0.60f), size = Size(w * 0.11f, h * 0.24f), cornerRadius = CornerRadius(6f, 6f))
                 }
             }
         }
-        if (kind == "CLOCK") {
-            Text(
-                text = "05.00",
-                color = Color(0xFF4ADE80),
-                fontSize = 10.sp,
-                fontWeight = FontWeight.Black,
+        if (kind == "CLASS" && !speechQuote.isNullOrBlank()) {
+            val shortText = if (speechQuote.length > 44) speechQuote.take(41) + "..." else speechQuote
+            Surface(
                 modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .padding(start = 18.dp, bottom = 22.dp),
-            )
-        } else if (kind == "CLASS" && !speechQuote.isNullOrBlank()) {
-            val shortText = if (speechQuote.length > 36) speechQuote.take(33) + "..." else speechQuote
-            Text(
-                text = shortText,
-                color = Color(0xFF1E293B),
-                fontSize = 9.sp,
-                fontWeight = FontWeight.ExtraBold,
-                lineHeight = 11.sp,
-                textAlign = TextAlign.Center,
-                modifier = Modifier
-                    .fillMaxWidth(0.54f)
+                    .fillMaxWidth(0.56f)
                     .align(Alignment.TopStart)
-                    .padding(start = 16.dp, top = 16.dp, end = 8.dp),
-            )
+                    .padding(start = 8.dp, top = 8.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = Color(0xFFFEF9C3).copy(alpha = 0.94f),
+                border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
+                shadowElevation = 2.dp,
+            ) {
+                Text(
+                    text = shortText,
+                    color = Color(0xFF1E293B),
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    lineHeight = 11.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 5.dp),
+                )
+            }
         }
     }
 }
@@ -574,7 +567,7 @@ fun DualColumnStepBuilderCompose(
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .heightIn(min = 52.dp),
+                                .heightIn(min = 58.dp),
                             shape = RoundedCornerShape(12.dp),
                             color = when {
                                 isDone -> Color.White
@@ -670,7 +663,7 @@ fun DualColumnStepBuilderCompose(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(50.dp)
+                                    .height(58.dp)
                                     .clip(RoundedCornerShape(12.dp))
                                     .background(Color(0xFFDCE6F2).copy(alpha = 0.7f)),
                             )
@@ -678,7 +671,7 @@ fun DualColumnStepBuilderCompose(
                             Surface(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .heightIn(min = 50.dp)
+                                    .heightIn(min = 58.dp)
                                     .clickable(enabled = !disabled) {
                                         if (item.origIdx == filledCount) {
                                             val next = filledCount + 1
@@ -726,6 +719,51 @@ fun DualColumnStepBuilderCompose(
 /* ═══════════════════════════════════════════════════════════════════════════
    3. MAP PIN & SCENE HOTSPOT ARENA (Mockup 1 & Mockup 3/4 Middle)
    ═══════════════════════════════════════════════════════════════════════════ */
+private fun normalizeScenePinsCompose(sceneId: String, rawPins: List<MapPinItem>): List<MapPinItem> {
+    if (sceneId == "cirebon_keraton_map") {
+        val overrides = mapOf(
+            "p1" to Pair(0.52f, 0.49f),
+            "p2" to Pair(0.47f, 0.40f),
+            "p3" to Pair(0.43f, 0.55f),
+            "p4" to Pair(0.53f, 0.58f),
+        )
+        return rawPins.map { pin ->
+            val xy = overrides[pin.id]
+            if (xy != null) pin.copy(x = xy.first, y = xy.second) else pin
+        }
+    }
+    if (sceneId == "morning_routine_room") {
+        val overrides = mapOf(
+            "r1" to Pair(0.135f, 0.62f),
+            "r2" to Pair(0.45f, 0.46f),
+            "r3" to Pair(0.89f, 0.42f),
+            "r4" to Pair(0.92f, 0.86f),
+        )
+        return rawPins.map { pin ->
+            val xy = overrides[pin.id]
+            if (xy != null) pin.copy(x = xy.first, y = xy.second) else pin
+        }
+    }
+    return rawPins
+}
+
+private fun deterministicShufflePins(pins: List<MapPinItem>, seedText: String): List<MapPinItem> {
+    val result = pins.toMutableList()
+    var hash = 2166136261L
+    seedText.forEach { ch ->
+        hash = hash xor ch.code.toLong()
+        hash = (hash * 16777619L) and 0xFFFFFFFFL
+    }
+    for (i in result.size - 1 downTo 1) {
+        hash = (hash * 1664525L + 1013904223L) and 0xFFFFFFFFL
+        val j = (hash % (i + 1).toLong()).toInt()
+        val tmp = result[i]
+        result[i] = result[j]
+        result[j] = tmp
+    }
+    return result
+}
+
 @Composable
 fun MapPinHuntArenaCompose(
     challenge: DailyQuestChallenge.MapPinHunt,
@@ -739,7 +777,17 @@ fun MapPinHuntArenaCompose(
     val scope = rememberCoroutineScope()
 
     val isMapTags = challenge.interactionType == "MAP_TAGS"
-    val pins = challenge.pins
+    val pins = remember(challenge.id, challenge.sceneId, challenge.pins) {
+        normalizeScenePinsCompose(challenge.sceneId, challenge.pins)
+    }
+    val shuffledPins = remember(challenge.id, pins) {
+        val shuffled = deterministicShufflePins(pins, challenge.id)
+        if (shuffled.size > 1 && shuffled.map { it.id } == pins.map { it.id }) {
+            shuffled.drop(1) + shuffled.take(1)
+        } else {
+            shuffled
+        }
+    }
     val currentStepIdx = unlockedIds.size
     val currentTargetPin = if (isMapTags) pins.getOrNull(currentStepIdx) else pins.firstOrNull { it.isTarget } ?: pins.firstOrNull()
     val isProklamasi = challenge.sceneId == "proklamasi_1945"
@@ -755,74 +803,31 @@ fun MapPinHuntArenaCompose(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (isMapTags) {
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                color = Color.White,
-                shadowElevation = 3.dp,
-                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-            ) {
-                Text(
-                    text = challenge.prompt,
-                    color = Color(0xFF1E293B),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    textAlign = TextAlign.Center,
-                    lineHeight = 18.sp,
-                    modifier = Modifier.padding(12.dp),
-                )
-            }
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = Color.White,
+            shadowElevation = 3.dp,
+            border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+        ) {
+            Text(
+                text = challenge.prompt,
+                color = Color(0xFF1E293B),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                lineHeight = 18.sp,
+                modifier = Modifier.padding(12.dp),
+            )
         }
 
-        BoxWithConstraints(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(235.dp)
+                .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(18.dp)),
         ) {
-            val boxWidthPx = constraints.maxWidth.toFloat()
-            val boxHeightPx = constraints.maxHeight.toFloat()
-
             SceneBackdropCanvas(sceneId = challenge.sceneId, modifier = Modifier.fillMaxSize())
-
-            if (isProklamasi) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(10.dp)
-                        .widthIn(max = 200.dp)
-                        .zIndex(2f),
-                    shape = RoundedCornerShape(14.dp),
-                    color = Color.White.copy(alpha = 0.96f),
-                    shadowElevation = 4.dp,
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                ) {
-                    Column(modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                        Text("TEBAK LOKASI:", color = Color(0xFF0F172A), fontSize = 9.sp, fontWeight = FontWeight.Black)
-                        Text("Klik lokasi pembacaan Teks Proklamasi!", color = Color(0xFF1E293B), fontSize = 10.sp, fontWeight = FontWeight.Bold, lineHeight = 13.sp)
-                    }
-                }
-            } else if (isRoutine) {
-                Surface(
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 10.dp)
-                        .zIndex(2f),
-                    shape = RoundedCornerShape(50),
-                    color = Color.White.copy(alpha = 0.96f),
-                    shadowElevation = 4.dp,
-                    border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                ) {
-                    Text(
-                        text = "HUNT: Click the time Andi wakes up!",
-                        color = Color(0xFF0F172A),
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 5.dp),
-                    )
-                }
-            }
 
             pins.forEachIndexed { idx, pin ->
                 val isUnlocked = pin.id in unlockedIds
@@ -831,12 +836,12 @@ fun MapPinHuntArenaCompose(
 
                 Box(
                     modifier = Modifier
-                        .offset {
-                            IntOffset(
-                                x = (pin.x * boxWidthPx).roundToInt() - 40,
-                                y = (pin.y * boxHeightPx).roundToInt() - 40,
-                            )
-                        }
+                        .align(
+                            BiasAlignment(
+                                horizontalBias = (pin.x * 2f - 1f).coerceIn(-0.92f, 0.92f),
+                                verticalBias = (pin.y * 2f - 1f).coerceIn(-0.90f, 0.90f),
+                            ),
+                        )
                         .zIndex(3f)
                         .clickable(enabled = !disabled) {
                             if (isMapTags) {
@@ -963,52 +968,44 @@ fun MapPinHuntArenaCompose(
                 }
             }
 
-            // Floating Checklist Bottom-Left (Mockup 1 exact layout!)
+            // Floating Checklist Bottom-Left (compact to avoid covering Cirebon pins)
             if (isMapTags) {
                 Surface(
                     modifier = Modifier
                         .align(Alignment.BottomStart)
-                        .padding(10.dp)
-                        .widthIn(max = 195.dp)
+                        .padding(8.dp)
+                        .widthIn(max = 165.dp)
                         .zIndex(2f),
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color.White.copy(alpha = 0.95f),
+                    shape = RoundedCornerShape(10.dp),
+                    color = Color.White.copy(alpha = 0.94f),
                     border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
-                    shadowElevation = 4.dp,
+                    shadowElevation = 3.dp,
                 ) {
                     Column(
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
-                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         pins.forEachIndexed { idx, pin ->
                             val done = pin.id in unlockedIds
                             val wip = idx == currentStepIdx && !done
-                            Column {
-                                Text(
-                                    text = "Langkah ${idx + 1}:",
-                                    color = Color(0xFF64748B),
-                                    fontSize = 8.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                )
-                                Text(
-                                    text = "${pin.stepLabel ?: pin.label}${if (done) " -> BENAR" else if (wip) " -> [WIP]" else ""}",
-                                    color = if (done) Color(0xFF16A34A) else Color(0xFF0F172A),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
+                            Text(
+                                text = "L${idx + 1}: ${pin.stepLabel ?: pin.label}${if (done) " ✓" else if (wip) " [Aktif]" else ""}",
+                                color = if (done) Color(0xFF16A34A) else Color(0xFF0F172A),
+                                fontSize = 8.5.sp,
+                                fontWeight = if (done || wip) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
                         }
                     }
                 }
             }
         }
 
-        // Bottom 2x2 White Location Cards (MAP_TAGS) OR Centered Caption (SCENE_HOTSPOT)
+        // Bottom 2x2 Shuffled White Location Cards (MAP_TAGS) OR Centered Caption (SCENE_HOTSPOT)
         if (isMapTags) {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                pins.chunked(2).forEach { pair ->
+                shuffledPins.chunked(2).forEach { pair ->
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -1115,16 +1112,23 @@ fun MapPinHuntArenaCompose(
 @Composable
 private fun SceneBackdropCanvas(sceneId: String, modifier: Modifier = Modifier) {
     Box(modifier = modifier) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            val w = size.width
-            val h = size.height
-            when (sceneId) {
-                "proklamasi_1945" -> {
+        when (sceneId) {
+            "morning_routine_room" -> {
+                Image(
+                    painter = painterResource(id = R.drawable.dq_morning_room),
+                    contentDescription = "Ilustrasi kamar tidur rutinitas pagi",
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+            "proklamasi_1945" -> {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
                     drawRect(Color(0xFFCFEAFB))
                     drawCircle(Color(0xFF4ADE80), radius = h * 0.22f, center = Offset(w * 0.10f, h * 0.44f))
                     drawCircle(Color(0xFF22C55E), radius = h * 0.16f, center = Offset(w * 0.18f, h * 0.52f))
                     drawCircle(Color(0xFF4ADE80), radius = h * 0.24f, center = Offset(w * 0.90f, h * 0.42f))
-                    // Red tiled colonial roof + white columns
                     val roof = Path().apply {
                         moveTo(w * 0.26f, h * 0.27f)
                         lineTo(w * 0.52f, h * 0.10f)
@@ -1147,26 +1151,11 @@ private fun SceneBackdropCanvas(sceneId: String, modifier: Modifier = Modifier) 
                         drawRoundRect(Color(0xFF64748B), topLeft = Offset(w * cx - w * 0.02f, h * 0.60f), size = Size(w * 0.04f, h * 0.14f), cornerRadius = CornerRadius(4f, 4f))
                     }
                 }
-                "morning_routine_room" -> {
-                    drawRect(Color(0xFFDCEEFB))
-                    for (i in 1..10) {
-                        drawLine(Color(0xFFC5E1F8), Offset(w * (i / 11f), 0f), Offset(w * (i / 11f), h * 0.70f), strokeWidth = 10f)
-                    }
-                    drawRoundRect(Color(0xFF93C5FD), topLeft = Offset(w * 0.13f, h * 0.08f), size = Size(w * 0.18f, h * 0.28f), cornerRadius = CornerRadius(6f, 6f))
-                    drawCircle(Color.White, radius = h * 0.09f, center = Offset(w * 0.39f, h * 0.19f))
-                    drawCircle(Color(0xFF475569), radius = h * 0.09f, center = Offset(w * 0.39f, h * 0.19f), style = Stroke(width = 3f))
-                    drawRect(Color(0xFFE7C294), topLeft = Offset(0f, h * 0.69f), size = Size(w, h * 0.31f))
-                    drawOval(Color(0xFF93C5FD), topLeft = Offset(w * 0.25f, h * 0.75f), size = Size(w * 0.55f, h * 0.18f))
-                    // Bed & digital alarm
-                    drawRoundRect(Color(0xFF3B82F6), topLeft = Offset(w * 0.24f, h * 0.42f), size = Size(w * 0.35f, h * 0.25f), cornerRadius = CornerRadius(10f, 10f))
-                    drawRoundRect(Color(0xFF1E293B), topLeft = Offset(w * 0.23f, h * 0.52f), size = Size(w * 0.13f, h * 0.10f), cornerRadius = CornerRadius(6f, 6f))
-                    // Hanging uniform & soccer ball
-                    drawRoundRect(Color.White, topLeft = Offset(w * 0.65f, h * 0.24f), size = Size(w * 0.11f, h * 0.16f), cornerRadius = CornerRadius(6f, 6f))
-                    drawRoundRect(Color(0xFF1E3A8A), topLeft = Offset(w * 0.66f, h * 0.40f), size = Size(w * 0.09f, h * 0.10f), cornerRadius = CornerRadius(4f, 4f))
-                    drawCircle(Color.White, radius = h * 0.08f, center = Offset(w * 0.82f, h * 0.78f))
-                    drawCircle(Color(0xFF0F172A), radius = h * 0.08f, center = Offset(w * 0.82f, h * 0.78f), style = Stroke(width = 3f))
-                }
-                "photosynthesis_scene" -> {
+            }
+            "photosynthesis_scene" -> {
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = size.width
+                    val h = size.height
                     drawRect(Color(0xFFDDF2FF))
                     drawCircle(Color(0xFFFACC15), radius = h * 0.13f, center = Offset(w * 0.22f, h * 0.23f))
                     drawRect(Color(0xFFA16207), topLeft = Offset(0f, h * 0.72f), size = Size(w, h * 0.28f))
@@ -1179,61 +1168,13 @@ private fun SceneBackdropCanvas(sceneId: String, modifier: Modifier = Modifier) 
                     drawPath(leaf, Color(0xFF22C55E))
                     drawCircle(Color(0xFF38BDF8), radius = h * 0.10f, center = Offset(w * 0.78f, h * 0.34f))
                 }
-                else -> {
-                    // Rich West/Central Java + Cirebon Cartographic Map (Mockup 1)
-                    drawRect(brush = Brush.verticalGradient(listOf(Color(0xFF9EDAF6), Color(0xFF81CAED))))
-                    val land = Path().apply {
-                        moveTo(0f, h * 0.26f)
-                        cubicTo(w * 0.18f, h * 0.25f, w * 0.35f, h * 0.32f, w * 0.48f, h * 0.32f)
-                        cubicTo(w * 0.58f, h * 0.39f, w * 0.75f, h * 0.45f, w, h * 0.43f)
-                        lineTo(w, h * 0.80f)
-                        cubicTo(w * 0.65f, h * 0.70f, w * 0.30f, h * 0.56f, 0f, h * 0.60f)
-                        close()
-                    }
-                    drawPath(land, Color(0xFFDCEEC1))
-                    drawPath(land, Color(0xFF789862), style = Stroke(width = 3f))
-
-                    val cirebon = Path().apply {
-                        moveTo(w * 0.38f, h * 0.32f)
-                        lineTo(w * 0.58f, h * 0.42f)
-                        lineTo(w * 0.54f, h * 0.56f)
-                        lineTo(w * 0.36f, h * 0.48f)
-                        close()
-                    }
-                    drawPath(cirebon, Color(0xFFF6E5C3))
-                    drawPath(cirebon, Color(0xFFB59369), style = Stroke(width = 2.5f))
-
-                    // Sailboat watermark in ocean
-                    drawRoundRect(Color(0xFF475569).copy(alpha = 0.28f), topLeft = Offset(w * 0.58f, h * 0.85f), size = Size(w * 0.09f, h * 0.05f), cornerRadius = CornerRadius(4f, 4f))
-                }
             }
-        }
-
-        if (sceneId == "cirebon_keraton_map") {
-            Text("JAWA BARAT", color = Color(0xFF293822), fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.TopStart).padding(start = 24.dp, top = 74.dp))
-            Text("Laut Jawa", color = Color(0xFF23648A), fontSize = 10.sp, fontStyle = FontStyle.Italic, fontWeight = FontWeight.SemiBold, modifier = Modifier.align(Alignment.TopEnd).padding(end = 26.dp, top = 22.dp))
-            Text("JAWA TENGAH", color = Color(0xFF293822), fontSize = 9.sp, fontWeight = FontWeight.Black, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 14.dp, bottom = 78.dp))
-        } else if (sceneId == "morning_routine_room") {
-            Text(
-                text = "05.00",
-                color = Color(0xFF4ADE80),
-                fontSize = 8.sp,
-                fontWeight = FontWeight.Black,
-                modifier = Modifier.align(Alignment.CenterStart).padding(start = 84.dp, top = 16.dp),
-            )
-        } else if (sceneId == "proklamasi_1945") {
-            Surface(
-                modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp),
-                shape = RoundedCornerShape(50),
-                color = Color.White.copy(alpha = 0.95f),
-                border = BorderStroke(1.dp, Color(0xFFCBD5E1)),
-            ) {
-                Text(
-                    text = "Jalan Pegangsaan Timur 56, Jakarta",
-                    color = Color(0xFF0F172A),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
+            else -> {
+                Image(
+                    painter = painterResource(id = R.drawable.dq_cirebon_map),
+                    contentDescription = "Peta Kesultanan Cirebon dan Keraton",
+                    contentScale = ContentScale.FillBounds,
+                    modifier = Modifier.fillMaxSize(),
                 )
             }
         }
@@ -1251,16 +1192,16 @@ fun StoryComicArenaCompose(
 ) {
     val combined = "${challenge.topicTag.orEmpty()} ${challenge.scenario} ${challenge.question}".lowercase()
     val panel2Caption = when {
-        "fotosintesis" in combined || "air" in combined || "biopori" in combined -> "Sistem bekerja mengolah energi..."
-        "usaha" in combined || "kopi" in combined || "uang" in combined || "ekonomi" in combined -> "Menghitung margin & biaya usaha..."
-        "digital" in combined || "otp" in combined || "iklan" in combined -> "Cek fakta & jaga data pribadi..."
-        else -> "Menganalisis solusi kasus..."
+        "fotosintesis" in combined || "air" in combined || "biopori" in combined -> "Sistem mengolah energi"
+        "usaha" in combined || "kopi" in combined || "uang" in combined || "ekonomi" in combined -> "Hitung biaya & margin"
+        "digital" in combined || "otp" in combined || "iklan" in combined -> "Cek fakta & keamanan"
+        else -> "Analisis kasus"
     }
     val panel3Caption = when {
-        "fotosintesis" in combined || "air" in combined || "biopori" in combined -> "Energi dihasilkan, alam sehat!"
-        "usaha" in combined || "kopi" in combined || "uang" in combined -> "Keuangan sehat, usaha tumbuh!"
-        "digital" in combined || "otp" in combined || "iklan" in combined -> "Aman dari hoaks & penipuan!"
-        else -> "Keputusan tepat tercapai!"
+        "fotosintesis" in combined || "air" in combined || "biopori" in combined -> "Dampak bagi alam"
+        "usaha" in combined || "kopi" in combined || "uang" in combined -> "Keuangan sehat"
+        "digital" in combined || "otp" in combined || "iklan" in combined -> "Aman dari hoaks"
+        else -> "Solusi cerdas"
     }
 
     Surface(
@@ -1270,26 +1211,27 @@ fun StoryComicArenaCompose(
         shadowElevation = 4.dp,
         border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
     ) {
-        Column(modifier = Modifier.padding(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(modifier = Modifier.padding(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // Top 3 Clean Visual Comic Panels (zero truncated text inside)
             Box(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalAlignment = Alignment.Top,
                 ) {
-                    // PANEL 1: Scenario + Inline Options A/B/C/D
+                    // PANEL 1: Situasi Awal
                     Surface(
-                        modifier = Modifier.weight(1.1f),
+                        modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         color = Color(0xFFF8FAFC),
                         border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                     ) {
                         Column(
-                            modifier = Modifier.padding(6.dp),
-                            verticalArrangement = Arrangement.spacedBy(5.dp),
+                            modifier = Modifier.padding(5.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
                         ) {
                             Box {
-                                TopicCartoonIllustrationCanvas("${challenge.topicTag.orEmpty()} ${challenge.scenario}", height = 74.dp)
+                                TopicCartoonIllustrationCanvas("${challenge.topicTag.orEmpty()} ${challenge.scenario}", height = 66.dp)
                                 Box(
                                     modifier = Modifier
                                         .padding(4.dp)
@@ -1302,73 +1244,31 @@ fun StoryComicArenaCompose(
                                 }
                             }
                             Text(
-                                text = "${challenge.scenario} ${challenge.question}",
-                                color = Color(0xFF1E293B),
+                                text = "1. Situasi Masalah",
+                                color = Color(0xFF334155),
                                 fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 11.sp,
-                                maxLines = 4,
-                                overflow = TextOverflow.Ellipsis,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
-                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                challenge.options.forEachIndexed { idx, opt ->
-                                    val letter = ('A' + idx).toString()
-                                    val isSelected = feedback?.selectedOptionIndex == idx
-                                    val isAnswer = idx == challenge.correctIndex
-                                    val bg = when {
-                                        feedback == null -> Color.White
-                                        isAnswer -> Color(0xFF22C55E)
-                                        isSelected -> Color(0xFFDC2626)
-                                        else -> Color(0xFFF1F5F9)
-                                    }
-                                    val fg = if (feedback != null && (isAnswer || isSelected)) Color.White else Color(0xFF1E293B)
-
-                                    Surface(
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable(enabled = feedback == null) { onChooseOption(idx) },
-                                        shape = RoundedCornerShape(50),
-                                        color = bg,
-                                        border = BorderStroke(1.dp, if (feedback == null) Color(0xFFCBD5E1) else bg),
-                                    ) {
-                                        Row(
-                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp),
-                                            verticalAlignment = Alignment.CenterVertically,
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                        ) {
-                                            Text(
-                                                text = "$letter. $opt",
-                                                color = fg,
-                                                fontSize = 8.sp,
-                                                fontWeight = FontWeight.ExtraBold,
-                                                maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis,
-                                                modifier = Modifier.weight(1f),
-                                            )
-                                            if (feedback != null && isAnswer) {
-                                                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(10.dp))
-                                            } else if (feedback != null && isSelected) {
-                                                Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(10.dp))
-                                            }
-                                        }
-                                    }
-                                }
-                            }
                         }
                     }
 
                     // PANEL 2: Process Frame
                     Surface(
-                        modifier = Modifier.weight(0.95f),
+                        modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         color = Color(0xFFF8FAFC),
                         border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                     ) {
-                        Column(modifier = Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Column(
+                            modifier = Modifier.padding(5.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(74.dp)
+                                    .height(66.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(Color(0xFFFEF3C7)),
                             ) {
@@ -1391,27 +1291,31 @@ fun StoryComicArenaCompose(
                                 }
                             }
                             Text(
-                                text = panel2Caption,
-                                color = Color(0xFF1E293B),
+                                text = "2. $panel2Caption",
+                                color = Color(0xFF334155),
                                 fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
                         }
                     }
 
-                    // PANEL 3: Outcome + Space for Cheering Shiba
+                    // PANEL 3: Outcome + Cheering Shiba
                     Surface(
-                        modifier = Modifier.weight(0.95f),
+                        modifier = Modifier.weight(1f),
                         shape = RoundedCornerShape(12.dp),
                         color = Color(0xFFF8FAFC),
                         border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
                     ) {
-                        Column(modifier = Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                        Column(
+                            modifier = Modifier.padding(5.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(74.dp)
+                                    .height(66.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(Color(0xFFDBEAFE)),
                             ) {
@@ -1441,25 +1345,128 @@ fun StoryComicArenaCompose(
                                 }
                             }
                             Text(
-                                text = panel3Caption,
-                                color = Color(0xFF1E293B),
+                                text = "3. $panel3Caption",
+                                color = Color(0xFF334155),
                                 fontSize = 9.sp,
-                                fontWeight = FontWeight.Bold,
-                                lineHeight = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.fillMaxWidth(),
                             )
-                            Spacer(modifier = Modifier.height(32.dp))
                         }
                     }
                 }
 
-                // Cheering Full-Body Shiba overlapping Panel 3 bottom-right (Mockup 3 & 4!)
                 ShibaFullBodyMascot(
-                    size = 54.dp,
+                    size = 46.dp,
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .offset(x = 2.dp, y = 4.dp)
                         .zIndex(4f),
                 )
+            }
+
+            // Full-Width Readable Scenario & Question Card (zero truncation!)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFFF4F7FC),
+                border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    if (!challenge.topicTag.isNullOrBlank()) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFFDBEAFE),
+                        ) {
+                            Text(
+                                text = challenge.topicTag.orEmpty().uppercase(),
+                                color = Color(0xFF1D4ED8),
+                                fontSize = 9.sp,
+                                fontWeight = FontWeight.Black,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
+                        }
+                    }
+                    Text(
+                        text = challenge.scenario,
+                        color = Color(0xFF334155),
+                        fontSize = 12.sp,
+                        lineHeight = 17.sp,
+                    )
+                    Text(
+                        text = challenge.question,
+                        color = Color(0xFF0F172A),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        lineHeight = 18.sp,
+                    )
+                }
+            }
+
+            // Full-Width Readable A / B / C / D Pill Choices
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                challenge.options.forEachIndexed { idx, opt ->
+                    val letter = ('A' + idx).toString()
+                    val isSelected = feedback?.selectedOptionIndex == idx
+                    val isAnswer = idx == challenge.correctIndex
+                    val bg = when {
+                        feedback == null -> Color.White
+                        isAnswer -> Color(0xFF22C55E)
+                        isSelected -> Color(0xFFDC2626)
+                        else -> Color(0xFFF1F5F9)
+                    }
+                    val fg = if (feedback != null && (isAnswer || isSelected)) Color.White else Color(0xFF0F172A)
+
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = feedback == null) { onChooseOption(idx) },
+                        shape = RoundedCornerShape(14.dp),
+                        color = bg,
+                        border = BorderStroke(1.2.dp, if (feedback == null) Color(0xFFCBD5E1) else bg),
+                        shadowElevation = if (feedback == null) 2.dp else 0.dp,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (feedback != null && (isAnswer || isSelected)) Color.White.copy(alpha = 0.25f)
+                                        else Color(0xFFF1F5F9),
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text(
+                                    text = letter,
+                                    color = fg,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Black,
+                                )
+                            }
+                            Text(
+                                text = opt,
+                                color = fg,
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 17.sp,
+                                modifier = Modifier.weight(1f),
+                            )
+                            if (feedback != null && isAnswer) {
+                                Icon(Icons.Default.Check, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            } else if (feedback != null && isSelected) {
+                                Icon(Icons.Default.Close, contentDescription = null, tint = Color.White, modifier = Modifier.size(16.dp))
+                            }
+                        }
+                    }
+                }
             }
 
             Text(
