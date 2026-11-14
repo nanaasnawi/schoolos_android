@@ -1,10 +1,14 @@
 package com.schoolos.android.data.mapper
 
+import com.schoolos.android.data.remote.dto.DailyChestResponseDto
 import com.schoolos.android.data.remote.dto.DailyQuestAttemptSummaryDto
 import com.schoolos.android.data.remote.dto.DailyQuestLeaderboardEntryDto
 import com.schoolos.android.data.remote.dto.DailyQuestModeInfoDto
 import com.schoolos.android.data.remote.dto.DailyQuestResponseDto
+import com.schoolos.android.data.remote.dto.FeedPetResponseDto
+import com.schoolos.android.data.remote.dto.ShibaPetStatusDto
 import com.schoolos.android.data.remote.dto.SubmitDailyQuestResponseDto
+import com.schoolos.android.domain.model.DailyChestResult
 import com.schoolos.android.domain.model.DailyQuest
 import com.schoolos.android.domain.model.DailyQuestAttemptSummary
 import com.schoolos.android.domain.model.DailyQuestChallenge
@@ -12,7 +16,10 @@ import com.schoolos.android.domain.model.DailyQuestGameMode
 import com.schoolos.android.domain.model.DailyQuestLeaderboardEntry
 import com.schoolos.android.domain.model.DailyQuestModeInfo
 import com.schoolos.android.domain.model.DailyQuestSubmitResult
+import com.schoolos.android.domain.model.FeedPetResult
 import com.schoolos.android.domain.model.MapPinItem
+import com.schoolos.android.domain.model.ShibaPetStatus
+import com.schoolos.android.domain.model.SpeedMatchPair
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
@@ -127,8 +134,41 @@ private fun JsonObject.toChallenge(mode: DailyQuestGameMode, fallbackIndex: Int)
                 topicTag = topicTag,
             )
         }
+        DailyQuestGameMode.SPEED_MATCH -> {
+            val pairArray = runCatching { this["pairs"]?.jsonArray }.getOrNull().orEmpty()
+            val pairs = pairArray.mapIndexedNotNull { pIdx, el ->
+                val obj = runCatching { el.jsonObject }.getOrNull() ?: return@mapIndexedNotNull null
+                val left = obj.str("left")
+                val right = obj.str("right")
+                if (left.isBlank() || right.isBlank()) null
+                else SpeedMatchPair(
+                    id = obj.str("id").ifBlank { "p_$pIdx" },
+                    left = left,
+                    right = right,
+                )
+            }
+            if (pairs.isEmpty()) null
+            else DailyQuestChallenge.SpeedMatch(
+                id = id,
+                prompt = str("prompt").ifBlank { "Cocokkan pasangan yang tepat!" },
+                pairs = pairs,
+                explanation = explanation,
+                topicTag = topicTag,
+            )
+        }
     }
 }
+
+fun ShibaPetStatusDto.toDomain() = ShibaPetStatus(
+    petName = petName,
+    petStage = petStage.coerceIn(1, 4),
+    stageTitle = stageTitle,
+    foodPoints = foodPoints.coerceAtLeast(0),
+    pointsToNextStage = pointsToNextStage.coerceAtLeast(0),
+    totalFed = totalFed.coerceAtLeast(0),
+    biscuits = biscuits.coerceAtLeast(0),
+    fiftyFiftyTokens = fiftyFiftyTokens.coerceAtLeast(0),
+)
 
 fun DailyQuestModeInfoDto.toDomain() = DailyQuestModeInfo(
     code = DailyQuestGameMode.fromCode(code),
@@ -169,6 +209,7 @@ fun DailyQuestResponseDto.toDomain(): DailyQuest {
         gameMode = parsedMode,
         featuredModeToday = DailyQuestGameMode.fromCode(featuredModeToday),
         isFeaturedToday = isFeaturedToday,
+        roundNumber = roundNumber,
         title = title,
         subtitle = subtitle,
         subjectName = subjectName,
@@ -180,6 +221,8 @@ fun DailyQuestResponseDto.toDomain(): DailyQuest {
         streakDays = streakDays,
         totalXp = totalXp,
         level = level.coerceAtLeast(1),
+        petStatus = petStatus?.toDomain(),
+        chestClaimedToday = chestClaimedToday,
         availableModes = availableModes.map { it.toDomain() },
         leaderboard = leaderboard.map { it.toDomain() },
     )
@@ -189,11 +232,35 @@ fun SubmitDailyQuestResponseDto.toDomain() = DailyQuestSubmitResult(
     awarded = awarded,
     alreadyCompleted = alreadyCompleted,
     xpEarned = xpEarned,
+    biscuitsEarned = biscuitsEarned,
     scorePercent = scorePercent,
     totalXp = totalXp,
     level = level.coerceAtLeast(1),
     streakDays = streakDays.coerceAtLeast(1),
     leveledUp = leveledUp,
     isPreviewAccount = isPreviewAccount,
+    petStatus = petStatus?.toDomain(),
+    message = message,
+)
+
+fun FeedPetResponseDto.toDomain() = FeedPetResult(
+    fed = fed,
+    evolved = evolved,
+    bonusXpEarned = bonusXpEarned,
+    totalXp = totalXp,
+    level = level.coerceAtLeast(1),
+    petStatus = petStatus?.toDomain(),
+    message = message,
+)
+
+fun DailyChestResponseDto.toDomain() = DailyChestResult(
+    opened = opened,
+    alreadyClaimed = alreadyClaimed,
+    rewardType = rewardType,
+    rewardAmount = rewardAmount,
+    rewardLabel = rewardLabel,
+    totalXp = totalXp,
+    level = level.coerceAtLeast(1),
+    petStatus = petStatus?.toDomain(),
     message = message,
 )

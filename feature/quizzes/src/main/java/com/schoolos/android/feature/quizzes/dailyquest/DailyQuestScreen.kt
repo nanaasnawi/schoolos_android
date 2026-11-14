@@ -77,6 +77,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.schoolos.android.core.designsystem.ConfettiParticleEffect
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
+import com.schoolos.android.domain.model.DailyChestResult
 import com.schoolos.android.domain.model.DailyQuest
 import com.schoolos.android.domain.model.DailyQuestChallenge
 import com.schoolos.android.domain.model.DailyQuestGameMode
@@ -126,6 +127,13 @@ private fun resolveModeVisual(mode: DailyQuestGameMode): GameModeVisual = when (
         secondaryColor = Color(0xFFF43F5E),
         darkLipColor = Color(0xFFB45309),
         badgeText = "Tebak Istilah",
+    )
+    DailyQuestGameMode.SPEED_MATCH -> GameModeVisual(
+        icon = Icons.Default.SportsEsports,
+        primaryColor = Color(0xFFF97316),
+        secondaryColor = Color(0xFFF59E0B),
+        darkLipColor = Color(0xFFC2410C),
+        badgeText = "Shopee Cocoki",
     )
 }
 
@@ -184,7 +192,7 @@ fun DailyQuestScreen(
                 contentPadding = PaddingValues(horizontal = 14.dp, vertical = 10.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                // ── 1. CLEAN MODE PILL SWITCHER ──
+                // ── 1. CLEAN MODE PILL SWITCHER + SOAL BARU ──
                 val modes = state.quest?.availableModes.orEmpty()
                 if (modes.isNotEmpty()) {
                     item {
@@ -202,7 +210,7 @@ fun DailyQuestScreen(
                                         .clip(RoundedCornerShape(50))
                                         .clickable {
                                             haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                            viewModel.loadQuest(modeInfo.code)
+                                            viewModel.loadQuest(modeInfo.code, 0)
                                         },
                                 ) {
                                     Row(
@@ -231,6 +239,72 @@ fun DailyQuestScreen(
                                             )
                                         }
                                     }
+                                }
+                            }
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = Color(0xFFFFF7ED),
+                                    border = BorderStroke(1.dp, Color(0xFFFDBA74)),
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(50))
+                                        .clickable {
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            viewModel.loadNextRound()
+                                        },
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Default.Refresh,
+                                            contentDescription = null,
+                                            tint = Color(0xFFC2410C),
+                                            modifier = Modifier.size(13.dp),
+                                        )
+                                        Text(
+                                            text = if (state.roundNumber > 0) "Ronde #${state.roundNumber + 1}" else "Soal Baru",
+                                            color = Color(0xFFC2410C),
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Black,
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // ── 1B. GOPAY PET / SHOPEE TANAM SHIBA PET BANNER ──
+                val pet = state.petStatus
+                if (pet != null) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            ShibaPetBannerCompose(
+                                pet = pet,
+                                feeding = state.isFeedingPet,
+                                onFeedPet = {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    viewModel.feedShibaPet()
+                                },
+                            )
+                            val notice = state.petNotice
+                            if (!notice.isNullOrBlank()) {
+                                Surface(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    shape = RoundedCornerShape(12.dp),
+                                    color = Color(0xFFFEF3C7),
+                                    border = BorderStroke(1.dp, Color(0xFFFDE68A)),
+                                ) {
+                                    Text(
+                                        text = notice,
+                                        color = Color(0xFF92400E),
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                                    )
                                 }
                             }
                         }
@@ -302,11 +376,22 @@ fun DailyQuestScreen(
                                     correctCount = state.correctCount,
                                     totalCount = quest.challenges.size.coerceAtLeast(1),
                                     maxCombo = state.maxCombo,
+                                    chestClaimedToday = state.chestClaimedToday,
+                                    isOpeningChest = state.isOpeningChest,
+                                    chestResult = state.chestResult,
                                     surfaceColor = surfaceColor,
                                     elevatedColor = elevatedColor,
                                     borderColor = borderColor,
                                     textPrimary = textPrimary,
                                     textSecondary = textSecondary,
+                                    onOpenChest = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        viewModel.openDailyChest()
+                                    },
+                                    onNewRound = {
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        viewModel.loadNextRound()
+                                    },
                                     onReplay = {
                                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                         viewModel.replayQuest()
@@ -411,12 +496,56 @@ fun DailyQuestScreen(
                                                 )
                                             }
                                             is DailyQuestChallenge.CaseDetective -> {
-                                                StoryComicArenaCompose(
+                                                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                                    val tokens = state.petStatus?.fiftyFiftyTokens ?: 0
+                                                    if (state.feedback == null && tokens > 0 && state.hiddenOptionIndices.isEmpty()) {
+                                                        Row(
+                                                            modifier = Modifier.fillMaxWidth(),
+                                                            horizontalArrangement = Arrangement.End,
+                                                        ) {
+                                                            Surface(
+                                                                modifier = Modifier
+                                                                    .clip(RoundedCornerShape(50))
+                                                                    .clickable {
+                                                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                                        viewModel.useFiftyFiftyPowerUp()
+                                                                    },
+                                                                shape = RoundedCornerShape(50),
+                                                                color = Color(0xFFFEF3C7),
+                                                                border = BorderStroke(1.dp, Color(0xFFFCD34D)),
+                                                            ) {
+                                                                Text(
+                                                                    text = "⚡ Power-Up 50:50 ($tokens)",
+                                                                    color = Color(0xFF92400E),
+                                                                    fontSize = 11.sp,
+                                                                    fontWeight = FontWeight.Black,
+                                                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                    StoryComicArenaCompose(
+                                                        challenge = currentChallenge,
+                                                        feedback = state.feedback,
+                                                        hiddenOptionIndices = state.hiddenOptionIndices,
+                                                        onChooseOption = { idx ->
+                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                            viewModel.answerCaseDetective(idx)
+                                                        },
+                                                    )
+                                                }
+                                            }
+                                            is DailyQuestChallenge.SpeedMatch -> {
+                                                SpeedMatchArenaCompose(
                                                     challenge = currentChallenge,
-                                                    feedback = state.feedback,
-                                                    onChooseOption = { idx ->
+                                                    disabled = state.feedback != null,
+                                                    onWrongTap = {
+                                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                        viewModel.onWrongStageTap()
+                                                    },
+                                                    onCompleted = { msg ->
                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
-                                                        viewModel.answerCaseDetective(idx)
+                                                        viewModel.completeInteractiveStage(msg, currentChallenge.explanation)
                                                     },
                                                 )
                                             }
@@ -929,11 +1058,16 @@ private fun VictoryLootCard(
     correctCount: Int,
     totalCount: Int,
     maxCombo: Int,
+    chestClaimedToday: Boolean,
+    isOpeningChest: Boolean,
+    chestResult: DailyChestResult?,
     surfaceColor: Color,
     elevatedColor: Color,
     borderColor: Color,
     textPrimary: Color,
     textSecondary: Color,
+    onOpenChest: () -> Unit,
+    onNewRound: () -> Unit,
     onReplay: () -> Unit,
     onSwitchMode: () -> Unit,
 ) {
@@ -1032,13 +1166,71 @@ private fun VictoryLootCard(
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 LootMetricTile("AKURASI", "${result.scorePercent}%", Color(0xFF10B981), elevatedColor, borderColor, textSecondary, Modifier.weight(1f))
                 LootMetricTile("BENAR", "$correctCount/$totalCount", textPrimary, elevatedColor, borderColor, textSecondary, Modifier.weight(1f))
-                LootMetricTile("COMBO", "${maxCombo}x", Color(0xFFF59E0B), elevatedColor, borderColor, textSecondary, Modifier.weight(1f))
+                LootMetricTile("BISKUIT", "+${result.biscuitsEarned}", Color(0xFFEA580C), elevatedColor, borderColor, textSecondary, Modifier.weight(1f))
                 LootMetricTile("XP LOOT", "+${result.xpEarned}", Color(0xFF0EA5E9), elevatedColor, borderColor, textSecondary, Modifier.weight(1f))
+            }
+
+            if (chestResult != null) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(14.dp),
+                    color = Color(0xFFFEF3C7),
+                    border = BorderStroke(1.5.dp, Color(0xFFF59E0B)),
+                ) {
+                    Column(
+                        modifier = Modifier.padding(12.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = "🎁 HADIAH PETI KEJUTAN",
+                            color = Color(0xFFD97706),
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Black,
+                        )
+                        Text(
+                            text = chestResult.rewardLabel,
+                            color = Color(0xFF0F172A),
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            textAlign = TextAlign.Center,
+                        )
+                        Text(
+                            text = chestResult.message,
+                            color = Color(0xFF92400E),
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            textAlign = TextAlign.Center,
+                        )
+                    }
+                }
+            } else {
+                ArcadePushButton(
+                    text = when {
+                        isOpeningChest -> "MEMBUKA PETI KEJUTAN..."
+                        chestClaimedToday -> "PETI KEJUTAN HARI INI SUDAH DIKLAIM"
+                        else -> "🎁 BUKA PETI KEJUTAN HARIAN!"
+                    },
+                    icon = Icons.Default.EmojiEvents,
+                    topColor = if (chestClaimedToday) elevatedColor else Color(0xFFF59E0B),
+                    lipColor = if (chestClaimedToday) borderColor else Color(0xFFD97706),
+                    textColor = if (chestClaimedToday) textSecondary else Color.White,
+                    onClick = {
+                        if (!chestClaimedToday && !isOpeningChest) onOpenChest()
+                    },
+                )
             }
 
             Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                 ArcadePushButton(
-                    text = "MAIN LAGI (LATIHAN)",
+                    text = "SOAL BARU (ACAK RONDE BERIKUTNYA)",
+                    icon = Icons.Default.Refresh,
+                    topColor = Color(0xFFF97316),
+                    lipColor = Color(0xFFC2410C),
+                    onClick = onNewRound,
+                )
+                ArcadePushButton(
+                    text = "MAIN ULANG RONDE INI",
                     icon = Icons.Default.Refresh,
                     topColor = elevatedColor,
                     lipColor = borderColor,

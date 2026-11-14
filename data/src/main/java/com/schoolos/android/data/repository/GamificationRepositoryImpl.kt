@@ -6,8 +6,10 @@ import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.data.remote.dto.AwardXpRequestDto
 import com.schoolos.android.data.remote.dto.SubmitDailyQuestRequestDto
 import com.schoolos.android.domain.model.AwardXpResult
+import com.schoolos.android.domain.model.DailyChestResult
 import com.schoolos.android.domain.model.DailyQuest
 import com.schoolos.android.domain.model.DailyQuestSubmitResult
+import com.schoolos.android.domain.model.FeedPetResult
 import com.schoolos.android.domain.model.GamificationStatus
 import com.schoolos.android.domain.repository.GamificationRepository
 import javax.inject.Inject
@@ -72,8 +74,8 @@ class GamificationRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getDailyQuest(mode: String?): Result<DailyQuest> = runCatching {
-        val response = api.getDailyQuest(mode = mode)
+    override suspend fun getDailyQuest(mode: String?, round: Int): Result<DailyQuest> = runCatching {
+        val response = api.getDailyQuest(mode = mode, round = round)
         val dto = response.data
         if (dto != null) {
             return@runCatching dto.toDomain()
@@ -87,6 +89,7 @@ class GamificationRepositoryImpl @Inject constructor(
         totalCount: Int,
         maxCombo: Int,
         durationSeconds: Int,
+        roundNumber: Int,
     ): Result<DailyQuestSubmitResult> = runCatching {
         val response = api.submitDailyQuest(
             SubmitDailyQuestRequestDto(
@@ -95,6 +98,7 @@ class GamificationRepositoryImpl @Inject constructor(
                 totalCount = totalCount,
                 maxCombo = maxCombo,
                 durationSeconds = durationSeconds,
+                roundNumber = roundNumber,
             )
         )
         val dto = response.data
@@ -102,5 +106,23 @@ class GamificationRepositoryImpl @Inject constructor(
             return@runCatching dto.toDomain()
         }
         throw Exception(response.error?.message ?: "Gagal menyimpan hasil misi harian.")
+    }
+
+    override suspend fun feedShibaPet(): Result<FeedPetResult> = runCatching {
+        val response = api.feedShibaPet()
+        val dto = response.data
+        if (dto != null) {
+            return@runCatching dto.toDomain()
+        }
+        throw Exception(response.error?.message ?: "Gagal memberi makan Shiba Pet.")
+    }
+
+    override suspend fun openDailyChest(): Result<DailyChestResult> = runCatching {
+        val response = api.openDailyChest()
+        val dto = response.data
+        if (dto != null) {
+            return@runCatching dto.toDomain()
+        }
+        throw Exception(response.error?.message ?: "Gagal membuka Peti Kejutan.")
     }
 }
