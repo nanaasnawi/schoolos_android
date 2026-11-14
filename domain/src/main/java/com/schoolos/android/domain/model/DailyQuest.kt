@@ -5,7 +5,8 @@ enum class DailyQuestGameMode(val code: String, val displayLabel: String) {
     FACT_OR_MYTH("FACT_OR_MYTH", "Geser Fakta/Mitos"),
     SEQUENCE_ORDER("SEQUENCE_ORDER", "Susun Langkah"),
     CASE_DETECTIVE("CASE_DETECTIVE", "Komik Kasus"),
-    CONCEPT_GUESS("CONCEPT_GUESS", "Tebak Istilah");
+    CONCEPT_GUESS("CONCEPT_GUESS", "Tebak Istilah"),
+    SPEED_MATCH("SPEED_MATCH", "Cocokkan Cepat");
 
     companion object {
         fun fromCode(raw: String?): DailyQuestGameMode = when (raw?.trim()?.uppercase()) {
@@ -13,10 +14,50 @@ enum class DailyQuestGameMode(val code: String, val displayLabel: String) {
             "CASE_DETECTIVE" -> CASE_DETECTIVE
             "SEQUENCE_ORDER" -> SEQUENCE_ORDER
             "CONCEPT_GUESS" -> CONCEPT_GUESS
+            "SPEED_MATCH" -> SPEED_MATCH
             else -> FACT_OR_MYTH
         }
     }
 }
+
+data class SpeedMatchPair(
+    val id: String,
+    val left: String,
+    val right: String,
+)
+
+data class ShibaPetStatus(
+    val petName: String = "Mochi Shiba",
+    val petStage: Int = 1,
+    val stageTitle: String = "Anak Shiba",
+    val foodPoints: Int = 0,
+    val pointsToNextStage: Int = 100,
+    val totalFed: Int = 0,
+    val biscuits: Int = 0,
+    val fiftyFiftyTokens: Int = 1,
+)
+
+data class FeedPetResult(
+    val fed: Boolean,
+    val evolved: Boolean,
+    val bonusXpEarned: Int,
+    val totalXp: Long,
+    val level: Int,
+    val petStatus: ShibaPetStatus? = null,
+    val message: String,
+)
+
+data class DailyChestResult(
+    val opened: Boolean,
+    val alreadyClaimed: Boolean,
+    val rewardType: String,
+    val rewardAmount: Int,
+    val rewardLabel: String,
+    val totalXp: Long,
+    val level: Int,
+    val petStatus: ShibaPetStatus? = null,
+    val message: String,
+)
 
 data class MapPinItem(
     val id: String,
@@ -76,6 +117,14 @@ sealed class DailyQuestChallenge {
         override val explanation: String? = null,
         override val topicTag: String? = null,
     ) : DailyQuestChallenge()
+
+    data class SpeedMatch(
+        override val id: String,
+        val prompt: String,
+        val pairs: List<SpeedMatchPair>,
+        override val explanation: String? = null,
+        override val topicTag: String? = null,
+    ) : DailyQuestChallenge()
 }
 
 data class DailyQuestModeInfo(
@@ -112,6 +161,7 @@ data class DailyQuest(
     val gameMode: DailyQuestGameMode,
     val featuredModeToday: DailyQuestGameMode,
     val isFeaturedToday: Boolean,
+    val roundNumber: Int = 0,
     val title: String,
     val subtitle: String,
     val subjectName: String,
@@ -123,6 +173,8 @@ data class DailyQuest(
     val streakDays: Int = 1,
     val totalXp: Long = 0,
     val level: Int = 1,
+    val petStatus: ShibaPetStatus? = null,
+    val chestClaimedToday: Boolean = false,
     val availableModes: List<DailyQuestModeInfo> = emptyList(),
     val leaderboard: List<DailyQuestLeaderboardEntry> = emptyList(),
 )
@@ -131,11 +183,13 @@ data class DailyQuestSubmitResult(
     val awarded: Boolean,
     val alreadyCompleted: Boolean,
     val xpEarned: Int,
+    val biscuitsEarned: Int = 0,
     val scorePercent: Int,
     val totalXp: Long,
     val level: Int,
     val streakDays: Int,
     val leveledUp: Boolean,
     val isPreviewAccount: Boolean,
+    val petStatus: ShibaPetStatus? = null,
     val message: String,
 )

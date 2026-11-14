@@ -5,10 +5,12 @@ import android.media.ToneGenerator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.schoolos.android.core.common.toHumanReadableError
+import com.schoolos.android.domain.model.DailyChestResult
 import com.schoolos.android.domain.model.DailyQuest
 import com.schoolos.android.domain.model.DailyQuestChallenge
 import com.schoolos.android.domain.model.DailyQuestGameMode
 import com.schoolos.android.domain.model.DailyQuestSubmitResult
+import com.schoolos.android.domain.model.ShibaPetStatus
 import com.schoolos.android.domain.repository.GamificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
@@ -38,6 +40,7 @@ data class DailyQuestUiState(
     val errorMessage: String? = null,
     val quest: DailyQuest? = null,
     val selectedMode: DailyQuestGameMode? = null,
+    val roundNumber: Int = 0,
     val currentIndex: Int = 0,
     val correctCount: Int = 0,
     val combo: Int = 0,
@@ -55,6 +58,13 @@ data class DailyQuestUiState(
     val revealedClues: Int = 1,
     val guessInput: String = "",
     val soundEnabled: Boolean = true,
+    val petStatus: ShibaPetStatus? = null,
+    val chestClaimedToday: Boolean = false,
+    val chestResult: DailyChestResult? = null,
+    val petNotice: String? = null,
+    val isFeedingPet: Boolean = false,
+    val isOpeningChest: Boolean = false,
+    val hiddenOptionIndices: Set<Int> = emptySet(),
 )
 
 @HiltViewModel
@@ -82,7 +92,7 @@ class DailyQuestViewModel @Inject constructor(
         _state.update { it.copy(soundEnabled = !it.soundEnabled) }
     }
 
-    fun loadQuest(modeOverride: DailyQuestGameMode? = null) {
+    fun loadQuest(modeOverride: DailyQuestGameMode? = null, roundOverride: Int = 0) {
         viewModelScope.launch {
             timerJob?.cancel()
             _state.update {
@@ -92,10 +102,13 @@ class DailyQuestViewModel @Inject constructor(
                     submitResult = null,
                     feedback = null,
                     selectedMode = modeOverride ?: it.selectedMode,
+                    chestResult = null,
+                    petNotice = null,
+                    hiddenOptionIndices = emptySet(),
                 )
             }
 
-            val result = gamificationRepository.getDailyQuest(modeOverride?.code)
+            val result = gamificationRepository.getDailyQuest(modeOverride?.code, roundOverride)
             result.onSuccess { quest ->
                 val firstSteps = prepareStepsForChallenge(quest, 0)
                 _state.update {
@@ -104,6 +117,7 @@ class DailyQuestViewModel @Inject constructor(
                         errorMessage = null,
                         quest = quest,
                         selectedMode = quest.gameMode,
+                        roundNumber = quest.roundNumber,
                         currentIndex = 0,
                         correctCount = 0,
                         combo = 0,
@@ -120,6 +134,9 @@ class DailyQuestViewModel @Inject constructor(
                         swapSourceIndex = null,
                         revealedClues = 1,
                         guessInput = "",
+                        petStatus = quest.petStatus ?: it.petStatus,
+                        chestClaimedToday = quest.chestClaimedToday,
+                        hiddenOptionIndices = emptySet(),
                     )
                 }
                 startTimer()
@@ -132,6 +149,13 @@ class DailyQuestViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    fun loadNextRound() {
+        val current = _state.value
+        val mode = current.selectedMode ?: current.quest?.gameMode
+        playSfx(SfxKind.TAP)
+        loadQuest(modeOverride = mode, roundOverride = current.roundNumber + 1)
     }
 
     private fun startTimer() {
@@ -310,7 +334,69 @@ class DailyQuestViewModel @Inject constructor(
                     swapSourceIndex = null,
                     revealedClues = 1,
                     guessInput = "",
+                    hiddenOptionIndices = emptySet(),
                 )
+            }
+        }
+    }
+
+    fun useFiftyFiftyPowerUp() {
+        val current = _state.value
+        val pet = current.petStatus ?: return
+        if (current.feedback != null || pet.fiftyFiftyTokens <= 0 || current.hiddenOptionIndices.isNotEmpty()) return
+        val ch = current.quest?.challenges?.getOrNull(current.currentIndex) as? DailyQuestChallenge.CaseDetective ?: return
+        val wrong = ch.options.indices.filter { it != ch.correctIndex }
+        if (wrong.size <= 1) return
+        playSfx(SfxKind.TAP)
+        _state.update {
+            it.copy(
+                hiddenOptionIndices = wrong.take(2).toSet(),
+                petStatus = pet.copy(fiftyFiftyTokens = (pet.fiftyFiftyTokens - 1).coerceAtLeast(0)),
+            )
+        }
+    }
+
+    fun feedShibaPet() {
+        if (_state.value.isFeedingPet) return
+        _state.update { it.copy(isFeedingPet = true, petNotice = null) }
+        viewModelScope.launch {
+            gamificationRepository.feedShibaPet().onSuccess { res ->
+                playSfx(if (res.evolved) SfxKind.VICTORY else SfxKind.CORRECT)
+                _state.update {
+                    it.copy(
+                        isFeedingPet = false,
+                        petStatus = res.petStatus ?: it.petStatus,
+                        petNotice = res.message,
+                    )
+                }
+            }.onFailure { err ->
+                _state.update {
+                    it.copy(
+                        isFeedingPet = false,
+                        petNotice = err.toHumanReadableError(),
+                    )
+                }
+            }
+        }
+    }
+
+    fun openDailyChest() {
+        val cur = _state.value
+        if (cur.isOpeningChest || cur.chestClaimedToday) return
+        _state.update { it.copy(isOpeningChest = true) }
+        viewModelScope.launch {
+            gamificationRepository.openDailyChest().onSuccess { res ->
+                playSfx(SfxKind.VICTORY)
+                _state.update {
+                    it.copy(
+                        isOpeningChest = false,
+                        chestClaimedToday = true,
+                        chestResult = res,
+                        petStatus = res.petStatus ?: it.petStatus,
+                    )
+                }
+            }.onFailure {
+                _state.update { it.copy(isOpeningChest = false) }
             }
         }
     }
@@ -331,6 +417,7 @@ class DailyQuestViewModel @Inject constructor(
                 totalCount = total,
                 maxCombo = current.maxCombo,
                 durationSeconds = current.elapsedSeconds.coerceAtLeast(3),
+                roundNumber = current.roundNumber,
             )
 
             result.onSuccess { submitRes ->
@@ -338,10 +425,13 @@ class DailyQuestViewModel @Inject constructor(
                     it.copy(
                         isSubmitting = false,
                         submitResult = submitRes,
+                        petStatus = submitRes.petStatus ?: it.petStatus,
                     )
                 }
-                gamificationRepository.getDailyQuest(quest.gameMode.code).onSuccess { refreshed ->
-                    _state.update { it.copy(quest = refreshed) }
+                if (current.roundNumber == 0) {
+                    gamificationRepository.getDailyQuest(quest.gameMode.code, 0).onSuccess { refreshed ->
+                        _state.update { it.copy(quest = refreshed, petStatus = refreshed.petStatus ?: it.petStatus) }
+                    }
                 }
             }.onFailure {
                 val pct = ((current.correctCount.toFloat() / total) * 100f).toInt().coerceIn(0, 100)
@@ -389,6 +479,7 @@ class DailyQuestViewModel @Inject constructor(
                 swapSourceIndex = null,
                 revealedClues = 1,
                 guessInput = "",
+                hiddenOptionIndices = emptySet(),
             )
         }
         startTimer()
@@ -401,7 +492,7 @@ class DailyQuestViewModel @Inject constructor(
         val idx = modes.indexOfFirst { it.code == quest.gameMode }.coerceAtLeast(0)
         val next = modes[(idx + 1) % modes.size].code
         playSfx(SfxKind.TAP)
-        loadQuest(next)
+        loadQuest(next, 0)
     }
 
     private fun prepareStepsForChallenge(quest: DailyQuest, index: Int): List<SequenceStepItem> {

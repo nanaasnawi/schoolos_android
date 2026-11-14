@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,6 +20,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -65,6 +67,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
@@ -73,6 +76,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.schoolos.android.domain.model.DailyQuestChallenge
 import com.schoolos.android.domain.model.MapPinItem
+import com.schoolos.android.domain.model.ShibaPetStatus
+import com.schoolos.android.domain.model.SpeedMatchPair
 import com.schoolos.android.feature.quizzes.R
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -1188,6 +1193,7 @@ private fun SceneBackdropCanvas(sceneId: String, modifier: Modifier = Modifier) 
 fun StoryComicArenaCompose(
     challenge: DailyQuestChallenge.CaseDetective,
     feedback: QuestFeedback?,
+    hiddenOptionIndices: Set<Int> = emptySet(),
     onChooseOption: (Int) -> Unit,
 ) {
     val combined = "${challenge.topicTag.orEmpty()} ${challenge.scenario} ${challenge.question}".lowercase()
@@ -1412,22 +1418,29 @@ fun StoryComicArenaCompose(
                     val letter = ('A' + idx).toString()
                     val isSelected = feedback?.selectedOptionIndex == idx
                     val isAnswer = idx == challenge.correctIndex
+                    val isEliminated = idx in hiddenOptionIndices && feedback == null
                     val bg = when {
+                        isEliminated -> Color(0xFFF1F5F9)
                         feedback == null -> Color.White
                         isAnswer -> Color(0xFF22C55E)
                         isSelected -> Color(0xFFDC2626)
                         else -> Color(0xFFF1F5F9)
                     }
-                    val fg = if (feedback != null && (isAnswer || isSelected)) Color.White else Color(0xFF0F172A)
+                    val fg = when {
+                        isEliminated -> Color(0xFF94A3B8)
+                        feedback != null && (isAnswer || isSelected) -> Color.White
+                        else -> Color(0xFF0F172A)
+                    }
 
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable(enabled = feedback == null) { onChooseOption(idx) },
+                            .alpha(if (isEliminated) 0.55f else 1f)
+                            .clickable(enabled = feedback == null && !isEliminated) { onChooseOption(idx) },
                         shape = RoundedCornerShape(14.dp),
                         color = bg,
                         border = BorderStroke(1.2.dp, if (feedback == null) Color(0xFFCBD5E1) else bg),
-                        shadowElevation = if (feedback == null) 2.dp else 0.dp,
+                        shadowElevation = if (feedback == null && !isEliminated) 2.dp else 0.dp,
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
@@ -1457,6 +1470,7 @@ fun StoryComicArenaCompose(
                                 fontSize = 12.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 lineHeight = 17.sp,
+                                textDecoration = if (isEliminated) TextDecoration.LineThrough else null,
                                 modifier = Modifier.weight(1f),
                             )
                             if (feedback != null && isAnswer) {
@@ -1477,6 +1491,339 @@ fun StoryComicArenaCompose(
                 textAlign = TextAlign.Center,
                 modifier = Modifier.fillMaxWidth(),
             )
+        }
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   5. SPEED MATCH ARENA (Shopee Cocoki Tap-Pair Grid)
+   ═══════════════════════════════════════════════════════════════════════════ */
+@Composable
+fun SpeedMatchArenaCompose(
+    challenge: DailyQuestChallenge.SpeedMatch,
+    disabled: Boolean,
+    onWrongTap: () -> Unit,
+    onCompleted: (String) -> Unit,
+) {
+    val pairs = challenge.pairs
+    val shuffledRight = remember(challenge.id) {
+        val list = pairs.toMutableList()
+        var hash = 0L
+        for (c in "${challenge.id}_right") {
+            hash = (hash * 31L + c.code.toLong()) and 0xFFFFFFFFL
+        }
+        for (i in list.size - 1 downTo 1) {
+            hash = (hash * 1664525L + 1013904223L) and 0xFFFFFFFFL
+            val j = (hash % (i + 1)).toInt()
+            val tmp = list[i]
+            list[i] = list[j]
+            list[j] = tmp
+        }
+        list.toList()
+    }
+
+    var selectedLeftId by remember(challenge.id) { mutableStateOf<String?>(null) }
+    var matchedIds by remember(challenge.id) { mutableStateOf(emptySet<String>()) }
+    var wrongLeftId by remember(challenge.id) { mutableStateOf<String?>(null) }
+    var wrongRightId by remember(challenge.id) { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = Color.White,
+        shadowElevation = 4.dp,
+        border = BorderStroke(1.dp, Color(0xFFE2E8F0)),
+    ) {
+        Column(modifier = Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                if (!challenge.topicTag.isNullOrBlank()) {
+                    Surface(shape = RoundedCornerShape(50), color = Color(0xFFFFEDD5)) {
+                        Text(
+                            text = challenge.topicTag.orEmpty().uppercase(),
+                            color = Color(0xFFC2410C),
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 3.dp),
+                        )
+                    }
+                }
+                Text(
+                    text = challenge.prompt,
+                    color = Color(0xFF0F172A),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                    lineHeight = 19.sp,
+                )
+                Text(
+                    text = if (selectedLeftId != null) {
+                        "Ketuk pasangan yang sesuai di kolom kanan!"
+                    } else {
+                        "Ketuk kartu kiri lalu pasangkan (${matchedIds.size}/${pairs.size} cocok)"
+                    },
+                    color = Color(0xFF64748B),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                // Left column
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    pairs.forEach { p ->
+                        val isMatched = p.id in matchedIds
+                        val isSelected = selectedLeftId == p.id
+                        val isWrong = wrongLeftId == p.id
+                        val bg = when {
+                            isMatched -> Color(0xFFECFDF5)
+                            isWrong -> Color(0xFFFFE4E6)
+                            isSelected -> Color(0xFFE0F2FE)
+                            else -> Color.White
+                        }
+                        val borderCol = when {
+                            isMatched -> Color(0xFF34D399)
+                            isWrong -> Color(0xFFF43F5E)
+                            isSelected -> Color(0xFF0EA5E9)
+                            else -> Color(0xFFCBD5E1)
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp)
+                                .clickable(enabled = !disabled && !isMatched) {
+                                    selectedLeftId = if (selectedLeftId == p.id) null else p.id
+                                },
+                            shape = RoundedCornerShape(14.dp),
+                            color = bg,
+                            border = BorderStroke(1.5.dp, borderCol),
+                            shadowElevation = if (isMatched) 0.dp else 2.dp,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = p.left,
+                                    color = if (isMatched) Color(0xFF047857) else Color(0xFF0F172A),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    lineHeight = 15.sp,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (isMatched) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Right column (shuffled)
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    shuffledRight.forEach { p ->
+                        val isMatched = p.id in matchedIds
+                        val isWrong = wrongRightId == p.id
+                        val bg = when {
+                            isMatched -> Color(0xFFECFDF5)
+                            isWrong -> Color(0xFFFFE4E6)
+                            selectedLeftId != null -> Color(0xFFFFF7ED)
+                            else -> Color(0xFFF8FAFC)
+                        }
+                        val borderCol = when {
+                            isMatched -> Color(0xFF34D399)
+                            isWrong -> Color(0xFFF43F5E)
+                            selectedLeftId != null -> Color(0xFFFDBA74)
+                            else -> Color(0xFFCBD5E1)
+                        }
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .heightIn(min = 52.dp)
+                                .clickable(enabled = !disabled && !isMatched && selectedLeftId != null) {
+                                    val left = selectedLeftId ?: return@clickable
+                                    if (left == p.id) {
+                                        val next = matchedIds + p.id
+                                        matchedIds = next
+                                        selectedLeftId = null
+                                        if (next.size >= pairs.size) {
+                                            onCompleted("Semua pasangan cocok 100%! Refleks & pemahamanmu keren.")
+                                        }
+                                    } else {
+                                        wrongLeftId = left
+                                        wrongRightId = p.id
+                                        selectedLeftId = null
+                                        onWrongTap()
+                                        scope.launch {
+                                            delay(480)
+                                            wrongLeftId = null
+                                            wrongRightId = null
+                                        }
+                                    }
+                                },
+                            shape = RoundedCornerShape(14.dp),
+                            color = bg,
+                            border = BorderStroke(1.5.dp, borderCol),
+                            shadowElevation = if (isMatched) 0.dp else 2.dp,
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                            ) {
+                                Text(
+                                    text = p.right,
+                                    color = if (isMatched) Color(0xFF047857) else Color(0xFF0F172A),
+                                    fontSize = 11.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    lineHeight = 15.sp,
+                                    modifier = Modifier.weight(1f),
+                                )
+                                if (isMatched) {
+                                    Icon(Icons.Default.Check, contentDescription = null, tint = Color(0xFF059669), modifier = Modifier.size(14.dp))
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            Text(
+                text = "SHOPEE COCOKI ARENA",
+                color = Color(0xFFEA580C),
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Black,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
+    }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   6. GOPAY PET / SHOPEE TANAM SHIBA PET BANNER
+   ═══════════════════════════════════════════════════════════════════════════ */
+@Composable
+fun ShibaPetBannerCompose(
+    pet: ShibaPetStatus,
+    feeding: Boolean,
+    onFeedPet: () -> Unit,
+) {
+    val stageMod = pet.foodPoints % 100
+    val frac = if (pet.petStage >= 4) 1f else (stageMod / 100f).coerceIn(0.08f, 1f)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        color = Color(0xFFFFFBEB),
+        border = BorderStroke(1.2.dp, Color(0xFFFDE68A)),
+        shadowElevation = 2.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            ShibaMascotAvatar(size = 38.dp, happy = true)
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(5.dp),
+                ) {
+                    Text(
+                        text = pet.petName,
+                        color = Color(0xFF0F172A),
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Surface(shape = RoundedCornerShape(50), color = Color(0xFFFEF3C7)) {
+                        Text(
+                            text = "Lv.${pet.petStage} ${pet.stageTitle}",
+                            color = Color(0xFF92400E),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                    Surface(shape = RoundedCornerShape(50), color = Color(0xFFE0F2FE)) {
+                        Text(
+                            text = "⚡50:50 ×${pet.fiftyFiftyTokens}",
+                            color = Color(0xFF0369A1),
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(8.dp)
+                            .clip(RoundedCornerShape(50))
+                            .background(Color.White)
+                            .padding(1.dp),
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth(frac)
+                                .fillMaxHeight()
+                                .clip(RoundedCornerShape(50))
+                                .background(Brush.horizontalGradient(listOf(Color(0xFFF59E0B), Color(0xFF10B981)))),
+                        )
+                    }
+                    Text(
+                        text = if (pet.petStage >= 4) "MAX" else "$stageMod/100",
+                        color = Color(0xFF475569),
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                    )
+                }
+            }
+
+            Surface(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .clickable(enabled = !feeding && pet.biscuits > 0, onClick = onFeedPet),
+                shape = RoundedCornerShape(12.dp),
+                color = if (pet.biscuits > 0) Color(0xFFFF6B00) else Color.White,
+                border = BorderStroke(1.dp, if (pet.biscuits > 0) Color(0xFFC2410C) else Color(0xFFE2E8F0)),
+            ) {
+                Text(
+                    text = if (feeding) "..." else "🦴 ${pet.biscuits} Makan",
+                    color = if (pet.biscuits > 0) Color.White else Color(0xFF94A3B8),
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.Black,
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 7.dp),
+                )
+            }
         }
     }
 }

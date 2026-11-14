@@ -322,10 +322,21 @@ interface SchoolOsApi {
     suspend fun awardStudentXp(@Body request: AwardXpRequestDto): ApiResponse<AwardXpResponseDto>
 
     @GET("gamification/daily-quest")
-    suspend fun getDailyQuest(@Query("mode") mode: String? = null): ApiResponse<com.schoolos.android.data.remote.dto.DailyQuestResponseDto>
+    suspend fun getDailyQuest(
+        @Query("mode") mode: String? = null,
+        @Query("round") round: Int = 0,
+    ): ApiResponse<com.schoolos.android.data.remote.dto.DailyQuestResponseDto>
 
     @POST("gamification/daily-quest/submit")
-    suspend fun submitDailyQuest(@Body request: com.schoolos.android.data.remote.dto.SubmitDailyQuestRequestDto): ApiResponse<com.schoolos.android.data.remote.dto.SubmitDailyQuestResponseDto>
+    suspend fun submitDailyQuest(
+        @Body request: com.schoolos.android.data.remote.dto.SubmitDailyQuestRequestDto,
+    ): ApiResponse<com.schoolos.android.data.remote.dto.SubmitDailyQuestResponseDto>
+
+    @POST("gamification/daily-quest/feed-pet")
+    suspend fun feedShibaPet(): ApiResponse<com.schoolos.android.data.remote.dto.FeedPetResponseDto>
+
+    @POST("gamification/daily-quest/open-chest")
+    suspend fun openDailyChest(): ApiResponse<com.schoolos.android.data.remote.dto.DailyChestResponseDto>
 
     // Notifications
     @GET("notifications")
