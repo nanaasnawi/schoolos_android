@@ -16,13 +16,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -72,9 +75,12 @@ internal fun ArcadeMascotHubBannerCompose(
     chestClaimedToday: Boolean,
     feedingPet: Boolean,
     openingChest: Boolean,
+    feedPulse: Int,
+    evolvePulse: Int,
     petNotice: String?,
     onFeedPet: () -> Unit,
     onOpenChest: () -> Unit,
+    onPetTap: () -> Unit,
     surfaceColor: Color,
     elevatedColor: Color,
     borderColor: Color,
@@ -82,9 +88,26 @@ internal fun ArcadeMascotHubBannerCompose(
     textSecondary: Color,
 ) {
     val stage = pet?.petStage ?: 1
+    val maxStage = pet?.maxStage ?: 6
+    val stageTitle = pet?.stageTitle ?: "Anak Kucing Penasaran"
     val biscuits = pet?.biscuits ?: 0
-    val ratio = if (totalGames > 0) (completedCount.toFloat() / totalGames.toFloat()).coerceIn(0f, 1f) else 0f
-    val pctText = "${(ratio * 100f).toInt()}%"
+
+    val energyCur = pet?.foodPoints ?: 0
+    val energyReq = (pet?.energyRequired ?: 120).coerceAtLeast(1)
+    val energyRatio = (energyCur.toFloat() / energyReq.toFloat()).coerceIn(0f, 1f)
+
+    val studentXp = pet?.studentXp ?: 0L
+    val xpReq = (pet?.xpRequiredNext ?: 250L).coerceAtLeast(1L)
+    val xpRemaining = pet?.xpRemainingNext ?: (xpReq - studentXp).coerceAtLeast(0L)
+    val xpRatio = if (stage >= maxStage) 1f else (studentXp.toFloat() / xpReq.toFloat()).coerceIn(0f, 1f)
+    val evoPct = pet?.evolutionProgressPercent ?: (((energyRatio + xpRatio) / 2f) * 100f).toInt()
+    val readyToEvolve = pet?.readyToEvolve == true
+    val hint = pet?.evolveRequirementHint?.takeIf { it.isNotBlank() }
+        ?: if (stage >= maxStage) {
+            "Wujud Puncak Kucing Cyber AI tercapai!"
+        } else {
+            "Kumpulkan Energi Makan & EXP Belajar untuk Evolusi Lv.${stage + 1}"
+        }
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -93,192 +116,322 @@ internal fun ArcadeMascotHubBannerCompose(
         border = BorderStroke(1.5.dp, borderColor),
     ) {
         Column {
-            // Full-bleed illustrated Game Hub Hero Stage
+            // Interactive 3D Pixar Living Stage
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(186.dp),
+                    .background(
+                        Brush.radialGradient(
+                            colors = listOf(Color(0xFF1E293B), Color(0xFF0F172A), Color(0xFF020617)),
+                        )
+                    ),
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.game_hub_hero),
-                    contentDescription = "Zona Game Edukasi",
+                    contentDescription = "Studio Ciko",
                     contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize(),
+                    alpha = 0.22f,
+                    modifier = Modifier.matchParentSize(),
                 )
 
                 Box(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .matchParentSize()
                         .background(
-                            Brush.verticalGradient(
+                            Brush.horizontalGradient(
                                 colors = listOf(
-                                    Color(0xFF0F172A).copy(alpha = 0.45f),
-                                    Color.Transparent,
-                                    Color(0xFF0F172A).copy(alpha = 0.88f),
+                                    Color(0xFF020617).copy(alpha = 0.9f),
+                                    Color(0xFF0F172A).copy(alpha = 0.72f),
+                                    Color(0xFF0F172A).copy(alpha = 0.52f),
                                 )
                             )
                         ),
                 )
 
-                // Top floating HUD Badges
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(12.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(50),
-                        color = Color(0xFFB45309),
-                    ) {
-                        Surface(
-                            modifier = Modifier.padding(bottom = 2.5.dp),
-                            shape = RoundedCornerShape(50),
-                            color = Color(0xFFF59E0B),
-                            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
-                                Text(
-                                    text = "${pet?.petName ?: "Ciko Pintar"} • Lv.$stage",
-                                    color = Color.White,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                )
-                            }
-                        }
-                    }
-
-                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = Color(0xFF0F172A).copy(alpha = 0.74f),
-                            border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.55f)),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            ) {
-                                Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(12.dp))
-                                Text(
-                                    text = "$biscuits Koin",
-                                    color = Color(0xFF38BDF8),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                )
-                            }
-                        }
-                        Surface(
-                            shape = RoundedCornerShape(50),
-                            color = Color(0xFF0F172A).copy(alpha = 0.74f),
-                            border = BorderStroke(1.dp, Color(0xFFFBBF24).copy(alpha = 0.5f)),
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            ) {
-                                Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
-                                Text(
-                                    text = "${streakDays}H",
-                                    color = Color(0xFFFBBF24),
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.Black,
-                                    maxLines = 1,
-                                    softWrap = false,
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // Bottom Ribbon & Headline
                 Column(
-                    modifier = Modifier
-                        .align(Alignment.BottomStart)
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Brush.horizontalGradient(listOf(Color(0xFFEF4444), Color(0xFFF97316))))
-                            .padding(horizontal = 9.dp, vertical = 2.dp),
+                    // Top floating HUD Badges
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            text = "ZONA GAME AKSELERASI",
-                            color = Color.White,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 0.5.sp,
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFFB45309),
+                        ) {
+                            Surface(
+                                modifier = Modifier.padding(bottom = 2.5.dp),
+                                shape = RoundedCornerShape(50),
+                                color = Color(0xFFF59E0B),
+                                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.7f)),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Icon(Icons.Default.EmojiEvents, contentDescription = null, tint = Color.White, modifier = Modifier.size(12.dp))
+                                    Text(
+                                        text = "${pet?.petName ?: "Ciko Pintar"} • Lv.$stage/$maxStage",
+                                        color = Color.White,
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                    )
+                                }
+                            }
+                        }
+
+                        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = Color(0xFF0F172A).copy(alpha = 0.78f),
+                                border = BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.55f)),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFF38BDF8), modifier = Modifier.size(12.dp))
+                                    Text(
+                                        text = "$biscuits Koin",
+                                        color = Color(0xFF38BDF8),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                    )
+                                }
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(50),
+                                color = Color(0xFF0F172A).copy(alpha = 0.78f),
+                                border = BorderStroke(1.dp, Color(0xFFFBBF24).copy(alpha = 0.5f)),
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                ) {
+                                    Icon(Icons.Default.LocalFireDepartment, contentDescription = null, tint = Color(0xFFFBBF24), modifier = Modifier.size(12.dp))
+                                    Text(
+                                        text = "${streakDays}H",
+                                        color = Color(0xFFFBBF24),
+                                        fontSize = 10.sp,
+                                        fontWeight = FontWeight.Black,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    // Split Stage: Stage Info + Living 3D Pixar Ciko
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            verticalArrangement = Arrangement.spacedBy(5.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(
+                                        Brush.horizontalGradient(
+                                            if (readyToEvolve) listOf(Color(0xFF10B981), Color(0xFF059669))
+                                            else listOf(Color(0xFFEF4444), Color(0xFFF97316))
+                                        )
+                                    )
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            ) {
+                                Text(
+                                    text = if (readyToEvolve) "SIAP EVOLUSI" else "EVOLUSI TAHAP $stage",
+                                    color = Color.White,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            }
+
+                            Text(
+                                text = stageTitle,
+                                color = Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Black,
+                                lineHeight = 19.sp,
+                            )
+
+                            Text(
+                                text = "Sentuh Ciko untuk bermain! Selesaikan tugas & beri makan agar Ciko berevolusi.",
+                                color = Color(0xFFCBD5E1),
+                                fontSize = 10.5.sp,
+                                lineHeight = 14.sp,
+                            )
+
+                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = Color(0xFF10B981).copy(alpha = 0.16f),
+                                    border = BorderStroke(1.dp, Color(0xFF10B981).copy(alpha = 0.35f)),
+                                ) {
+                                    Text(
+                                        text = "Misi: $completedCount/$totalGames",
+                                        color = Color(0xFFA7F3D0),
+                                        fontSize = 9.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                    )
+                                }
+                                Surface(
+                                    shape = RoundedCornerShape(50),
+                                    color = Color(0xFFF59E0B).copy(alpha = 0.16f),
+                                    border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f)),
+                                ) {
+                                    Text(
+                                        text = "Evolusi $evoPct%",
+                                        color = Color(0xFFFDE68A),
+                                        fontSize = 9.5.sp,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        maxLines = 1,
+                                        softWrap = false,
+                                        modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                                    )
+                                }
+                            }
+                        }
+
+                        CikoLivingAvatarCompose(
+                            stage = stage,
+                            stageTitle = stageTitle,
+                            readyToEvolve = readyToEvolve,
+                            biscuits = biscuits,
+                            feedPulse = feedPulse,
+                            evolvePulse = evolvePulse,
+                            onPetTap = onPetTap,
                         )
                     }
-                    Text(
-                        text = "Main & Koleksi Koin + XP Harian!",
-                        color = Color.White,
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Black,
-                    )
                 }
             }
 
-            // Bottom Glossy Progress & 3D Beveled Buttons
+            // Bottom Dual-Gate Evolution Bars + 3D Beveled Buttons
             Column(
                 modifier = Modifier.padding(14.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
-                    Text(
-                        text = "Misi Game Hari Ini: $completedCount/$totalGames Tuntas",
-                        color = textPrimary,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Black,
-                    )
-                    Text(
-                        text = "$pctText Selesai",
-                        color = Color(0xFFF59E0B),
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                    )
+                    // Pillar 1: Energi Makan Ciko
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Icon(Icons.Default.Bolt, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
+                                Text("Energi", color = textPrimary, fontSize = 10.5.sp, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
+                            }
+                            Text(
+                                text = "$energyCur/$energyReq",
+                                color = Color(0xFFF59E0B),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(11.dp)
+                                .clip(CircleShape)
+                                .background(elevatedColor)
+                                .border(1.dp, borderColor, CircleShape)
+                                .padding(1.5.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(energyRatio.coerceAtLeast(0.05f))
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(Brush.verticalGradient(listOf(Color(0xFFFBBF24), Color(0xFFEA580C)))),
+                            )
+                        }
+                    }
+
+                    // Pillar 2: Syarat EXP Belajar
+                    Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                Icon(Icons.Default.School, contentDescription = null, tint = Color(0xFF0EA5E9), modifier = Modifier.size(13.dp))
+                                Text("EXP Belajar", color = textPrimary, fontSize = 10.5.sp, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
+                            }
+                            Text(
+                                text = if (stage >= maxStage) "MAX ✓" else "$studentXp/$xpReq",
+                                color = if (xpRemaining == 0L) Color(0xFF10B981) else Color(0xFF0EA5E9),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                                softWrap = false,
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(11.dp)
+                                .clip(CircleShape)
+                                .background(elevatedColor)
+                                .border(1.dp, borderColor, CircleShape)
+                                .padding(1.5.dp),
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(xpRatio.coerceAtLeast(0.05f))
+                                    .fillMaxSize()
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.verticalGradient(
+                                            if (xpRemaining == 0L) listOf(Color(0xFF34D399), Color(0xFF059669))
+                                            else listOf(Color(0xFF38BDF8), Color(0xFF6366F1))
+                                        )
+                                    ),
+                            )
+                        }
+                    }
                 }
 
-                // Glossy 3D Progress Bar
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(14.dp)
-                        .clip(CircleShape)
-                        .background(elevatedColor)
-                        .border(1.5.dp, borderColor, CircleShape)
-                        .padding(2.dp),
+                // Evolution Requirement Hint
+                Surface(
+                    shape = RoundedCornerShape(10.dp),
+                    color = elevatedColor,
+                    border = BorderStroke(1.dp, borderColor),
                 ) {
-                    Box(
+                    Text(
+                        text = hint,
+                        color = if (readyToEvolve) Color(0xFF10B981) else textSecondary,
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
                         modifier = Modifier
-                            .fillMaxWidth(ratio.coerceAtLeast(0.06f))
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .background(
-                                Brush.verticalGradient(
-                                    if (completedCount >= totalGames) {
-                                        listOf(Color(0xFF34D399), Color(0xFF059669))
-                                    } else {
-                                        listOf(Color(0xFFFBBF24), Color(0xFFEA580C))
-                                    }
-                                )
-                            ),
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                     )
                 }
 

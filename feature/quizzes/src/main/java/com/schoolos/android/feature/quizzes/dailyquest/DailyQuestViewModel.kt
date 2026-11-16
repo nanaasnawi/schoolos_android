@@ -42,6 +42,8 @@ data class DailyQuestUiState(
     val petNotice: String? = null,
     val isFeedingPet: Boolean = false,
     val isOpeningChest: Boolean = false,
+    val cikoFeedPulse: Int = 0,
+    val cikoEvolvePulse: Int = 0,
 ) {
     fun unlockedLevelFor(subject: String): Int =
         (ttsUnlockedMap[subject] ?: 1).coerceIn(1, 10)
@@ -320,6 +322,8 @@ class DailyQuestViewModel @Inject constructor(
                                 petStatus = res.petStatus ?: it.hubQuest.petStatus,
                             ),
                             petNotice = res.message,
+                            cikoFeedPulse = if (res.fed) it.cikoFeedPulse + 1 else it.cikoFeedPulse,
+                            cikoEvolvePulse = if (res.evolved) it.cikoEvolvePulse + 1 else it.cikoEvolvePulse,
                         )
                     }
                 }
