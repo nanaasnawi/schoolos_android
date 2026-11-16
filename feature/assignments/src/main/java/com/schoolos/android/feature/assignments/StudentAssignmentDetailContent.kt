@@ -2109,7 +2109,11 @@ private fun SubmittedMultipleChoiceCard(
                         )
                         if (isGraded) {
                             val badgeColor = if (isCorrect == true) NeonSuccess else NeonError
-                            val badgeText = if (isCorrect == true) "+${answer?.pointsEarned ?: 0} Poin (Benar)" else "0 Poin (Salah)"
+                            val effectiveEarned = if (isCorrect == true) {
+                                val raw = answer?.pointsEarned ?: 0
+                                if (raw > 0) raw else (question.points ?: 10)
+                            } else 0
+                            val badgeText = if (isCorrect == true) "+$effectiveEarned Poin (Benar)" else "0 Poin (Salah)"
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
@@ -2747,4 +2751,4 @@ private fun QuestionsSubmissionCard(
             }
         }
     }
-}
+}

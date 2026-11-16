@@ -233,8 +233,8 @@ fun AssignmentDetailScreen(
                                     isGrading = state.isGrading,
                                     gradeSuccess = state.gradeSuccess,
                                     gradeError = state.gradeError,
-                                    onGrade = { submissionId, score, feedback ->
-                                        viewModel.gradeSubmission(submissionId, score, feedback)
+                                    onGrade = { submissionId, score, feedback, answerPoints ->
+                                        viewModel.gradeSubmission(submissionId, score, feedback, answerPoints)
                                     },
                                     onDismissGradeSuccess = viewModel::dismissGradeSuccess,
                                     onDismissGradeError = viewModel::dismissGradeError,

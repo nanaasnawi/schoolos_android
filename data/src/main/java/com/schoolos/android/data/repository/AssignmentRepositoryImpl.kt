@@ -208,12 +208,27 @@ class AssignmentRepositoryImpl @Inject constructor(
         submissionId: String,
         score: Int,
         feedback: String?,
+        answerPoints: Map<String, Int>,
     ): Result<AssignmentSubmission> = runCatching {
         val idempotencyKey = java.util.UUID.randomUUID().toString()
+        val gradesDto = if (answerPoints.isEmpty()) {
+            null
+        } else {
+            answerPoints.map { (qId, pts) ->
+                com.schoolos.android.data.remote.GradeAnswerRequestDto(
+                    questionId = qId,
+                    pointsEarned = pts.coerceAtLeast(0),
+                )
+            }
+        }
         val response = api.gradeSubmission(
             assignmentId = assignmentId,
             submissionId = submissionId,
-            request = com.schoolos.android.data.remote.GradeSubmissionRequest(score = score, feedback = feedback),
+            request = com.schoolos.android.data.remote.GradeSubmissionRequest(
+                score = score,
+                feedback = feedback,
+                answerGrades = gradesDto,
+            ),
             idempotencyKey = idempotencyKey,
         )
         response.data?.dtoToDomain() ?: throw Exception("Gagal menyimpan nilai: respons kosong dari server.")

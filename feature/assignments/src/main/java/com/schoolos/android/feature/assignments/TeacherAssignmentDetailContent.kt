@@ -39,7 +39,7 @@ fun TeacherAssignmentDetailContent(
     isGrading: Boolean = false,
     gradeSuccess: Boolean = false,
     gradeError: String? = null,
-    onGrade: (submissionId: String, score: Int, feedback: String?) -> Unit = { _, _, _ -> },
+    onGrade: (submissionId: String, score: Int, feedback: String?, answerPoints: Map<String, Int>) -> Unit = { _, _, _, _ -> },
     onDismissGradeSuccess: () -> Unit = {},
     onDismissGradeError: () -> Unit = {},
 ) {
@@ -479,8 +479,8 @@ fun TeacherAssignmentDetailContent(
                     maxScore = assignment.maxScore,
                     isGrading = isGrading,
                     onDismiss = { gradingSubmission = null },
-                    onGrade = { score, feedback ->
-                        onGrade(gradingSubmission!!.id, score, feedback)
+                    onGrade = { score, feedback, answerPoints ->
+                        onGrade(gradingSubmission!!.id, score, feedback, answerPoints)
                         gradingSubmission = null
                     }
                 )
@@ -901,7 +901,7 @@ private fun TeacherInlineGradingCard(
     maxScore: Int,
     isGrading: Boolean,
     onDismiss: () -> Unit,
-    onGrade: (score: Int, feedback: String?) -> Unit,
+    onGrade: (score: Int, feedback: String?, answerPoints: Map<String, Int>) -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -929,11 +929,29 @@ private fun TeacherInlineGradingCard(
     val correctPgCount = pgAnswersList.count { it.isCorrect == true }
     val totalPgCount = pgAnswersList.size
 
+    val answerPointsMap = remember(submission.id, maxScore) {
+        mutableStateMapOf<String, Int>().apply {
+            submission.answers.forEach { ans ->
+                val isPg = ans.questionType.uppercase().contains("CHOICE") || ans.questionType.uppercase() == "PG"
+                val qMax = if (ans.maxPoints > 0) ans.maxPoints else defaultPerQuestion
+                val initPts = if (isPg) {
+                    if (ans.isCorrect == true) (if (ans.pointsEarned > 0) ans.pointsEarned else qMax) else 0
+                } else {
+                    ans.pointsEarned.coerceIn(0, qMax)
+                }
+                put(ans.questionId, initPts)
+            }
+        }
+    }
+
+    val totalMaxPoints = remember(submission.answers, maxScore) {
+        submission.answers.sumOf { if (it.maxPoints > 0) it.maxPoints else defaultPerQuestion }.coerceAtLeast(1)
+    }
+
     val autoCalculatedScore = remember(submission.answers, maxScore) {
         if (submission.answers.isEmpty()) {
             submission.score ?: maxScore
         } else {
-            val totalMaxPoints = submission.answers.sumOf { if (it.maxPoints > 0) it.maxPoints else defaultPerQuestion }.coerceAtLeast(1)
             val earnedPoints = submission.answers.sumOf { ans ->
                 val isPg = ans.questionType.uppercase().contains("CHOICE") || ans.questionType.uppercase() == "PG"
                 val qMax = if (ans.maxPoints > 0) ans.maxPoints else defaultPerQuestion
@@ -950,6 +968,7 @@ private fun TeacherInlineGradingCard(
     var scoreInput by remember(submission.id) {
         mutableStateOf((submission.score ?: autoCalculatedScore).toFloat())
     }
+    var essayEditedManually by remember(submission.id) { mutableStateOf(false) }
     var feedbackInput by remember(submission.id) { mutableStateOf(submission.feedback ?: "") }
     var showGradingSheet by remember(submission.id) { mutableStateOf(false) }
 
@@ -1245,10 +1264,11 @@ private fun TeacherInlineGradingCard(
             submission.answers.forEachIndexed { idx, answer ->
                 val isPg = answer.questionType.uppercase().contains("CHOICE") || answer.questionType.uppercase() == "PG"
                 val effectiveMax = if (answer.maxPoints > 0) answer.maxPoints else defaultPerQuestion
+                val curPts = answerPointsMap[answer.questionId] ?: answer.pointsEarned
                 val effectiveEarned = if (isPg) {
-                    if (answer.isCorrect == true) (if (answer.pointsEarned > 0) answer.pointsEarned else effectiveMax) else 0
+                    if (answer.isCorrect == true) (if (curPts > 0) curPts else effectiveMax) else 0
                 } else {
-                    answer.pointsEarned
+                    curPts.coerceIn(0, effectiveMax)
                 }
 
                 val statusFg = when {
@@ -1328,6 +1348,7 @@ private fun TeacherInlineGradingCard(
                                     val badgeText = when {
                                         isPg && answer.isCorrect == true -> "✓ +$effectiveEarned/$effectiveMax Poin"
                                         isPg && answer.isCorrect == false -> "✕ 0/$effectiveMax Poin"
+                                        isGraded || effectiveEarned > 0 -> "+$effectiveEarned/$effectiveMax Poin"
                                         else -> "Maks $effectiveMax Poin"
                                     }
                                     Text(
@@ -1410,6 +1431,47 @@ private fun TeacherInlineGradingCard(
                                         color = textPrimary,
                                         lineHeight = 19.sp
                                     )
+                                    Spacer(Modifier.height(6.dp))
+                                    val essayQuickOptions = listOf(0, (effectiveMax / 2), effectiveMax).distinct()
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                    ) {
+                                        Text(
+                                            text = "Poin Butir:",
+                                            fontSize = 10.5.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = textTertiary,
+                                        )
+                                        essayQuickOptions.forEach { ptsOpt ->
+                                            val sel = effectiveEarned == ptsOpt
+                                            Surface(
+                                                modifier = Modifier
+                                                    .clip(RoundedCornerShape(8.dp))
+                                                    .clickable {
+                                                        essayEditedManually = true
+                                                        answerPointsMap[answer.questionId] = ptsOpt
+                                                        val sumPts = submission.answers.sumOf { a ->
+                                                            answerPointsMap[a.questionId] ?: 0
+                                                        }
+                                                        val scaled = ((sumPts.toFloat() / totalMaxPoints.toFloat()) * maxScore).toInt().coerceIn(0, maxScore)
+                                                        scoreInput = scaled.toFloat()
+                                                    },
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = if (sel) teacherAccent else cardBg,
+                                                border = BorderStroke(1.dp, if (sel) teacherAccent else innerCardBorder),
+                                            ) {
+                                                Text(
+                                                    text = if (ptsOpt == 0) "0p" else "+${ptsOpt}p",
+                                                    fontSize = 10.5.sp,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = if (sel) Color.White else textPrimary,
+                                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1813,9 +1875,42 @@ private fun TeacherInlineGradingCard(
                     Button(
                         onClick = {
                             showGradingSheet = false
+                            val finalScore = scoreInput.toInt().coerceIn(0, maxScore)
+                            val finalAnswerPoints = buildMap {
+                                var pgSum = 0
+                                val essays = mutableListOf<Pair<String, Int>>()
+                                submission.answers.forEach { ans ->
+                                    val isPg = ans.questionType.uppercase().contains("CHOICE") || ans.questionType.uppercase() == "PG"
+                                    val qMax = if (ans.maxPoints > 0) ans.maxPoints else defaultPerQuestion
+                                    if (isPg) {
+                                        val p = if (ans.isCorrect == true) (answerPointsMap[ans.questionId]?.takeIf { it > 0 } ?: qMax) else 0
+                                        pgSum += p
+                                        put(ans.questionId, p)
+                                    } else {
+                                        val cur = answerPointsMap[ans.questionId] ?: 0
+                                        essays.add(ans.questionId to qMax)
+                                        put(ans.questionId, cur.coerceIn(0, qMax))
+                                    }
+                                }
+                                if (!essayEditedManually && essays.isNotEmpty() && essays.all { (qId, _) -> (this[qId] ?: 0) == 0 }) {
+                                    val targetTotalEarned = if (maxScore > 0) ((finalScore.toFloat() / maxScore.toFloat()) * totalMaxPoints).toInt() else finalScore
+                                    var rem = (targetTotalEarned - pgSum).coerceAtLeast(0)
+                                    val essayMaxTotal = essays.sumOf { it.second }.coerceAtLeast(1)
+                                    essays.forEachIndexed { idx, (qId, qMax) ->
+                                        val alloc = if (idx + 1 == essays.size) {
+                                            rem.coerceIn(0, qMax)
+                                        } else {
+                                            ((rem.toLong() * qMax.toLong()) / essayMaxTotal.toLong()).toInt().coerceIn(0, qMax)
+                                        }
+                                        rem = (rem - alloc).coerceAtLeast(0)
+                                        put(qId, alloc)
+                                    }
+                                }
+                            }
                             onGrade(
-                                scoreInput.toInt(),
-                                feedbackInput.trim().ifBlank { null }
+                                finalScore,
+                                feedbackInput.trim().ifBlank { null },
+                                finalAnswerPoints,
                             )
                         },
                         enabled = !isGrading,

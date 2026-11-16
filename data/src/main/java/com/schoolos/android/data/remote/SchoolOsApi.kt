@@ -464,9 +464,17 @@ data class CreateAnnouncementRequest(
 )
 
 @kotlinx.serialization.Serializable
+data class GradeAnswerRequestDto(
+    @kotlinx.serialization.SerialName("question_id") val questionId: String,
+    @kotlinx.serialization.SerialName("points_earned") val pointsEarned: Int,
+    @kotlinx.serialization.SerialName("teacher_feedback") val teacherFeedback: String? = null,
+)
+
+@kotlinx.serialization.Serializable
 data class GradeSubmissionRequest(
     val score: Int,
     val feedback: String? = null,
+    @kotlinx.serialization.SerialName("answer_grades") val answerGrades: List<GradeAnswerRequestDto>? = null,
 )
 
 @kotlinx.serialization.Serializable
