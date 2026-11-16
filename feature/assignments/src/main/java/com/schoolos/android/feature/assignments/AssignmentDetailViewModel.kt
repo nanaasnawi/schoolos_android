@@ -247,10 +247,15 @@ class AssignmentDetailViewModel @Inject constructor(
         }
     }
 
-    fun gradeSubmission(submissionId: String, score: Int, feedback: String?) {
+    fun gradeSubmission(
+        submissionId: String,
+        score: Int,
+        feedback: String?,
+        answerPoints: Map<String, Int> = emptyMap(),
+    ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isGrading = true, gradeError = null, gradeSuccess = false)
-            repository.gradeSubmission(assignmentId, submissionId, score, feedback)
+            repository.gradeSubmission(assignmentId, submissionId, score, feedback, answerPoints)
                 .onSuccess { gradedSubmission ->
                     // Update the submission in the list
                     val updatedList = _state.value.allSubmissions.map { sub ->
