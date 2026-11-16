@@ -74,8 +74,18 @@ class GamificationRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun getDailyQuest(mode: String?, round: Int): Result<DailyQuest> = runCatching {
-        val response = api.getDailyQuest(mode = mode, round = round)
+    override suspend fun getDailyQuest(
+        mode: String?,
+        round: Int,
+        subject: String?,
+        level: Int,
+    ): Result<DailyQuest> = runCatching {
+        val response = api.getDailyQuest(
+            mode = mode,
+            round = round,
+            subject = subject,
+            level = level,
+        )
         val dto = response.data
         if (dto != null) {
             return@runCatching dto.toDomain()

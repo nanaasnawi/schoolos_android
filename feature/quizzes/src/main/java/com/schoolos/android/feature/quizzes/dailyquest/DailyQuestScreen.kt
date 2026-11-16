@@ -728,7 +728,17 @@ fun DailyQuestScreen(
                                         ) {
                                             Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(15.dp))
                                             Spacer(Modifier.width(4.dp))
-                                            Text("Level Baru", fontSize = 12.sp, fontWeight = FontWeight.Black, maxLines = 1, softWrap = false)
+                                            Text(
+                                                text = if (state.activeGame == DailyQuestGameMode.CROSSWORD && state.ttsLevel < 10) {
+                                                    "Naik Level ${state.ttsLevel + 1}"
+                                                } else {
+                                                    "Level Baru"
+                                                },
+                                                fontSize = 12.sp,
+                                                fontWeight = FontWeight.Black,
+                                                maxLines = 1,
+                                                softWrap = false,
+                                            )
                                         }
                                         Button(
                                             onClick = { viewModel.backToMenu() },
@@ -750,15 +760,20 @@ fun DailyQuestScreen(
                                     is DailyQuestChallenge.Crossword -> CrosswordGameCompose(
                                         challenge = firstChallenge,
                                         disabled = state.isSubmitting,
+                                        selectedSubject = state.ttsSubject,
+                                        selectedLevel = state.ttsLevel,
+                                        unlockedLevel = state.unlockedLevelFor(state.ttsSubject),
                                         surfaceColor = surfaceColor,
                                         elevatedColor = elevatedColor,
                                         borderColor = borderColor,
                                         textPrimary = textPrimary,
                                         textSecondary = textSecondary,
+                                        onChangeSubject = { viewModel.selectTtsSubject(it) },
+                                        onChangeLevel = { viewModel.selectTtsLevel(it) },
                                         onPlayTap = { viewModel.playTapSfx() },
                                         onPlayGood = { viewModel.playGoodSfx() },
                                         onFinish = { c, t, m -> viewModel.submitGameScore(c, t, m) },
-                                        onNewLevel = { viewModel.loadNextLevel() },
+                                        onNewLevel = { viewModel.openGame(DailyQuestGameMode.CROSSWORD, state.roundNumber + 1) },
                                     )
 
                                     is DailyQuestChallenge.SlidingPuzzle -> SlidingPuzzleGameCompose(

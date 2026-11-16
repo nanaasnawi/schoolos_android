@@ -15,7 +15,12 @@ interface GamificationRepository {
         description: String? = null,
         studentId: String? = null,
     ): Result<AwardXpResult>
-    suspend fun getDailyQuest(mode: String? = null, round: Int = 0): Result<DailyQuest>
+    suspend fun getDailyQuest(
+        mode: String? = null,
+        round: Int = 0,
+        subject: String? = null,
+        level: Int = 1,
+    ): Result<DailyQuest>
     suspend fun submitDailyQuest(
         questId: String,
         correctCount: Int,

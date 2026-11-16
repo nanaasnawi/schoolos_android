@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -50,6 +51,8 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.domain.model.CrosswordClueItem
+import com.schoolos.android.domain.model.CrosswordSubjectOption
 import com.schoolos.android.domain.model.DailyQuestChallenge
 import kotlin.math.abs
 import kotlin.math.ln
@@ -76,6 +80,16 @@ import kotlin.math.roundToInt
 // 1. TEKA-TEKI SILANG (CROSSWORD PUZZLE)
 // ═════════════════════════════════════════════════════════════════════════════
 
+private val DEFAULT_CROSSWORD_SUBJECTS = listOf(
+    CrosswordSubjectOption("UMUM", "Semua Mapel"),
+    CrosswordSubjectOption("IPA", "IPA & Sains"),
+    CrosswordSubjectOption("MATEMATIKA", "Matematika"),
+    CrosswordSubjectOption("IPS", "IPS & Sejarah"),
+    CrosswordSubjectOption("BAHASA", "Bahasa Indonesia"),
+    CrosswordSubjectOption("INFORMATIKA", "Informatika"),
+    CrosswordSubjectOption("INGGRIS", "Bahasa Inggris"),
+)
+
 private val QWERTY_ROWS = listOf(
     listOf("Q", "W", "E", "R", "T", "Y", "U", "I", "O", "P"),
     listOf("A", "S", "D", "F", "G", "H", "J", "K", "L"),
@@ -86,11 +100,16 @@ private val QWERTY_ROWS = listOf(
 internal fun CrosswordGameCompose(
     challenge: DailyQuestChallenge.Crossword,
     disabled: Boolean,
+    selectedSubject: String,
+    selectedLevel: Int,
+    unlockedLevel: Int,
     surfaceColor: Color,
     elevatedColor: Color,
     borderColor: Color,
     textPrimary: Color,
     textSecondary: Color,
+    onChangeSubject: (String) -> Unit,
+    onChangeLevel: (Int) -> Unit,
     onPlayTap: () -> Unit,
     onPlayGood: () -> Unit,
     onFinish: (correct: Int, total: Int, maxCombo: Int) -> Unit,
@@ -99,6 +118,17 @@ internal fun CrosswordGameCompose(
     val haptic = LocalHapticFeedback.current
     val rows = challenge.rows
     val cols = challenge.cols
+    val currentLevel = challenge.level.coerceAtLeast(selectedLevel)
+    val maxHints = challenge.maxHints.coerceAtLeast(1)
+    val activeSubject = challenge.subject.ifBlank { selectedSubject.ifBlank { "UMUM" } }
+    val subjects = challenge.availableSubjects.ifEmpty { DEFAULT_CROSSWORD_SUBJECTS }
+    val diffLabel = challenge.difficultyLabel.ifBlank {
+        when {
+            currentLevel >= 5 -> "Master"
+            currentLevel >= 3 -> "Menengah"
+            else -> "Pemula"
+        }
+    }
 
     var board by remember(challenge.id) {
         mutableStateOf(
@@ -213,7 +243,181 @@ internal fun CrosswordGameCompose(
         evaluateWin(next)
     }
 
+    val remainingHints = (maxHints - hintsUsed).coerceAtLeast(0)
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // Level, AI Source & Subject Selector Card
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            color = surfaceColor,
+            border = BorderStroke(1.dp, borderColor),
+        ) {
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = Color(0xFFF59E0B).copy(alpha = 0.16f),
+                            border = BorderStroke(1.dp, Color(0xFFF59E0B).copy(alpha = 0.35f)),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.EmojiEvents,
+                                    contentDescription = null,
+                                    tint = Color(0xFFF59E0B),
+                                    modifier = Modifier.size(12.dp),
+                                )
+                                Text(
+                                    text = "Lv.$currentLevel • $diffLabel",
+                                    color = Color(0xFFF59E0B),
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            }
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = if (challenge.aiGenerated) Color(0xFF8B5CF6).copy(alpha = 0.16f) else Color(0xFF0EA5E9).copy(alpha = 0.14f),
+                            border = BorderStroke(
+                                1.dp,
+                                if (challenge.aiGenerated) Color(0xFF8B5CF6).copy(alpha = 0.35f) else Color(0xFF0EA5E9).copy(alpha = 0.32f),
+                            ),
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(3.dp),
+                            ) {
+                                Icon(
+                                    Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = if (challenge.aiGenerated) Color(0xFFA78BFA) else Color(0xFF0EA5E9),
+                                    modifier = Modifier.size(11.dp),
+                                )
+                                Text(
+                                    text = if (challenge.aiGenerated) "Soal AI" else "Kurikulum",
+                                    color = if (challenge.aiGenerated) Color(0xFFA78BFA) else Color(0xFF0EA5E9),
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                )
+                            }
+                        }
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = elevatedColor,
+                            border = BorderStroke(1.dp, borderColor),
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(enabled = !disabled && currentLevel > 1) {
+                                    onChangeLevel((currentLevel - 1).coerceAtLeast(1))
+                                },
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                                    contentDescription = "Level sebelumnya",
+                                    tint = if (currentLevel > 1) textPrimary else textSecondary.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = "$currentLevel/${unlockedLevel.coerceAtLeast(currentLevel)}",
+                            color = textSecondary,
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            softWrap = false,
+                        )
+
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = elevatedColor,
+                            border = BorderStroke(1.dp, borderColor),
+                            modifier = Modifier
+                                .size(26.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(enabled = !disabled && currentLevel < unlockedLevel.coerceAtMost(10)) {
+                                    onChangeLevel((currentLevel + 1).coerceAtMost(unlockedLevel).coerceAtMost(10))
+                                },
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                                    contentDescription = "Level berikutnya",
+                                    tint = if (currentLevel < unlockedLevel.coerceAtMost(10)) textPrimary else textSecondary.copy(alpha = 0.4f),
+                                    modifier = Modifier.size(16.dp),
+                                )
+                            }
+                        }
+                    }
+                }
+
+                // Pilih Mapel Chips
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    subjects.forEach { subj ->
+                        val isActive = subj.code == activeSubject
+                        Surface(
+                            shape = RoundedCornerShape(50),
+                            color = if (isActive) Color(0xFF0EA5E9) else elevatedColor,
+                            border = BorderStroke(
+                                1.dp,
+                                if (isActive) Color(0xFF0284C7) else borderColor,
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(50))
+                                .clickable(enabled = !disabled && !isActive) {
+                                    onChangeSubject(subj.code)
+                                },
+                        ) {
+                            Text(
+                                text = subj.label,
+                                color = if (isActive) Color.White else textSecondary,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         // Active Clue Card
         if (activeClue != null) {
             Surface(
@@ -382,15 +586,19 @@ internal fun CrosswordGameCompose(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(10.dp),
-                        color = Color(0xFFF59E0B).copy(alpha = 0.16f),
+                        color = if (remainingHints > 0) Color(0xFFF59E0B).copy(alpha = 0.16f) else elevatedColor,
+                        border = if (remainingHints > 0) null else BorderStroke(1.dp, borderColor),
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1.15f)
                             .clip(RoundedCornerShape(10.dp))
-                            .clickable(enabled = !disabled) {
+                            .clickable(enabled = !disabled && remainingHints > 0) {
                                 val target = challenge.grid.getOrNull(selectedRow)?.getOrNull(selectedCol)
-                                var tr = selectedRow
-                                var tc = selectedCol
-                                if (target != null && target != '#' && board[tr][tc] == target.toString() && activeClue != null) {
+                                var tr = -1
+                                var tc = -1
+                                if (target != null && target != '#' && board[selectedRow][selectedCol] != target.toString()) {
+                                    tr = selectedRow
+                                    tc = selectedCol
+                                } else if (activeClue != null) {
                                     for (k in 0 until activeClue.length) {
                                         val rr = if (activeClue.direction == "DOWN") activeClue.row + k else activeClue.row
                                         val cc = if (activeClue.direction == "ACROSS") activeClue.col + k else activeClue.col
@@ -401,7 +609,19 @@ internal fun CrosswordGameCompose(
                                         }
                                     }
                                 }
-                                val ansChar = challenge.grid.getOrNull(tr)?.getOrNull(tc)
+                                if (tr < 0) {
+                                    outer@ for (rr in 0 until rows) {
+                                        for (cc in 0 until cols) {
+                                            val ch = challenge.grid[rr][cc]
+                                            if (ch != '#' && board[rr][cc] != ch.toString()) {
+                                                tr = rr
+                                                tc = cc
+                                                break@outer
+                                            }
+                                        }
+                                    }
+                                }
+                                val ansChar = if (tr >= 0 && tc >= 0) challenge.grid.getOrNull(tr)?.getOrNull(tc) else null
                                 if (ansChar != null && ansChar != '#') {
                                     hintsUsed++
                                     val next = board.map { it.toMutableList() }
@@ -416,8 +636,9 @@ internal fun CrosswordGameCompose(
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = Color(0xFFF59E0B), modifier = Modifier.size(13.dp))
-                            Text(" Petunjuk", color = Color(0xFFF59E0B), fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
+                            val hintTint = if (remainingHints > 0) Color(0xFFF59E0B) else textSecondary
+                            Icon(Icons.Default.Lightbulb, contentDescription = null, tint = hintTint, modifier = Modifier.size(13.dp))
+                            Text(" ($remainingHints/$maxHints)", color = hintTint, fontSize = 11.sp, fontWeight = FontWeight.ExtraBold, maxLines = 1, softWrap = false)
                         }
                     }
 

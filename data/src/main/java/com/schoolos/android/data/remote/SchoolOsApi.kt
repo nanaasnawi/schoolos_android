@@ -325,6 +325,8 @@ interface SchoolOsApi {
     suspend fun getDailyQuest(
         @Query("mode") mode: String? = null,
         @Query("round") round: Int = 0,
+        @Query("subject") subject: String? = null,
+        @Query("level") level: Int = 1,
     ): ApiResponse<com.schoolos.android.data.remote.dto.DailyQuestResponseDto>
 
     @POST("gamification/daily-quest/submit")

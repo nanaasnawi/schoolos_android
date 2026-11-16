@@ -58,6 +58,11 @@ data class CognitiveStageData(
     val explanation: String? = null,
 )
 
+data class CrosswordSubjectOption(
+    val code: String,
+    val label: String,
+)
+
 data class CrosswordClueItem(
     val number: Int,
     val direction: String, // "ACROSS" or "DOWN"
@@ -119,6 +124,13 @@ sealed class DailyQuestChallenge {
         val cols: Int,
         val grid: List<String>,
         val clues: List<CrosswordClueItem>,
+        val maxHints: Int = 3,
+        val level: Int = 1,
+        val difficultyLabel: String = "Pemula",
+        val subject: String = "UMUM",
+        val subjectLabel: String = "Semua Mapel",
+        val aiGenerated: Boolean = false,
+        val availableSubjects: List<CrosswordSubjectOption> = emptyList(),
         override val topicTag: String? = null,
         override val explanation: String? = null,
     ) : DailyQuestChallenge()
