@@ -564,6 +564,114 @@ internal fun GamePosterArtworkCompose(
                 )
             }
         }
+
+        DailyQuestGameMode.KAHOOT_BLITZ -> {
+            Canvas(modifier = modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFFA855F7), Color(0xFF6D28D9), Color(0xFF3B0764)),
+                        center = Offset(w * 0.5f, h * 0.45f),
+                        radius = w * 0.7f,
+                    ),
+                    size = Size(w, h),
+                )
+                val bw = w * 0.28f
+                val bh = h * 0.28f
+                val gx = w * 0.2f
+                val gy = h * 0.18f
+                val specs = listOf(
+                    Triple(gx, gy, Color(0xFFF43F5E) to Color(0xFF9F1239)),
+                    Triple(gx + bw + 14f, gy, Color(0xFF0EA5E9) to Color(0xFF0369A1)),
+                    Triple(gx, gy + bh + 12f, Color(0xFFF59E0B) to Color(0xFFB45309)),
+                    Triple(gx + bw + 14f, gy + bh + 12f, Color(0xFF10B981) to Color(0xFF047857)),
+                )
+                specs.forEach { (x, y, pair) ->
+                    drawRoundRect(pair.second, topLeft = Offset(x, y + 6f), size = Size(bw, bh), cornerRadius = CornerRadius(18f))
+                    drawRoundRect(pair.first, topLeft = Offset(x, y), size = Size(bw, bh), cornerRadius = CornerRadius(18f))
+                    drawRoundRect(Color.White.copy(alpha = 0.55f), topLeft = Offset(x, y), size = Size(bw, bh), cornerRadius = CornerRadius(18f), style = Stroke(2f))
+                }
+                drawCircle(Color(0xFFFDE047), radius = 14f, center = Offset(w * 0.5f, h * 0.48f))
+            }
+        }
+
+        DailyQuestGameMode.WORD_SCRAMBLE -> {
+            Canvas(modifier = modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFFFB7185), Color(0xFFE11D48), Color(0xFF881337)),
+                        center = Offset(w * 0.5f, h * 0.45f),
+                        radius = w * 0.7f,
+                    ),
+                    size = Size(w, h),
+                )
+                val ts = min(w, h) * 0.24f
+                val gap = ts * 0.14f
+                val row1X = w * 0.5f - ts * 2.1f
+                val row1Y = h * 0.22f
+                for (i in 0..3) {
+                    val x = row1X + i * (ts + gap)
+                    drawRoundRect(Color(0xFFB45309), Offset(x, row1Y + 5f), Size(ts, ts), CornerRadius(14f))
+                    drawRoundRect(Color(0xFFFEF3C7), Offset(x, row1Y), Size(ts, ts), CornerRadius(14f))
+                    drawRoundRect(Color.White, Offset(x, row1Y), Size(ts, ts), CornerRadius(14f), style = Stroke(2f))
+                }
+                val row2X = w * 0.5f - ts * 1.9f
+                val row2Y = row1Y + ts + 14f
+                for (i in 0..3) {
+                    val x = row2X + i * (ts + gap)
+                    drawRoundRect(Color(0xFF0369A1), Offset(x, row2Y + 5f), Size(ts, ts), CornerRadius(14f))
+                    drawRoundRect(Color(0xFF38BDF8), Offset(x, row2Y), Size(ts, ts), CornerRadius(14f))
+                    drawRoundRect(Color.White, Offset(x, row2Y), Size(ts, ts), CornerRadius(14f), style = Stroke(2f))
+                }
+            }
+        }
+
+        DailyQuestGameMode.COGNITIVE_TRAINER -> {
+            Canvas(modifier = modifier.fillMaxSize()) {
+                val w = size.width
+                val h = size.height
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Color(0xFF2DD4BF), Color(0xFF0D9488), Color(0xFF134E4A)),
+                        center = Offset(w * 0.5f, h * 0.45f),
+                        radius = w * 0.7f,
+                    ),
+                    size = Size(w, h),
+                )
+                val boxSize = min(w, h) * 0.66f
+                val left = (w - boxSize) / 2f
+                val top = (h - boxSize) / 2f
+                drawRoundRect(Color(0xFF0F172A).copy(alpha = 0.45f), Offset(left, top + 6f), Size(boxSize, boxSize), CornerRadius(24f))
+                drawRoundRect(Color(0xFF134E4A), Offset(left, top), Size(boxSize, boxSize), CornerRadius(24f))
+                drawRoundRect(Color(0xFF5EEAD4), Offset(left, top), Size(boxSize, boxSize), CornerRadius(24f), style = Stroke(2.5f))
+                val cell = (boxSize - 28f) / 3f
+                val litMap = mapOf(
+                    0 to Color(0xFF38BDF8),
+                    2 to Color(0xFFFACC15),
+                    4 to Color(0xFFF43F5E),
+                    6 to Color(0xFFA78BFA),
+                    7 to Color(0xFF34D399),
+                )
+                for (r in 0..2) for (c in 0..2) {
+                    val idx = r * 3 + c
+                    val x = left + 10f + c * (cell + 4f)
+                    val y = top + 10f + r * (cell + 4f)
+                    val litCol = litMap[idx]
+                    drawRoundRect(
+                        color = litCol ?: Color.White.copy(alpha = 0.14f),
+                        topLeft = Offset(x, y),
+                        size = Size(cell, cell),
+                        cornerRadius = CornerRadius(10f),
+                    )
+                    if (litCol != null) {
+                        drawRoundRect(Color.White, Offset(x, y), Size(cell, cell), CornerRadius(10f), style = Stroke(2f))
+                    }
+                }
+            }
+        }
     }
 }
 

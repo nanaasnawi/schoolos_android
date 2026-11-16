@@ -8,6 +8,7 @@ import com.schoolos.android.data.remote.dto.DailyQuestResponseDto
 import com.schoolos.android.data.remote.dto.FeedPetResponseDto
 import com.schoolos.android.data.remote.dto.ShibaPetStatusDto
 import com.schoolos.android.data.remote.dto.SubmitDailyQuestResponseDto
+import com.schoolos.android.domain.model.CognitiveStageData
 import com.schoolos.android.domain.model.CrosswordClueItem
 import com.schoolos.android.domain.model.DailyChestResult
 import com.schoolos.android.domain.model.DailyQuest
@@ -18,8 +19,10 @@ import com.schoolos.android.domain.model.DailyQuestLeaderboardEntry
 import com.schoolos.android.domain.model.DailyQuestModeInfo
 import com.schoolos.android.domain.model.DailyQuestSubmitResult
 import com.schoolos.android.domain.model.FeedPetResult
+import com.schoolos.android.domain.model.KahootQuestionItem
 import com.schoolos.android.domain.model.NumberMergeSeedTile
 import com.schoolos.android.domain.model.ShibaPetStatus
+import com.schoolos.android.domain.model.WordScrambleItemData
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
@@ -148,6 +151,92 @@ private fun JsonObject.toChallenge(mode: DailyQuestGameMode, fallbackIndex: Int)
                 seed = longVal("seed", 777123L),
                 initialTiles = initialTiles,
                 themeTitle = str("theme_title").ifBlank { "2048 Gabung Angka" },
+                topicTag = topicTag,
+                explanation = explanation,
+            )
+        }
+
+        DailyQuestGameMode.KAHOOT_BLITZ -> {
+            val qArr = runCatching { this["questions"]?.jsonArray }.getOrNull().orEmpty()
+            val questions = qArr.mapIndexedNotNull { qIdx, elem ->
+                val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapIndexedNotNull null
+                val qText = obj.str("question")
+                val opts = obj.strList("options")
+                if (qText.isBlank() || opts.isEmpty()) null
+                else KahootQuestionItem(
+                    id = obj.str("id").ifBlank { "kq_$qIdx" },
+                    question = qText,
+                    options = opts,
+                    correctIndex = obj.intVal("correct_index", 0).coerceIn(0, (opts.size - 1).coerceAtLeast(0)),
+                    topicTag = obj.str("topic_tag").ifBlank { "Umum" },
+                    explanation = obj.strOrNull("explanation"),
+                )
+            }
+            if (questions.isEmpty()) null
+            else DailyQuestChallenge.KahootBlitz(
+                id = id,
+                gradeBand = str("grade_band").ifBlank { "PAKET_B" },
+                timePerQuestion = intVal("time_per_question", 15),
+                questions = questions,
+                topicTag = topicTag,
+                explanation = explanation,
+            )
+        }
+
+        DailyQuestGameMode.WORD_SCRAMBLE -> {
+            val arr = runCatching { this["items"]?.jsonArray }.getOrNull().orEmpty()
+            val items = arr.mapIndexedNotNull { wIdx, elem ->
+                val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapIndexedNotNull null
+                val word = obj.str("word")
+                val letters = obj.strList("scrambled_letters")
+                if (word.isBlank() || letters.isEmpty()) null
+                else WordScrambleItemData(
+                    id = obj.str("id").ifBlank { "ws_$wIdx" },
+                    word = word,
+                    scrambledLetters = letters,
+                    language = obj.str("language").ifBlank { "ID" },
+                    category = obj.str("category").ifBlank { "Kosakata" },
+                    clue = obj.str("clue"),
+                    explanation = obj.strOrNull("explanation"),
+                )
+            }
+            if (items.isEmpty()) null
+            else DailyQuestChallenge.WordScramble(
+                id = id,
+                gradeBand = str("grade_band").ifBlank { "PAKET_B" },
+                items = items,
+                topicTag = topicTag,
+                explanation = explanation,
+            )
+        }
+
+        DailyQuestGameMode.COGNITIVE_TRAINER -> {
+            val arr = runCatching { this["stages"]?.jsonArray }.getOrNull().orEmpty()
+            val stages = arr.mapIndexedNotNull { sIdx, elem ->
+                val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapIndexedNotNull null
+                val kind = obj.str("kind").ifBlank { "PATTERN_SEQUENCE" }
+                CognitiveStageData(
+                    id = obj.str("id").ifBlank { "cs_$sIdx" },
+                    kind = kind,
+                    prompt = obj.str("prompt"),
+                    gridSize = obj.intVal("grid_size", 3),
+                    targets = obj.intList("targets"),
+                    viewMs = obj.intVal("view_ms", 2500),
+                    displayWord = obj.strOrNull("display_word"),
+                    inkColor = obj.strOrNull("ink_color"),
+                    sequence = obj.strOrNull("sequence"),
+                    leftExpr = obj.strOrNull("left_expr"),
+                    rightExpr = obj.strOrNull("right_expr"),
+                    options = obj.strList("options"),
+                    correctIndex = obj.intVal("correct_index", 0),
+                    explanation = obj.strOrNull("explanation"),
+                )
+            }
+            if (stages.isEmpty()) null
+            else DailyQuestChallenge.CognitiveTrainer(
+                id = id,
+                gradeBand = str("grade_band").ifBlank { "PAKET_B" },
+                stages = stages,
                 topicTag = topicTag,
                 explanation = explanation,
             )

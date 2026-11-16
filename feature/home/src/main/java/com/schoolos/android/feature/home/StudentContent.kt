@@ -195,7 +195,7 @@ internal fun HomeDailyQuestGameCard(
     val doneTextColor = if (isDark) Color(0xFF34D399) else Color(0xFF047857)
 
     val completedCount = dailyQuest?.availableModes?.count { it.completedToday } ?: 0
-    val totalGames = (dailyQuest?.availableModes?.size ?: 4).coerceAtLeast(4)
+    val totalGames = (dailyQuest?.availableModes?.size ?: 7).coerceAtLeast(7)
     val xpReward = dailyQuest?.xpReward ?: 80
 
     Surface(
@@ -287,7 +287,7 @@ internal fun HomeDailyQuestGameCard(
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = "TTS • Puzzle • Block Blast • 2048",
+                    text = "TTS • Puzzle • Block • Kahoot • Kata • Kognitif",
                     color = textSecondary,
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
