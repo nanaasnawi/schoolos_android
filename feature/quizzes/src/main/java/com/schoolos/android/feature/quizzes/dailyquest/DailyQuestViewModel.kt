@@ -1,5 +1,6 @@
 package com.schoolos.android.feature.quizzes.dailyquest
 
+import android.content.Context
 import android.media.AudioManager
 import android.media.ToneGenerator
 import androidx.lifecycle.ViewModel
@@ -11,6 +12,7 @@ import com.schoolos.android.domain.model.DailyQuestSubmitResult
 import com.schoolos.android.domain.model.ShibaPetStatus
 import com.schoolos.android.domain.repository.GamificationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,9 +27,12 @@ data class DailyQuestUiState(
     val isLoadingGame: Boolean = false,
     val errorMessage: String? = null,
     val hubQuest: DailyQuest? = null,
-    val activeGame: DailyQuestGameMode? = null, // null = show 4-Game Selection Menu Hub first!
+    val activeGame: DailyQuestGameMode? = null, // null = show 7-Game Selection Menu Hub first!
     val activeQuest: DailyQuest? = null,
     val roundNumber: Int = 0,
+    val ttsSubject: String = "UMUM",
+    val ttsLevel: Int = 1,
+    val ttsUnlockedMap: Map<String, Int> = mapOf("UMUM" to 1),
     val elapsedSeconds: Int = 0,
     val isSubmitting: Boolean = false,
     val submitResult: DailyQuestSubmitResult? = null,
@@ -37,12 +42,20 @@ data class DailyQuestUiState(
     val petNotice: String? = null,
     val isFeedingPet: Boolean = false,
     val isOpeningChest: Boolean = false,
-)
+) {
+    fun unlockedLevelFor(subject: String): Int =
+        (ttsUnlockedMap[subject] ?: 1).coerceIn(1, 10)
+}
 
 @HiltViewModel
 class DailyQuestViewModel @Inject constructor(
     private val gamificationRepository: GamificationRepository,
+    @ApplicationContext private val appContext: Context,
 ) : ViewModel() {
+
+    private val prefs by lazy {
+        appContext.getSharedPreferences("schoolos_tts_progression", Context.MODE_PRIVATE)
+    }
 
     private val _state = MutableStateFlow(DailyQuestUiState())
     val state = _state.asStateFlow()
@@ -51,7 +64,26 @@ class DailyQuestViewModel @Inject constructor(
     private var toneGenerator: ToneGenerator? = null
 
     init {
+        loadUnlockedMap()
         loadHubSummary()
+    }
+
+    private fun loadUnlockedMap() {
+        val subjects = listOf("UMUM", "IPA", "MATEMATIKA", "IPS", "BAHASA", "INFORMATIKA", "INGGRIS")
+        val map = subjects.associateWith { subj ->
+            prefs.getInt("unlocked_$subj", 1).coerceIn(1, 10)
+        }
+        _state.update { it.copy(ttsUnlockedMap = map) }
+    }
+
+    private fun unlockNextTtsLevel(subject: String, finishedLevel: Int) {
+        val nextLevel = (finishedLevel + 1).coerceIn(1, 10)
+        val currentUnlocked = _state.value.unlockedLevelFor(subject)
+        if (nextLevel <= currentUnlocked) return
+        prefs.edit().putInt("unlocked_$subject", nextLevel).apply()
+        _state.update { st ->
+            st.copy(ttsUnlockedMap = st.ttsUnlockedMap + (subject to nextLevel))
+        }
     }
 
     override fun onCleared() {
@@ -90,21 +122,35 @@ class DailyQuestViewModel @Inject constructor(
         }
     }
 
-    fun openGame(mode: DailyQuestGameMode, round: Int = 0) {
+    fun openGame(
+        mode: DailyQuestGameMode,
+        round: Int = 0,
+        subject: String? = null,
+        level: Int? = null,
+    ) {
         viewModelScope.launch {
             timerJob?.cancel()
             playSfx(SfxKind.TAP)
+            val resolvedSubject = subject ?: _state.value.ttsSubject
+            val resolvedLevel = (level ?: _state.value.ttsLevel).coerceIn(1, 10)
             _state.update {
                 it.copy(
                     activeGame = mode,
                     roundNumber = round,
+                    ttsSubject = if (mode == DailyQuestGameMode.CROSSWORD) resolvedSubject else it.ttsSubject,
+                    ttsLevel = if (mode == DailyQuestGameMode.CROSSWORD) resolvedLevel else it.ttsLevel,
                     isLoadingGame = true,
                     errorMessage = null,
                     submitResult = null,
                     elapsedSeconds = 0,
                 )
             }
-            gamificationRepository.getDailyQuest(mode = mode.code, round = round)
+            gamificationRepository.getDailyQuest(
+                mode = mode.code,
+                round = round,
+                subject = if (mode == DailyQuestGameMode.CROSSWORD) resolvedSubject else null,
+                level = if (mode == DailyQuestGameMode.CROSSWORD) resolvedLevel else 1,
+            )
                 .onSuccess { quest ->
                     _state.update {
                         it.copy(
@@ -131,9 +177,41 @@ class DailyQuestViewModel @Inject constructor(
         }
     }
 
+    fun selectTtsSubject(subject: String) {
+        val unlocked = _state.value.unlockedLevelFor(subject)
+        val nextLevel = _state.value.ttsLevel.coerceAtMost(unlocked)
+        openGame(
+            mode = DailyQuestGameMode.CROSSWORD,
+            round = _state.value.roundNumber + 1,
+            subject = subject,
+            level = nextLevel,
+        )
+    }
+
+    fun selectTtsLevel(level: Int) {
+        val subj = _state.value.ttsSubject
+        val unlocked = _state.value.unlockedLevelFor(subj)
+        openGame(
+            mode = DailyQuestGameMode.CROSSWORD,
+            round = _state.value.roundNumber + 1,
+            subject = subj,
+            level = level.coerceIn(1, unlocked),
+        )
+    }
+
     fun loadNextLevel() {
         val mode = _state.value.activeGame ?: return
-        openGame(mode, _state.value.roundNumber + 1)
+        if (mode == DailyQuestGameMode.CROSSWORD) {
+            val nextLevel = (_state.value.ttsLevel + 1).coerceIn(1, 10)
+            openGame(
+                mode = mode,
+                round = _state.value.roundNumber + 1,
+                subject = _state.value.ttsSubject,
+                level = nextLevel,
+            )
+        } else {
+            openGame(mode, _state.value.roundNumber + 1)
+        }
     }
 
     fun backToMenu() {
@@ -173,6 +251,10 @@ class DailyQuestViewModel @Inject constructor(
         val current = _state.value
         val quest = current.activeQuest ?: return
         if (current.isSubmitting || current.submitResult != null) return
+
+        if (current.activeGame == DailyQuestGameMode.CROSSWORD) {
+            unlockNextTtsLevel(current.ttsSubject, current.ttsLevel)
+        }
 
         timerJob?.cancel()
         _state.update { it.copy(isSubmitting = true) }

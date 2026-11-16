@@ -10,6 +10,7 @@ import com.schoolos.android.data.remote.dto.ShibaPetStatusDto
 import com.schoolos.android.data.remote.dto.SubmitDailyQuestResponseDto
 import com.schoolos.android.domain.model.CognitiveStageData
 import com.schoolos.android.domain.model.CrosswordClueItem
+import com.schoolos.android.domain.model.CrosswordSubjectOption
 import com.schoolos.android.domain.model.DailyChestResult
 import com.schoolos.android.domain.model.DailyQuest
 import com.schoolos.android.domain.model.DailyQuestAttemptSummary
@@ -24,6 +25,7 @@ import com.schoolos.android.domain.model.NumberMergeSeedTile
 import com.schoolos.android.domain.model.ShibaPetStatus
 import com.schoolos.android.domain.model.WordScrambleItemData
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
@@ -80,6 +82,24 @@ private fun JsonObject.toChallenge(mode: DailyQuestGameMode, fallbackIndex: Int)
                     topicTag = obj.strOrNull("topic_tag"),
                 )
             }
+            val subjArr = runCatching { this["available_subjects"]?.jsonArray }.getOrNull().orEmpty()
+            val availableSubjects = subjArr.mapNotNull { elem ->
+                val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+                val code = obj.str("code")
+                val label = obj.str("label")
+                if (code.isBlank() || label.isBlank()) null
+                else CrosswordSubjectOption(code = code, label = label)
+            }
+            val levelVal = intVal("level", 1).coerceAtLeast(1)
+            val maxHintsVal = intVal("max_hints", if (levelVal >= 5) 2 else 3).coerceAtLeast(1)
+            val diffLabel = str("difficulty_label").ifBlank {
+                when {
+                    levelVal >= 5 -> "Master"
+                    levelVal >= 3 -> "Menengah"
+                    else -> "Pemula"
+                }
+            }
+            val aiGen = runCatching { this["ai_generated"]?.jsonPrimitive?.booleanOrNull }.getOrNull() ?: false
             if (rows <= 0 || cols <= 0 || grid.isEmpty() || clues.isEmpty()) null
             else DailyQuestChallenge.Crossword(
                 id = id,
@@ -87,6 +107,13 @@ private fun JsonObject.toChallenge(mode: DailyQuestGameMode, fallbackIndex: Int)
                 cols = cols,
                 grid = grid,
                 clues = clues,
+                maxHints = maxHintsVal,
+                level = levelVal,
+                difficultyLabel = diffLabel,
+                subject = str("subject").ifBlank { "UMUM" },
+                subjectLabel = str("subject_label").ifBlank { "Semua Mapel" },
+                aiGenerated = aiGen,
+                availableSubjects = availableSubjects,
                 topicTag = topicTag,
                 explanation = explanation,
             )
