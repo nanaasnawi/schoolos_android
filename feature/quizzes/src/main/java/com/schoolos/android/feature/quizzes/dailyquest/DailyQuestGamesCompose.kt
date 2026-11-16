@@ -54,6 +54,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
@@ -1042,6 +1043,7 @@ internal fun BlockBlastGameCompose(
     var board by remember(challenge.id) { mutableStateOf(buildInitialBoard()) }
     var tray by remember(challenge.id) { mutableStateOf(makeTray()) }
     var selectedTrayIdx by remember(challenge.id) { mutableIntStateOf(0) }
+    var previewAnchor by remember(challenge.id) { mutableStateOf<Pair<Int, Int>?>(null) }
     var score by remember(challenge.id) { mutableIntStateOf(0) }
     var bestScore by remember(challenge.id) { mutableIntStateOf(prefs.getInt("block_best", 0)) }
     var linesCleared by remember(challenge.id) { mutableIntStateOf(0) }
@@ -1055,8 +1057,25 @@ internal fun BlockBlastGameCompose(
     val targetLines = challenge.targetLines.coerceAtLeast(3)
     val missionReady = score >= targetScore || linesCleared >= targetLines
 
+    val previewSet = remember(previewAnchor, selectedPiece, board) {
+        val anchor = previewAnchor ?: return@remember Triple(emptySet<Pair<Int, Int>>(), false, emptySet<Int>() to emptySet<Int>())
+        val piece = selectedPiece ?: return@remember Triple(emptySet<Pair<Int, Int>>(), false, emptySet<Int>() to emptySet<Int>())
+        val valid = canPlaceBlock(board, piece, anchor.first, anchor.second)
+        val cells = piece.cells.map { (dr, dc) -> (anchor.first + dr) to (anchor.second + dc) }
+            .filter { (rr, cc) -> rr in 0..7 && cc in 0..7 }.toSet()
+        val clearRows = if (valid) (0..7).filter { rr -> (0..7).all { cc -> board[rr][cc] != null || (rr to cc) in cells } }.toSet() else emptySet()
+        val clearCols = if (valid) (0..7).filter { cc -> (0..7).all { rr -> board[rr][cc] != null || (rr to cc) in cells } }.toSet() else emptySet()
+        Triple(cells, valid, clearRows to clearCols)
+    }
+
     fun placePieceAt(r: Int, c: Int) {
         if (disabled || gameOver || selectedPiece == null) return
+        val currentAnchor = previewAnchor
+        if (currentAnchor != (r to c)) {
+            previewAnchor = r to c
+            onPlayTap()
+            return
+        }
         if (!canPlaceBlock(board, selectedPiece, r, c)) {
             onPlayError()
             return
@@ -1080,9 +1099,9 @@ internal fun BlockBlastGameCompose(
         linesCleared += cleared
         if (cleared >= 2) {
             maxCombo = max(maxCombo, cleared)
-            comboText = "COMBO ×$cleared! +$gained Poin"
+            comboText = "MEGA BLAST ×$cleared! +$gained Poin"
         } else if (cleared == 1) {
-            comboText = "Baris Bersih! +$gained Poin"
+            comboText = "LINE CLEAR! +$gained Poin"
         } else {
             comboText = null
         }
@@ -1099,6 +1118,7 @@ internal fun BlockBlastGameCompose(
         board = nextBoard
         tray = finalTray
         selectedTrayIdx = nextSel
+        previewAnchor = null
         if (!anyBlockMoveLeft(nextBoard, finalTray)) {
             gameOver = true
         }
@@ -1205,43 +1225,85 @@ internal fun BlockBlastGameCompose(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
+                // Sleek Deep Arcade Cabinet 8x8 Board
                 Surface(
-                    shape = RoundedCornerShape(14.dp),
-                    color = elevatedColor,
-                    border = BorderStroke(1.dp, borderColor),
+                    shape = RoundedCornerShape(18.dp),
+                    color = Color(0xFF020617),
                 ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .aspectRatio(1f)
-                            .padding(6.dp),
-                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    Surface(
+                        modifier = Modifier.padding(bottom = 5.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        color = Color(0xFF0F172A),
+                        border = BorderStroke(2.dp, Color(0xFF38BDF8).copy(alpha = 0.4f)),
                     ) {
-                        for (r in 0..7) {
-                            Row(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .fillMaxWidth(),
-                                horizontalArrangement = Arrangement.spacedBy(3.dp),
-                            ) {
-                                for (c in 0..7) {
-                                    val cellColor = board[r][c]
-                                    Box(
-                                        modifier = Modifier
-                                            .weight(1f)
-                                            .fillMaxSize()
-                                            .clip(RoundedCornerShape(7.dp))
-                                            .background(if (cellColor != null) cellColor.copy(alpha = 0.65f) else surfaceColor)
-                                            .padding(bottom = if (cellColor != null) 3.dp else 0.dp)
-                                            .clip(RoundedCornerShape(7.dp))
-                                            .background(cellColor ?: surfaceColor)
-                                            .border(
-                                                1.dp,
-                                                if (cellColor != null) Color.White.copy(alpha = 0.45f) else borderColor,
-                                                RoundedCornerShape(7.dp),
-                                            )
-                                            .clickable { placePieceAt(r, c) },
-                                    )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .aspectRatio(1f)
+                                .padding(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            for (r in 0..7) {
+                                Row(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                ) {
+                                    for (c in 0..7) {
+                                        val cellColor = board[r][c]
+                                        val isGhost = (r to c) in previewSet.first
+                                        val willClear = r in previewSet.third.first || c in previewSet.third.second
+
+                                        Box(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .fillMaxSize()
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(
+                                                    when {
+                                                        cellColor != null -> cellColor.copy(alpha = 0.65f)
+                                                        isGhost && previewSet.second -> (selectedPiece?.color ?: Color(0xFF10B981)).copy(alpha = 0.55f)
+                                                        isGhost -> Color(0xFFF43F5E).copy(alpha = 0.45f)
+                                                        willClear -> Color(0xFFFBBF24).copy(alpha = 0.25f)
+                                                        else -> Color(0xFF1E293B)
+                                                    }
+                                                )
+                                                .padding(bottom = if (cellColor != null) 3.5.dp else 0.dp)
+                                                .clip(RoundedCornerShape(8.dp))
+                                                .background(
+                                                    when {
+                                                        cellColor != null -> cellColor
+                                                        isGhost && previewSet.second -> (selectedPiece?.color ?: Color(0xFF10B981)).copy(alpha = 0.45f)
+                                                        isGhost -> Color(0xFFF43F5E).copy(alpha = 0.42f)
+                                                        willClear -> Color(0xFFFBBF24).copy(alpha = 0.22f)
+                                                        else -> Color(0xFF1E293B)
+                                                    }
+                                                )
+                                                .border(
+                                                    width = if (willClear) 1.5.dp else 1.dp,
+                                                    color = when {
+                                                        willClear -> Color(0xFFFDE047)
+                                                        cellColor != null -> Color.White.copy(alpha = 0.55f)
+                                                        isGhost -> Color.White.copy(alpha = 0.7f)
+                                                        else -> Color.White.copy(alpha = 0.08f)
+                                                    },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                )
+                                                .clickable { placePieceAt(r, c) },
+                                            contentAlignment = Alignment.Center,
+                                        ) {
+                                            // Faceted Gem Highlight Inner Square
+                                            if (cellColor != null) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .fillMaxSize(0.62f)
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(Color.White.copy(alpha = 0.26f)),
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -1249,10 +1311,15 @@ internal fun BlockBlastGameCompose(
                 }
 
                 Text(
-                    text = "Pilih balok lalu ketuk posisi kiri-atas di papan 8×8:",
-                    color = textSecondary,
+                    text = if (previewAnchor != null) {
+                        if (previewSet.second) "Ketuk lagi kotak yang sama untuk PASANG!" else "Posisi terhalang! Pilih kotak kosong lain."
+                    } else {
+                        "Pilih balok di bawah, ketuk 1× pratinjau lalu ketuk lagi untuk pasang:"
+                    },
+                    color = if (previewAnchor != null && !previewSet.second) Color(0xFFF43F5E) else textSecondary,
                     fontSize = 11.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center,
                 )
 
                 Row(
@@ -1264,34 +1331,40 @@ internal fun BlockBlastGameCompose(
                         Surface(
                             modifier = Modifier
                                 .weight(1f)
-                                .height(74.dp)
+                                .height(78.dp)
                                 .clip(RoundedCornerShape(14.dp))
                                 .clickable(enabled = piece != null && !gameOver) {
                                     selectedTrayIdx = idx
+                                    previewAnchor = null
                                 },
                             shape = RoundedCornerShape(14.dp),
-                            color = if (isSel) Color(0xFF0EA5E9).copy(alpha = 0.14f) else elevatedColor,
-                            border = BorderStroke(if (isSel) 2.dp else 1.dp, if (isSel) Color(0xFF0EA5E9) else borderColor),
+                            color = if (isSel) Color(0xFF0EA5E9).copy(alpha = 0.16f) else elevatedColor,
+                            border = BorderStroke(if (isSel) 2.dp else 1.dp, if (isSel) Color(0xFF38BDF8) else borderColor),
                         ) {
                             Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxSize()) {
                                 if (piece != null) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Column(verticalArrangement = Arrangement.spacedBy(2.5.dp)) {
                                         for (pr in 0 until piece.rows) {
-                                            Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                                            Row(horizontalArrangement = Arrangement.spacedBy(2.5.dp)) {
                                                 for (pc in 0 until piece.cols) {
                                                     val active = (pr to pc) in piece.cells
                                                     Box(
                                                         modifier = Modifier
-                                                            .size(12.dp)
-                                                            .clip(RoundedCornerShape(3.dp))
-                                                            .background(if (active) piece.color else Color.Transparent),
+                                                            .size(14.dp)
+                                                            .clip(RoundedCornerShape(3.5.dp))
+                                                            .background(if (active) piece.color else Color.Transparent)
+                                                            .border(
+                                                                if (active) 1.dp else 0.dp,
+                                                                if (active) Color.White.copy(alpha = 0.45f) else Color.Transparent,
+                                                                RoundedCornerShape(3.5.dp),
+                                                            ),
                                                     )
                                                 }
                                             }
                                         }
                                     }
                                 } else {
-                                    Text("Terpakai", color = textSecondary, fontSize = 10.sp)
+                                    Text("Kosong", color = textSecondary, fontSize = 10.sp)
                                 }
                             }
                         }

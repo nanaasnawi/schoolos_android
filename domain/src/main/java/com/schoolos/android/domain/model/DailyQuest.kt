@@ -4,17 +4,59 @@ enum class DailyQuestGameMode(val code: String, val displayLabel: String) {
     CROSSWORD("CROSSWORD", "Teka-Teki Silang"),
     SLIDING_PUZZLE("SLIDING_PUZZLE", "Puzzle Geser"),
     BLOCK_PUZZLE("BLOCK_PUZZLE", "Block Blast"),
-    NUMBER_MERGE("NUMBER_MERGE", "2048 Angka");
+    NUMBER_MERGE("NUMBER_MERGE", "2048 Angka"),
+    KAHOOT_BLITZ("KAHOOT_BLITZ", "Kuis Kilat Arena"),
+    WORD_SCRAMBLE("WORD_SCRAMBLE", "Susun Kata ID & EN"),
+    COGNITIVE_TRAINER("COGNITIVE_TRAINER", "Latih Kognitif");
 
     companion object {
         fun fromCode(raw: String?): DailyQuestGameMode = when (raw?.trim()?.uppercase()) {
             "SLIDING_PUZZLE" -> SLIDING_PUZZLE
             "BLOCK_PUZZLE" -> BLOCK_PUZZLE
             "NUMBER_MERGE" -> NUMBER_MERGE
+            "KAHOOT_BLITZ" -> KAHOOT_BLITZ
+            "WORD_SCRAMBLE" -> WORD_SCRAMBLE
+            "COGNITIVE_TRAINER" -> COGNITIVE_TRAINER
             else -> CROSSWORD
         }
     }
 }
+
+data class KahootQuestionItem(
+    val id: String,
+    val question: String,
+    val options: List<String>,
+    val correctIndex: Int,
+    val topicTag: String,
+    val explanation: String? = null,
+)
+
+data class WordScrambleItemData(
+    val id: String,
+    val word: String,
+    val scrambledLetters: List<String>,
+    val language: String,
+    val category: String,
+    val clue: String,
+    val explanation: String? = null,
+)
+
+data class CognitiveStageData(
+    val id: String,
+    val kind: String, // MEMORY_GRID, STROOP_FOCUS, PATTERN_SEQUENCE, QUICK_COMPARE
+    val prompt: String,
+    val gridSize: Int = 3,
+    val targets: List<Int> = emptyList(),
+    val viewMs: Int = 2500,
+    val displayWord: String? = null,
+    val inkColor: String? = null,
+    val sequence: String? = null,
+    val leftExpr: String? = null,
+    val rightExpr: String? = null,
+    val options: List<String> = emptyList(),
+    val correctIndex: Int = 0,
+    val explanation: String? = null,
+)
 
 data class CrosswordClueItem(
     val number: Int,
@@ -114,6 +156,31 @@ sealed class DailyQuestChallenge {
         val seed: Long,
         val initialTiles: List<NumberMergeSeedTile>,
         val themeTitle: String,
+        override val topicTag: String? = null,
+        override val explanation: String? = null,
+    ) : DailyQuestChallenge()
+
+    data class KahootBlitz(
+        override val id: String,
+        val gradeBand: String,
+        val timePerQuestion: Int,
+        val questions: List<KahootQuestionItem>,
+        override val topicTag: String? = null,
+        override val explanation: String? = null,
+    ) : DailyQuestChallenge()
+
+    data class WordScramble(
+        override val id: String,
+        val gradeBand: String,
+        val items: List<WordScrambleItemData>,
+        override val topicTag: String? = null,
+        override val explanation: String? = null,
+    ) : DailyQuestChallenge()
+
+    data class CognitiveTrainer(
+        override val id: String,
+        val gradeBand: String,
+        val stages: List<CognitiveStageData>,
         override val topicTag: String? = null,
         override val explanation: String? = null,
     ) : DailyQuestChallenge()

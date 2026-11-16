@@ -22,16 +22,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.VolumeOff
 import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.EmojiEvents
 import androidx.compose.material.icons.filled.Extension
 import androidx.compose.material.icons.filled.GridOn
 import androidx.compose.material.icons.filled.LocalFireDepartment
+import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.Translate
 import androidx.compose.material.icons.filled.ViewModule
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -76,6 +79,50 @@ private data class GameCatalogMeta(
 
 private val ANDROID_GAME_CATALOG = listOf(
     GameCatalogMeta(
+        mode = DailyQuestGameMode.KAHOOT_BLITZ,
+        title = "Kuis Kilat Arena",
+        badge = "KUIS CEPAT",
+        tagline = "Gaya Kahoot! Jawab cepat sebelum waktu habis untuk bonus kombo",
+        accent = Color(0xFFA855F7),
+        gradTop = Color(0xFFC084FC),
+        gradBottom = Color(0xFF9333EA),
+        lipColor = Color(0xFF6D28D9),
+        icon = Icons.Default.Bolt,
+    ),
+    GameCatalogMeta(
+        mode = DailyQuestGameMode.WORD_SCRAMBLE,
+        title = "Susun Kata ID & EN",
+        badge = "BILINGUAL ID•EN",
+        tagline = "Rangkai huruf acak kosakata Bahasa Indonesia & Bahasa Inggris",
+        accent = Color(0xFFF43F5E),
+        gradTop = Color(0xFFFB7185),
+        gradBottom = Color(0xFFE11D48),
+        lipColor = Color(0xFFBE123C),
+        icon = Icons.Default.Translate,
+    ),
+    GameCatalogMeta(
+        mode = DailyQuestGameMode.COGNITIVE_TRAINER,
+        title = "Latih Kognitif",
+        badge = "ASAH OTAK",
+        tagline = "Latih memori visual, fokus Stroop, pola & hitung Paket A/B/C",
+        accent = Color(0xFF14B8A6),
+        gradTop = Color(0xFF2DD4BF),
+        gradBottom = Color(0xFF0D9488),
+        lipColor = Color(0xFF0F766E),
+        icon = Icons.Default.Psychology,
+    ),
+    GameCatalogMeta(
+        mode = DailyQuestGameMode.BLOCK_PUZZLE,
+        title = "Block Blast 8×8",
+        badge = "STRATEGI BALOK",
+        tagline = "Pasang balok permata & bersihkan baris penuh untuk kombo",
+        accent = Color(0xFFF59E0B),
+        gradTop = Color(0xFFFBBF24),
+        gradBottom = Color(0xFFD97706),
+        lipColor = Color(0xFFB45309),
+        icon = Icons.Default.ViewModule,
+    ),
+    GameCatalogMeta(
         mode = DailyQuestGameMode.CROSSWORD,
         title = "Teka-Teki Silang",
         badge = "KATA & WAWASAN",
@@ -96,17 +143,6 @@ private val ANDROID_GAME_CATALOG = listOf(
         gradBottom = Color(0xFF059669),
         lipColor = Color(0xFF047857),
         icon = Icons.Default.Extension,
-    ),
-    GameCatalogMeta(
-        mode = DailyQuestGameMode.BLOCK_PUZZLE,
-        title = "Block Blast 8×8",
-        badge = "STRATEGI BALOK",
-        tagline = "Pasang balok permata & bersihkan baris penuh untuk kombo",
-        accent = Color(0xFFF59E0B),
-        gradTop = Color(0xFFFBBF24),
-        gradBottom = Color(0xFFD97706),
-        lipColor = Color(0xFFB45309),
-        icon = Icons.Default.ViewModule,
     ),
     GameCatalogMeta(
         mode = DailyQuestGameMode.NUMBER_MERGE,
@@ -147,7 +183,7 @@ fun DailyQuestScreen(
     val hubQuest = state.hubQuest
     val availableModes = hubQuest?.availableModes.orEmpty()
     val completedCount = availableModes.count { it.completedToday }
-    val totalGames = availableModes.size.coerceAtLeast(4)
+    val totalGames = availableModes.size.coerceAtLeast(7)
 
     Scaffold(
         containerColor = pageBg,
@@ -766,6 +802,48 @@ fun DailyQuestScreen(
                                         onPlayGood = { viewModel.playGoodSfx() },
                                         onFinish = { c, t, m -> viewModel.submitGameScore(c, t, m) },
                                         onNewLevel = { viewModel.loadNextLevel() },
+                                    )
+
+                                    is DailyQuestChallenge.KahootBlitz -> KahootBlitzGameCompose(
+                                        challenge = firstChallenge,
+                                        disabled = state.isSubmitting,
+                                        surfaceColor = surfaceColor,
+                                        elevatedColor = elevatedColor,
+                                        borderColor = borderColor,
+                                        textPrimary = textPrimary,
+                                        textSecondary = textSecondary,
+                                        onPlayTap = { viewModel.playTapSfx() },
+                                        onPlayGood = { viewModel.playGoodSfx() },
+                                        onPlayError = { viewModel.playErrorSfx() },
+                                        onFinish = { c, t, m -> viewModel.submitGameScore(c, t, m) },
+                                    )
+
+                                    is DailyQuestChallenge.WordScramble -> WordScrambleGameCompose(
+                                        challenge = firstChallenge,
+                                        disabled = state.isSubmitting,
+                                        surfaceColor = surfaceColor,
+                                        elevatedColor = elevatedColor,
+                                        borderColor = borderColor,
+                                        textPrimary = textPrimary,
+                                        textSecondary = textSecondary,
+                                        onPlayTap = { viewModel.playTapSfx() },
+                                        onPlayGood = { viewModel.playGoodSfx() },
+                                        onPlayError = { viewModel.playErrorSfx() },
+                                        onFinish = { c, t, m -> viewModel.submitGameScore(c, t, m) },
+                                    )
+
+                                    is DailyQuestChallenge.CognitiveTrainer -> CognitiveTrainerGameCompose(
+                                        challenge = firstChallenge,
+                                        disabled = state.isSubmitting,
+                                        surfaceColor = surfaceColor,
+                                        elevatedColor = elevatedColor,
+                                        borderColor = borderColor,
+                                        textPrimary = textPrimary,
+                                        textSecondary = textSecondary,
+                                        onPlayTap = { viewModel.playTapSfx() },
+                                        onPlayGood = { viewModel.playGoodSfx() },
+                                        onPlayError = { viewModel.playErrorSfx() },
+                                        onFinish = { c, t, m -> viewModel.submitGameScore(c, t, m) },
                                     )
                                 }
                             }
