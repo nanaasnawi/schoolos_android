@@ -184,148 +184,141 @@ internal fun HomeDailyQuestGameCard(
     onClick: () -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
-    val lipColor = if (isDark) Color(0xFF0369A1) else Color(0xFF0284C7)
-    val cardBg = if (isDark) Color(0xFF0E1729) else Color(0xFFF0F9FF)
-    val cardBorder = if (isDark) Color(0xFF0EA5E9).copy(alpha = 0.55f) else Color(0xFF7DD3FC)
-    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
-    val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF475569)
+    val cardBg = if (isDark) Color(0xFF111113) else Color.White
+    val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+    val accentTint = Color(0xFF0EA5E9)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val xpTextColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+    val xpBgColor = if (isDark) Color(0xFFF59E0B).copy(alpha = 0.16f) else Color(0xFFFEF3C7)
+    val doneBgColor = if (isDark) Color(0xFF10B981).copy(alpha = 0.18f) else Color(0xFFD1FAE5)
+    val doneTextColor = if (isDark) Color(0xFF34D399) else Color(0xFF047857)
 
-    val completed = dailyQuest?.alreadyCompleted == true
+    val completedCount = dailyQuest?.availableModes?.count { it.completedToday } ?: 0
+    val totalGames = (dailyQuest?.availableModes?.size ?: 4).coerceAtLeast(4)
     val xpReward = dailyQuest?.xpReward ?: 80
 
     Surface(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(22.dp),
-        color = lipColor.copy(alpha = 0.7f),
+        shape = RoundedCornerShape(18.dp),
+        color = cardBg,
+        border = BorderStroke(1.dp, cardBorder),
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = 3.dp),
-            shape = RoundedCornerShape(22.dp),
-            color = cardBg,
-            border = BorderStroke(1.5.dp, cardBorder),
+        Row(
+            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(accentTint),
+                contentAlignment = Alignment.Center,
             ) {
-                Surface(
-                    shape = RoundedCornerShape(16.dp),
-                    color = Color(0xFF0369A1),
+                Icon(
+                    imageVector = Icons.Default.SportsEsports,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(22.dp),
+                )
+            }
+
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .padding(bottom = 3.dp)
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(Color(0xFF0EA5E9)),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.SportsEsports,
-                            contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(24.dp),
+                    Surface(shape = RoundedCornerShape(6.dp), color = accentTint) {
+                        Text(
+                            text = "ZONA GAME",
+                            color = Color.White,
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Black,
+                            maxLines = 1,
+                            softWrap = false,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                         )
                     }
-                }
-
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(3.dp),
-                ) {
-                    Row(
-                        horizontalArrangement = Arrangement.spacedBy(6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Surface(shape = RoundedCornerShape(6.dp), color = Color(0xFF0EA5E9)) {
+                    if (completedCount > 0) {
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = doneBgColor,
+                        ) {
                             Text(
-                                text = "GAME HARIAN",
-                                color = Color.White,
+                                text = "$completedCount/$totalGames TUNTAS",
+                                color = doneTextColor,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
+                    } else {
                         Surface(
                             shape = RoundedCornerShape(6.dp),
-                            color = Color(0xFFF59E0B).copy(alpha = 0.18f),
-                            border = BorderStroke(0.5.dp, Color(0xFFF59E0B).copy(alpha = 0.45f)),
+                            color = xpBgColor,
                         ) {
                             Text(
                                 text = "+$xpReward XP",
-                                color = Color(0xFFF59E0B),
+                                color = xpTextColor,
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.Black,
+                                maxLines = 1,
+                                softWrap = false,
                                 modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
                             )
                         }
-                        if (completed) {
-                            Surface(
-                                shape = RoundedCornerShape(6.dp),
-                                color = Color(0xFF10B981).copy(alpha = 0.18f),
-                            ) {
-                                Text(
-                                    text = "✓ TUNTAS",
-                                    color = Color(0xFF10B981),
-                                    fontSize = 9.sp,
-                                    fontWeight = FontWeight.Black,
-                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                )
-                            }
-                        }
                     }
-
-                    Text(
-                        text = dailyQuest?.title ?: "Tantangan Belajar Seru Hari Ini (3 Menit)",
-                        color = textPrimary,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Black,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                    Text(
-                        text = dailyQuest?.subjectName ?: "Fakta/Mitos • Detektif Kasus • Rangkai Logika",
-                        color = textSecondary,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
 
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = Color(0xFF0369A1),
+                Text(
+                    text = "Zona Game Edukasi",
+                    color = textPrimary,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = "TTS • Puzzle • Block Blast • 2048",
+                    color = textSecondary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = accentTint,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
-                    Surface(
-                        modifier = Modifier.padding(bottom = 2.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        color = Color(0xFF0EA5E9),
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(3.dp),
-                        ) {
-                            Text(
-                                text = if (completed) "LATIHAN" else "MAIN",
-                                color = Color.White,
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                            )
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                                contentDescription = null,
-                                tint = Color.White,
-                                modifier = Modifier.size(15.dp),
-                            )
-                        }
-                    }
+                    Text(
+                        text = "MAIN",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(15.dp),
+                    )
                 }
             }
         }

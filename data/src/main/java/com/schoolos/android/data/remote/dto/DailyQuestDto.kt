@@ -6,7 +6,7 @@ import kotlinx.serialization.json.JsonObject
 
 @Serializable
 data class DailyQuestModeInfoDto(
-    val code: String = "FACT_OR_MYTH",
+    val code: String = "CROSSWORD",
     val label: String = "",
     @SerialName("is_featured_today") val isFeaturedToday: Boolean = false,
     @SerialName("completed_today") val completedToday: Boolean = false,
@@ -34,9 +34,9 @@ data class DailyQuestLeaderboardEntryDto(
 
 @Serializable
 data class ShibaPetStatusDto(
-    @SerialName("pet_name") val petName: String = "Mochi Shiba",
+    @SerialName("pet_name") val petName: String = "Ciko Pintar",
     @SerialName("pet_stage") val petStage: Int = 1,
-    @SerialName("stage_title") val stageTitle: String = "Anak Shiba",
+    @SerialName("stage_title") val stageTitle: String = "Anak Kucing Penasaran",
     @SerialName("food_points") val foodPoints: Int = 0,
     @SerialName("points_to_next_stage") val pointsToNextStage: Int = 100,
     @SerialName("total_fed") val totalFed: Int = 0,
@@ -51,8 +51,8 @@ data class DailyQuestResponseDto(
     @SerialName("day_label") val dayLabel: String = "",
     @SerialName("grade_band") val gradeBand: String = "PAKET_B",
     @SerialName("class_name") val className: String = "",
-    @SerialName("game_mode") val gameMode: String = "FACT_OR_MYTH",
-    @SerialName("featured_mode_today") val featuredModeToday: String = "FACT_OR_MYTH",
+    @SerialName("game_mode") val gameMode: String = "CROSSWORD",
+    @SerialName("featured_mode_today") val featuredModeToday: String = "CROSSWORD",
     @SerialName("is_featured_today") val isFeaturedToday: Boolean = false,
     @SerialName("round_number") val roundNumber: Int = 0,
     val title: String = "",
