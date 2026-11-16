@@ -8,6 +8,7 @@ import com.schoolos.android.data.remote.dto.DailyQuestResponseDto
 import com.schoolos.android.data.remote.dto.FeedPetResponseDto
 import com.schoolos.android.data.remote.dto.ShibaPetStatusDto
 import com.schoolos.android.data.remote.dto.SubmitDailyQuestResponseDto
+import com.schoolos.android.domain.model.CrosswordClueItem
 import com.schoolos.android.domain.model.DailyChestResult
 import com.schoolos.android.domain.model.DailyQuest
 import com.schoolos.android.domain.model.DailyQuestAttemptSummary
@@ -17,17 +18,15 @@ import com.schoolos.android.domain.model.DailyQuestLeaderboardEntry
 import com.schoolos.android.domain.model.DailyQuestModeInfo
 import com.schoolos.android.domain.model.DailyQuestSubmitResult
 import com.schoolos.android.domain.model.FeedPetResult
-import com.schoolos.android.domain.model.MapPinItem
+import com.schoolos.android.domain.model.NumberMergeSeedTile
 import com.schoolos.android.domain.model.ShibaPetStatus
-import com.schoolos.android.domain.model.SpeedMatchPair
 import kotlinx.serialization.json.JsonObject
-import kotlinx.serialization.json.booleanOrNull
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.floatOrNull
 import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 
 private fun JsonObject.str(key: String): String =
     runCatching { this[key]?.jsonPrimitive?.contentOrNull }.getOrNull().orEmpty()
@@ -35,35 +34,20 @@ private fun JsonObject.str(key: String): String =
 private fun JsonObject.strOrNull(key: String): String? =
     runCatching { this[key]?.jsonPrimitive?.contentOrNull }.getOrNull()?.takeIf { it.isNotBlank() }
 
-private fun JsonObject.bool(key: String, default: Boolean = false): Boolean =
-    runCatching { this[key]?.jsonPrimitive?.booleanOrNull }.getOrNull() ?: default
-
 private fun JsonObject.intVal(key: String, default: Int = 0): Int =
     runCatching { this[key]?.jsonPrimitive?.intOrNull }.getOrNull() ?: default
 
-private fun JsonObject.floatVal(key: String, default: Float = 0.5f): Float =
-    runCatching { this[key]?.jsonPrimitive?.floatOrNull }.getOrNull() ?: default
+private fun JsonObject.longVal(key: String, default: Long = 0L): Long =
+    runCatching { this[key]?.jsonPrimitive?.longOrNull }.getOrNull() ?: default
 
 private fun JsonObject.strList(key: String): List<String> =
     runCatching {
         this[key]?.jsonArray?.mapNotNull { runCatching { it.jsonPrimitive.contentOrNull }.getOrNull() }.orEmpty()
     }.getOrDefault(emptyList())
 
-private fun JsonObject.pinList(key: String): List<MapPinItem> =
+private fun JsonObject.intList(key: String): List<Int> =
     runCatching {
-        this[key]?.jsonArray?.mapIndexedNotNull { idx, elem ->
-            val obj = elem.jsonObject
-            val label = obj.str("label")
-            if (label.isBlank()) null
-            else MapPinItem(
-                id = obj.str("id").ifBlank { "pin_$idx" },
-                label = label,
-                stepLabel = obj.strOrNull("step_label"),
-                x = obj.floatVal("x", 0.5f).coerceIn(0.08f, 0.92f),
-                y = obj.floatVal("y", 0.5f).coerceIn(0.10f, 0.90f),
-                isTarget = obj.bool("is_target", false),
-            )
-        }.orEmpty()
+        this[key]?.jsonArray?.mapNotNull { runCatching { it.jsonPrimitive.intOrNull }.getOrNull() }.orEmpty()
     }.getOrDefault(emptyList())
 
 private fun JsonObject.toChallenge(mode: DailyQuestGameMode, fallbackIndex: Int): DailyQuestChallenge? {
@@ -72,88 +56,100 @@ private fun JsonObject.toChallenge(mode: DailyQuestGameMode, fallbackIndex: Int)
     val topicTag = strOrNull("topic_tag")
 
     return when (mode) {
-        DailyQuestGameMode.MAP_PIN_HUNT -> {
-            val prompt = str("prompt")
-            val pins = pinList("pins")
-            if (prompt.isBlank() || pins.isEmpty()) null
-            else DailyQuestChallenge.MapPinHunt(
-                id = id,
-                sceneId = str("scene_id").ifBlank { "cirebon_keraton_map" },
-                interactionType = str("interaction_type").ifBlank { "MAP_TAGS" },
-                prompt = prompt,
-                pins = pins,
-                explanation = explanation,
-                topicTag = topicTag,
-            )
-        }
-        DailyQuestGameMode.FACT_OR_MYTH -> {
-            val statement = str("statement")
-            if (statement.isBlank()) null
-            else DailyQuestChallenge.FactOrMyth(
-                id = id,
-                statement = statement,
-                isFact = bool("is_fact", true),
-                explanation = explanation,
-                topicTag = topicTag,
-            )
-        }
-        DailyQuestGameMode.CASE_DETECTIVE -> {
-            val question = str("question")
-            val options = strList("options")
-            if (question.isBlank() || options.isEmpty()) null
-            else DailyQuestChallenge.CaseDetective(
-                id = id,
-                scenario = str("scenario"),
-                question = question,
-                options = options,
-                correctIndex = intVal("correct_index", 0).coerceIn(0, (options.size - 1).coerceAtLeast(0)),
-                explanation = explanation,
-                topicTag = topicTag,
-            )
-        }
-        DailyQuestGameMode.SEQUENCE_ORDER -> {
-            val steps = strList("steps")
-            if (steps.isEmpty()) null
-            else DailyQuestChallenge.SequenceOrder(
-                id = id,
-                prompt = str("prompt"),
-                steps = steps,
-                explanation = explanation,
-                topicTag = topicTag,
-            )
-        }
-        DailyQuestGameMode.CONCEPT_GUESS -> {
-            val answer = str("answer")
-            if (answer.isBlank()) null
-            else DailyQuestChallenge.ConceptGuess(
-                id = id,
-                answer = answer,
-                clues = strList("clues"),
-                acceptableAliases = strList("acceptable_aliases"),
-                explanation = explanation,
-                topicTag = topicTag,
-            )
-        }
-        DailyQuestGameMode.SPEED_MATCH -> {
-            val pairArray = runCatching { this["pairs"]?.jsonArray }.getOrNull().orEmpty()
-            val pairs = pairArray.mapIndexedNotNull { pIdx, el ->
-                val obj = runCatching { el.jsonObject }.getOrNull() ?: return@mapIndexedNotNull null
-                val left = obj.str("left")
-                val right = obj.str("right")
-                if (left.isBlank() || right.isBlank()) null
-                else SpeedMatchPair(
-                    id = obj.str("id").ifBlank { "p_$pIdx" },
-                    left = left,
-                    right = right,
+        DailyQuestGameMode.CROSSWORD -> {
+            val rows = intVal("rows", 0)
+            val cols = intVal("cols", 0)
+            val grid = strList("grid")
+            val cluesArray = runCatching { this["clues"]?.jsonArray }.getOrNull().orEmpty()
+            val clues = cluesArray.mapNotNull { elem ->
+                val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+                val ans = obj.str("answer")
+                val clueTxt = obj.str("clue")
+                if (ans.isBlank() || clueTxt.isBlank()) null
+                else CrosswordClueItem(
+                    number = obj.intVal("number", 1),
+                    direction = obj.str("direction").ifBlank { "ACROSS" },
+                    row = obj.intVal("row", 0),
+                    col = obj.intVal("col", 0),
+                    length = obj.intVal("length", ans.length),
+                    answer = ans,
+                    clue = clueTxt,
+                    topicTag = obj.strOrNull("topic_tag"),
                 )
             }
-            if (pairs.isEmpty()) null
-            else DailyQuestChallenge.SpeedMatch(
+            if (rows <= 0 || cols <= 0 || grid.isEmpty() || clues.isEmpty()) null
+            else DailyQuestChallenge.Crossword(
                 id = id,
-                prompt = str("prompt").ifBlank { "Cocokkan pasangan yang tepat!" },
-                pairs = pairs,
-                explanation = explanation,
+                rows = rows,
+                cols = cols,
+                grid = grid,
+                clues = clues,
                 topicTag = topicTag,
+                explanation = explanation,
+            )
+        }
+
+        DailyQuestGameMode.SLIDING_PUZZLE -> {
+            val gridSize = intVal("grid_size", 3).coerceIn(3, 4)
+            val tiles = intList("initial_tiles")
+            if (tiles.isEmpty()) null
+            else DailyQuestChallenge.SlidingPuzzle(
+                id = id,
+                gridSize = gridSize,
+                themeId = str("theme_id").ifBlank { "TATA_SURYA" },
+                themeTitle = str("theme_title").ifBlank { "Puzzle Geser Visual" },
+                themeSubtitle = str("theme_subtitle"),
+                initialTiles = tiles,
+                parMoves = intVal("par_moves", 35),
+                seed = longVal("seed", 12345L),
+                topicTag = topicTag,
+                explanation = explanation,
+            )
+        }
+
+        DailyQuestGameMode.BLOCK_PUZZLE -> {
+            val prefilledArr = runCatching { this["prefilled_cells"]?.jsonArray }.getOrNull().orEmpty()
+            val prefilled = prefilledArr.mapNotNull { elem ->
+                val arr = runCatching { elem.jsonArray }.getOrNull() ?: return@mapNotNull null
+                if (arr.size >= 2) {
+                    val r = runCatching { arr[0].jsonPrimitive.intOrNull }.getOrNull()
+                    val c = runCatching { arr[1].jsonPrimitive.intOrNull }.getOrNull()
+                    if (r != null && c != null) Pair(r, c) else null
+                } else null
+            }
+            DailyQuestChallenge.BlockPuzzle(
+                id = id,
+                boardSize = intVal("board_size", 8),
+                targetScore = intVal("target_score", 350),
+                targetLines = intVal("target_lines", 4),
+                seed = longVal("seed", 123456L),
+                prefilledCells = prefilled,
+                themeTitle = str("theme_title").ifBlank { "Arena Block Blast Harian" },
+                topicTag = topicTag,
+                explanation = explanation,
+            )
+        }
+
+        DailyQuestGameMode.NUMBER_MERGE -> {
+            val seedTilesArr = runCatching { this["initial_tiles"]?.jsonArray }.getOrNull().orEmpty()
+            val initialTiles = seedTilesArr.mapNotNull { elem ->
+                val obj = runCatching { elem.jsonObject }.getOrNull() ?: return@mapNotNull null
+                NumberMergeSeedTile(
+                    row = obj.intVal("row", 0),
+                    col = obj.intVal("col", 0),
+                    value = obj.intVal("value", 2),
+                )
+            }
+            DailyQuestChallenge.NumberMerge(
+                id = id,
+                boardSize = intVal("board_size", 4),
+                targetTile = intVal("target_tile", 256),
+                targetScore = intVal("target_score", 1500),
+                seed = longVal("seed", 777123L),
+                initialTiles = initialTiles,
+                themeTitle = str("theme_title").ifBlank { "2048 Gabung Angka" },
+                topicTag = topicTag,
+                explanation = explanation,
             )
         }
     }

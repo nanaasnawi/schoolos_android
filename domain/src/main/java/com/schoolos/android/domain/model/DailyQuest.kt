@@ -1,37 +1,44 @@
 package com.schoolos.android.domain.model
 
 enum class DailyQuestGameMode(val code: String, val displayLabel: String) {
-    MAP_PIN_HUNT("MAP_PIN_HUNT", "Peta & Lokasi"),
-    FACT_OR_MYTH("FACT_OR_MYTH", "Geser Fakta/Mitos"),
-    SEQUENCE_ORDER("SEQUENCE_ORDER", "Susun Langkah"),
-    CASE_DETECTIVE("CASE_DETECTIVE", "Komik Kasus"),
-    CONCEPT_GUESS("CONCEPT_GUESS", "Tebak Istilah"),
-    SPEED_MATCH("SPEED_MATCH", "Cocokkan Cepat");
+    CROSSWORD("CROSSWORD", "Teka-Teki Silang"),
+    SLIDING_PUZZLE("SLIDING_PUZZLE", "Puzzle Geser"),
+    BLOCK_PUZZLE("BLOCK_PUZZLE", "Block Blast"),
+    NUMBER_MERGE("NUMBER_MERGE", "2048 Angka");
 
     companion object {
         fun fromCode(raw: String?): DailyQuestGameMode = when (raw?.trim()?.uppercase()) {
-            "MAP_PIN_HUNT" -> MAP_PIN_HUNT
-            "CASE_DETECTIVE" -> CASE_DETECTIVE
-            "SEQUENCE_ORDER" -> SEQUENCE_ORDER
-            "CONCEPT_GUESS" -> CONCEPT_GUESS
-            "SPEED_MATCH" -> SPEED_MATCH
-            else -> FACT_OR_MYTH
+            "SLIDING_PUZZLE" -> SLIDING_PUZZLE
+            "BLOCK_PUZZLE" -> BLOCK_PUZZLE
+            "NUMBER_MERGE" -> NUMBER_MERGE
+            else -> CROSSWORD
         }
     }
 }
 
-data class SpeedMatchPair(
-    val id: String,
-    val left: String,
-    val right: String,
+data class CrosswordClueItem(
+    val number: Int,
+    val direction: String, // "ACROSS" or "DOWN"
+    val row: Int,
+    val col: Int,
+    val length: Int,
+    val answer: String,
+    val clue: String,
+    val topicTag: String? = null,
+)
+
+data class NumberMergeSeedTile(
+    val row: Int,
+    val col: Int,
+    val value: Int,
 )
 
 data class ShibaPetStatus(
-    val petName: String = "Mochi Shiba",
+    val petName: String = "Ciko Pintar",
     val petStage: Int = 1,
-    val stageTitle: String = "Anak Shiba",
-    val foodPoints: Int = 0,
-    val pointsToNextStage: Int = 100,
+    val stageTitle: String = "Anak Kucing Penasaran",
+    val foodPoints: Int = 25,
+    val pointsToNextStage: Int = 75,
     val totalFed: Int = 0,
     val biscuits: Int = 0,
     val fiftyFiftyTokens: Int = 1,
@@ -59,71 +66,56 @@ data class DailyChestResult(
     val message: String,
 )
 
-data class MapPinItem(
-    val id: String,
-    val label: String,
-    val stepLabel: String? = null,
-    val x: Float,
-    val y: Float,
-    val isTarget: Boolean = false,
-)
-
 sealed class DailyQuestChallenge {
     abstract val id: String
     abstract val topicTag: String?
     abstract val explanation: String?
 
-    data class MapPinHunt(
+    data class Crossword(
         override val id: String,
-        val sceneId: String,
-        val interactionType: String,
-        val prompt: String,
-        val pins: List<MapPinItem>,
-        override val explanation: String? = null,
+        val rows: Int,
+        val cols: Int,
+        val grid: List<String>,
+        val clues: List<CrosswordClueItem>,
         override val topicTag: String? = null,
+        override val explanation: String? = null,
     ) : DailyQuestChallenge()
 
-    data class FactOrMyth(
+    data class SlidingPuzzle(
         override val id: String,
-        val statement: String,
-        val isFact: Boolean,
-        override val explanation: String? = null,
+        val gridSize: Int,
+        val themeId: String,
+        val themeTitle: String,
+        val themeSubtitle: String,
+        val initialTiles: List<Int>,
+        val parMoves: Int,
+        val seed: Long,
         override val topicTag: String? = null,
+        override val explanation: String? = null,
     ) : DailyQuestChallenge()
 
-    data class CaseDetective(
+    data class BlockPuzzle(
         override val id: String,
-        val scenario: String,
-        val question: String,
-        val options: List<String>,
-        val correctIndex: Int,
-        override val explanation: String? = null,
+        val boardSize: Int,
+        val targetScore: Int,
+        val targetLines: Int,
+        val seed: Long,
+        val prefilledCells: List<Pair<Int, Int>>,
+        val themeTitle: String,
         override val topicTag: String? = null,
+        override val explanation: String? = null,
     ) : DailyQuestChallenge()
 
-    data class SequenceOrder(
+    data class NumberMerge(
         override val id: String,
-        val prompt: String,
-        val steps: List<String>,
-        override val explanation: String? = null,
+        val boardSize: Int,
+        val targetTile: Int,
+        val targetScore: Int,
+        val seed: Long,
+        val initialTiles: List<NumberMergeSeedTile>,
+        val themeTitle: String,
         override val topicTag: String? = null,
-    ) : DailyQuestChallenge()
-
-    data class ConceptGuess(
-        override val id: String,
-        val answer: String,
-        val clues: List<String>,
-        val acceptableAliases: List<String> = emptyList(),
         override val explanation: String? = null,
-        override val topicTag: String? = null,
-    ) : DailyQuestChallenge()
-
-    data class SpeedMatch(
-        override val id: String,
-        val prompt: String,
-        val pairs: List<SpeedMatchPair>,
-        override val explanation: String? = null,
-        override val topicTag: String? = null,
     ) : DailyQuestChallenge()
 }
 
