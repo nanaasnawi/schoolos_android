@@ -295,10 +295,21 @@ internal fun CrosswordGameCompose(
                                             Box(
                                                 modifier = Modifier
                                                     .size(cellDp)
-                                                    .clip(RoundedCornerShape(6.dp))
+                                                    .clip(RoundedCornerShape(7.dp))
+                                                    .background(
+                                                        when {
+                                                            isSel -> Color(0xFF0369A1)
+                                                            letter.isNotEmpty() -> Color(0xFFD97706)
+                                                            isWord -> Color(0xFF0EA5E9).copy(alpha = 0.22f)
+                                                            else -> surfaceColor
+                                                        }
+                                                    )
+                                                    .padding(bottom = if (isSel || letter.isNotEmpty()) 2.5.dp else 0.dp)
+                                                    .clip(RoundedCornerShape(7.dp))
                                                     .background(
                                                         when {
                                                             isSel -> Color(0xFF0EA5E9)
+                                                            letter.isNotEmpty() -> Color(0xFFFEF3C7)
                                                             isWord -> Color(0xFF0EA5E9).copy(alpha = 0.22f)
                                                             else -> surfaceColor
                                                         }
@@ -306,11 +317,12 @@ internal fun CrosswordGameCompose(
                                                     .border(
                                                         width = if (isSel) 1.5.dp else 1.dp,
                                                         color = when {
-                                                            isSel -> Color(0xFF0284C7)
+                                                            isSel -> Color(0xFF38BDF8)
+                                                            letter.isNotEmpty() -> Color(0xFFF59E0B)
                                                             isWord -> Color(0xFF0EA5E9).copy(alpha = 0.6f)
                                                             else -> borderColor
                                                         },
-                                                        shape = RoundedCornerShape(6.dp),
+                                                        shape = RoundedCornerShape(7.dp),
                                                     )
                                                     .clickable {
                                                         haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -330,7 +342,11 @@ internal fun CrosswordGameCompose(
                                                 if (num != null) {
                                                     Text(
                                                         text = num.toString(),
-                                                        color = if (isSel) Color.White.copy(alpha = 0.9f) else textSecondary,
+                                                        color = when {
+                                                            isSel -> Color.White.copy(alpha = 0.9f)
+                                                            letter.isNotEmpty() -> Color(0xFF92400E)
+                                                            else -> textSecondary
+                                                        },
                                                         fontSize = 8.sp,
                                                         fontWeight = FontWeight.ExtraBold,
                                                         modifier = Modifier
@@ -340,7 +356,11 @@ internal fun CrosswordGameCompose(
                                                 }
                                                 Text(
                                                     text = letter,
-                                                    color = if (isSel) Color.White else textPrimary,
+                                                    color = when {
+                                                        isSel -> Color.White
+                                                        letter.isNotEmpty() -> Color(0xFF78350F)
+                                                        else -> textPrimary
+                                                    },
                                                     fontSize = 14.sp,
                                                     fontWeight = FontWeight.Black,
                                                     modifier = Modifier.align(Alignment.Center),
@@ -1210,12 +1230,15 @@ internal fun BlockBlastGameCompose(
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxSize()
-                                            .clip(RoundedCornerShape(6.dp))
+                                            .clip(RoundedCornerShape(7.dp))
+                                            .background(if (cellColor != null) cellColor.copy(alpha = 0.65f) else surfaceColor)
+                                            .padding(bottom = if (cellColor != null) 3.dp else 0.dp)
+                                            .clip(RoundedCornerShape(7.dp))
                                             .background(cellColor ?: surfaceColor)
                                             .border(
                                                 1.dp,
-                                                if (cellColor != null) Color.White.copy(alpha = 0.25f) else borderColor,
-                                                RoundedCornerShape(6.dp),
+                                                if (cellColor != null) Color.White.copy(alpha = 0.45f) else borderColor,
+                                                RoundedCornerShape(7.dp),
                                             )
                                             .clickable { placePieceAt(r, c) },
                                     )
@@ -1636,12 +1659,15 @@ internal fun NumberMergeGameCompose(
                                         modifier = Modifier
                                             .weight(1f)
                                             .fillMaxSize()
-                                            .clip(RoundedCornerShape(12.dp))
+                                            .clip(RoundedCornerShape(13.dp))
+                                            .background(if (v > 0) Color.Black.copy(alpha = 0.28f) else surfaceColor)
+                                            .padding(bottom = if (v > 0) 4.dp else 0.dp)
+                                            .clip(RoundedCornerShape(13.dp))
                                             .background(bg)
                                             .border(
-                                                width = if (v == 0) 1.dp else 0.dp,
-                                                color = if (v == 0) borderColor else Color.Transparent,
-                                                shape = RoundedCornerShape(12.dp),
+                                                width = if (v == 0) 1.dp else 1.5.dp,
+                                                color = if (v == 0) borderColor else Color.White.copy(alpha = 0.4f),
+                                                shape = RoundedCornerShape(13.dp),
                                             ),
                                         contentAlignment = Alignment.Center,
                                     ) {
