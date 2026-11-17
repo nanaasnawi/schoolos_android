@@ -95,6 +95,26 @@ data class TanyaAiResponseDto(
 )
 
 @Serializable
+data class AiFeedbackRequestDto(
+    @SerialName("thread_id") val threadId: String,
+    @SerialName("message_id") val messageId: String,
+    @SerialName("rating") val rating: String,
+    @SerialName("question_text") val questionText: String? = null,
+    @SerialName("ai_reply_text") val aiReplyText: String,
+    @SerialName("subject_name") val subjectName: String? = null,
+    @SerialName("grade_level") val gradeLevel: String? = null,
+    @SerialName("model_name") val modelName: String? = null,
+    @SerialName("reason") val reason: String? = null,
+)
+
+@Serializable
+data class AiFeedbackResponseDto(
+    @SerialName("id") val id: String,
+    @SerialName("rating") val rating: String,
+    @SerialName("recorded") val recorded: Boolean = true,
+)
+
+@Serializable
 data class CreateInquiryRequestDto(
     @SerialName("id") val id: String? = null,
     @SerialName("student_id") val studentId: String? = null,
@@ -171,4 +191,9 @@ interface InquiriesApi {
     suspend fun tanyaAi(
         @Body request: TanyaAiRequestDto
     ): ChatApiResponse<TanyaAiResponseDto>
+
+    @POST("ai/feedback")
+    suspend fun submitAiFeedback(
+        @Body request: AiFeedbackRequestDto
+    ): ChatApiResponse<AiFeedbackResponseDto>
 }
