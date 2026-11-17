@@ -690,7 +690,7 @@ fun MaterialAiGeneratorScreen(
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 SubcomposeAsyncImage(
-                                                    model = block.content.trim(),
+                                                    model = com.schoolos.android.feature.learning.components.resolveLearningMediaUrl(block.content),
                                                     contentDescription = "Visual #${idx + 1}",
                                                     contentScale = ContentScale.Crop,
                                                     modifier = Modifier.fillMaxSize(),

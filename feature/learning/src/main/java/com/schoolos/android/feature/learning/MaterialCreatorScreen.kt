@@ -1881,7 +1881,7 @@ private fun MaterialReviewAndPublishScreen(
                             contentBlocks.forEach { block ->
                                 if (block.type == ContentBlockType.IMAGE && block.content.isNotBlank()) {
                                     SubcomposeAsyncImage(
-                                        model = block.content,
+                                        model = com.schoolos.android.feature.learning.components.resolveLearningMediaUrl(block.content),
                                         contentDescription = "Visual Materi",
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -2497,7 +2497,7 @@ private fun RichBlockEditorSection(
                                     .background(CosmicNavy)
                             ) {
                                 SubcomposeAsyncImage(
-                                    model = block.content,
+                                    model = com.schoolos.android.feature.learning.components.resolveLearningMediaUrl(block.content),
                                     contentDescription = "Infografis $index",
                                     contentScale = ContentScale.FillWidth,
                                     modifier = Modifier.fillMaxWidth()
@@ -2618,7 +2618,7 @@ private fun RichBlockEditorSection(
                                         contentAlignment = Alignment.Center
                                     ) {
                                         SubcomposeAsyncImage(
-                                            model = block.content,
+                                            model = com.schoolos.android.feature.learning.components.resolveLearningMediaUrl(block.content),
                                             contentDescription = null,
                                             modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Fit

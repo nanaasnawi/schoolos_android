@@ -31,6 +31,34 @@ import com.schoolos.android.core.designsystem.*
 import kotlin.math.absoluteValue
 
 /**
+ * Resolves relative `/uploads/...` media paths from the SchoolOS backend into absolute URLs
+ * while keeping full URLs, `data:`, `content://`, and `file://` URIs untouched.
+ */
+fun resolveLearningMediaUrl(rawUrl: String): String {
+    val trimmed = rawUrl.trim()
+    if (trimmed.isBlank()) return ""
+    if (trimmed.startsWith("http://", ignoreCase = true) ||
+        trimmed.startsWith("https://", ignoreCase = true) ||
+        trimmed.startsWith("data:", ignoreCase = true) ||
+        trimmed.startsWith("content://", ignoreCase = true) ||
+        trimmed.startsWith("file://", ignoreCase = true)
+    ) {
+        return trimmed
+    }
+    val rawApi = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.trimEnd('/')
+    val rootBase = when {
+        rawApi.endsWith("/api/v1") -> rawApi.removeSuffix("/api/v1").trimEnd('/')
+        rawApi.endsWith("/api") -> rawApi.removeSuffix("/api").trimEnd('/')
+        else -> rawApi
+    }
+    return when {
+        trimmed.startsWith("/") -> "$rootBase$trimmed"
+        trimmed.startsWith("uploads/", ignoreCase = true) -> "$rootBase/$trimmed"
+        else -> "$rootBase/uploads/$trimmed"
+    }
+}
+
+/**
  * In-App High Resolution Image & Infographic Viewer with Pinch-to-Zoom, Lightbox,
  * and clean native educational placeholder (zero inaccurate stock photos).
  */
@@ -79,9 +107,11 @@ fun InAppImageViewer(
         return
     }
 
-    val imageRequest = remember(imageUrl) {
+    val resolvedUrl = remember(imageUrl) { resolveLearningMediaUrl(imageUrl) }
+
+    val imageRequest = remember(resolvedUrl) {
         ImageRequest.Builder(context)
-            .data(imageUrl)
+            .data(resolvedUrl)
             .addHeader(
                 "User-Agent",
                 "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
@@ -148,9 +178,9 @@ fun InAppImageViewer(
             var offsetX by remember { mutableStateOf(0f) }
             var offsetY by remember { mutableStateOf(0f) }
 
-            val lightboxRequest = remember(imageUrl) {
+            val lightboxRequest = remember(resolvedUrl) {
                 ImageRequest.Builder(context)
-                    .data(imageUrl)
+                    .data(resolvedUrl)
                     .addHeader(
                         "User-Agent",
                         "Mozilla/5.0 (Linux; Android 13; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
