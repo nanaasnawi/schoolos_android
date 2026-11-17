@@ -24,6 +24,7 @@ fun Assignment.toEntity() = AssignmentEntity(
     subjectName = subjectName,
     teacherName = teacherName,
     releaseAt = releaseAt,
+    hasGameQuestions = hasGameQuestions,
 )
 
 fun AssignmentEntity.toDomain() = Assignment(
@@ -43,6 +44,7 @@ fun AssignmentEntity.toDomain() = Assignment(
     subjectName = subjectName,
     teacherName = teacherName,
     releaseAt = releaseAt,
+    hasGameQuestions = hasGameQuestions,
 )
 
 fun Quiz.toEntity() = QuizEntity(

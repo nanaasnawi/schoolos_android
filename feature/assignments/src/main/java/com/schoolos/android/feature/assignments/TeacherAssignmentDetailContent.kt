@@ -319,6 +319,8 @@ fun TeacherAssignmentDetailContent(
 
                 assignment.questions.forEachIndexed { qIdx, q ->
                     val isPg = q.questionType.uppercase().contains("CHOICE") || q.questionType.uppercase() == "PG"
+                    val isGame = isInteractiveGameQuestionType(q.questionType)
+                    val qAccent = if (isGame) questionTypeAccentColor(q.questionType) else if (isPg) NeonBlue else NeonWarning
 
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
@@ -355,14 +357,14 @@ fun TeacherAssignmentDetailContent(
                                     Box(
                                         modifier = Modifier
                                             .clip(RoundedCornerShape(6.dp))
-                                            .background(if (isPg) NeonBlue.copy(alpha = 0.1f) else NeonWarning.copy(alpha = 0.1f))
+                                            .background(qAccent.copy(alpha = 0.12f))
                                             .padding(horizontal = 7.dp, vertical = 3.dp)
                                     ) {
                                         Text(
-                                            if (isPg) "Pilihan Ganda (PG)" else "Soal Uraian / Esai",
+                                            questionTypeDisplayLabel(q.questionType),
                                             fontSize = 10.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (isPg) NeonBlue else NeonWarning
+                                            color = qAccent
                                         )
                                     }
                                 }
@@ -384,7 +386,7 @@ fun TeacherAssignmentDetailContent(
                                 lineHeight = 19.sp
                             )
 
-                            // Choices for PG or Essay explanation
+                            // Choices for PG, Interactive Game summary, or Essay explanation
                             if (isPg) {
                                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                     q.choices.forEachIndexed { cIdx, choice ->
@@ -442,6 +444,15 @@ fun TeacherAssignmentDetailContent(
                                         }
                                     }
                                 }
+                            } else if (isGame) {
+                                InteractiveGamePreviewBlock(
+                                    questionType = q.questionType,
+                                    interactionConfigJson = q.interactionConfigJson,
+                                    subSurfaceBg = innerCardBg,
+                                    subSurfaceBorder = innerCardBorder,
+                                    textPrimary = textPrimary,
+                                    textSecondary = textSecondary,
+                                )
                             } else {
                                 Box(
                                     modifier = Modifier
@@ -474,9 +485,13 @@ fun TeacherAssignmentDetailContent(
         // ════════════════════════════════════════════════════════════════════════
         if (selectedTab == 1) {
             if (gradingSubmission != null) {
+                val questionsMap = remember(assignment.questions) {
+                    assignment.questions.mapNotNull { q -> q.id?.let { it to q } }.toMap()
+                }
                 TeacherInlineGradingCard(
                     submission = gradingSubmission!!,
                     maxScore = assignment.maxScore,
+                    questionsMap = questionsMap,
                     isGrading = isGrading,
                     onDismiss = { gradingSubmission = null },
                     onGrade = { score, feedback, answerPoints ->
@@ -899,6 +914,7 @@ private fun TeacherSubmissionRow(
 private fun TeacherInlineGradingCard(
     submission: AssignmentSubmission,
     maxScore: Int,
+    questionsMap: Map<String, com.schoolos.android.domain.model.AssignmentQuestion> = emptyMap(),
     isGrading: Boolean,
     onDismiss: () -> Unit,
     onGrade: (score: Int, feedback: String?, answerPoints: Map<String, Int>) -> Unit,
@@ -933,11 +949,12 @@ private fun TeacherInlineGradingCard(
         mutableStateMapOf<String, Int>().apply {
             submission.answers.forEach { ans ->
                 val isPg = ans.questionType.uppercase().contains("CHOICE") || ans.questionType.uppercase() == "PG"
+                val isGame = isInteractiveGameQuestionType(ans.questionType)
                 val qMax = if (ans.maxPoints > 0) ans.maxPoints else defaultPerQuestion
-                val initPts = if (isPg) {
-                    if (ans.isCorrect == true) (if (ans.pointsEarned > 0) ans.pointsEarned else qMax) else 0
-                } else {
-                    ans.pointsEarned.coerceIn(0, qMax)
+                val initPts = when {
+                    isPg -> if (ans.isCorrect == true) (if (ans.pointsEarned > 0) ans.pointsEarned else qMax) else 0
+                    isGame -> ans.pointsEarned.coerceIn(0, qMax)
+                    else -> ans.pointsEarned.coerceIn(0, qMax)
                 }
                 put(ans.questionId, initPts)
             }
@@ -1263,6 +1280,7 @@ private fun TeacherInlineGradingCard(
 
             submission.answers.forEachIndexed { idx, answer ->
                 val isPg = answer.questionType.uppercase().contains("CHOICE") || answer.questionType.uppercase() == "PG"
+                val isGame = isInteractiveGameQuestionType(answer.questionType)
                 val effectiveMax = if (answer.maxPoints > 0) answer.maxPoints else defaultPerQuestion
                 val curPts = answerPointsMap[answer.questionId] ?: answer.pointsEarned
                 val effectiveEarned = if (isPg) {
@@ -1274,11 +1292,13 @@ private fun TeacherInlineGradingCard(
                 val statusFg = when {
                     isPg && answer.isCorrect == true -> teacherAccent
                     isPg && answer.isCorrect == false -> redFg
+                    isGame && effectiveEarned > 0 -> teacherAccent
                     else -> amberFg
                 }
                 val statusBg = when {
                     isPg && answer.isCorrect == true -> greenBg
                     isPg && answer.isCorrect == false -> redBg
+                    isGame && effectiveEarned > 0 -> greenBg
                     else -> amberBg
                 }
                 val cleanedQuestionText = remember(answer.questionText) {
@@ -1327,7 +1347,7 @@ private fun TeacherInlineGradingCard(
                                     border = BorderStroke(0.5.dp, innerCardBorder)
                                 ) {
                                     Text(
-                                        text = if (isPg) "Pilihan Ganda" else "Uraian / Esai",
+                                        text = questionTypeDisplayLabel(answer.questionType),
                                         fontSize = 10.5.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = textSecondary,
@@ -1403,6 +1423,39 @@ private fun TeacherInlineGradingCard(
                                             text = answer.chosenChoiceText?.takeIf { it.isNotBlank() } ?: "-",
                                             fontSize = 13.sp,
                                             fontWeight = FontWeight.Bold,
+                                            color = textPrimary,
+                                            lineHeight = 18.sp
+                                        )
+                                    }
+                                }
+                            }
+                        } else if (isGame) {
+                            val formattedGameLines = remember(answer.questionType, answer.textAnswer, questionsMap[answer.questionId]?.interactionConfigJson) {
+                                formatInteractiveAnswerSummary(
+                                    questionType = answer.questionType,
+                                    answerJson = answer.textAnswer,
+                                    interactionConfigJson = questionsMap[answer.questionId]?.interactionConfigJson,
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(innerCardBg)
+                                    .border(1.dp, innerCardBorder, RoundedCornerShape(14.dp))
+                                    .padding(12.dp)
+                            ) {
+                                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    Text(
+                                        text = "Jawaban Misi Game Siswa (Skor Otomatis Sistem):",
+                                        fontSize = 10.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = teacherAccent
+                                    )
+                                    formattedGameLines.forEach { line ->
+                                        Text(
+                                            text = line,
+                                            fontSize = 12.5.sp,
                                             color = textPrimary,
                                             lineHeight = 18.sp
                                         )
@@ -1881,9 +1934,14 @@ private fun TeacherInlineGradingCard(
                                 val essays = mutableListOf<Pair<String, Int>>()
                                 submission.answers.forEach { ans ->
                                     val isPg = ans.questionType.uppercase().contains("CHOICE") || ans.questionType.uppercase() == "PG"
+                                    val isGame = isInteractiveGameQuestionType(ans.questionType)
                                     val qMax = if (ans.maxPoints > 0) ans.maxPoints else defaultPerQuestion
                                     if (isPg) {
                                         val p = if (ans.isCorrect == true) (answerPointsMap[ans.questionId]?.takeIf { it > 0 } ?: qMax) else 0
+                                        pgSum += p
+                                        put(ans.questionId, p)
+                                    } else if (isGame) {
+                                        val p = (answerPointsMap[ans.questionId] ?: ans.pointsEarned).coerceIn(0, qMax)
                                         pgSum += p
                                         put(ans.questionId, p)
                                     } else {

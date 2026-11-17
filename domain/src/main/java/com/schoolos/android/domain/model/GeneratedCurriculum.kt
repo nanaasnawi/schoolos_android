@@ -8,11 +8,12 @@ data class GeneratedCurriculumChoice(
 data class GeneratedCurriculumQuestion(
     val id: String,
     val questionText: String,
-    val questionType: String, // "MULTIPLE_CHOICE" or "ESSAY"
+    val questionType: String, // "MULTIPLE_CHOICE", "ESSAY", "MATCHING", "ORDERING", "FILL_BLANK"
     val points: Int,
     val choices: List<GeneratedCurriculumChoice> = emptyList(),
     val explanation: String? = null,
     val rubric: String? = null,
+    val interactionConfigJson: String? = null,
 )
 
 data class GeneratedCurriculumResult(

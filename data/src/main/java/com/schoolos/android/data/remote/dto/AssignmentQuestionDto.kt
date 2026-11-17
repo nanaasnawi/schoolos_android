@@ -2,6 +2,7 @@ package com.schoolos.android.data.remote.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class AssignmentChoiceDto(
@@ -19,6 +20,7 @@ data class AssignmentQuestionDto(
     val points: Int? = null,
     @SerialName("order_index") val orderIndex: Int? = null,
     val choices: List<AssignmentChoiceDto> = emptyList(),
+    @SerialName("interaction_config") val interactionConfig: JsonElement? = null,
 )
 
 @Serializable

@@ -121,7 +121,8 @@ fun AssignmentAiGeneratorScreen(
         if (fromClasses.isNotEmpty()) (fromClasses + defaults).distinct() else defaults
     }
 
-    var selectedFormat by remember { mutableStateOf("STRUCTURED_QUESTIONS") }
+    var selectedFormat by remember { mutableStateOf("GAME_MIXED") }
+    var structuredMode by remember { mutableStateOf("MIXED") } // "MIXED" | "MCQ_ONLY" | "ESSAY_ONLY"
     var customTopic by remember { mutableStateOf("") }
     var selectedGrade by remember(currentClassName, gradeOptions) {
         mutableStateOf(
@@ -165,8 +166,18 @@ fun AssignmentAiGeneratorScreen(
             errorMessage = null
             currentStep = GeneratorStep.GENERATING
 
-            val finalMcq = if (selectedFormat == "HOMEWORK_PR") 0 else numMcq
-            val finalEssay = numEssay
+            val finalMcq = when {
+                selectedFormat == "HOMEWORK_PR" || selectedFormat == "INTERACTIVE_GAMES" -> 0
+                selectedFormat == "GAME_MIXED" -> numMcq.coerceAtLeast(1)
+                selectedFormat == "STRUCTURED_QUESTIONS" && structuredMode == "ESSAY_ONLY" -> 0
+                else -> numMcq.coerceAtLeast(1)
+            }
+            val finalEssay = when {
+                selectedFormat == "GAME_MIXED" || selectedFormat == "INTERACTIVE_GAMES" -> 0
+                selectedFormat == "HOMEWORK_PR" -> numEssay.coerceAtLeast(1)
+                selectedFormat == "STRUCTURED_QUESTIONS" && structuredMode == "MCQ_ONLY" -> 0
+                else -> numEssay.coerceAtLeast(1)
+            }
             val subId = subject?.id ?: ""
             val subName = subject?.name ?: currentSubjectName
             val effectiveTopic = customTopic.trim().ifBlank { subName }
@@ -436,58 +447,90 @@ fun AssignmentAiGeneratorScreen(
                                             fontSize = 13.5.sp,
                                             color = textPrimary
                                         )
-                                        Row(
-                                            modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                        ) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             listOf(
-                                                Triple("STRUCTURED_QUESTIONS", "Terstruktur (PG & Esai)", "Koreksi otomatis & uraian"),
-                                                Triple("HOMEWORK_PR", "Tugas Mandiri (PR)", "Instruksi lembar kerja & rubrik")
-                                            ).forEach { (fmtKey, titleLabel, descLabel) ->
-                                                val isSel = selectedFormat == fmtKey
-                                                Surface(
-                                                    modifier = Modifier
-                                                        .weight(1f)
-                                                        .clip(RoundedCornerShape(13.dp))
-                                                        .clickable { selectedFormat = fmtKey },
-                                                    shape = RoundedCornerShape(13.dp),
-                                                    color = if (isSel) emeraldSoftBg else subSurfaceBg,
-                                                    border = BorderStroke(
-                                                        width = if (isSel) 1.5.dp else 1.dp,
-                                                        color = if (isSel) emeraldAccent else subSurfaceBorder
-                                                    )
+                                                listOf(
+                                                    Triple("GAME_MIXED", "Paket Variatif + Game ✨", "PG + 3 Mini-Game (Tanpa Esai) • Otomatis"),
+                                                    Triple("INTERACTIVE_GAMES", "Misi Game Penuh 🎮", "100% 3 Mini-Game • Otomatis")
+                                                ),
+                                                listOf(
+                                                    Triple("STRUCTURED_QUESTIONS", "Terstruktur (PG / Esai)", "Murni PG, Murni Esai, atau kombinasi"),
+                                                    Triple("HOMEWORK_PR", "Tugas Mandiri (PR)", "Instruksi lembar kerja & rubrik")
+                                                )
+                                            ).forEach { rowPair ->
+                                                Row(
+                                                    modifier = Modifier.fillMaxWidth(),
+                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                                 ) {
-                                                    Column(
-                                                        modifier = Modifier.padding(12.dp),
-                                                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                                                    ) {
-                                                        Row(
-                                                            verticalAlignment = Alignment.CenterVertically,
-                                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                                            modifier = Modifier.fillMaxWidth()
-                                                        ) {
-                                                            Text(
-                                                                titleLabel,
-                                                                fontWeight = FontWeight.Bold,
-                                                                fontSize = 12.sp,
-                                                                color = if (isSel) emeraldAccent else textPrimary,
-                                                                modifier = Modifier.weight(1f)
+                                                    rowPair.forEach { (fmtKey, titleLabel, descLabel) ->
+                                                        val isSel = selectedFormat == fmtKey
+                                                        Surface(
+                                                            modifier = Modifier
+                                                                .weight(1f)
+                                                                .clip(RoundedCornerShape(13.dp))
+                                                                .clickable {
+                                                                    selectedFormat = fmtKey
+                                                                    if (fmtKey == "GAME_MIXED" && numMcq < 1) {
+                                                                        numMcq = 4
+                                                                        customMcqInput = "4"
+                                                                    }
+                                                                    if (fmtKey == "HOMEWORK_PR" && numEssay < 1) {
+                                                                        numEssay = 2
+                                                                        customEssayInput = "2"
+                                                                    }
+                                                                    if (fmtKey == "STRUCTURED_QUESTIONS") {
+                                                                        if (structuredMode != "ESSAY_ONLY" && numMcq < 1) {
+                                                                            numMcq = 4
+                                                                            customMcqInput = "4"
+                                                                        }
+                                                                        if (structuredMode != "MCQ_ONLY" && numEssay < 1) {
+                                                                            numEssay = 2
+                                                                            customEssayInput = "2"
+                                                                        }
+                                                                    }
+                                                                },
+                                                            shape = RoundedCornerShape(13.dp),
+                                                            color = if (isSel) emeraldSoftBg else subSurfaceBg,
+                                                            border = BorderStroke(
+                                                                width = if (isSel) 1.5.dp else 1.dp,
+                                                                color = if (isSel) emeraldAccent else subSurfaceBorder
                                                             )
-                                                            if (isSel) {
-                                                                Icon(
-                                                                    Icons.Default.CheckCircle,
-                                                                    contentDescription = null,
-                                                                    tint = emeraldAccent,
-                                                                    modifier = Modifier.size(15.dp)
+                                                        ) {
+                                                            Column(
+                                                                modifier = Modifier.padding(12.dp),
+                                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                            ) {
+                                                                Row(
+                                                                    verticalAlignment = Alignment.CenterVertically,
+                                                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                                                    modifier = Modifier.fillMaxWidth()
+                                                                ) {
+                                                                    Text(
+                                                                        titleLabel,
+                                                                        fontWeight = FontWeight.Bold,
+                                                                        fontSize = 11.5.sp,
+                                                                        color = if (isSel) emeraldAccent else textPrimary,
+                                                                        modifier = Modifier.weight(1f),
+                                                                        maxLines = 1,
+                                                                        overflow = TextOverflow.Ellipsis
+                                                                    )
+                                                                    if (isSel) {
+                                                                        Icon(
+                                                                            Icons.Default.CheckCircle,
+                                                                            contentDescription = null,
+                                                                            tint = emeraldAccent,
+                                                                            modifier = Modifier.size(14.dp)
+                                                                        )
+                                                                    }
+                                                                }
+                                                                Text(
+                                                                    descLabel,
+                                                                    fontSize = 10.sp,
+                                                                    color = textSecondary,
+                                                                    lineHeight = 14.sp
                                                                 )
                                                             }
                                                         }
-                                                        Text(
-                                                            descLabel,
-                                                            fontSize = 10.5.sp,
-                                                            color = textSecondary,
-                                                            lineHeight = 14.sp
-                                                        )
                                                     }
                                                 }
                                             }
@@ -563,7 +606,111 @@ fun AssignmentAiGeneratorScreen(
                                     modifier = Modifier.padding(16.dp),
                                     verticalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
+                                    if (selectedFormat == "INTERACTIVE_GAMES") {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(amberSoftBg)
+                                                .border(1.dp, amberSoftBorder, RoundedCornerShape(12.dp))
+                                                .padding(12.dp)
+                                        ) {
+                                            Text(
+                                                "AI akan menyusun tepat 3 Misi Game Interaktif (Menjodohkan, Urutkan Langkah, Kalimat Rumpang) — tanpa esai dan dinilai otomatis 100% oleh sistem.",
+                                                fontSize = 11.5.sp,
+                                                color = amberAccent,
+                                                fontWeight = FontWeight.Medium,
+                                                lineHeight = 17.sp
+                                            )
+                                        }
+                                    }
+
                                     if (selectedFormat == "STRUCTURED_QUESTIONS") {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            Text(
+                                                "Komposisi Tipe Soal",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = textPrimary
+                                            )
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                listOf(
+                                                    Triple("MIXED", "PG + Esai", emeraldAccent),
+                                                    Triple("MCQ_ONLY", "Murni PG", Color(0xFF0284C7)),
+                                                    Triple("ESSAY_ONLY", "Murni Esai", purpleAccent),
+                                                ).forEach { (modeKey, modeLabel, modeColor) ->
+                                                    val active = structuredMode == modeKey
+                                                    Surface(
+                                                        modifier = Modifier
+                                                            .weight(1f)
+                                                            .clip(RoundedCornerShape(10.dp))
+                                                            .clickable {
+                                                                structuredMode = modeKey
+                                                                when (modeKey) {
+                                                                    "MCQ_ONLY" -> {
+                                                                        if (numMcq < 1) {
+                                                                            numMcq = 5
+                                                                            customMcqInput = "5"
+                                                                        }
+                                                                        numEssay = 0
+                                                                        customEssayInput = "0"
+                                                                    }
+                                                                    "ESSAY_ONLY" -> {
+                                                                        numMcq = 0
+                                                                        customMcqInput = "0"
+                                                                        if (numEssay < 1) {
+                                                                            numEssay = 3
+                                                                            customEssayInput = "3"
+                                                                        }
+                                                                    }
+                                                                    else -> {
+                                                                        if (numMcq < 1) {
+                                                                            numMcq = 4
+                                                                            customMcqInput = "4"
+                                                                        }
+                                                                        if (numEssay < 1) {
+                                                                            numEssay = 2
+                                                                            customEssayInput = "2"
+                                                                        }
+                                                                    }
+                                                                }
+                                                            },
+                                                        shape = RoundedCornerShape(10.dp),
+                                                        color = if (active) modeColor.copy(alpha = 0.16f) else subSurfaceBg,
+                                                        border = BorderStroke(
+                                                            width = if (active) 1.5.dp else 1.dp,
+                                                            color = if (active) modeColor else subSurfaceBorder
+                                                        )
+                                                    ) {
+                                                        Box(
+                                                            modifier = Modifier.padding(vertical = 9.dp, horizontal = 4.dp),
+                                                            contentAlignment = Alignment.Center
+                                                        ) {
+                                                            Text(
+                                                                text = modeLabel,
+                                                                fontSize = 11.5.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = if (active) modeColor else textSecondary,
+                                                                maxLines = 1,
+                                                                overflow = TextOverflow.Ellipsis
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                        HorizontalDivider(color = cardBorder)
+                                    }
+
+                                    val showMcqSelector = selectedFormat == "GAME_MIXED" ||
+                                        (selectedFormat == "STRUCTURED_QUESTIONS" && structuredMode != "ESSAY_ONLY")
+                                    val showEssaySelector = selectedFormat == "HOMEWORK_PR" ||
+                                        (selectedFormat == "STRUCTURED_QUESTIONS" && structuredMode != "MCQ_ONLY")
+
+                                    if (showMcqSelector) {
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             Row(
                                                 modifier = Modifier.fillMaxWidth(),
@@ -597,7 +744,12 @@ fun AssignmentAiGeneratorScreen(
                                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                listOf(2, 4, 5, 10).forEach { count ->
+                                                val mcqPresets = if (selectedFormat == "STRUCTURED_QUESTIONS" && structuredMode == "MCQ_ONLY") {
+                                                    listOf(5, 10, 15, 20)
+                                                } else {
+                                                    listOf(2, 4, 5, 10)
+                                                }
+                                                mcqPresets.forEach { count ->
                                                     val isSel = numMcq == count
                                                     Surface(
                                                         modifier = Modifier
@@ -636,7 +788,7 @@ fun AssignmentAiGeneratorScreen(
                                                         onValueChange = {
                                                             val filtered = it.filter { ch -> ch.isDigit() }.take(2)
                                                             customMcqInput = filtered
-                                                            filtered.toIntOrNull()?.let { v -> if (v in 1..20) numMcq = v }
+                                                            filtered.toIntOrNull()?.let { v -> if (v in 1..25) numMcq = v }
                                                         },
                                                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                                         singleLine = true,
@@ -653,10 +805,32 @@ fun AssignmentAiGeneratorScreen(
                                             }
                                         }
 
-                                        HorizontalDivider(color = cardBorder)
+                                        if (selectedFormat == "GAME_MIXED") {
+                                            Box(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .clip(RoundedCornerShape(10.dp))
+                                                    .background(Color(0xFF0284C7).copy(alpha = 0.10f))
+                                                    .border(1.dp, Color(0xFF0284C7).copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                                                    .padding(10.dp)
+                                            ) {
+                                                Text(
+                                                    "+ 3 Mini-Game Interaktif Otomatis (Menjodohkan, Urutkan Langkah, Kalimat Rumpang) — Tanpa soal esai & 100% terkoreksi otomatis.",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF38BDF8),
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    lineHeight = 16.sp
+                                                )
+                                            }
+                                        }
+
+                                        if (showEssaySelector) {
+                                            HorizontalDivider(color = cardBorder)
+                                        }
                                     }
 
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    if (showEssaySelector) {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -744,6 +918,7 @@ fun AssignmentAiGeneratorScreen(
                                             }
                                         }
                                     }
+                                    } // end if (showEssaySelector)
 
                                     HorizontalDivider(color = cardBorder)
 
@@ -819,6 +994,7 @@ fun AssignmentAiGeneratorScreen(
                 val res = generatedResult
                 if (res != null) {
                     val mcqCount = res.questions.count { it.questionType == "MULTIPLE_CHOICE" }
+                    val gameCount = res.questions.count { isInteractiveGameQuestionType(it.questionType) }
                     val essayCount = res.questions.count { it.questionType == "ESSAY" }
 
                     Scaffold(
@@ -970,6 +1146,17 @@ fun AssignmentAiGeneratorScreen(
                                                     Text("$mcqCount Soal PG", color = emeraldAccent, fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                                 }
                                             }
+                                            if (gameCount > 0) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .background(Color(0xFF0284C7).copy(alpha = 0.14f))
+                                                        .border(0.5.dp, Color(0xFF0284C7).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
+                                                        .padding(horizontal = 9.dp, vertical = 4.dp)
+                                                ) {
+                                                    Text("$gameCount Misi Game", color = Color(0xFF38BDF8), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                                }
+                                            }
                                             if (essayCount > 0) {
                                                 Box(
                                                     modifier = Modifier
@@ -1091,6 +1278,22 @@ private fun QuestionVerificationCard(
     purpleSoftBorder: Color,
 ) {
     val isMcq = question.questionType == "MULTIPLE_CHOICE"
+    val isGame = isInteractiveGameQuestionType(question.questionType)
+    val badgeColor = when {
+        isMcq -> emeraldAccent
+        isGame -> questionTypeAccentColor(question.questionType)
+        else -> purpleAccent
+    }
+    val badgeBg = when {
+        isMcq -> emeraldSoftBg
+        isGame -> badgeColor.copy(alpha = 0.14f)
+        else -> purpleSoftBg
+    }
+    val badgeBorder = when {
+        isMcq -> emeraldSoftBorder
+        isGame -> badgeColor.copy(alpha = 0.4f)
+        else -> purpleSoftBorder
+    }
 
     Surface(
         shape = RoundedCornerShape(16.dp),
@@ -1115,22 +1318,22 @@ private fun QuestionVerificationCard(
                         modifier = Modifier
                             .size(26.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .background(if (isMcq) emeraldSoftBg else purpleSoftBg)
-                            .border(0.5.dp, if (isMcq) emeraldSoftBorder else purpleSoftBorder, RoundedCornerShape(8.dp)),
+                            .background(badgeBg)
+                            .border(0.5.dp, badgeBorder, RoundedCornerShape(8.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
                             "#$index",
-                            color = if (isMcq) emeraldAccent else purpleAccent,
+                            color = badgeColor,
                             fontWeight = FontWeight.ExtraBold,
                             fontSize = 11.sp
                         )
                     }
                     Text(
-                        if (isMcq) "Pilihan Ganda" else "Uraian / Esai",
+                        questionTypeDisplayLabel(question.questionType),
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (isMcq) emeraldAccent else purpleAccent
+                        color = badgeColor
                     )
                 }
                 Box(
@@ -1155,6 +1358,17 @@ private fun QuestionVerificationCard(
                 color = textPrimary,
                 lineHeight = 19.sp
             )
+
+            if (isGame) {
+                InteractiveGamePreviewBlock(
+                    questionType = question.questionType,
+                    interactionConfigJson = question.interactionConfigJson,
+                    subSurfaceBg = subSurfaceBg,
+                    subSurfaceBorder = subSurfaceBorder,
+                    textPrimary = textPrimary,
+                    textSecondary = textSecondary,
+                )
+            }
 
             if (isMcq && question.choices.isNotEmpty()) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

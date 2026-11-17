@@ -98,6 +98,116 @@ fun LazyListScope.studentContent(
         )
     }
 
+    // ── 0.6. MISI GAME TUGAS DARI GURU (TAMPIL HANYA JIKA ADA TUGAS GAME AKTIF) ──
+    val activeTeacherGameMissions = studentAssignments.filter {
+        it.hasAnyGame &&
+            !it.isScheduled &&
+            !it.status.equals("submitted", ignoreCase = true) &&
+            !it.status.equals("graded", ignoreCase = true)
+    }
+    if (activeTeacherGameMissions.isNotEmpty()) {
+        item {
+            val isDark = LocalIsDarkTheme.current
+            val cardBg = if (isDark) Color(0xFF111113) else Color.White
+            val emeraldTint = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+            val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+            val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+            val firstMission = activeTeacherGameMissions.first()
+
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable {
+                        if (activeTeacherGameMissions.size == 1) {
+                            onNavigateToAssignmentDetail(firstMission.id)
+                        } else {
+                            onNavigateToAssignments()
+                        }
+                    },
+                shape = RoundedCornerShape(18.dp),
+                color = cardBg,
+                border = BorderStroke(1.2.dp, emeraldTint.copy(alpha = 0.5f)),
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(emeraldTint),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SportsEsports,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Surface(shape = RoundedCornerShape(6.dp), color = emeraldTint) {
+                                Text(
+                                    text = "MISI GAME DARI GURU",
+                                    color = Color.White,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = emeraldTint.copy(alpha = 0.14f),
+                            ) {
+                                Text(
+                                    text = "${activeTeacherGameMissions.size} AKTIF",
+                                    color = emeraldTint,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black,
+                                    maxLines = 1,
+                                    softWrap = false,
+                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = if (activeTeacherGameMissions.size == 1) {
+                                firstMission.title.ifBlank { "Tugas Game Interaktif" }
+                            } else {
+                                "${activeTeacherGameMissions.size} Tugas Game Menunggu Dikerjakan"
+                            },
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Text(
+                            text = "${firstMission.subjectName ?: "Penugasan Guru"} • Ketuk untuk langsung bermain",
+                            fontSize = 11.sp,
+                            color = textSecondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
     // ── HEADER AKSES UTAMA ────────────────────────────────────────────────────
     item {
         HomeAksesUtamaSectionHeader()

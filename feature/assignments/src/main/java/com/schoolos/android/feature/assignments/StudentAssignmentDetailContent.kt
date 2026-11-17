@@ -126,8 +126,11 @@ fun StudentAssignmentDetailContent(
     pgAnswers: Map<String, String> = emptyMap(),
     // Essay answers: questionId -> text
     essayAnswers: Map<String, String> = emptyMap(),
+    // Interactive game answers: questionId -> serialized JSON string
+    interactiveAnswers: Map<String, String> = emptyMap(),
     onPgAnswerSelected: (questionId: String, choiceId: String) -> Unit = { _, _ -> },
     onEssayAnswerChanged: (questionId: String, text: String) -> Unit = { _, _ -> },
+    onInteractiveAnswerChanged: (questionId: String, json: String) -> Unit = { _, _ -> },
     attachedFileUrl: String? = null,
     attachedFileName: String? = null,
     isUploadingFile: Boolean = false,
@@ -498,8 +501,10 @@ fun StudentAssignmentDetailContent(
                     questions = questions,
                     pgAnswers = pgAnswers,
                     essayAnswers = essayAnswers,
+                    interactiveAnswers = interactiveAnswers,
                     onPgAnswerSelected = onPgAnswerSelected,
                     onEssayAnswerChanged = onEssayAnswerChanged,
+                    onInteractiveAnswerChanged = onInteractiveAnswerChanged,
                     isParent = isParent,
                 )
             }
@@ -518,9 +523,11 @@ fun StudentAssignmentDetailContent(
             val totalQuestions = questions.size
             val answeredCount = questions.count { q ->
                 val qId = q.id ?: return@count false
-                when (q.questionType.uppercase()) {
-                    "MULTIPLE_CHOICE" -> pgAnswers.containsKey(qId)
-                    "ESSAY" -> essayAnswers[qId]?.isNotBlank() == true
+                when {
+                    q.questionType.uppercase() == "MULTIPLE_CHOICE" -> pgAnswers.containsKey(qId)
+                    isInteractiveGameQuestionType(q.questionType) ->
+                        isInteractiveAnswerComplete(q.questionType, interactiveAnswers[qId], q.interactionConfigJson)
+                    q.questionType.uppercase() == "ESSAY" -> essayAnswers[qId]?.isNotBlank() == true
                     else -> false
                 }
             }
@@ -1598,8 +1605,10 @@ private fun QuestionsSection(
     questions: List<AssignmentQuestion>,
     pgAnswers: Map<String, String>,
     essayAnswers: Map<String, String>,
+    interactiveAnswers: Map<String, String>,
     onPgAnswerSelected: (String, String) -> Unit,
     onEssayAnswerChanged: (String, String) -> Unit,
+    onInteractiveAnswerChanged: (String, String) -> Unit,
     isParent: Boolean,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -1637,12 +1646,19 @@ private fun QuestionsSection(
 
         questions.forEachIndexed { idx, question ->
             val qId = question.id ?: return@forEachIndexed
-            when (question.questionType.uppercase()) {
-                "MULTIPLE_CHOICE" -> MultipleChoiceCard(
+            when {
+                question.questionType.uppercase() == "MULTIPLE_CHOICE" -> MultipleChoiceCard(
                     index = idx + 1,
                     question = question,
                     selectedChoiceId = pgAnswers[qId],
                     onChoiceSelected = { choiceId -> onPgAnswerSelected(qId, choiceId) },
+                    isParent = isParent,
+                )
+                isInteractiveGameQuestionType(question.questionType) -> InteractiveGameStudentCard(
+                    index = idx + 1,
+                    question = question,
+                    answerJson = interactiveAnswers[qId],
+                    onAnswerJsonChanged = { json -> onInteractiveAnswerChanged(qId, json) },
                     isParent = isParent,
                 )
                 else -> EssayQuestionCard(
@@ -2027,8 +2043,14 @@ private fun SubmittedQuestionsReviewSection(
             val qId = question.id ?: return@forEachIndexed
             val answer = answersMap[qId]
 
-            when (question.questionType.uppercase()) {
-                "MULTIPLE_CHOICE" -> SubmittedMultipleChoiceCard(
+            when {
+                question.questionType.uppercase() == "MULTIPLE_CHOICE" -> SubmittedMultipleChoiceCard(
+                    index = idx + 1,
+                    question = question,
+                    answer = answer,
+                    isGraded = submission.status.lowercase() == "graded",
+                )
+                isInteractiveGameQuestionType(question.questionType) -> SubmittedInteractiveGameReviewCard(
                     index = idx + 1,
                     question = question,
                     answer = answer,

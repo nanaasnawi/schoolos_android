@@ -99,6 +99,16 @@ fun AssignmentListScreen(
     val isParent  = com.schoolos.android.core.auth.isParentRole(state.userRole)
     val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
     val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
+    val activeGameMissions = remember(state.active, state.dueSoon) {
+        (state.dueSoon + state.active).filter { it.hasAnyGame }
+    }
+    val hasGameMissions = !isTeacher && activeGameMissions.isNotEmpty()
+
+    androidx.compose.runtime.LaunchedEffect(hasGameMissions) {
+        if (!hasGameMissions && selectedTab == "Misi Game") {
+            selectedTab = "Semua"
+        }
+    }
 
     // Tab counts mapping
     val tabCounts = if (isTeacher) {
@@ -109,12 +119,13 @@ fun AssignmentListScreen(
             "Perlu Dinilai" to state.dueSoon.size
         )
     } else {
-        mapOf(
-            "Semua" to (state.active.size + state.dueSoon.size + state.completed.size),
-            "Segera" to state.dueSoon.size,
-            "Aktif" to (state.active.size + state.dueSoon.size),
-            "Selesai" to state.completed.size
-        )
+        buildMap {
+            put("Semua", state.active.size + state.dueSoon.size + state.completed.size)
+            if (hasGameMissions) put("Misi Game", activeGameMissions.size)
+            put("Segera", state.dueSoon.size)
+            put("Aktif", state.active.size + state.dueSoon.size)
+            put("Selesai", state.completed.size)
+        }
     }
 
     Scaffold(
@@ -263,6 +274,89 @@ fun AssignmentListScreen(
                             }
                         }
 
+                        // ── MISI GAME DARI GURU BANNER (Only when teacher assigned active game missions) ──
+                        if (hasGameMissions) {
+                            item {
+                                val isGameTabActive = selectedTab == "Misi Game"
+                                val isDark = LocalIsDarkTheme.current
+                                val gameAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+                                val bannerBg = if (isGameTabActive) {
+                                    gameAccent.copy(alpha = if (isDark) 0.18f else 0.12f)
+                                } else {
+                                    if (isDark) Color(0xFF111113) else Color.White
+                                }
+                                Surface(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clip(RoundedCornerShape(18.dp))
+                                        .clickable {
+                                            selectedTab = if (isGameTabActive) "Semua" else "Misi Game"
+                                        },
+                                    shape = RoundedCornerShape(18.dp),
+                                    color = bannerBg,
+                                    border = BorderStroke(
+                                        width = if (isGameTabActive) 1.5.dp else 1.dp,
+                                        color = gameAccent.copy(alpha = if (isGameTabActive) 0.8f else 0.45f)
+                                    ),
+                                    shadowElevation = 0.dp
+                                ) {
+                                    Row(
+                                        modifier = Modifier.padding(14.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(40.dp)
+                                                .clip(RoundedCornerShape(12.dp))
+                                                .background(gameAccent.copy(alpha = 0.15f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("🎮", fontSize = 18.sp)
+                                        }
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = "Misi Game dari Guru",
+                                                    fontSize = 14.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+                                                )
+                                                Box(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(999.dp))
+                                                        .background(gameAccent)
+                                                        .padding(horizontal = 7.dp, vertical = 2.dp)
+                                                ) {
+                                                    Text(
+                                                        text = "${activeGameMissions.size} Aktif",
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.ExtraBold,
+                                                        color = Color.White
+                                                    )
+                                                }
+                                            }
+                                            Spacer(Modifier.height(2.dp))
+                                            Text(
+                                                text = if (isGameTabActive) {
+                                                    "Menampilkan tugas dengan mini-game interaktif (ketuk untuk tampilkan semua)"
+                                                } else {
+                                                    "Ada ${activeGameMissions.size} tugas berisi game interaktif — ketuk untuk mengerjakan!"
+                                                },
+                                                fontSize = 11.5.sp,
+                                                color = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B),
+                                                maxLines = 2,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // ── ACTIVE SUBJECT / CLASS / DATE FILTER ──────────────
                         if (state.subjectFilter != null || state.classFilter != null || state.dateFilter != null) {
                             item {
@@ -288,6 +382,7 @@ fun AssignmentListScreen(
                         item {
                             AssignmentTabFilter(
                                 isTeacher = isTeacher,
+                                hasGameMissions = hasGameMissions,
                                 selectedTab = selectedTab,
                                 onTabSelected = { selectedTab = it },
                                 counts = tabCounts
@@ -805,6 +900,7 @@ private fun TeacherEmptyState() {
 @Composable
 private fun AssignmentTabFilter(
     isTeacher: Boolean,
+    hasGameMissions: Boolean = false,
     selectedTab: String,
     onTabSelected: (String) -> Unit,
     counts: Map<String, Int> = emptyMap(),
@@ -817,8 +913,17 @@ private fun AssignmentTabFilter(
         if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
     }
 
-    val tabs = if (isTeacher) listOf("Semua", "Terjadwal", "Aktif", "Perlu Dinilai")
-               else listOf("Semua", "Segera", "Aktif", "Selesai")
+    val tabs = if (isTeacher) {
+        listOf("Semua", "Terjadwal", "Aktif", "Perlu Dinilai")
+    } else {
+        buildList {
+            add("Semua")
+            if (hasGameMissions) add("Misi Game")
+            add("Segera")
+            add("Aktif")
+            add("Selesai")
+        }
+    }
 
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),

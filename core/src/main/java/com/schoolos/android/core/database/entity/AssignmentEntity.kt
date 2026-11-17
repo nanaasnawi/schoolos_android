@@ -21,4 +21,5 @@ data class AssignmentEntity(
     val subjectName: String? = null,
     val teacherName: String? = null,
     val releaseAt: String? = null,
+    val hasGameQuestions: Boolean = false,
 )

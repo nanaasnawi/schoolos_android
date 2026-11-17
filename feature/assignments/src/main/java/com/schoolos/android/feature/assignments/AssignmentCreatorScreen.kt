@@ -597,7 +597,7 @@ fun AssignmentCreatorScreen(
             }
 
             // ── 3. DAFTAR BUTIR SOAL (CLEAN TABBED QUESTION WORKSPACE — ZERO NESTED CARD CLUTTER) ──
-            val isStructuredMode = state.assignmentFormat == "STRUCTURED_QUESTIONS" || state.assignmentFormat == "HYBRID"
+            val isStructuredMode = state.assignmentFormat != "HOMEWORK_PR"
             if (isStructuredMode) {
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
@@ -612,12 +612,12 @@ fun AssignmentCreatorScreen(
                         verticalArrangement = Arrangement.spacedBy(14.dp)
                     ) {
                         // Top Header + Add Question Buttons
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Column {
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
                                 Text(
                                     text = "Butir Soal (${state.questions.size} Soal)",
                                     fontSize = 14.5.sp,
@@ -632,7 +632,12 @@ fun AssignmentCreatorScreen(
                                 )
                             }
 
-                            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(10.dp))
@@ -642,9 +647,9 @@ fun AssignmentCreatorScreen(
                                             viewModel.addMultipleChoiceQuestion()
                                             activeQuestionIndex = state.questions.size
                                         }
-                                        .padding(horizontal = 11.dp, vertical = 7.dp)
+                                        .padding(horizontal = 10.dp, vertical = 7.dp)
                                 ) {
-                                    Text("+ Soal PG", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = emeraldAccent)
+                                    Text("+ Soal PG", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = emeraldAccent)
                                 }
 
                                 Box(
@@ -656,9 +661,30 @@ fun AssignmentCreatorScreen(
                                             viewModel.addEssayQuestion()
                                             activeQuestionIndex = state.questions.size
                                         }
-                                        .padding(horizontal = 11.dp, vertical = 7.dp)
+                                        .padding(horizontal = 10.dp, vertical = 7.dp)
                                 ) {
-                                    Text("+ Esai", fontSize = 11.5.sp, fontWeight = FontWeight.Bold, color = CyanAccent)
+                                    Text("+ Esai", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = CyanAccent)
+                                }
+
+                                listOf(
+                                    "MATCHING" to "+ Jodohkan",
+                                    "ORDERING" to "+ Urutan",
+                                    "FILL_BLANK" to "+ Rumpang",
+                                ).forEach { (gType, gLabel) ->
+                                    val gColor = questionTypeAccentColor(gType)
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(gColor.copy(alpha = 0.14f))
+                                            .border(1.dp, gColor.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                viewModel.addGameQuestion(gType)
+                                                activeQuestionIndex = state.questions.size
+                                            }
+                                            .padding(horizontal = 10.dp, vertical = 7.dp)
+                                    ) {
+                                        Text(gLabel, fontSize = 11.sp, fontWeight = FontWeight.Bold, color = gColor)
+                                    }
                                 }
                             }
                         }
@@ -673,7 +699,6 @@ fun AssignmentCreatorScreen(
                         ) {
                             state.questions.forEachIndexed { idx, q ->
                                 val isSelected = idx == activeQuestionIndex
-                                val isMcq = q.questionType == "MULTIPLE_CHOICE"
                                 val hasContent = q.questionText.isNotBlank()
                                 Box(
                                     modifier = Modifier
@@ -698,7 +723,7 @@ fun AssignmentCreatorScreen(
                                         .padding(horizontal = 12.dp, vertical = 8.dp)
                                 ) {
                                     Text(
-                                        text = "#${idx + 1} ${if (isMcq) "PG" else "Esai"}",
+                                        text = "#${idx + 1} ${questionTypeShortLabel(q.questionType)}",
                                         fontSize = 11.5.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = when {
@@ -735,6 +760,7 @@ fun AssignmentCreatorScreen(
                                 onPointsChange = { viewModel.updateQuestionPoints(safeIdx, it) },
                                 onChoiceTextChange = { cIdx, text -> viewModel.updateChoiceText(safeIdx, cIdx, text) },
                                 onCorrectChoiceSelect = { cIdx -> viewModel.setCorrectChoice(safeIdx, cIdx) },
+                                onInteractionConfigChange = { cfg -> viewModel.updateQuestionInteractionConfig(safeIdx, cfg) },
                                 onPrevQuestion = if (safeIdx > 0) ({ activeQuestionIndex = safeIdx - 1 }) else null,
                                 onNextQuestion = if (safeIdx < state.questions.lastIndex) ({ activeQuestionIndex = safeIdx + 1 }) else null,
                             )
@@ -785,10 +811,13 @@ private fun FlatQuestionEditor(
     onPointsChange: (Int) -> Unit,
     onChoiceTextChange: (Int, String) -> Unit,
     onCorrectChoiceSelect: (Int) -> Unit,
+    onInteractionConfigChange: (String) -> Unit,
     onPrevQuestion: (() -> Unit)?,
     onNextQuestion: (() -> Unit)?,
 ) {
     val isMultipleChoice = question.questionType == "MULTIPLE_CHOICE"
+    val isGame = isInteractiveGameQuestionType(question.questionType)
+    val typeAccent = if (isMultipleChoice) emeraldAccent else if (isGame) questionTypeAccentColor(question.questionType) else CyanAccent
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         // Question Top Metadata Row
@@ -810,12 +839,12 @@ private fun FlatQuestionEditor(
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
-                        .background(if (isMultipleChoice) emeraldSoftBg else CyanAccent.copy(alpha = 0.14f))
+                        .background(if (isMultipleChoice) emeraldSoftBg else typeAccent.copy(alpha = 0.14f))
                         .padding(horizontal = 7.dp, vertical = 3.dp)
                 ) {
                     Text(
-                        if (isMultipleChoice) "Pilihan Ganda" else "Uraian Esai",
-                        color = if (isMultipleChoice) emeraldAccent else CyanAccent,
+                        questionTypeDisplayLabel(question.questionType),
+                        color = typeAccent,
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -996,6 +1025,18 @@ private fun FlatQuestionEditor(
                     }
                 }
             }
+        } else if (isGame) {
+            InteractiveGameTeacherEditor(
+                questionType = question.questionType,
+                configJson = question.interactionConfigJson,
+                onConfigJsonChange = onInteractionConfigChange,
+                subSurfaceBg = subSurfaceBg,
+                subSurfaceBorder = subSurfaceBorder,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                textTertiary = textTertiary,
+                emeraldAccent = emeraldAccent,
+            )
         } else {
             Row(
                 modifier = Modifier
@@ -1276,8 +1317,8 @@ private fun AssignmentReviewAndPublishScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(
-                                        "Soal #${idx + 1} • ${if (q.questionType == "MULTIPLE_CHOICE") "Pilihan Ganda" else "Esai"}",
-                                        color = emeraldAccent,
+                                        "Soal #${idx + 1} • ${questionTypeDisplayLabel(q.questionType)}",
+                                        color = if (isInteractiveGameQuestionType(q.questionType)) questionTypeAccentColor(q.questionType) else emeraldAccent,
                                         fontWeight = FontWeight.Bold,
                                         fontSize = 11.5.sp
                                     )
@@ -1295,6 +1336,17 @@ private fun AssignmentReviewAndPublishScreen(
                                     fontWeight = FontWeight.Medium,
                                     lineHeight = 18.sp
                                 )
+
+                                if (isInteractiveGameQuestionType(q.questionType)) {
+                                    InteractiveGamePreviewBlock(
+                                        questionType = q.questionType,
+                                        interactionConfigJson = q.interactionConfigJson,
+                                        subSurfaceBg = subSurfaceBg,
+                                        subSurfaceBorder = subSurfaceBorder,
+                                        textPrimary = textPrimary,
+                                        textSecondary = textSecondary,
+                                    )
+                                }
 
                                 if (q.choices.isNotEmpty()) {
                                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {

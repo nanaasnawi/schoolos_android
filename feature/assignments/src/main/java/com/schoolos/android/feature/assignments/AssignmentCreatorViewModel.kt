@@ -90,7 +90,19 @@ class AssignmentCreatorViewModel @Inject constructor(
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isGeneratingAi = true, error = null)
-            val apiType = if (format == "HOMEWORK_PR") "ASSIGNMENT_HOMEWORK" else "ASSIGNMENT_STRUCTURED"
+            val fmtUpper = format.uppercase()
+            val isHomework = fmtUpper == "HOMEWORK_PR"
+            val isPureGame = fmtUpper == "INTERACTIVE_GAMES"
+            val isGameMixed = fmtUpper.contains("GAME") && !isPureGame
+            val apiType = if (isHomework) "ASSIGNMENT_HOMEWORK" else "ASSIGNMENT_STRUCTURED"
+            val effectiveMcq = if (isHomework || isPureGame) 0 else numMcq
+            val effectiveEssay = if (isPureGame || isGameMixed) 0 else numEssay
+            val effectiveTotal = when {
+                isHomework -> effectiveEssay
+                isPureGame -> 3
+                isGameMixed -> effectiveMcq + 3
+                else -> effectiveMcq + effectiveEssay
+            }
             generatorRepository.generateCurriculum(
                 type = apiType,
                 subjectId = subjectId,
@@ -98,11 +110,12 @@ class AssignmentCreatorViewModel @Inject constructor(
                 sourceMode = "LATEST_PUBLISHED",
                 topic = topic.trim().ifBlank { null },
                 gradeLevel = gradeLevel,
-                numQuestions = if (format == "HOMEWORK_PR") numEssay else (numMcq + numEssay),
-                numMcq = if (format == "HOMEWORK_PR") 0 else numMcq,
-                numEssay = numEssay,
+                numQuestions = effectiveTotal,
+                numMcq = effectiveMcq,
+                numEssay = effectiveEssay,
                 difficulty = difficulty,
                 includeImages = includeImages,
+                assignmentFormat = fmtUpper,
             ).onSuccess { result ->
                 val convertedQuestions = result.questions.mapIndexed { idx, q ->
                     AssignmentQuestion(
@@ -118,13 +131,14 @@ class AssignmentCreatorViewModel @Inject constructor(
                                 isCorrect = c.isCorrect,
                                 orderIndex = cIdx + 1
                             )
-                        }
+                        },
+                        interactionConfigJson = q.interactionConfigJson,
                     )
                 }
 
                 _state.value = _state.value.copy(
                     isGeneratingAi = false,
-                    assignmentFormat = format,
+                    assignmentFormat = if (isHomework) "HOMEWORK_PR" else "STRUCTURED_QUESTIONS",
                     questions = if (convertedQuestions.isNotEmpty()) convertedQuestions else listOf(defaultMultipleChoiceQuestion(1))
                 )
                 onGenerated(result.title, result.instructions ?: "")
@@ -148,18 +162,31 @@ class AssignmentCreatorViewModel @Inject constructor(
         includeImages: Boolean,
     ): Result<com.schoolos.android.domain.model.GeneratedCurriculumResult> {
         _state.value = _state.value.copy(isGeneratingAi = true, error = null)
+        val fmtUpper = format.uppercase()
+        val isHomework = fmtUpper == "HOMEWORK_PR"
+        val isPureGame = fmtUpper == "INTERACTIVE_GAMES"
+        val isGameMixed = fmtUpper.contains("GAME") && !isPureGame
+        val effectiveMcq = if (isHomework || isPureGame) 0 else numMcq
+        val effectiveEssay = if (isPureGame || isGameMixed) 0 else numEssay
+        val effectiveTotal = when {
+            isHomework -> effectiveEssay
+            isPureGame -> 3
+            isGameMixed -> effectiveMcq + 3
+            else -> effectiveMcq + effectiveEssay
+        }
         val res = generatorRepository.generateCurriculum(
-            type = if (format == "HOMEWORK_PR") "ASSIGNMENT_HOMEWORK" else "ASSIGNMENT_STRUCTURED",
+            type = if (isHomework) "ASSIGNMENT_HOMEWORK" else "ASSIGNMENT_STRUCTURED",
             subjectId = subjectId,
             subjectName = subjectName,
             sourceMode = "LATEST_PUBLISHED",
             topic = topic.trim().ifBlank { null },
             gradeLevel = gradeLevel,
-            numQuestions = if (format == "HOMEWORK_PR") numEssay else (numMcq + numEssay),
-            numMcq = if (format == "HOMEWORK_PR") 0 else numMcq,
-            numEssay = numEssay,
+            numQuestions = effectiveTotal,
+            numMcq = effectiveMcq,
+            numEssay = effectiveEssay,
             difficulty = difficulty,
             includeImages = includeImages,
+            assignmentFormat = fmtUpper,
         )
         _state.value = _state.value.copy(isGeneratingAi = false)
         return res
@@ -185,13 +212,17 @@ class AssignmentCreatorViewModel @Inject constructor(
                         isCorrect = c.isCorrect,
                         orderIndex = cIdx + 1
                     )
-                }
+                },
+                interactionConfigJson = q.interactionConfigJson,
             )
         }
 
+        val isHomeworkResult = result.format.equals("ASSIGNMENT_HOMEWORK", ignoreCase = true) ||
+            result.format.equals("HOMEWORK_PR", ignoreCase = true)
+
         _state.value = _state.value.copy(
             isGeneratingAi = false,
-            assignmentFormat = if (result.format == "ASSIGNMENT_HOMEWORK") "HOMEWORK_PR" else "STRUCTURED_QUESTIONS",
+            assignmentFormat = if (isHomeworkResult) "HOMEWORK_PR" else "STRUCTURED_QUESTIONS",
             questions = if (convertedQuestions.isNotEmpty()) convertedQuestions else listOf(defaultMultipleChoiceQuestion(1))
         )
     }
@@ -280,6 +311,30 @@ class AssignmentCreatorViewModel @Inject constructor(
         _state.value = _state.value.copy(questions = current + defaultEssayQuestion(nextOrder))
     }
 
+    fun addGameQuestion(gameType: String) {
+        val normType = gameType.trim().uppercase()
+        val current = _state.value.questions
+        val nextOrder = current.size + 1
+        val newQuestion = AssignmentQuestion(
+            id = null,
+            questionText = defaultPromptForGameType(normType),
+            questionType = normType,
+            points = 20,
+            orderIndex = nextOrder,
+            choices = emptyList(),
+            interactionConfigJson = createDefaultInteractionConfigJson(normType),
+        )
+        _state.value = _state.value.copy(questions = current + newQuestion)
+    }
+
+    fun updateQuestionInteractionConfig(index: Int, configJson: String) {
+        val current = _state.value.questions.toMutableList()
+        if (index in current.indices) {
+            current[index] = current[index].copy(interactionConfigJson = configJson)
+            _state.value = _state.value.copy(questions = current)
+        }
+    }
+
     fun removeQuestion(index: Int) {
         val current = _state.value.questions.toMutableList()
         if (index in current.indices) {
@@ -345,7 +400,8 @@ class AssignmentCreatorViewModel @Inject constructor(
             _state.value = _state.value.copy(isLoading = true, error = null)
 
             val format = _state.value.assignmentFormat
-            val isStructured = format == "STRUCTURED_QUESTIONS" || format == "HYBRID"
+            val isStructured = format == "STRUCTURED_QUESTIONS" || format == "HYBRID" ||
+                format == "GAME_MIXED" || format == "INTERACTIVE_GAMES"
 
             // Filter valid questions: must have non-blank questionText
             val validQuestions = if (isStructured) {
