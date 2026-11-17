@@ -392,6 +392,7 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
             put("topic", topic.trim())
             put("grade_level", gradeLevel)
             put("subject_name", subjectName)
+            put("include_images", mode.equals("INFOGRAPHIC", ignoreCase = true))
         }
 
         try {
@@ -435,15 +436,10 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                 for (i in 0 until blocksArr.length()) {
                     val bObj = blocksArr.getJSONObject(i)
                     val bType = bObj.optString("block_type", bObj.optString("type", "TEXT"))
-                    var content = bObj.optString("content", "")
+                    val content = bObj.optString("content", "").trim()
 
-                    if (bType.equals("IMAGE", ignoreCase = true) &&
-                        (content.isBlank() || content.contains("photo-1544716278-ca5e3f4abd8c") || content.contains("photo-1497633762265-9d179a990aa6"))
-                    ) {
-                        val wikiImage = fetchWikipediaImage(topic.trim(), aiHttpClient)
-                        if (!wikiImage.isNullOrBlank()) {
-                            content = wikiImage
-                        }
+                    if (bType.equals("IMAGE", ignoreCase = true) && content.isBlank()) {
+                        continue
                     }
 
                     blocksList.add(
