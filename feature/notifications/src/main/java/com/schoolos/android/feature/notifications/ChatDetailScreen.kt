@@ -51,6 +51,10 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.ThumbDown
+import androidx.compose.material.icons.filled.ThumbUp
+import androidx.compose.material.icons.outlined.ThumbDown
+import androidx.compose.material.icons.outlined.ThumbUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -168,9 +172,9 @@ fun ChatDetailScreen(
         targetUserId = if (isTeacherMode) thread?.studentId else thread?.teacherId,
     ).collectAsState(initial = false)
 
-    LaunchedEffect(thread?.messages?.size) {
+    LaunchedEffect(thread?.messages?.size, thread?.messages?.lastOrNull()?.content?.length) {
         val size = thread?.messages?.size ?: 0
-        if (size > 0) listState.animateScrollToItem(size - 1)
+        if (size > 0) listState.scrollToItem(size - 1)
     }
 
     val imeInsets = WindowInsets.ime
@@ -536,6 +540,7 @@ fun ChatDetailScreen(
                         (thread?.teacherLastReadAt ?: 0L) >= msg.timestamp
                     }
                     if (isNewDay) DatePill(dateText = formatDateGroup(msg.timestamp))
+                    val relatedQuestion = if (prevMsg != null && !prevMsg.id.startsWith("ai-")) prevMsg.content else null
                     MessageBubble(
                         message = msg,
                         isMe = isMe,
@@ -544,6 +549,25 @@ fun ChatDetailScreen(
                         fallbackTeacherName = thread?.teacherName.orEmpty(),
                         isReadByRecipient = isReadByOther,
                         onImageClick = { previewFullImageUrl = it },
+                        onAiFeedback = { rating ->
+                            coroutineScope.launch {
+                                val res = chatManager.submitAiFeedback(
+                                    threadId = threadId,
+                                    message = msg,
+                                    rating = rating,
+                                    questionText = relatedQuestion,
+                                    subjectName = thread?.subjectName,
+                                    gradeLevel = thread?.studentClass,
+                                    reason = if (rating == "DOWN") "Jawaban dinilai kurang tepat oleh pengguna" else null,
+                                )
+                                val toastText = if (res.isSuccess) {
+                                    if (rating == "DOWN") "Masukan dicatat ke evaluasi AI. Terima kasih!" else "Terima kasih atas penilaiannya!"
+                                } else {
+                                    "Penilaian tersimpan lokal."
+                                }
+                                Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
+                            }
+                        },
                     )
                 }
 
@@ -927,7 +951,8 @@ fun ChatDetailScreen(
                                             question = textToSend,
                                             subjectName = thread?.subjectName,
                                             gradeLevel = thread?.studentClass,
-                                            history = messages
+                                            history = messages,
+                                            onFirstChunk = { isAiThinking = false },
                                         )
                                         isAiThinking = false
                                     }
@@ -1139,6 +1164,7 @@ private fun MessageBubble(
     fallbackTeacherName: String = "",
     isReadByRecipient: Boolean = false,
     onImageClick: (String) -> Unit = {},
+    onAiFeedback: (String) -> Unit = {},
 ) {
     val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -1324,10 +1350,84 @@ private fun MessageBubble(
 
                 Spacer(Modifier.height(4.dp))
 
+                val showAiFeedback = isAi &&
+                    !message.id.startsWith("ai-welcome") &&
+                    message.content.isNotBlank()
+
                 Row(
-                    modifier = Modifier.align(Alignment.End),
+                    modifier = if (showAiFeedback) Modifier.fillMaxWidth() else Modifier.align(Alignment.End),
                     verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = if (showAiFeedback) Arrangement.SpaceBetween else Arrangement.End,
                 ) {
+                    if (showAiFeedback) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                        ) {
+                            val isUp = message.feedbackRating == "UP"
+                            val isDown = message.feedbackRating == "DOWN"
+                            val upColor = if (isUp) Color(0xFF10B981) else textTertiary
+                            val downColor = if (isDown) Color(0xFFEF4444) else textTertiary
+
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isUp) Color(0xFF10B981).copy(alpha = 0.14f) else Color.Transparent)
+                                    .border(
+                                        0.75.dp,
+                                        if (isUp) Color(0xFF10B981).copy(alpha = 0.55f) else bubbleBorder,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { onAiFeedback("UP") }
+                                    .padding(horizontal = 7.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = if (isUp) Icons.Filled.ThumbUp else Icons.Outlined.ThumbUp,
+                                    contentDescription = "Bantu",
+                                    tint = upColor,
+                                    modifier = Modifier.size(12.dp),
+                                )
+                                Text(
+                                    text = "Bantu",
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isUp) FontWeight.Bold else FontWeight.Medium,
+                                    color = upColor,
+                                )
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isDown) Color(0xFFEF4444).copy(alpha = 0.14f) else Color.Transparent)
+                                    .border(
+                                        0.75.dp,
+                                        if (isDown) Color(0xFFEF4444).copy(alpha = 0.55f) else bubbleBorder,
+                                        RoundedCornerShape(8.dp)
+                                    )
+                                    .clickable { onAiFeedback("DOWN") }
+                                    .padding(horizontal = 7.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = if (isDown) Icons.Filled.ThumbDown else Icons.Outlined.ThumbDown,
+                                    contentDescription = "Kurang Tepat",
+                                    tint = downColor,
+                                    modifier = Modifier.size(12.dp),
+                                )
+                                Text(
+                                    text = "Kurang Tepat",
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isDown) FontWeight.Bold else FontWeight.Medium,
+                                    color = downColor,
+                                )
+                            }
+                        }
+                    }
+
+                    Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = timeStr,
                         fontSize = 10.sp,
@@ -1356,6 +1456,7 @@ private fun MessageBubble(
                                 )
                             }
                         }
+                    }
                     }
                 }
             }

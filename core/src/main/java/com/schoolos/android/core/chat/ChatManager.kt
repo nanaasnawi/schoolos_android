@@ -22,15 +22,21 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
+import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONArray
 import org.json.JSONObject
 import timber.log.Timber
+import java.io.BufferedReader
 import java.io.File
+import java.io.InputStreamReader
 import java.time.Instant
 import java.util.UUID
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -58,6 +64,7 @@ data class ChatMessage(
     val readAt: Long? = null,
     val attachmentUrl: String? = null,
     val attachmentType: String? = null,
+    val feedbackRating: String? = null,
 )
 
 data class ChatThread(
@@ -1169,12 +1176,54 @@ class ChatManager @Inject constructor(
 
     fun getPrincipalContext(): String? = principalContextSummary
 
+    private val streamHttpClient: okhttp3.OkHttpClient by lazy {
+        apiClient.httpClient.newBuilder()
+            .readTimeout(90, TimeUnit.SECONDS)
+            .build()
+    }
+
+    private fun buildAiStreamUrl(): String {
+        val raw = (authManager.getCustomServerUrlSync() ?: com.schoolos.android.core.common.BuildConfig.API_BASE_URL).trimEnd('/')
+        val apiV1 = if (raw.endsWith("/api/v1")) raw else "$raw/api/v1"
+        return "$apiV1/ai/tanya-ai/stream"
+    }
+
+    private fun upsertAiMessageInThread(
+        threadId: String,
+        aiMsg: ChatMessage,
+        senderTitle: String,
+        statusLabel: String,
+    ) {
+        _threads.value = _threads.value.map { thread ->
+            if (thread.id == threadId) {
+                val existingIdx = thread.messages.indexOfFirst { it.id == aiMsg.id }
+                val updated = if (existingIdx >= 0) {
+                    thread.messages.toMutableList().apply { set(existingIdx, aiMsg) }
+                } else {
+                    thread.messages + aiMsg
+                }
+                thread.copy(
+                    messages = updated,
+                    status = InquiryStatus.ANSWERED,
+                    lastUpdated = aiMsg.timestamp,
+                    lastMessageContent = aiMsg.content,
+                    lastSenderName = senderTitle,
+                    messageCount = updated.size,
+                    readStatusLabel = statusLabel,
+                )
+            } else {
+                thread
+            }
+        }
+    }
+
     suspend fun askAi(
         threadId: String,
         question: String,
         subjectName: String? = null,
         gradeLevel: String? = null,
         history: List<ChatMessage> = emptyList(),
+        onFirstChunk: () -> Unit = {},
     ): Result<String> {
         return try {
             val isPrincipalMode = threadId.startsWith("ai-principal") ||
@@ -1213,14 +1262,7 @@ class ChatManager @Inject constructor(
                     content = it.content,
                 )
             }
-            val resp = api.tanyaAi(
-                TanyaAiRequestDto(
-                    question = finalQuestion,
-                    subjectName = finalSubject,
-                    gradeLevel = finalGrade,
-                    history = historyDtos,
-                )
-            )
+
             val senderTitle = when {
                 isPrincipalMode -> "AI Analitik Kepala Sekolah"
                 isTeacherMode -> if (isPkbm) "AI Copilot Tutor" else "AI Copilot Guru"
@@ -1231,76 +1273,157 @@ class ChatManager @Inject constructor(
                 isTeacherMode -> "ai-teacher"
                 else -> "ai-tutor"
             }
+            val statusLabel = if (isPrincipalMode) "Dijawab AI Analitik" else "Dijawab Guru AI"
+            val aiMsgId = UUID.randomUUID().toString()
+            val startedAt = System.currentTimeMillis()
 
-            if (resp.success && resp.data != null) {
-                val replyText = resp.data.reply
-                val now = System.currentTimeMillis()
-                val aiMsg = ChatMessage(
-                    id = UUID.randomUUID().toString(),
-                    threadId = threadId,
-                    senderId = senderIdVal,
-                    senderName = senderTitle,
-                    senderRole = "TEACHER",
-                    content = replyText,
-                    timestamp = now,
-                    isFromTeacher = true,
-                    isRead = true,
-                )
-                firebaseRtdbManager.pushMessage(
-                    threadId = threadId,
-                    message = aiMsg,
-                    teacherId = senderIdVal,
-                    teacherName = senderTitle,
-                )
-                _threads.value = _threads.value.map { thread ->
-                    if (thread.id == threadId) {
-                        val updated = thread.messages + aiMsg
-                        thread.copy(
-                            messages = updated,
-                            status = InquiryStatus.ANSWERED,
-                            lastUpdated = now,
-                            lastMessageContent = replyText,
-                            lastSenderName = senderTitle,
-                            messageCount = updated.size,
-                            readStatusLabel = if (isPrincipalMode) "Dijawab AI Analitik" else "Dijawab Guru AI",
-                        )
-                    } else {
-                        thread
+            // Try real-time SSE token streaming first
+            var streamedReply: String? = null
+            var firstChunkNotified = false
+            try {
+                val jsonPayload = JSONObject().apply {
+                    put("question", finalQuestion)
+                    put("subject_name", finalSubject)
+                    put("grade_level", finalGrade)
+                    put(
+                        "history",
+                        JSONArray().apply {
+                            historyDtos.forEach { h ->
+                                put(JSONObject().apply {
+                                    put("role", h.role)
+                                    put("content", h.content)
+                                })
+                            }
+                        }
+                    )
+                }.toString()
+
+                val sseRequest = Request.Builder()
+                    .url(buildAiStreamUrl())
+                    .header("Accept", "text/event-stream")
+                    .post(jsonPayload.toRequestBody("application/json; charset=utf-8".toMediaType()))
+                    .build()
+
+                val accumulated = StringBuilder()
+                withContext(Dispatchers.IO) {
+                    streamHttpClient.newCall(sseRequest).execute().use { response ->
+                        if (response.isSuccessful) {
+                            val bodyStream = response.body?.byteStream()
+                            if (bodyStream != null) {
+                                BufferedReader(InputStreamReader(bodyStream, Charsets.UTF_8)).use { reader ->
+                                    var currentEvent = ""
+                                    var lastUiEmitMs = 0L
+                                    while (true) {
+                                        val line = reader.readLine() ?: break
+                                        if (line.startsWith("event:")) {
+                                            currentEvent = line.removePrefix("event:").trim()
+                                        } else if (line.startsWith("data:")) {
+                                            val data = line.removePrefix("data:").trim()
+                                            if (currentEvent == "done" || data == "[DONE]") {
+                                                break
+                                            }
+                                            if (currentEvent == "delta" || currentEvent.isEmpty()) {
+                                                val deltaText = try {
+                                                    JSONObject(data).optString("text", "")
+                                                } catch (_: Exception) {
+                                                    ""
+                                                }
+                                                if (deltaText.isNotEmpty()) {
+                                                    accumulated.append(deltaText)
+                                                    if (!firstChunkNotified) {
+                                                        firstChunkNotified = true
+                                                        withContext(Dispatchers.Main) { onFirstChunk() }
+                                                    }
+                                                    val nowMs = System.currentTimeMillis()
+                                                    if (nowMs - lastUiEmitMs >= 35L) {
+                                                        lastUiEmitMs = nowMs
+                                                        val liveMsg = ChatMessage(
+                                                            id = aiMsgId,
+                                                            threadId = threadId,
+                                                            senderId = senderIdVal,
+                                                            senderName = senderTitle,
+                                                            senderRole = "TEACHER",
+                                                            content = accumulated.toString(),
+                                                            timestamp = startedAt,
+                                                            isFromTeacher = true,
+                                                            isRead = true,
+                                                        )
+                                                        upsertAiMessageInThread(threadId, liveMsg, senderTitle, statusLabel)
+                                                    }
+                                                }
+                                            }
+                                        } else if (line.isBlank()) {
+                                            currentEvent = ""
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
-                saveToDisk(_threads.value, cachedAuth?.userId)
-                Result.success(replyText)
-            } else {
-                val errorMsg = resp.error?.message ?: "Gagal mendapatkan respon dari Guru AI"
-                val errorAiMsg = ChatMessage(
-                    id = UUID.randomUUID().toString(),
-                    threadId = threadId,
-                    senderId = senderIdVal,
-                    senderName = senderTitle,
-                    senderRole = "TEACHER",
-                    content = "Maaf, $errorMsg. Silakan coba kembali sesaat lagi.",
-                    timestamp = System.currentTimeMillis(),
-                    isFromTeacher = true,
-                    isRead = true,
-                )
-                _threads.value = _threads.value.map { thread ->
-                    if (thread.id == threadId) {
-                        val updated = thread.messages + errorAiMsg
-                        thread.copy(
-                            messages = updated,
-                            status = InquiryStatus.ANSWERED,
-                            lastUpdated = System.currentTimeMillis(),
-                            lastMessageContent = errorAiMsg.content,
-                            lastSenderName = senderTitle,
-                            messageCount = updated.size,
-                        )
-                    } else {
-                        thread
-                    }
+                if (accumulated.isNotEmpty()) {
+                    streamedReply = accumulated.toString()
                 }
-                saveToDisk(_threads.value, cachedAuth?.userId)
-                Result.failure(Exception(errorMsg))
+            } catch (streamEx: Exception) {
+                Timber.w(streamEx, "SSE stream failed, falling back to REST tanya-ai")
             }
+
+            val finalReply = if (!streamedReply.isNullOrBlank()) {
+                streamedReply
+            } else {
+                val resp = api.tanyaAi(
+                    TanyaAiRequestDto(
+                        question = finalQuestion,
+                        subjectName = finalSubject,
+                        gradeLevel = finalGrade,
+                        history = historyDtos,
+                    )
+                )
+                if (!resp.success || resp.data == null) {
+                    val errorMsg = resp.error?.message ?: "Gagal mendapatkan respon dari Guru AI"
+                    val errorAiMsg = ChatMessage(
+                        id = aiMsgId,
+                        threadId = threadId,
+                        senderId = senderIdVal,
+                        senderName = senderTitle,
+                        senderRole = "TEACHER",
+                        content = "Maaf, $errorMsg. Silakan coba kembali sesaat lagi.",
+                        timestamp = System.currentTimeMillis(),
+                        isFromTeacher = true,
+                        isRead = true,
+                    )
+                    upsertAiMessageInThread(threadId, errorAiMsg, senderTitle, statusLabel)
+                    saveToDisk(_threads.value, cachedAuth?.userId)
+                    return Result.failure(Exception(errorMsg))
+                }
+                resp.data.reply
+            }
+
+            if (!firstChunkNotified) {
+                withContext(Dispatchers.Main) { onFirstChunk() }
+            }
+
+            val now = System.currentTimeMillis()
+            val aiMsg = ChatMessage(
+                id = aiMsgId,
+                threadId = threadId,
+                senderId = senderIdVal,
+                senderName = senderTitle,
+                senderRole = "TEACHER",
+                content = finalReply,
+                timestamp = now,
+                isFromTeacher = true,
+                isRead = true,
+            )
+            firebaseRtdbManager.pushMessage(
+                threadId = threadId,
+                message = aiMsg,
+                teacherId = senderIdVal,
+                teacherName = senderTitle,
+            )
+            upsertAiMessageInThread(threadId, aiMsg, senderTitle, statusLabel)
+            saveToDisk(_threads.value, cachedAuth?.userId)
+            Result.success(finalReply)
         } catch (e: Exception) {
             Timber.e(e, "askAi failed")
             val fallbackMsg = ChatMessage(
@@ -1314,22 +1437,56 @@ class ChatManager @Inject constructor(
                 isFromTeacher = true,
                 isRead = true,
             )
-            _threads.value = _threads.value.map { thread ->
-                if (thread.id == threadId) {
-                    val updated = thread.messages + fallbackMsg
-                    thread.copy(
-                        messages = updated,
-                        status = InquiryStatus.ANSWERED,
-                        lastUpdated = System.currentTimeMillis(),
-                        lastMessageContent = fallbackMsg.content,
-                        lastSenderName = "Guru AI",
-                        messageCount = updated.size,
-                    )
-                } else {
-                    thread
-                }
-            }
+            upsertAiMessageInThread(threadId, fallbackMsg, "Guru AI", "Dijawab Guru AI")
             saveToDisk(_threads.value, cachedAuth?.userId)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun submitAiFeedback(
+        threadId: String,
+        message: ChatMessage,
+        rating: String, // "UP" or "DOWN"
+        questionText: String? = null,
+        subjectName: String? = null,
+        gradeLevel: String? = null,
+        reason: String? = null,
+    ): Result<String> {
+        val normalized = if (rating.equals("DOWN", ignoreCase = true)) "DOWN" else "UP"
+        // Update local state immediately for snappy UX
+        _threads.value = _threads.value.map { t ->
+            if (t.id == threadId) {
+                t.copy(
+                    messages = t.messages.map { m ->
+                        if (m.id == message.id) m.copy(feedbackRating = normalized) else m
+                    }
+                )
+            } else {
+                t
+            }
+        }
+        saveToDisk(_threads.value, cachedAuth?.userId)
+
+        return try {
+            val resp = api.submitAiFeedback(
+                AiFeedbackRequestDto(
+                    threadId = threadId,
+                    messageId = message.id,
+                    rating = normalized,
+                    questionText = questionText,
+                    aiReplyText = message.content,
+                    subjectName = subjectName,
+                    gradeLevel = gradeLevel,
+                    reason = reason,
+                )
+            )
+            if (resp.success) {
+                Result.success(normalized)
+            } else {
+                Result.failure(Exception(resp.error?.message ?: "Gagal menyimpan feedback AI"))
+            }
+        } catch (e: Exception) {
+            Timber.w(e, "submitAiFeedback network error")
             Result.failure(e)
         }
     }
@@ -1730,6 +1887,7 @@ class ChatManager @Inject constructor(
                             put("readAt", m.readAt ?: JSONObject.NULL)
                             put("attachmentUrl", m.attachmentUrl ?: JSONObject.NULL)
                             put("attachmentType", m.attachmentType ?: JSONObject.NULL)
+                            put("feedbackRating", m.feedbackRating ?: JSONObject.NULL)
                         }
                         msgsArray.put(mObj)
                     }
@@ -1781,6 +1939,7 @@ class ChatManager @Inject constructor(
                                 readAt = if (mObj.isNull("readAt")) null else mObj.optLong("readAt"),
                                 attachmentUrl = if (mObj.isNull("attachmentUrl")) null else mObj.optString("attachmentUrl"),
                                 attachmentType = if (mObj.isNull("attachmentType")) null else mObj.optString("attachmentType"),
+                                feedbackRating = if (mObj.isNull("feedbackRating")) null else mObj.optString("feedbackRating"),
                             )
                         )
                     }
