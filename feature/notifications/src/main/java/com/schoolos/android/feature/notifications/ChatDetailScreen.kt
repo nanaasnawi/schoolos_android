@@ -1310,7 +1310,7 @@ private fun MessageBubble(
                             codeBackground = aiCodeBg,
                             codeColor = aiAccent,
                             linkColor = aiAccent,
-                            mutedColor = textSecondary,
+                            mutedColor = textTertiary,
                         )
                     } else {
                         Text(
