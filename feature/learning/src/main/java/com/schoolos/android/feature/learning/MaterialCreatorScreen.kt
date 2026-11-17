@@ -47,10 +47,12 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.LibraryBook
 import com.schoolos.android.domain.model.MaterialType
 import com.schoolos.android.feature.learning.components.InAppVideoPlayer
+import com.schoolos.android.feature.learning.components.resolveLearningMediaUrl
 import androidx.compose.ui.window.Dialog
 import android.content.Intent
 
@@ -1880,8 +1882,8 @@ private fun MaterialReviewAndPublishScreen(
                         ) {
                             contentBlocks.forEach { block ->
                                 if (block.type == ContentBlockType.IMAGE && block.content.isNotBlank()) {
-                                    SubcomposeAsyncImage(
-                                        model = com.schoolos.android.feature.learning.components.resolveLearningMediaUrl(block.content),
+                                    CreatorBlockImage(
+                                        rawUrl = block.content,
                                         contentDescription = "Visual Materi",
                                         modifier = Modifier
                                             .fillMaxWidth()
@@ -2493,11 +2495,12 @@ private fun RichBlockEditorSection(
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .heightIn(min = 140.dp)
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(CosmicNavy)
                             ) {
-                                SubcomposeAsyncImage(
-                                    model = com.schoolos.android.feature.learning.components.resolveLearningMediaUrl(block.content),
+                                CreatorBlockImage(
+                                    rawUrl = block.content,
                                     contentDescription = "Infografis $index",
                                     contentScale = ContentScale.FillWidth,
                                     modifier = Modifier.fillMaxWidth()
@@ -2614,12 +2617,12 @@ private fun RichBlockEditorSection(
                                             .fillMaxWidth()
                                             .height(180.dp)
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(Color.Black),
+                                            .background(CosmicNavy),
                                         contentAlignment = Alignment.Center
                                     ) {
-                                        SubcomposeAsyncImage(
-                                            model = com.schoolos.android.feature.learning.components.resolveLearningMediaUrl(block.content),
-                                            contentDescription = null,
+                                        CreatorBlockImage(
+                                            rawUrl = block.content,
+                                            contentDescription = "Gambar Blok #${index + 1}",
                                             modifier = Modifier.fillMaxSize(),
                                             contentScale = ContentScale.Fit
                                         )
@@ -2739,4 +2742,69 @@ private fun RichBlockEditorSection(
             }
         }
     }
+}
+
+@Composable
+private fun CreatorBlockImage(
+    rawUrl: String,
+    contentDescription: String?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Fit,
+) {
+    val context = LocalContext.current
+    val resolvedUrl = remember(rawUrl) { resolveLearningMediaUrl(rawUrl) }
+    val imageRequest = remember(resolvedUrl) {
+        ImageRequest.Builder(context)
+            .data(resolvedUrl)
+            .crossfade(true)
+            .build()
+    }
+
+    SubcomposeAsyncImage(
+        model = imageRequest,
+        contentDescription = contentDescription,
+        contentScale = contentScale,
+        modifier = modifier,
+        loading = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(CosmicNavy),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(24.dp),
+                    strokeWidth = 2.dp,
+                    color = EmeraldGlow
+                )
+            }
+        },
+        error = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(CosmicNavy)
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.BrokenImage,
+                        contentDescription = null,
+                        tint = TextTertiary,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Text(
+                        text = "Gambar gagal dimuat",
+                        color = TextSecondary,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+        }
+    )
 }
