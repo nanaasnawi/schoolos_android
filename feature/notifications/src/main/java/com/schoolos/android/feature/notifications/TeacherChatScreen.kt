@@ -4,6 +4,7 @@ import com.schoolos.android.core.R as CoreR
 import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.LaunchedEffect
 import com.schoolos.android.core.common.BuildConfig
+import com.schoolos.android.core.designsystem.stripMarkdownForPreview
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -998,7 +999,7 @@ private fun StudentWhatsAppChatList(
 
                         WhatsAppChatRowItem(
                             teacher = teacher,
-                            lastMessage = lastMsg,
+                            lastMessage = lastMsg?.let { stripMarkdownForPreview(it) },
                             lastMessageTime = lastMsgTime,
                             isOnline = isTeacherOnline,
                             hasUnread = thread?.status == InquiryStatus.ANSWERED,
@@ -2116,7 +2117,7 @@ private fun PrincipalSupervisionChatContent(
 
                             PrincipalTeacherRowItem(
                                 teacher = teacher,
-                                lastMessage = lastMsg,
+                                lastMessage = lastMsg?.let { stripMarkdownForPreview(it) },
                                 lastMessageTime = lastMsgTime,
                                 isOnline = isTeacherOnline,
                                 hasUnread = thread?.status == InquiryStatus.WAITING_REPLY,
@@ -2239,7 +2240,7 @@ private fun PrincipalSupervisionChatContent(
 
                             PrincipalStudentThreadRowItem(
                                 thread = thread,
-                                lastMessage = lastMsg,
+                                lastMessage = lastMsg?.let { stripMarkdownForPreview(it) },
                                 lastMessageTime = lastMsgTime,
                                 isDark = isDark,
                                 cardBg = cardBg,

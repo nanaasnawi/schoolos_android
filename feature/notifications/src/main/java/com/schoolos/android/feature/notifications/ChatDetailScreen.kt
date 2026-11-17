@@ -56,6 +56,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import com.schoolos.android.core.designsystem.CustomBackButton
+import com.schoolos.android.core.designsystem.MarkdownText
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -1297,12 +1298,28 @@ private fun MessageBubble(
                 }
 
                 if (message.content.isNotBlank() && !message.content.equals("📷 [Foto Lampiran]", ignoreCase = true)) {
-                    Text(
-                        text = message.content,
-                        fontSize = 13.5.sp,
-                        color = textPrimary,
-                        lineHeight = 20.sp,
-                    )
+                    if (isAi) {
+                        val aiAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+                        val aiCodeBg = if (isDark) Color(0x3338BDF8) else Color(0x1A0284C7)
+                        MarkdownText(
+                            text = message.content,
+                            fontSize = 13.5.sp,
+                            color = textPrimary,
+                            lineHeight = 20.sp,
+                            headingColor = textPrimary,
+                            codeBackground = aiCodeBg,
+                            codeColor = aiAccent,
+                            linkColor = aiAccent,
+                            mutedColor = textSecondary,
+                        )
+                    } else {
+                        Text(
+                            text = message.content,
+                            fontSize = 13.5.sp,
+                            color = textPrimary,
+                            lineHeight = 20.sp,
+                        )
+                    }
                 }
 
                 Spacer(Modifier.height(4.dp))
