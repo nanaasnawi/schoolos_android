@@ -19,7 +19,13 @@ data class Assignment(
     val teacherName: String? = null,
     val questions: List<AssignmentQuestion> = emptyList(),
     val releaseAt: String? = null,
+    val hasGameQuestions: Boolean = false,
 ) {
+    val hasAnyGame: Boolean
+        get() = hasGameQuestions || questions.any {
+            it.questionType.uppercase() in setOf("MATCHING", "ORDERING", "FILL_BLANK")
+        }
+
     val isScheduled: Boolean
         get() = status.equals("draft", ignoreCase = true) || (!releaseAt.isNullOrBlank() && try {
             java.time.Instant.parse(releaseAt).isAfter(java.time.Instant.now())

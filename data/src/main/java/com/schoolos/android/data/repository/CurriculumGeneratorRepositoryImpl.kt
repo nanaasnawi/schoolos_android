@@ -223,6 +223,7 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                 val defaultPoints = if (qType == "MULTIPLE_CHOICE") 10 else 20
                 val rawQText = qObj.optString("question_text", qObj.optString("text", ""))
                 val cleanQText = if (qType == "MULTIPLE_CHOICE") cleanQuestionStem(rawQText) else rawQText.trim()
+                val rawInteraction = qObj.optJSONObject("interaction_config")
 
                 questionsList.add(
                     GeneratedCurriculumQuestion(
@@ -233,6 +234,7 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                         choices = choicesList,
                         explanation = qObj.optString("explanation", rubric),
                         rubric = if (qObj.isNull("rubric")) rubric else qObj.optString("rubric", rubric),
+                        interactionConfigJson = rawInteraction?.toString(),
                     )
                 )
             }
@@ -284,23 +286,35 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
         numEssay: Int?,
         difficulty: String?,
         includeImages: Boolean?,
+        assignmentFormat: String?,
     ): Result<GeneratedCurriculumResult> = withContext(Dispatchers.IO) {
         val effectiveTopic = topic?.trim()?.ifBlank { null } ?: subjectName
         val effectiveGrade = gradeLevel ?: "Kelas 5 SD"
         val isQuiz = type.startsWith("QUIZ") || type == "EXAM_MONTHLY"
         val isExam = type == "EXAM_MONTHLY"
-        val isHomework = type == "ASSIGNMENT_HOMEWORK"
+        val resolvedAssignmentFormat = (assignmentFormat ?: if (type == "ASSIGNMENT_HOMEWORK") "HOMEWORK_PR" else "STRUCTURED_QUESTIONS").uppercase()
+        val isHomework = type == "ASSIGNMENT_HOMEWORK" || resolvedAssignmentFormat == "HOMEWORK_PR"
+        val isPureGame = !isQuiz && resolvedAssignmentFormat == "INTERACTIVE_GAMES"
+        val isGameMixed = !isQuiz && resolvedAssignmentFormat.contains("GAME") && !isPureGame
         val isQuizMixed = type == "QUIZ_MCQ_ESSAY" || (isQuiz && (numEssay ?: 0) > 0)
 
         val effectiveDifficulty = difficulty ?: if (isExam) "HOTS" else "Sedang"
-        val effectiveNumMcq = numMcq ?: if (isHomework) 0 else if (isQuizMixed) 10 else 5
-        val effectiveNumEssay = numEssay ?: if (isQuizMixed) 5 else (if (isHomework) 5 else 2)
-        val effectiveNumQuestions = numQuestions ?: if (isQuiz) {
-            effectiveNumMcq + (if (isQuizMixed) effectiveNumEssay else 0)
-        } else if (isHomework) {
-            effectiveNumEssay
+        val effectiveNumMcq = if (isHomework || isPureGame) {
+            0
         } else {
-            effectiveNumMcq + effectiveNumEssay
+            numMcq ?: if (isQuizMixed) 10 else 5
+        }
+        val effectiveNumEssay = if (isPureGame || isGameMixed) {
+            0
+        } else {
+            numEssay ?: if (isQuizMixed) 5 else if (isHomework) 5 else 2
+        }
+        val effectiveNumQuestions = numQuestions ?: when {
+            isQuiz -> effectiveNumMcq + (if (isQuizMixed) effectiveNumEssay else 0)
+            isHomework -> effectiveNumEssay
+            isPureGame -> 3
+            isGameMixed -> effectiveNumMcq + 3
+            else -> effectiveNumMcq + effectiveNumEssay
         }
 
         val apiV1 = getApiV1Base()
@@ -318,7 +332,7 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
             put("num_mcq", effectiveNumMcq)
             put("num_essay", effectiveNumEssay)
             put("quiz_format", if (isQuizMixed) "MIXED" else "MCQ_ONLY")
-            put("assignment_format", if (isHomework) "HOMEWORK_PR" else "STRUCTURED_QUESTIONS")
+            put("assignment_format", resolvedAssignmentFormat)
             if (includeImages != null) {
                 put("include_images", includeImages)
             }
@@ -366,7 +380,12 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
             if (data.has("assignment") && !data.isNull("assignment")) {
                 val assignObj = data.getJSONObject("assignment")
                 return@withContext Result.success(
-                    parseAssignmentFromJson(assignObj, type, effectiveTopic, subjectName)
+                    parseAssignmentFromJson(
+                        assignObj = assignObj,
+                        type = if (!assignmentFormat.isNullOrBlank()) resolvedAssignmentFormat else type,
+                        effectiveTopic = effectiveTopic,
+                        subjectName = subjectName,
+                    )
                 )
             }
 

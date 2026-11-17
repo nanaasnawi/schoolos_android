@@ -10,10 +10,11 @@ data class AssignmentChoice(
 data class AssignmentQuestion(
     val id: String?,
     val questionText: String,
-    val questionType: String, // "MULTIPLE_CHOICE" or "ESSAY"
+    val questionType: String, // "MULTIPLE_CHOICE", "ESSAY", "MATCHING", "ORDERING", "FILL_BLANK"
     val points: Int?,
     val orderIndex: Int?,
     val choices: List<AssignmentChoice> = emptyList(),
+    val interactionConfigJson: String? = null,
 )
 
 data class SubmissionAnswer(

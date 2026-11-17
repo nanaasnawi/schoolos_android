@@ -34,13 +34,17 @@ fun LazyListScope.studentAssignmentListContent(
     selectedTab: String,
     onAssignmentClick: (String) -> Unit,
 ) {
+    val isGameTab = selectedTab == "Misi Game"
     val showAll = selectedTab == "Semua"
-    val showDueSoon = showAll || selectedTab == "Segera" || selectedTab == "Aktif"
-    val showActive = showAll || selectedTab == "Aktif"
+    val showDueSoon = showAll || isGameTab || selectedTab == "Segera" || selectedTab == "Aktif"
+    val showActive = showAll || isGameTab || selectedTab == "Aktif"
     val showCompleted = showAll || selectedTab == "Selesai"
 
-    val hasAnyItems = (showDueSoon && dueSoonItems.isNotEmpty()) ||
-            (showActive && activeItems.isNotEmpty()) ||
+    val effDueSoon = if (isGameTab) dueSoonItems.filter { it.hasAnyGame } else dueSoonItems
+    val effActive = if (isGameTab) activeItems.filter { it.hasAnyGame } else activeItems
+
+    val hasAnyItems = (showDueSoon && effDueSoon.isNotEmpty()) ||
+            (showActive && effActive.isNotEmpty()) ||
             (showCompleted && completedItems.isNotEmpty())
 
     if (!hasAnyItems) {
@@ -49,20 +53,20 @@ fun LazyListScope.studentAssignmentListContent(
         }
     } else {
         // Show due soon (urgent) first
-        if (showDueSoon && dueSoonItems.isNotEmpty()) {
+        if (showDueSoon && effDueSoon.isNotEmpty()) {
             renderAssignmentSection(
-                title = "Segera Berakhir",
-                items = dueSoonItems,
+                title = if (isGameTab) "Misi Game Segera Berakhir" else "Segera Berakhir",
+                items = effDueSoon,
                 type = AssignmentSectionType.DUE_SOON,
                 onAssignmentClick = onAssignmentClick
             )
         }
 
         // Show active assignments
-        if (showActive && activeItems.isNotEmpty()) {
+        if (showActive && effActive.isNotEmpty()) {
             renderAssignmentSection(
-                title = "Sedang Berlangsung",
-                items = activeItems,
+                title = if (isGameTab) "Misi Game Berlangsung" else "Sedang Berlangsung",
+                items = effActive,
                 type = AssignmentSectionType.ACTIVE,
                 onAssignmentClick = onAssignmentClick
             )
@@ -199,23 +203,46 @@ private fun StudentAssignmentCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Subject / Class pill
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
-                    border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD)),
-                    modifier = Modifier.weight(1f, fill = false)
+                // Subject / Class + Game Mission badges
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = subjectLabel.uppercase(),
-                        fontSize = 10.5.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = studentAccentColor,
-                        letterSpacing = 0.5.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                    )
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isDark) Color(0xFF1E293B) else Color(0xFFE0F2FE),
+                        border = BorderStroke(1.dp, if (isDark) Color(0xFF334155) else Color(0xFFBAE6FD)),
+                        modifier = Modifier.weight(1f, fill = false)
+                    ) {
+                        Text(
+                            text = subjectLabel.uppercase(),
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = studentAccentColor,
+                            letterSpacing = 0.5.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        )
+                    }
+                    if (assignment.hasAnyGame) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isDark) Color(0xFF064E3B).copy(alpha = 0.45f) else Color(0xFFDCFCE7),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.45f) else Color(0xFF86EFAC)),
+                        ) {
+                            Text(
+                                text = "🎮 MISI GAME",
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (isDark) Color(0xFF34D399) else Color(0xFF059669),
+                                maxLines = 1,
+                                softWrap = false,
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
                 }
 
                 // Max Score pill

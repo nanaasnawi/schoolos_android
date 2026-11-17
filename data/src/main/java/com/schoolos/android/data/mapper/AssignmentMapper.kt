@@ -25,6 +25,10 @@ fun AssignmentQuestionDto.toDomain() = AssignmentQuestion(
     points = points,
     orderIndex = orderIndex,
     choices = choices.map { it.toDomain() },
+    interactionConfigJson = interactionConfig?.let {
+        val raw = it.toString()
+        if (raw == "null") null else raw
+    },
 )
 
 fun SubmissionAnswerDetailDto.toDomain() = SubmissionAnswer(
@@ -58,6 +62,7 @@ fun AssignmentDto.toDomain() = Assignment(
     teacherName = teacherName,
     questions = questions.map { it.toDomain() },
     releaseAt = releaseAt,
+    hasGameQuestions = hasGameQuestions,
 )
 
 fun SubmissionDto.toDomain() = AssignmentSubmission(

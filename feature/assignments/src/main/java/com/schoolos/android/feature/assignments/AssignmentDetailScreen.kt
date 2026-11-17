@@ -83,6 +83,7 @@ fun AssignmentDetailScreen(
     var showConfirm by remember { mutableStateOf(false) }
     var pgAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
     var essayAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
+    var interactiveAnswers by remember { mutableStateOf(emptyMap<String, String>()) }
 
     val attachmentPickerLauncher = androidx.activity.compose.rememberLauncherForActivityResult(
         contract = androidx.activity.result.contract.ActivityResultContracts.GetContent()
@@ -135,10 +136,17 @@ fun AssignmentDetailScreen(
 
     LaunchedEffect(state.submitSuccess) {
         if (state.submitSuccess) {
-            Toast.makeText(context, "Tugas berhasil dikumpulkan!", Toast.LENGTH_SHORT).show()
+            val savedSub = state.submission
+            val toastText = if (savedSub != null && savedSub.status.equals("graded", ignoreCase = true) && savedSub.score != null) {
+                "Misi selesai! Skor otomatis kamu: ${savedSub.score} / 100"
+            } else {
+                "Tugas berhasil dikumpulkan!"
+            }
+            Toast.makeText(context, toastText, Toast.LENGTH_SHORT).show()
             content = ""
             pgAnswers = emptyMap()
             essayAnswers = emptyMap()
+            interactiveAnswers = emptyMap()
             viewModel.dismissSubmitSuccess()
         }
     }
@@ -262,11 +270,15 @@ fun AssignmentDetailScreen(
                                     },
                                     pgAnswers = pgAnswers,
                                     essayAnswers = essayAnswers,
+                                    interactiveAnswers = interactiveAnswers,
                                     onPgAnswerSelected = { qId, choiceId ->
                                         pgAnswers = pgAnswers + (qId to choiceId)
                                     },
                                     onEssayAnswerChanged = { qId, text ->
                                         essayAnswers = essayAnswers + (qId to text)
+                                    },
+                                    onInteractiveAnswerChanged = { qId, json ->
+                                        interactiveAnswers = interactiveAnswers + (qId to json)
                                     },
                                     attachedFileUrl = state.attachedFileUrl,
                                     attachedFileName = state.attachedFileName,
@@ -297,6 +309,7 @@ fun AssignmentDetailScreen(
                     content = content,
                     pgAnswers = pgAnswers,
                     essayAnswers = essayAnswers,
+                    interactiveAnswers = interactiveAnswers,
                 )
             },
             onDismiss = { showConfirm = false }

@@ -16,6 +16,7 @@ interface CurriculumGeneratorRepository {
         numEssay: Int? = null,
         difficulty: String? = null,
         includeImages: Boolean? = null,
+        assignmentFormat: String? = null,
     ): Result<GeneratedCurriculumResult>
 
     suspend fun generateMaterial(

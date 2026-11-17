@@ -98,6 +98,12 @@ class AssignmentRepositoryImpl @Inject constructor(
         val targetClassId = classId.ifBlank { null }
         val questionDtos = if (questions.isNotEmpty()) {
             questions.mapIndexed { qIdx, q ->
+                val parsedInteraction = q.interactionConfigJson
+                    ?.trim()
+                    ?.takeIf { it.isNotBlank() && it != "null" }
+                    ?.let { rawJson ->
+                        runCatching { kotlinx.serialization.json.Json.parseToJsonElement(rawJson) }.getOrNull()
+                    }
                 com.schoolos.android.data.remote.dto.AssignmentQuestionDto(
                     id = q.id,
                     questionText = q.questionText,
@@ -111,7 +117,8 @@ class AssignmentRepositoryImpl @Inject constructor(
                             isCorrect = c.isCorrect ?: false,
                             orderIndex = c.orderIndex ?: (cIdx + 1),
                         )
-                    }
+                    },
+                    interactionConfig = parsedInteraction,
                 )
             }
         } else null

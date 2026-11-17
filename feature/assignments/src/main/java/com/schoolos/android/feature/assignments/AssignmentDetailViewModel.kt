@@ -185,29 +185,34 @@ class AssignmentDetailViewModel @Inject constructor(
      */
     fun submit(
         content: String = "",
-        pgAnswers: Map<String, String> = emptyMap(),        // questionId -> chosenChoiceId
-        essayAnswers: Map<String, String> = emptyMap(),     // questionId -> text answer
+        pgAnswers: Map<String, String> = emptyMap(),          // questionId -> chosenChoiceId
+        essayAnswers: Map<String, String> = emptyMap(),       // questionId -> text answer
+        interactiveAnswers: Map<String, String> = emptyMap(), // questionId -> serialized game JSON
     ) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isSubmitting = true, submitError = null)
 
-            // Build unified answers list: PG choices + essay (essay has null chosenChoiceId)
+            // Build unified answers list: PG uses chosenChoiceId; ESSAY & Interactive Games use textAnswers
             val questions = _state.value.assignment?.questions ?: emptyList()
             val answers = questions.map { q ->
                 val qId = q.id ?: return@map null
                 when (q.questionType.uppercase()) {
                     "MULTIPLE_CHOICE" -> Pair(qId, pgAnswers[qId])
-                    "ESSAY" -> Pair(qId, null) // essay text goes in textAnswers map
-                    else -> Pair(qId, pgAnswers[qId])
+                    else -> Pair(qId, null) // essay text & game JSON go into textAnswers map
                 }
             }.filterNotNull()
+
+            val mergedTextAnswers = buildMap<String, String> {
+                putAll(essayAnswers)
+                putAll(interactiveAnswers)
+            }
 
             repository.submitAssignment(
                 assignmentId = assignmentId,
                 content = content.ifBlank { null },
                 fileUrl = _state.value.attachedFileUrl,
                 answers = answers,
-                textAnswers = essayAnswers,
+                textAnswers = mergedTextAnswers,
             )
                 .onSuccess { submission ->
                     _state.value = _state.value.copy(
