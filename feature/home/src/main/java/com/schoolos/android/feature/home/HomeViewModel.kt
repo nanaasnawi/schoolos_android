@@ -573,12 +573,6 @@ class HomeViewModel @Inject constructor(
                 }
             }
 
-            gamificationRepository.getDailyQuest().onSuccess { quest ->
-                _state.update { current ->
-                    current.copy(dailyQuestSummary = quest)
-                }
-            }
-
             // 4. Reading History & SIBI Book Recommendations (Kemendikdasmen)
             val studentId = auth.userId ?: ""
             val localHistory = readingHistoryManager.getReadingHistory(studentId).filter { !it.isCompleted }

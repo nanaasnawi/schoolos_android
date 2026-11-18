@@ -56,20 +56,30 @@ data class ParsedMagazineData(
  */
 fun parseInfographicBlocks(
     title: String,
-    blocks: List<ContentBlock>
+    blocks: List<ContentBlock>,
+    isEnglish: Boolean = false,
 ): ParsedMagazineData {
+    val editionSuffix = if (isEnglish) "Interactive Visual Edition" else "Edisi Visual Interaktif"
     if (blocks.isEmpty()) {
         return ParsedMagazineData(
             heroCoverUrl = null,
-            heroCaption = "$title • Edisi Visual Interaktif",
+            heroCaption = "$title • $editionSuffix",
             cards = emptyList(),
-            didYouKnowText = "Visual ilustrasi pada modul pembelajaran membantu daya ingat siswa hingga 65% lebih kuat dibanding membaca teks polos!",
-            glossaryTerms = listOf("Literasi Visual", "Kurikulum Merdeka", "Eksplorasi Konsep")
+            didYouKnowText = if (isEnglish) {
+                "Visual illustrations in learning modules boost concept retention by up to 65% compared to plain text alone!"
+            } else {
+                "Visual ilustrasi pada modul pembelajaran membantu daya ingat siswa hingga 65% lebih kuat dibanding membaca teks polos!"
+            },
+            glossaryTerms = if (isEnglish) {
+                listOf("Visual Literacy", "Reading Comprehension", "Key Vocabulary")
+            } else {
+                listOf("Literasi Visual", "Kurikulum Merdeka", "Eksplorasi Konsep")
+            }
         )
     }
 
     var heroCoverUrl: String? = null
-    val heroCaption = "$title • Edisi Visual Interaktif"
+    val heroCaption = "$title • $editionSuffix"
     var didYouKnow: String? = null
     val terms = linkedSetOf<String>()
     val cardList = mutableListOf<ParsedInfographicCard>()
@@ -99,18 +109,19 @@ fun parseInfographicBlocks(
             val text = b.content.trim()
 
             // Check if text is "Tahukah Kamu?" / Did you know callout
-            if (text.contains("tahukah kamu", ignoreCase = true) || text.contains("fakta menarik", ignoreCase = true)) {
+            if (text.contains("tahukah kamu", ignoreCase = true) || text.contains("fakta menarik", ignoreCase = true) || text.contains("did you know", ignoreCase = true)) {
                 didYouKnow = text
                     .replace(Regex("""^###\s*[\p{So}\p{Sk}\p{Sm}\u2000-\u3300]?\s*""", RegexOption.IGNORE_CASE), "")
                     .replace(Regex("""^Tahukah Kamu\??:?\s*""", RegexOption.IGNORE_CASE), "")
                     .replace(Regex("""^Fakta Menarik\??:?\s*""", RegexOption.IGNORE_CASE), "")
+                    .replace(Regex("""^Did You Know\??:?\s*""", RegexOption.IGNORE_CASE), "")
                     .trim()
                 i++
                 continue
             }
 
             // Extract headline & body cleanly
-            var headline = "Poin Esensial #$cardCounter"
+            var headline = if (isEnglish) "Essential Point #$cardCounter" else "Poin Esensial #$cardCounter"
             var body = text
             var step = cardCounter
 
@@ -154,7 +165,11 @@ fun parseInfographicBlocks(
             currentPendingImage = null
 
             val takeaway = if (body.length > 90) {
-                "Intisari: Memahami konsep penting seputar $headline."
+                if (isEnglish) {
+                    "Key Takeaway: Understanding essential concepts about $headline."
+                } else {
+                    "Intisari: Memahami konsep penting seputar $headline."
+                }
             } else null
 
             cardList.add(
@@ -173,12 +188,22 @@ fun parseInfographicBlocks(
     }
 
     if (didYouKnow.isNullOrBlank()) {
-        didYouKnow = "Visual ilustrasi interaktif membantu daya serap materi dan retensi pemahaman siswa hingga 65% lebih tinggi dibanding teks standar!"
+        didYouKnow = if (isEnglish) {
+            "Interactive visual illustrations improve concept comprehension and retention by up to 65% compared to plain text!"
+        } else {
+            "Visual ilustrasi interaktif membantu daya serap materi dan retensi pemahaman siswa hingga 65% lebih tinggi dibanding teks standar!"
+        }
     }
     if (terms.isEmpty()) {
-        terms.add("Literasi Visual")
-        terms.add("Kurikulum Merdeka")
-        terms.add("Eksplorasi Konsep")
+        if (isEnglish) {
+            terms.add("Visual Literacy")
+            terms.add("Reading Comprehension")
+            terms.add("Key Vocabulary")
+        } else {
+            terms.add("Literasi Visual")
+            terms.add("Kurikulum Merdeka")
+            terms.add("Eksplorasi Konsep")
+        }
     }
 
     return ParsedMagazineData(
@@ -209,15 +234,25 @@ fun InfographicMagazineReaderView(
     val clipboardManager = LocalClipboardManager.current
     var copiedSuccess by remember { mutableStateOf(false) }
 
-    val magazineData = remember(title, blocks) {
-        parseInfographicBlocks(title, blocks)
+    val isEnglish = remember(subjectName) {
+        subjectName.contains("inggris", ignoreCase = true) ||
+            subjectName.contains("english", ignoreCase = true)
+    }
+
+    val magazineData = remember(title, blocks, isEnglish) {
+        parseInfographicBlocks(title, blocks, isEnglish)
     }
 
     val copyAllText = {
         val sb = StringBuilder()
         sb.append(title.uppercase()).append("\n")
-        sb.append("Mata Pelajaran: ").append(subjectName).append(" | Rombel: ").append(className).append("\n")
-        sb.append("Penyusun: ").append(teacherName).append("\n\n")
+        if (isEnglish) {
+            sb.append("Subject: ").append(subjectName).append(" | Class: ").append(className).append("\n")
+            sb.append("Author: ").append(teacherName).append("\n\n")
+        } else {
+            sb.append("Mata Pelajaran: ").append(subjectName).append(" | Rombel: ").append(className).append("\n")
+            sb.append("Penyusun: ").append(teacherName).append("\n\n")
+        }
 
         magazineData.cards.forEach { card ->
             sb.append(card.stepNumber).append(". ").append(card.headline).append("\n")
@@ -225,12 +260,17 @@ fun InfographicMagazineReaderView(
         }
 
         if (!magazineData.didYouKnowText.isNullOrBlank()) {
-            sb.append("Tahukah Kamu?\n").append(magazineData.didYouKnowText).append("\n\n")
+            sb.append(if (isEnglish) "Did You Know?\n" else "Tahukah Kamu?\n")
+                .append(magazineData.didYouKnowText).append("\n\n")
         }
 
         clipboardManager.setText(AnnotatedString(sb.toString()))
         copiedSuccess = true
-        Toast.makeText(context, "Seluruh naskah materi berhasil disalin ke papan klip", Toast.LENGTH_SHORT).show()
+        Toast.makeText(
+            context,
+            if (isEnglish) "Module text copied to clipboard" else "Seluruh naskah materi berhasil disalin ke papan klip",
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     Column(
@@ -261,7 +301,7 @@ fun InfographicMagazineReaderView(
                         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(5.dp)) {
                             Icon(Icons.Default.AutoAwesome, null, tint = NeonBlue, modifier = Modifier.size(12.dp))
                             Text(
-                                text = "INFOGRAFIS KURIKULUM MERDEKA",
+                                text = if (isEnglish) "VISUAL INFOGRAPHIC MODULE" else "INFOGRAFIS KURIKULUM MERDEKA",
                                 color = NeonBlue,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
@@ -273,7 +313,7 @@ fun InfographicMagazineReaderView(
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                         Icon(Icons.Default.Schedule, null, tint = TextTertiary, modifier = Modifier.size(13.dp))
                         Text(
-                            text = "~4 Mnt Baca",
+                            text = if (isEnglish) "~4 Min Read" else "~4 Mnt Baca",
                             color = TextTertiary,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium
@@ -283,7 +323,7 @@ fun InfographicMagazineReaderView(
 
                 // Magazine Title
                 Text(
-                    text = title.ifBlank { "Materi Infografis Digital" },
+                    text = title.ifBlank { if (isEnglish) "Digital Visual Learning Module" else "Materi Infografis Digital" },
                     color = TextPrimary,
                     fontSize = (20 * textSizeMultiplier).sp,
                     lineHeight = (26 * textSizeMultiplier).sp,
@@ -292,7 +332,11 @@ fun InfographicMagazineReaderView(
 
                 // Subtitle description
                 Text(
-                    text = subtitle ?: "Modul eksplorasi visual interaktif yang menyajikan ringkasan konsep esensial secara tematis, menarik, dan mudah dipahami.",
+                    text = subtitle ?: if (isEnglish) {
+                        "An interactive visual learning module presenting essential English concepts concisely and clearly."
+                    } else {
+                        "Modul eksplorasi visual interaktif yang menyajikan ringkasan konsep esensial secara tematis, menarik, dan mudah dipahami."
+                    },
                     color = TextSecondary,
                     fontSize = (12.5 * textSizeMultiplier).sp,
                     lineHeight = (18 * textSizeMultiplier).sp
@@ -515,7 +559,7 @@ fun InfographicMagazineReaderView(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Poin Inti Bab ${card.stepNumber}",
+                                text = if (isEnglish) "Learning Point #${card.stepNumber}" else "Poin Inti Bab ${card.stepNumber}",
                                 color = TextTertiary,
                                 fontSize = 10.5.sp
                             )
@@ -615,7 +659,7 @@ fun InfographicMagazineReaderView(
                             )
                         }
                         Text(
-                            text = "TAHUKAH KAMU?",
+                            text = if (isEnglish) "DID YOU KNOW?" else "TAHUKAH KAMU?",
                             color = NeonWarning,
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.ExtraBold,
@@ -648,7 +692,7 @@ fun InfographicMagazineReaderView(
                     ) {
                         Icon(Icons.Default.Tag, null, tint = AccentNeonPurple, modifier = Modifier.size(16.dp))
                         Text(
-                            text = "Konsep & Kosakata Kunci",
+                            text = if (isEnglish) "Key Vocabulary & Concepts" else "Konsep & Kosakata Kunci",
                             color = TextPrimary,
                             fontSize = 12.5.sp,
                             fontWeight = FontWeight.Bold

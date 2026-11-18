@@ -1,392 +1,80 @@
 package com.schoolos.android.feature.quizzes.dailyquest
 
-import android.content.Context
-import android.media.AudioManager
-import android.media.ToneGenerator
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.core.common.toHumanReadableError
-import com.schoolos.android.domain.model.DailyQuest
-import com.schoolos.android.domain.model.DailyQuestGameMode
-import com.schoolos.android.domain.model.DailyQuestSubmitResult
-import com.schoolos.android.domain.model.ShibaPetStatus
-import com.schoolos.android.domain.repository.GamificationRepository
+import com.schoolos.android.core.designsystem.matchesClassFilter
+import com.schoolos.android.domain.model.Assignment
+import com.schoolos.android.domain.repository.AssignmentRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import java.time.Instant
 import javax.inject.Inject
 
 data class DailyQuestUiState(
-    val isLoadingHub: Boolean = true,
-    val isLoadingGame: Boolean = false,
+    val isLoading: Boolean = true,
     val errorMessage: String? = null,
-    val hubQuest: DailyQuest? = null,
-    val activeGame: DailyQuestGameMode? = null, // null = show 7-Game Selection Menu Hub first!
-    val activeQuest: DailyQuest? = null,
-    val roundNumber: Int = 0,
-    val ttsSubject: String = "UMUM",
-    val ttsLevel: Int = 1,
-    val ttsUnlockedMap: Map<String, Int> = mapOf("UMUM" to 1),
-    val elapsedSeconds: Int = 0,
-    val isSubmitting: Boolean = false,
-    val submitResult: DailyQuestSubmitResult? = null,
-    val soundEnabled: Boolean = true,
-    val petStatus: ShibaPetStatus? = null,
-    val chestClaimedToday: Boolean = false,
-    val petNotice: String? = null,
-    val isFeedingPet: Boolean = false,
-    val isOpeningChest: Boolean = false,
-    val cikoFeedPulse: Int = 0,
-    val cikoEvolvePulse: Int = 0,
-) {
-    fun unlockedLevelFor(subject: String): Int =
-        (ttsUnlockedMap[subject] ?: 1).coerceIn(1, 10)
-}
+    val teacherGameMissions: List<Assignment> = emptyList(),
+)
 
 @HiltViewModel
 class DailyQuestViewModel @Inject constructor(
-    private val gamificationRepository: GamificationRepository,
-    @ApplicationContext private val appContext: Context,
+    private val assignmentRepository: AssignmentRepository,
+    private val authManager: AuthManager,
 ) : ViewModel() {
-
-    private val prefs by lazy {
-        appContext.getSharedPreferences("schoolos_tts_progression", Context.MODE_PRIVATE)
-    }
 
     private val _state = MutableStateFlow(DailyQuestUiState())
     val state = _state.asStateFlow()
 
-    private var timerJob: Job? = null
-    private var toneGenerator: ToneGenerator? = null
-
     init {
-        loadUnlockedMap()
-        loadHubSummary()
+        loadTeacherGameMissions()
     }
 
-    private fun loadUnlockedMap() {
-        val subjects = listOf("UMUM", "IPA", "MATEMATIKA", "IPS", "BAHASA", "INFORMATIKA", "INGGRIS")
-        val map = subjects.associateWith { subj ->
-            prefs.getInt("unlocked_$subj", 1).coerceIn(1, 10)
-        }
-        _state.update { it.copy(ttsUnlockedMap = map) }
-    }
-
-    private fun unlockNextTtsLevel(subject: String, finishedLevel: Int) {
-        val nextLevel = (finishedLevel + 1).coerceIn(1, 10)
-        val currentUnlocked = _state.value.unlockedLevelFor(subject)
-        if (nextLevel <= currentUnlocked) return
-        prefs.edit().putInt("unlocked_$subject", nextLevel).apply()
-        _state.update { st ->
-            st.copy(ttsUnlockedMap = st.ttsUnlockedMap + (subject to nextLevel))
-        }
-    }
-
-    override fun onCleared() {
-        super.onCleared()
-        timerJob?.cancel()
-        runCatching { toneGenerator?.release() }
-    }
-
-    fun toggleSound() {
-        _state.update { it.copy(soundEnabled = !it.soundEnabled) }
-    }
-
-    fun loadHubSummary() {
+    fun loadTeacherGameMissions() {
         viewModelScope.launch {
-            _state.update { it.copy(isLoadingHub = true, errorMessage = null) }
-            gamificationRepository.getDailyQuest(mode = null, round = 0)
-                .onSuccess { quest ->
+            _state.update { it.copy(isLoading = true, errorMessage = null) }
+            val auth = authManager.authState.first()
+            val classFilter = if (!auth.isTeacher && !auth.isPrincipal) {
+                auth.className?.takeIf { it.isNotBlank() }
+            } else {
+                null
+            }
+            assignmentRepository.getAssignments("")
+                .onSuccess { list ->
+                    val now = Instant.now()
+                    val activeMissions = list.filter { assignment ->
+                        val classOk = classFilter == null || matchesClassFilter(assignment.className, classFilter)
+                        val isCompleted = assignment.status.equals("submitted", ignoreCase = true) ||
+                            assignment.status.equals("graded", ignoreCase = true)
+                        val isExpired = !assignment.dueAt.isNullOrBlank() && try {
+                            Instant.parse(assignment.dueAt).isBefore(now)
+                        } catch (_: Exception) {
+                            false
+                        }
+                        classOk && assignment.hasAnyGame && !assignment.isScheduled && !isCompleted && !isExpired
+                    }
                     _state.update {
                         it.copy(
-                            isLoadingHub = false,
+                            isLoading = false,
                             errorMessage = null,
-                            hubQuest = quest,
-                            petStatus = quest.petStatus ?: it.petStatus,
-                            chestClaimedToday = quest.chestClaimedToday,
+                            teacherGameMissions = activeMissions,
                         )
                     }
                 }
                 .onFailure { err ->
                     _state.update {
                         it.copy(
-                            isLoadingHub = false,
+                            isLoading = false,
+                            teacherGameMissions = emptyList(),
                             errorMessage = err.toHumanReadableError(),
                         )
                     }
                 }
-        }
-    }
-
-    fun openGame(
-        mode: DailyQuestGameMode,
-        round: Int = 0,
-        subject: String? = null,
-        level: Int? = null,
-    ) {
-        viewModelScope.launch {
-            timerJob?.cancel()
-            playSfx(SfxKind.TAP)
-            val resolvedSubject = subject ?: _state.value.ttsSubject
-            val resolvedLevel = (level ?: _state.value.ttsLevel).coerceIn(1, 10)
-            _state.update {
-                it.copy(
-                    activeGame = mode,
-                    roundNumber = round,
-                    ttsSubject = if (mode == DailyQuestGameMode.CROSSWORD) resolvedSubject else it.ttsSubject,
-                    ttsLevel = if (mode == DailyQuestGameMode.CROSSWORD) resolvedLevel else it.ttsLevel,
-                    isLoadingGame = true,
-                    errorMessage = null,
-                    submitResult = null,
-                    elapsedSeconds = 0,
-                )
-            }
-            gamificationRepository.getDailyQuest(
-                mode = mode.code,
-                round = round,
-                subject = if (mode == DailyQuestGameMode.CROSSWORD) resolvedSubject else null,
-                level = if (mode == DailyQuestGameMode.CROSSWORD) resolvedLevel else 1,
-            )
-                .onSuccess { quest ->
-                    _state.update {
-                        it.copy(
-                            isLoadingGame = false,
-                            errorMessage = null,
-                            activeQuest = quest,
-                            roundNumber = quest.roundNumber,
-                            elapsedSeconds = 0,
-                            submitResult = null,
-                            petStatus = quest.petStatus ?: it.petStatus,
-                            chestClaimedToday = quest.chestClaimedToday,
-                        )
-                    }
-                    startTimer()
-                }
-                .onFailure { err ->
-                    _state.update {
-                        it.copy(
-                            isLoadingGame = false,
-                            errorMessage = err.toHumanReadableError(),
-                        )
-                    }
-                }
-        }
-    }
-
-    fun selectTtsSubject(subject: String) {
-        val unlocked = _state.value.unlockedLevelFor(subject)
-        val nextLevel = _state.value.ttsLevel.coerceAtMost(unlocked)
-        openGame(
-            mode = DailyQuestGameMode.CROSSWORD,
-            round = _state.value.roundNumber + 1,
-            subject = subject,
-            level = nextLevel,
-        )
-    }
-
-    fun selectTtsLevel(level: Int) {
-        val subj = _state.value.ttsSubject
-        val unlocked = _state.value.unlockedLevelFor(subj)
-        openGame(
-            mode = DailyQuestGameMode.CROSSWORD,
-            round = _state.value.roundNumber + 1,
-            subject = subj,
-            level = level.coerceIn(1, unlocked),
-        )
-    }
-
-    fun loadNextLevel() {
-        val mode = _state.value.activeGame ?: return
-        if (mode == DailyQuestGameMode.CROSSWORD) {
-            val nextLevel = (_state.value.ttsLevel + 1).coerceIn(1, 10)
-            openGame(
-                mode = mode,
-                round = _state.value.roundNumber + 1,
-                subject = _state.value.ttsSubject,
-                level = nextLevel,
-            )
-        } else {
-            openGame(mode, _state.value.roundNumber + 1)
-        }
-    }
-
-    fun backToMenu() {
-        timerJob?.cancel()
-        playSfx(SfxKind.TAP)
-        _state.update {
-            it.copy(
-                activeGame = null,
-                activeQuest = null,
-                submitResult = null,
-                errorMessage = null,
-                elapsedSeconds = 0,
-            )
-        }
-        loadHubSummary()
-    }
-
-    private fun startTimer() {
-        timerJob?.cancel()
-        timerJob = viewModelScope.launch {
-            while (isActive) {
-                delay(1_000L)
-                val current = _state.value
-                if (current.activeGame != null && !current.isLoadingGame && !current.isSubmitting && current.submitResult == null) {
-                    _state.update { it.copy(elapsedSeconds = it.elapsedSeconds + 1) }
-                }
-            }
-        }
-    }
-
-    fun submitGameScore(
-        correctCount: Int,
-        totalCount: Int,
-        maxCombo: Int,
-        durationSeconds: Int? = null,
-    ) {
-        val current = _state.value
-        val quest = current.activeQuest ?: return
-        if (current.isSubmitting || current.submitResult != null) return
-
-        if (current.activeGame == DailyQuestGameMode.CROSSWORD) {
-            unlockNextTtsLevel(current.ttsSubject, current.ttsLevel)
-        }
-
-        timerJob?.cancel()
-        _state.update { it.copy(isSubmitting = true) }
-
-        val duration = (durationSeconds ?: current.elapsedSeconds).coerceAtLeast(1)
-
-        viewModelScope.launch {
-            gamificationRepository.submitDailyQuest(
-                questId = quest.questId,
-                correctCount = correctCount,
-                totalCount = totalCount.coerceAtLeast(1),
-                maxCombo = maxCombo.coerceAtLeast(1),
-                durationSeconds = duration,
-                roundNumber = quest.roundNumber,
-            ).onSuccess { res ->
-                playSfx(SfxKind.WIN)
-                _state.update {
-                    it.copy(
-                        isSubmitting = false,
-                        submitResult = res,
-                        petStatus = res.petStatus ?: it.petStatus,
-                    )
-                }
-                loadHubSummary()
-            }.onFailure { err ->
-                playSfx(SfxKind.WIN)
-                _state.update {
-                    it.copy(
-                        isSubmitting = false,
-                        submitResult = DailyQuestSubmitResult(
-                            awarded = false,
-                            alreadyCompleted = false,
-                            xpEarned = 0,
-                            scorePercent = ((correctCount.toFloat() / totalCount.coerceAtLeast(1)) * 100f).toInt(),
-                            totalXp = it.hubQuest?.totalXp ?: 0L,
-                            level = it.hubQuest?.level ?: 1,
-                            streakDays = it.hubQuest?.streakDays ?: 1,
-                            leveledUp = false,
-                            isPreviewAccount = false,
-                            message = "Permainan selesai! (${err.toHumanReadableError()})",
-                        ),
-                    )
-                }
-            }
-        }
-    }
-
-    fun feedShibaPet() {
-        val current = _state.value
-        if (current.isFeedingPet) return
-        _state.update { it.copy(isFeedingPet = true, petNotice = null) }
-        viewModelScope.launch {
-            gamificationRepository.feedShibaPet()
-                .onSuccess { res ->
-                    playSfx(if (res.evolved) SfxKind.WIN else SfxKind.CORRECT)
-                    _state.update {
-                        it.copy(
-                            isFeedingPet = false,
-                            petStatus = res.petStatus ?: it.petStatus,
-                            hubQuest = it.hubQuest?.copy(
-                                totalXp = res.totalXp,
-                                level = res.level,
-                                petStatus = res.petStatus ?: it.hubQuest.petStatus,
-                            ),
-                            petNotice = res.message,
-                            cikoFeedPulse = if (res.fed) it.cikoFeedPulse + 1 else it.cikoFeedPulse,
-                            cikoEvolvePulse = if (res.evolved) it.cikoEvolvePulse + 1 else it.cikoEvolvePulse,
-                        )
-                    }
-                }
-                .onFailure { err ->
-                    _state.update {
-                        it.copy(
-                            isFeedingPet = false,
-                            petNotice = err.toHumanReadableError(),
-                        )
-                    }
-                }
-        }
-    }
-
-    fun openDailyChest() {
-        val current = _state.value
-        if (current.isOpeningChest || current.chestClaimedToday) return
-        _state.update { it.copy(isOpeningChest = true, petNotice = null) }
-        viewModelScope.launch {
-            gamificationRepository.openDailyChest()
-                .onSuccess { res ->
-                    playSfx(SfxKind.WIN)
-                    _state.update {
-                        it.copy(
-                            isOpeningChest = false,
-                            chestClaimedToday = true,
-                            petStatus = res.petStatus ?: it.petStatus,
-                            hubQuest = it.hubQuest?.copy(
-                                totalXp = res.totalXp,
-                                level = res.level,
-                                petStatus = res.petStatus ?: it.hubQuest.petStatus,
-                            ),
-                            petNotice = res.message,
-                        )
-                    }
-                }
-                .onFailure { err ->
-                    _state.update {
-                        it.copy(
-                            isOpeningChest = false,
-                            petNotice = err.toHumanReadableError(),
-                        )
-                    }
-                }
-        }
-    }
-
-    fun playTapSfx() = playSfx(SfxKind.TAP)
-    fun playGoodSfx() = playSfx(SfxKind.CORRECT)
-    fun playErrorSfx() = playSfx(SfxKind.WRONG)
-
-    enum class SfxKind { TAP, CORRECT, WRONG, WIN }
-
-    private fun playSfx(kind: SfxKind) {
-        if (!_state.value.soundEnabled) return
-        runCatching {
-            val tg = toneGenerator ?: ToneGenerator(AudioManager.STREAM_MUSIC, 65).also { toneGenerator = it }
-            when (kind) {
-                SfxKind.TAP -> tg.startTone(ToneGenerator.TONE_PROP_BEEP, 40)
-                SfxKind.CORRECT -> tg.startTone(ToneGenerator.TONE_PROP_ACK, 100)
-                SfxKind.WRONG -> tg.startTone(ToneGenerator.TONE_PROP_NACK, 130)
-                SfxKind.WIN -> tg.startTone(ToneGenerator.TONE_PROP_BEEP2, 240)
-            }
         }
     }
 }

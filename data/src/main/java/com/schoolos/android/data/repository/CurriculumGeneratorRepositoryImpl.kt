@@ -148,6 +148,8 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
             val rawQText = qObj.optString("question_text", qObj.optString("text", ""))
             val cleanQText = if (qType == "MULTIPLE_CHOICE") cleanQuestionStem(rawQText) else rawQText.trim()
 
+            val isEnglishSubject = subjectName.contains("inggris", ignoreCase = true) ||
+                subjectName.contains("english", ignoreCase = true)
             questionsList.add(
                 GeneratedCurriculumQuestion(
                     id = qObj.optString("id", "q-${i + 1}"),
@@ -155,16 +157,30 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                     questionType = qType,
                     points = qObj.optInt("points", if (qType == "ESSAY") 20 else (if (isExam) 10 else 10)),
                     choices = choicesList,
-                    explanation = qObj.optString("explanation", "Disusun otomatis oleh AI backend"),
+                    explanation = qObj.optString(
+                        "explanation",
+                        if (isEnglishSubject) "Generated automatically by AI backend" else "Disusun otomatis oleh AI backend"
+                    ),
                     rubric = if (qObj.isNull("rubric")) null else qObj.optString("rubric"),
                 )
             )
         }
 
+        val isEnglishSubject = subjectName.contains("inggris", ignoreCase = true) ||
+            subjectName.contains("english", ignoreCase = true)
         return GeneratedCurriculumResult(
-            title = quizObj.optString("title", "Paket Soal CBT: $effectiveTopic"),
-            instructions = quizObj.optString("instructions", "Kerjakan seluruh butir soal ujian pilihan ganda berikut dengan teliti."),
-            description = quizObj.optString("description", "Paket soal CBT resmi Kurikulum Merdeka."),
+            title = quizObj.optString(
+                "title",
+                if (isEnglishSubject) "CBT Question Set: $effectiveTopic" else "Paket Soal CBT: $effectiveTopic"
+            ),
+            instructions = quizObj.optString(
+                "instructions",
+                if (isEnglishSubject) "Answer all CBT assessment items below carefully." else "Kerjakan seluruh butir soal ujian pilihan ganda berikut dengan teliti."
+            ),
+            description = quizObj.optString(
+                "description",
+                if (isEnglishSubject) "Official English CBT assessment set." else "Paket soal CBT resmi Kurikulum Merdeka."
+            ),
             format = type,
             questions = questionsList,
             timeLimitMinutes = quizObj.optInt("time_limit_minutes", if (isExam) 90 else 45),
@@ -179,9 +195,18 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
         effectiveTopic: String,
         subjectName: String
     ): GeneratedCurriculumResult {
+        val isEnglishSubject = subjectName.contains("inggris", ignoreCase = true) ||
+            subjectName.contains("english", ignoreCase = true)
         val questionsArray = assignObj.optJSONArray("questions")
         val tasksArray = assignObj.optJSONArray("tasks")
-        val rubric = assignObj.optString("rubric", "Rubrik Penilaian Objektif: Kriteria ketepatan konsep dan kelengkapan analisis (Skor 0 - 100)")
+        val rubric = assignObj.optString(
+            "rubric",
+            if (isEnglishSubject) {
+                "Grading Rubric: Accuracy, clarity, and completeness (0 - 100 scale)"
+            } else {
+                "Rubrik Penilaian Objektif: Kriteria ketepatan konsep dan kelengkapan analisis (Skor 0 - 100)"
+            }
+        )
         val questionsList = ArrayList<GeneratedCurriculumQuestion>()
 
         if (questionsArray != null && questionsArray.length() > 0) {
@@ -263,9 +288,15 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
         }
 
         return GeneratedCurriculumResult(
-            title = assignObj.optString("title", "Tugas Siswa: $effectiveTopic"),
-            instructions = "${assignObj.optString("instructions", "Selesaikan tugas berikut sesuai instruksi guru.")}\n\nRubrik Penilaian:\n$rubric",
-            description = assignObj.optString("description", "Lembar tugas terstruktur Kurikulum Merdeka."),
+            title = assignObj.optString(
+                "title",
+                if (isEnglishSubject) "English Assignment: $effectiveTopic" else "Tugas Siswa: $effectiveTopic"
+            ),
+            instructions = "${assignObj.optString("instructions", if (isEnglishSubject) "Complete the following tasks according to your teacher's instructions." else "Selesaikan tugas berikut sesuai instruksi guru.")}\n\n${if (isEnglishSubject) "Grading Rubric:" else "Rubrik Penilaian:"}\n$rubric",
+            description = assignObj.optString(
+                "description",
+                if (isEnglishSubject) "Structured English learning assignment." else "Lembar tugas terstruktur Kurikulum Merdeka."
+            ),
             format = type,
             questions = questionsList,
             timeLimitMinutes = assignObj.optInt("time_limit_minutes", 45),
@@ -470,10 +501,18 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                     )
                 }
 
+                val isEnglishSubject = subjectName.contains("inggris", ignoreCase = true) ||
+                    subjectName.contains("english", ignoreCase = true)
                 return@withContext Result.success(
                     GeneratedMaterialResult(
-                        title = infoObj.optString("title", "Infografis: ${topic.trim()}"),
-                        description = infoObj.optString("description", "Modul infografis interaktif Kurikulum Merdeka."),
+                        title = infoObj.optString(
+                            "title",
+                            if (isEnglishSubject) "Infographic: ${topic.trim()}" else "Infografis: ${topic.trim()}"
+                        ),
+                        description = infoObj.optString(
+                            "description",
+                            if (isEnglishSubject) "Interactive English learning infographic module." else "Modul infografis interaktif Kurikulum Merdeka."
+                        ),
                         mode = "INFOGRAPHIC",
                         blocks = blocksList
                     )
@@ -482,8 +521,16 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
 
             if (mode.equals("ARTICLE", ignoreCase = true) && data.has("article") && !data.isNull("article")) {
                 val artObj = data.getJSONObject("article")
-                val artTitle = artObj.optString("title", "Artikel: ${topic.trim()}")
-                val artDesc = artObj.optString("description", "Artikel materi pembelajaran resmi Kurikulum Merdeka.")
+                val isEnglishSubject = subjectName.contains("inggris", ignoreCase = true) ||
+                    subjectName.contains("english", ignoreCase = true)
+                val artTitle = artObj.optString(
+                    "title",
+                    if (isEnglishSubject) "Article: ${topic.trim()}" else "Artikel: ${topic.trim()}"
+                )
+                val artDesc = artObj.optString(
+                    "description",
+                    if (isEnglishSubject) "Structured English learning article module." else "Artikel materi pembelajaran resmi Kurikulum Merdeka."
+                )
                 val artContent = artObj.optString("article_content", artObj.optString("content", ""))
 
                 val blocksList = listOf(
