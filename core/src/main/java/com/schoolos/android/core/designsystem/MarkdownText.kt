@@ -1,11 +1,29 @@
 package com.schoolos.android.core.designsystem
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -14,9 +32,12 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 /**
@@ -37,6 +58,165 @@ fun stripMarkdownForPreview(raw: String): String {
         .replace(Regex("(?m)^\\s*[-*]\\s+"), "• ")
         .replace(Regex("\\s+"), " ")
         .trim()
+}
+
+/**
+ * Recovers leaked `"glossary": [...]` JSON fragments if an older AI article stored one,
+ * expands collapsed single-line pipe tables (`| Col | | :--- | | Val |`) onto separate lines,
+ * and fixes asymmetrical LLM bold syntax (`*Term:**` -> `**Term:**`).
+ */
+fun normalizeMarkdownContent(rawInput: String): String {
+    if (rawInput.isBlank()) return rawInput
+    var text = rawInput.replace("\r\n", "\n")
+
+    val glossaryLeakRe = Regex(
+        pattern = """(?:["'],?\s*\n?|\n\s*[•*\-]?\s*)"glossary"\s*:\s*\[([\s\S]*)$""",
+        options = setOf(RegexOption.IGNORE_CASE)
+    )
+    val leakMatch = glossaryLeakRe.find(text)
+    if (leakMatch != null) {
+        val before = text.substring(0, leakMatch.range.first)
+            .replace(Regex("""["'],?\s*$"""), "")
+            .trimEnd()
+        val jsonTail = leakMatch.groupValues.getOrNull(1).orEmpty()
+        val pairRe = Regex(""""term"\s*:\s*"([^"]+)"[\s\S]*?"definition"\s*:\s*"([^"]+)"""")
+        val extractedPairs = pairRe.findAll(jsonTail)
+            .map { "- **${it.groupValues[1]}:** ${it.groupValues[2]}" }
+            .toList()
+        text = if (extractedPairs.isNotEmpty()) {
+            "$before\n\n${extractedPairs.joinToString("\n")}"
+        } else {
+            before
+        }
+    }
+
+    text = text.replace(Regex("""",\s*$"""), "").trimEnd()
+
+    val rawLines = text.split('\n')
+    val expandedLines = ArrayList<String>(rawLines.size + 8)
+    val sepPattern = Regex("""((?:\|\s*:?-{2,}:?\s*)+\|)""")
+
+    for (line in rawLines) {
+        val sepMatch = sepPattern.find(line)
+        if (sepMatch != null) {
+            val sepText = sepMatch.groupValues[1]
+            val colCount = sepText.split('|').map { it.trim() }.count { it.isNotEmpty() }
+            val beforeSep = line.substring(0, sepMatch.range.first)
+            val pipeIndices = ArrayList<Int>()
+            for (idx in beforeSep.indices) {
+                if (beforeSep[idx] == '|') pipeIndices.add(idx)
+            }
+            if (colCount >= 2 && pipeIndices.size >= colCount + 1) {
+                val tailAfterLast = beforeSep.substring(pipeIndices.last() + 1).trim()
+                val headerPipeOffset = if (tailAfterLast.isEmpty()) 1 else 0
+                val startPipePos = (pipeIndices.size - (colCount + headerPipeOffset)).coerceAtLeast(0)
+                val headerStartIdx = pipeIndices[startPipePos]
+                val prefix = beforeSep.substring(0, headerStartIdx).trim()
+                val tablePart = line.substring(headerStartIdx).trim()
+
+                if (prefix.isNotEmpty()) {
+                    expandedLines.add(prefix)
+                    expandedLines.add("")
+                }
+                if (Regex("""\|\s+\|""").containsMatchIn(tablePart)) {
+                    tablePart.replace(Regex("""\|\s+\|"""), "|\n|")
+                        .split('\n')
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .forEach { expandedLines.add(it) }
+                    continue
+                }
+            }
+        }
+        expandedLines.add(line)
+    }
+
+    val asymBoldRe = Regex("""(^|\s)\*([^*\n]+)\*\*(?=\s|$|[.,:;!?])""")
+    return expandedLines.joinToString("\n") { l ->
+        asymBoldRe.replace(l, "$1**$2**")
+    }
+}
+
+private sealed interface MdRenderBlock {
+    data class TextChunk(val rawLines: List<String>) : MdRenderBlock
+    data class Table(
+        val headers: List<String>,
+        val alignments: List<TextAlign>,
+        val rows: List<List<String>>,
+    ) : MdRenderBlock
+}
+
+private fun splitTableCells(line: String): List<String> {
+    var trimmed = line.trim()
+    if (trimmed.startsWith('|')) trimmed = trimmed.substring(1)
+    if (trimmed.endsWith('|')) trimmed = trimmed.substring(0, trimmed.length - 1)
+    return trimmed.split('|').map { it.trim() }
+}
+
+private fun parseTableSeparatorRow(line: String): List<TextAlign>? {
+    val trimmed = line.trim()
+    if (!trimmed.contains('|') || !trimmed.contains('-')) return null
+    val cells = splitTableCells(trimmed)
+    if (cells.isEmpty()) return null
+    val aligns = ArrayList<TextAlign>(cells.size)
+    val sepCellRe = Regex("""^:?-{2,}:?$""")
+    for (c in cells) {
+        if (!sepCellRe.matches(c)) return null
+        aligns.add(
+            when {
+                c.startsWith(':') && c.endsWith(':') -> TextAlign.Center
+                c.endsWith(':') -> TextAlign.End
+                else -> TextAlign.Start
+            }
+        )
+    }
+    return aligns
+}
+
+private fun parseMarkdownBlocks(rawText: String): List<MdRenderBlock> {
+    val lines = normalizeMarkdownContent(rawText).split('\n')
+    val blocks = ArrayList<MdRenderBlock>()
+    val textBuffer = ArrayList<String>()
+
+    fun flushTextBuffer() {
+        if (textBuffer.isNotEmpty()) {
+            blocks.add(MdRenderBlock.TextChunk(textBuffer.toList()))
+            textBuffer.clear()
+        }
+    }
+
+    var i = 0
+    var inCodeBlock = false
+    while (i < lines.size) {
+        val trimmed = lines[i].trim()
+        if (trimmed.startsWith("```")) {
+            inCodeBlock = !inCodeBlock
+            textBuffer.add(lines[i])
+            i++
+            continue
+        }
+        if (!inCodeBlock && trimmed.contains('|') && i + 1 < lines.size) {
+            val aligns = parseTableSeparatorRow(lines[i + 1])
+            if (aligns != null && aligns.isNotEmpty()) {
+                flushTextBuffer()
+                val headers = splitTableCells(trimmed)
+                val rows = ArrayList<List<String>>()
+                i += 2
+                while (i < lines.size) {
+                    val rowTrim = lines[i].trim()
+                    if (rowTrim.isEmpty() || !rowTrim.contains('|') || rowTrim.startsWith("#")) break
+                    rows.add(splitTableCells(rowTrim))
+                    i++
+                }
+                blocks.add(MdRenderBlock.Table(headers = headers, alignments = aligns, rows = rows))
+                continue
+            }
+        }
+        textBuffer.add(lines[i])
+        i++
+    }
+    flushTextBuffer()
+    return blocks
 }
 
 private fun AnnotatedString.Builder.appendMarkdownInline(
@@ -116,16 +296,20 @@ private fun AnnotatedString.Builder.appendMarkdownInline(
             }
         }
 
-        // 5. Italic: *text* (only when not preceded/followed blindly inside whitespace)
-        if (line[i] == '*' && i + 1 < n && !line[i + 1].isWhitespace()) {
-            val close = line.indexOf('*', i + 1)
-            if (close > i + 1 && !line[close - 1].isWhitespace()) {
-                val inner = line.substring(i + 1, close)
-                withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
-                    appendMarkdownInline(inner, codeBg, codeColor, linkColor)
+        // 5. Italic: *text* or _text_
+        if ((line[i] == '*' || line[i] == '_') && i + 1 < n && !line[i + 1].isWhitespace()) {
+            val delimChar = line[i]
+            val prevIsWord = i > 0 && (line[i - 1].isLetterOrDigit() || line[i - 1] == '_')
+            if (!(delimChar == '_' && prevIsWord)) {
+                val close = line.indexOf(delimChar, i + 1)
+                if (close > i + 1 && !line[close - 1].isWhitespace()) {
+                    val inner = line.substring(i + 1, close)
+                    withStyle(SpanStyle(fontStyle = FontStyle.Italic)) {
+                        appendMarkdownInline(inner, codeBg, codeColor, linkColor)
+                    }
+                    i = close + 1
+                    continue
                 }
-                i = close + 1
-                continue
             }
         }
 
@@ -147,9 +331,19 @@ fun parseMarkdownToAnnotatedString(
     linkColor: Color,
     mutedColor: Color,
 ): AnnotatedString {
-    val normalized = rawText.replace("\r\n", "\n").trimEnd()
-    val lines = normalized.split('\n')
+    val lines = normalizeMarkdownContent(rawText).split('\n')
+    return linesToAnnotatedString(lines, baseFontSize, headingColor, codeBg, codeColor, linkColor, mutedColor)
+}
 
+private fun linesToAnnotatedString(
+    lines: List<String>,
+    baseFontSize: TextUnit,
+    headingColor: Color,
+    codeBg: Color,
+    codeColor: Color,
+    linkColor: Color,
+    mutedColor: Color,
+): AnnotatedString {
     return buildAnnotatedString {
         var inCodeBlock = false
         lines.forEachIndexed { idx, rawLine ->
@@ -223,8 +417,8 @@ fun parseMarkdownToAnnotatedString(
                 return@forEachIndexed
             }
 
-            // Unordered list - item / * item
-            val bulletMatch = Regex("^(\\s*)[-*]\\s+(.+)$").matchEntire(rawLine)
+            // Unordered list - item / * item / • item
+            val bulletMatch = Regex("^(\\s*)[-*•]\\s+(.+)$").matchEntire(rawLine)
             if (bulletMatch != null) {
                 val indent = if (bulletMatch.groupValues[1].length >= 2) "   " else ""
                 withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = linkColor)) {
@@ -253,8 +447,117 @@ fun parseMarkdownToAnnotatedString(
     }
 }
 
+@Composable
+private fun MarkdownTableBlockView(
+    table: MdRenderBlock.Table,
+    baseFontSize: TextUnit,
+    lineHeight: TextUnit,
+    textColor: Color,
+    headingColor: Color,
+    codeBg: Color,
+    codeColor: Color,
+    linkColor: Color,
+) {
+    val borderColor = headingColor.copy(alpha = 0.24f)
+    val headerBg = codeBg.copy(alpha = (codeBg.alpha * 1.4f).coerceIn(0.14f, 0.35f))
+    val stripeBg = headingColor.copy(alpha = 0.05f)
+
+    val colWidths: List<Dp> = remember(table) {
+        table.headers.indices.map { colIdx ->
+            val maxChars = maxOf(
+                table.headers.getOrNull(colIdx)?.length ?: 0,
+                table.rows.maxOfOrNull { it.getOrNull(colIdx)?.length ?: 0 } ?: 0
+            )
+            (maxChars * 7.5f + 24f).coerceIn(92f, 220f).dp
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(10.dp))
+            .border(1.dp, borderColor, RoundedCornerShape(10.dp))
+            .horizontalScroll(rememberScrollState())
+    ) {
+        Column {
+            // Header row
+            Row(
+                modifier = Modifier
+                    .height(IntrinsicSize.Min)
+                    .background(headerBg)
+            ) {
+                table.headers.forEachIndexed { colIdx, header ->
+                    val cellText = remember(header, codeBg, codeColor, linkColor) {
+                        buildAnnotatedString {
+                            withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
+                                appendMarkdownInline(header, codeBg, codeColor, linkColor)
+                            }
+                        }
+                    }
+                    Text(
+                        text = cellText,
+                        color = headingColor,
+                        fontSize = (baseFontSize.value * 0.92f).sp,
+                        lineHeight = (lineHeight.value * 0.90f).sp,
+                        textAlign = table.alignments.getOrNull(colIdx) ?: TextAlign.Start,
+                        modifier = Modifier
+                            .width(colWidths.getOrElse(colIdx) { 110.dp })
+                            .padding(horizontal = 10.dp, vertical = 8.dp)
+                    )
+                    if (colIdx < table.headers.lastIndex) {
+                        VerticalDivider(
+                            color = borderColor,
+                            modifier = Modifier.fillMaxHeight()
+                        )
+                    }
+                }
+            }
+
+            HorizontalDivider(color = borderColor)
+
+            // Body rows
+            table.rows.forEachIndexed { rowIdx, row ->
+                Row(
+                    modifier = Modifier
+                        .height(IntrinsicSize.Min)
+                        .background(if (rowIdx % 2 == 1) stripeBg else Color.Transparent)
+                ) {
+                    table.headers.indices.forEach { colIdx ->
+                        val rawCell = row.getOrNull(colIdx).orEmpty()
+                        val cellAnnotated = remember(rawCell, codeBg, codeColor, linkColor) {
+                            buildAnnotatedString {
+                                appendMarkdownInline(rawCell, codeBg, codeColor, linkColor)
+                            }
+                        }
+                        Text(
+                            text = cellAnnotated,
+                            color = textColor,
+                            fontSize = (baseFontSize.value * 0.90f).sp,
+                            lineHeight = (lineHeight.value * 0.90f).sp,
+                            textAlign = table.alignments.getOrNull(colIdx) ?: TextAlign.Start,
+                            modifier = Modifier
+                                .width(colWidths.getOrElse(colIdx) { 110.dp })
+                                .padding(horizontal = 10.dp, vertical = 7.dp)
+                        )
+                        if (colIdx < table.headers.lastIndex) {
+                            VerticalDivider(
+                                color = borderColor.copy(alpha = 0.6f),
+                                modifier = Modifier.fillMaxHeight()
+                            )
+                        }
+                    }
+                }
+                if (rowIdx < table.rows.lastIndex) {
+                    HorizontalDivider(color = borderColor.copy(alpha = 0.6f))
+                }
+            }
+        }
+    }
+}
+
 /**
- * Pure-Compose Markdown text component tailored for SchoolOS AI tutor/copilot/analytics responses.
+ * Pure-Compose Markdown text + GFM table component tailored for SchoolOS AI tutor, articles,
+ * infographics, and teacher workstation responses.
  */
 @Composable
 fun MarkdownText(
@@ -275,37 +578,71 @@ fun MarkdownText(
     val resolvedHeading = if (headingColor != Color.Unspecified) headingColor else resolvedColor
     val resolvedMuted = if (mutedColor != Color.Unspecified) mutedColor else resolvedColor.copy(alpha = 0.78f)
 
-    val parsed = remember(text, fontSize, resolvedHeading, codeBackground, codeColor, linkColor, resolvedMuted) {
-        parseMarkdownToAnnotatedString(
-            rawText = text,
-            baseFontSize = fontSize,
-            headingColor = resolvedHeading,
-            codeBg = codeBackground,
-            codeColor = codeColor,
-            linkColor = linkColor,
-            mutedColor = resolvedMuted,
-        )
+    val blocks = remember(text) { parseMarkdownBlocks(text) }
+
+    val content: @Composable () -> Unit = {
+        Column(
+            modifier = modifier,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            blocks.forEach { block ->
+                when (block) {
+                    is MdRenderBlock.TextChunk -> {
+                        val trimmedLines = block.rawLines
+                            .dropWhile { it.isBlank() }
+                            .dropLastWhile { it.isBlank() }
+                        if (trimmedLines.isNotEmpty()) {
+                            val parsed = remember(
+                                trimmedLines,
+                                fontSize,
+                                resolvedHeading,
+                                codeBackground,
+                                codeColor,
+                                linkColor,
+                                resolvedMuted
+                            ) {
+                                linesToAnnotatedString(
+                                    lines = trimmedLines,
+                                    baseFontSize = fontSize,
+                                    headingColor = resolvedHeading,
+                                    codeBg = codeBackground,
+                                    codeColor = codeColor,
+                                    linkColor = linkColor,
+                                    mutedColor = resolvedMuted,
+                                )
+                            }
+                            Text(
+                                text = parsed,
+                                color = resolvedColor,
+                                fontSize = fontSize,
+                                lineHeight = lineHeight,
+                                style = style,
+                            )
+                        }
+                    }
+
+                    is MdRenderBlock.Table -> {
+                        MarkdownTableBlockView(
+                            table = block,
+                            baseFontSize = fontSize,
+                            lineHeight = lineHeight,
+                            textColor = resolvedColor,
+                            headingColor = resolvedHeading,
+                            codeBg = codeBackground,
+                            codeColor = codeColor,
+                            linkColor = linkColor,
+                        )
+                    }
+                }
+            }
+        }
     }
 
     if (selectable) {
         SelectionContainer {
-            Text(
-                text = parsed,
-                modifier = modifier,
-                color = resolvedColor,
-                fontSize = fontSize,
-                lineHeight = lineHeight,
-                style = style,
-            )
+            content()
         }
     } else {
-        Text(
-            text = parsed,
-            modifier = modifier,
-            color = resolvedColor,
-            fontSize = fontSize,
-            lineHeight = lineHeight,
-            style = style,
-        )
+        content()
     }
 }
