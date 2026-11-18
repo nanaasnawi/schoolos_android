@@ -22,10 +22,20 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.*
+
+private fun splitArticleSections(rawContent: String): List<String> {
+    val normalized = normalizeMarkdownContent(rawContent).trim()
+    if (normalized.isBlank()) {
+        return listOf("Belum ada teks naskah artikel yang disematkan.")
+    }
+    // Split on blank lines unless keeping a Markdown heading paired cleanly, or render clean sections
+    return normalized.split(Regex("""\n{2,}"""))
+        .map { it.trim() }
+        .filter { it.isNotEmpty() }
+}
 
 /**
  * Article & Text Reader View with Typography, Copy-Paste, and Professional Reading Mode
@@ -124,12 +134,8 @@ fun ArticleReaderView(
 
             HorizontalDivider(color = GlassBorder)
 
-            // Content Paragraphs
-            val paragraphs = if (content.isNotBlank()) {
-                content.split("\n\n").filter { it.isNotBlank() }
-            } else {
-                listOf("Belum ada teks naskah artikel yang disematkan.")
-            }
+            // Content Paragraphs & Rich Markdown Sections
+            val paragraphs = remember(content) { splitArticleSections(content) }
 
             paragraphs.forEachIndexed { index, p ->
                 var paragraphCopied by remember(index) { mutableStateOf(false) }
@@ -185,13 +191,14 @@ fun ArticleReaderView(
 
                     Spacer(Modifier.height(6.dp))
 
-                    Text(
+                    MarkdownText(
                         text = p.trim(),
                         color = TextPrimary,
+                        headingColor = NeonSuccess,
                         fontSize = (14 * textSizeMultiplier).sp,
                         lineHeight = (22 * textSizeMultiplier).sp,
-                        textAlign = TextAlign.Justify,
-                        fontWeight = FontWeight.Normal
+                        selectable = true,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }

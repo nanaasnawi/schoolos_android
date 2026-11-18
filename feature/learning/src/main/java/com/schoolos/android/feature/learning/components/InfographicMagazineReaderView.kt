@@ -584,14 +584,15 @@ fun InfographicMagazineReaderView(
                         }
                     }
 
-                    // Readable Paragraph Body
+                    // Readable Paragraph Body (with Markdown & table support)
                     if (card.body.isNotBlank()) {
-                        Text(
+                        MarkdownText(
                             text = card.body,
                             color = TextSecondary,
+                            headingColor = TextPrimary,
                             fontSize = (13.5 * textSizeMultiplier).sp,
                             lineHeight = (21 * textSizeMultiplier).sp,
-                            fontWeight = FontWeight.Normal
+                            modifier = Modifier.fillMaxWidth()
                         )
                     }
 
