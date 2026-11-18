@@ -131,9 +131,26 @@ fun normalizeMarkdownContent(rawInput: String): String {
         expandedLines.add(line)
     }
 
-    val asymBoldRe = Regex("""(^|\s)\*([^*\n]+)\*\*(?=\s|$|[.,:;!?])""")
-    return expandedLines.joinToString("\n") { l ->
-        asymBoldRe.replace(l, "$1**$2**")
+    val asymBoldOpenSingleRe = Regex("""(^|\s)\*([^*\n]+)\*\*(?=\s|$|[.,:;!?])""")
+    val asymBoldCloseSingleRe = Regex("""(^|\s)\*\*([^*\n]+)\*(?!\*)(?=\s|$|[.,:;!?])""")
+    val unclosedBoldLineRe = Regex("""^(\s*[-*•]\s+|\s*\d+[.)]\s+)?\*\*[^*\n]+$""")
+    val labelColonRe = Regex("""^(\s*(?:[-*•]\s+|\d+[.)]\s+)?\*\*[^*\n:]{1,65}:)(\s+.+)$""")
+
+    return expandedLines.joinToString("\n") { line ->
+        var l = asymBoldOpenSingleRe.replace(line, "$1**$2**")
+        l = asymBoldCloseSingleRe.replace(l, "$1**$2**")
+
+        val trimmed = l.trim()
+        val boldPairsCount = Regex("""\*\*""").findAll(trimmed).count()
+        if (boldPairsCount % 2 == 1 && unclosedBoldLineRe.matches(l)) {
+            val labelColonMatch = labelColonRe.matchEntire(l)
+            l = if (labelColonMatch != null && labelColonMatch.groupValues[2].trim().length > 25) {
+                "${labelColonMatch.groupValues[1]}**${labelColonMatch.groupValues[2]}"
+            } else {
+                "${l.trimEnd()}**"
+            }
+        }
+        l
     }
 }
 
