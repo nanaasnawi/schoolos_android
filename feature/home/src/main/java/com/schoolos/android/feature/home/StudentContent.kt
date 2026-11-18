@@ -90,15 +90,7 @@ fun LazyListScope.studentContent(
         )
     }
 
-    // ── 0.5. MISI HARIAN DINAMIS (GAME QUEST ARENA BANNER) ────────────────────
-    item {
-        HomeDailyQuestGameCard(
-            dailyQuest = dailyQuestSummary,
-            onClick = onNavigateToDailyQuest,
-        )
-    }
-
-    // ── 0.6. MISI GAME TUGAS DARI GURU (TAMPIL HANYA JIKA ADA TUGAS GAME AKTIF) ──
+    // ── 0.5. MISI GAME TUGAS DARI GURU (TAMPIL HANYA JIKA ADA TUGAS GAME AKTIF) ──
     val activeTeacherGameMissions = studentAssignments.filter {
         it.hasAnyGame &&
             !it.isScheduled &&

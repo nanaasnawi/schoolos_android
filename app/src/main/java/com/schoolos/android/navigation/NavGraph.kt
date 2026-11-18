@@ -392,10 +392,12 @@ fun NavGraph(
                 )
             }
 
-            // Daily Dynamic Quest Arena (4 Rotating Mini-Games)
+            // Misi Game Tugas dari Guru
             composable(Screen.DailyQuest.route) {
                 com.schoolos.android.feature.quizzes.dailyquest.DailyQuestScreen(
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onOpenAssignment = { id -> navController.navigate(Screen.AssignmentDetail.createRoute(id)) },
+                    onOpenAssignments = { navController.navigate(Screen.Assignments.route) },
                 )
             }
 
