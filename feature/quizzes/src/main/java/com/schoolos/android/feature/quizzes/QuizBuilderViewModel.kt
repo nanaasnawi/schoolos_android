@@ -117,19 +117,26 @@ class QuizBuilderViewModel @Inject constructor(
                         }
                         val correctIdx = q.choices.indexOfFirst { it.isCorrect }.let { if (it >= 0) it else 0 }
 
+                        val cleanImg = q.imageUrl?.trim()?.takeIf { it.isNotBlank() && !it.contains("unsplash.com", ignoreCase = true) }
+                        val storedQuestionText = if (cleanImg != null && !q.questionText.contains("![")) {
+                            "![Diagram Soal]($cleanImg)\n\n${q.questionText.trim()}"
+                        } else {
+                            q.questionText.trim()
+                        }
+
                         repository.addQuestion(
                             quizId = createdQuiz.id,
-                            questionText = q.questionText,
+                            questionText = storedQuestionText,
                             questionType = if (q.questionType == "MULTIPLE_CHOICE") "multiple_choice" else "essay",
                             points = q.points,
-                            imageUrl = q.imageUrl,
+                            imageUrl = cleanImg,
                             choices = choicesInputs
                         )
 
                         summaries.add(
                             QuestionSummary(
                                 number = summaries.size + 1,
-                                text = q.questionText,
+                                text = storedQuestionText,
                                 type = q.questionType,
                                 points = q.points,
                                 choicesCount = q.choices.size,
@@ -261,12 +268,18 @@ class QuizBuilderViewModel @Inject constructor(
                     } else {
                         emptyList()
                     }
+                    val cleanImg = q.imageUrl?.trim()?.takeIf { it.isNotBlank() && !it.contains("unsplash.com", ignoreCase = true) }
+                    val storedQuestionText = if (cleanImg != null && !q.questionText.contains("![")) {
+                        "![Diagram Soal]($cleanImg)\n\n${q.questionText.trim()}"
+                    } else {
+                        q.questionText.trim()
+                    }
                     repository.addQuestion(
                         quizId = createdQuiz.id,
-                        questionText = q.questionText,
+                        questionText = storedQuestionText,
                         questionType = if (q.questionType == "MULTIPLE_CHOICE") "multiple_choice" else "essay",
                         points = q.points,
-                        imageUrl = q.imageUrl,
+                        imageUrl = cleanImg,
                         choices = choicesInputs
                     )
                 }

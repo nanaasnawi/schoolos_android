@@ -42,9 +42,11 @@
 -keep @androidx.room.Dao interface * { *; }
 -dontwarn androidx.room.paging.**
 
-# Coil Image Loading
+# Coil Image Loading & AndroidSVG (keep all SVG parser/DOM classes intact under R8)
 -dontwarn coil.**
 -keep class coil.** { *; }
+-dontwarn com.caverock.androidsvg.**
+-keep class com.caverock.androidsvg.** { *; }
 
 # Coroutines
 -dontwarn kotlinx.coroutines.**

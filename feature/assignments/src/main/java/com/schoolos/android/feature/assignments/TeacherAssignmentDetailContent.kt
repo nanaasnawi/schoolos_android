@@ -1381,13 +1381,23 @@ private fun TeacherInlineGradingCard(
                             }
                         }
 
-                        // Clean Full-Width Question Text
-                        Text(
-                            text = cleanedQuestionText,
+                        // Clean Full-Width Question Text & Optional Diagram Stimulus
+                        val gradingFallbackImg = remember(answer.questionId, cleanedQuestionText, questionsMap) {
+                            if (cleanedQuestionText.contains("![")) {
+                                null
+                            } else {
+                                questionsMap[answer.questionId]?.questionText?.let {
+                                    com.schoolos.android.core.designsystem.extractQuestionDiagramAndText(it).first
+                                }
+                            }
+                        }
+                        QuestionPromptWithDiagram(
+                            rawText = cleanedQuestionText,
+                            explicitImageUrl = gradingFallbackImg,
                             fontSize = 13.5.sp,
                             fontWeight = FontWeight.Medium,
                             color = textPrimary,
-                            lineHeight = 20.sp
+                            lineHeight = 20.sp,
                         )
 
                         // Student Answer Box
