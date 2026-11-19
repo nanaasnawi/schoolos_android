@@ -269,13 +269,17 @@ fun isInteractiveAnswerComplete(
                 else leftItems.all { matches.optString(it.id, "").isNotBlank() }
             }
             "ORDERING" -> {
-                val order = ansObj.optJSONArray("order") ?: return@runCatching false
+                val order = ansObj.optJSONArray("order")
+                    ?: ansObj.optJSONArray("ordered_ids")
+                    ?: return@runCatching false
                 val items = parseOrderingItems(interactionConfigJson)
                 if (items.isEmpty()) order.length() > 0
                 else order.length() >= items.size
             }
             "FILL_BLANK" -> {
-                val fills = ansObj.optJSONArray("fills") ?: return@runCatching false
+                val fills = ansObj.optJSONArray("fills")
+                    ?: ansObj.optJSONArray("answers")
+                    ?: return@runCatching false
                 val cfg = parseFillBlankStudentConfig(interactionConfigJson)
                 if (fills.length() < cfg.blankCount) return@runCatching false
                 (0 until cfg.blankCount).all { i -> fills.optString(i, "").isNotBlank() }
@@ -315,7 +319,9 @@ fun formatInteractiveAnswerSummary(
                 }
             }
             "ORDERING" -> {
-                val order = ansObj.optJSONArray("order") ?: return@runCatching listOf(answerJson)
+                val order = ansObj.optJSONArray("order")
+                    ?: ansObj.optJSONArray("ordered_ids")
+                    ?: return@runCatching listOf(answerJson)
                 val itemsMap = parseOrderingItems(interactionConfigJson).associateBy { it.id }
                 buildList {
                     for (i in 0 until order.length()) {
@@ -326,7 +332,9 @@ fun formatInteractiveAnswerSummary(
                 }.ifEmpty { listOf("-") }
             }
             "FILL_BLANK" -> {
-                val fills = ansObj.optJSONArray("fills") ?: return@runCatching listOf(answerJson)
+                val fills = ansObj.optJSONArray("fills")
+                    ?: ansObj.optJSONArray("answers")
+                    ?: return@runCatching listOf(answerJson)
                 val cfg = parseFillBlankStudentConfig(interactionConfigJson)
                 val fillWords = buildList {
                     for (i in 0 until fills.length()) {
@@ -835,7 +843,8 @@ private fun OrderingGamePlayer(
     LaunchedEffect(answerJson, rawItems) {
         if (!answerJson.isNullOrBlank()) {
             runCatching {
-                val arr = JSONObject(answerJson).optJSONArray("order")
+                val obj = JSONObject(answerJson)
+                val arr = obj.optJSONArray("order") ?: obj.optJSONArray("ordered_ids")
                 if (arr != null && arr.length() > 0) {
                     val parsed = buildList {
                         for (i in 0 until arr.length()) {
@@ -1012,7 +1021,8 @@ private fun FillBlankGamePlayer(
     LaunchedEffect(answerJson, cfg.blankCount) {
         if (!answerJson.isNullOrBlank()) {
             runCatching {
-                val arr = JSONObject(answerJson).optJSONArray("fills")
+                val obj = JSONObject(answerJson)
+                val arr = obj.optJSONArray("fills") ?: obj.optJSONArray("answers")
                 if (arr != null) {
                     for (i in 0 until cfg.blankCount) {
                         fills[i] = arr.optString(i, "")

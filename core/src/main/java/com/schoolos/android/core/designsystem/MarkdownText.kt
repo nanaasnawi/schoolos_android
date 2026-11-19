@@ -69,24 +69,28 @@ fun normalizeMarkdownContent(rawInput: String): String {
     if (rawInput.isBlank()) return rawInput
     var text = rawInput.replace("\r\n", "\n")
 
-    val glossaryLeakRe = Regex(
-        pattern = """(?:["'],?\s*\n?|\n\s*[•*\-]?\s*)"glossary"\s*:\s*\[([\s\S]*)$""",
+    val siblingJsonLeakRe = Regex(
+        pattern = """(?:(?:^|\n)\s*["'],\s*(?:\n\s*)+|\n\s*[•*\-]?\s*)"(?:glossary|soal_essay|soal_pilihan_ganda|soal_pg|questions|quiz|exercises|practice_questions|rubric|tasks)"\s*:\s*(?:\[|\{|")[\s\S]*$|(?:^|\n)\s*["'],\s*\n+\s*"[a-zA-Z_][a-zA-Z0-9_]*"\s*:\s*(?:\[|\{|")[\s\S]*$""",
         options = setOf(RegexOption.IGNORE_CASE)
     )
-    val leakMatch = glossaryLeakRe.find(text)
+    val leakMatch = siblingJsonLeakRe.find(text)
     if (leakMatch != null) {
         val before = text.substring(0, leakMatch.range.first)
             .replace(Regex("""["'],?\s*$"""), "")
             .trimEnd()
-        val jsonTail = leakMatch.groupValues.getOrNull(1).orEmpty()
-        val pairRe = Regex(""""term"\s*:\s*"([^"]+)"[\s\S]*?"definition"\s*:\s*"([^"]+)"""")
-        val extractedPairs = pairRe.findAll(jsonTail)
-            .map { "- **${it.groupValues[1]}:** ${it.groupValues[2]}" }
-            .toList()
-        text = if (extractedPairs.isNotEmpty()) {
-            "$before\n\n${extractedPairs.joinToString("\n")}"
+        val matchedTail = leakMatch.value
+        if (Regex(""""glossary"\s*:""", RegexOption.IGNORE_CASE).containsMatchIn(matchedTail)) {
+            val pairRe = Regex(""""term"\s*:\s*"([^"]+)"[\s\S]*?"definition"\s*:\s*"([^"\r\n]+)(?:"|$)""")
+            val extractedPairs = pairRe.findAll(matchedTail)
+                .map { "- **${it.groupValues[1]}:** ${it.groupValues[2]}" }
+                .toList()
+            text = if (extractedPairs.isNotEmpty()) {
+                "$before\n\n${extractedPairs.joinToString("\n")}"
+            } else {
+                before
+            }
         } else {
-            before
+            text = before
         }
     }
 
