@@ -150,12 +150,16 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
 
             val isEnglishSubject = subjectName.contains("inggris", ignoreCase = true) ||
                 subjectName.contains("english", ignoreCase = true)
+            val rawImageUrl = qObj.optString("image_url", "")
+                .trim()
+                .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
             questionsList.add(
                 GeneratedCurriculumQuestion(
                     id = qObj.optString("id", "q-${i + 1}"),
                     questionText = cleanQText,
                     questionType = qType,
                     points = qObj.optInt("points", if (qType == "ESSAY") 20 else (if (isExam) 10 else 10)),
+                    imageUrl = rawImageUrl,
                     choices = choicesList,
                     explanation = qObj.optString(
                         "explanation",
@@ -249,6 +253,9 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                 val rawQText = qObj.optString("question_text", qObj.optString("text", ""))
                 val cleanQText = if (qType == "MULTIPLE_CHOICE") cleanQuestionStem(rawQText) else rawQText.trim()
                 val rawInteraction = qObj.optJSONObject("interaction_config")
+                val rawImageUrl = qObj.optString("image_url", "")
+                    .trim()
+                    .takeIf { it.isNotBlank() && !it.equals("null", ignoreCase = true) }
 
                 questionsList.add(
                     GeneratedCurriculumQuestion(
@@ -256,6 +263,7 @@ class CurriculumGeneratorRepositoryImpl @Inject constructor(
                         questionText = cleanQText,
                         questionType = qType,
                         points = qObj.optInt("points", defaultPoints),
+                        imageUrl = rawImageUrl,
                         choices = choicesList,
                         explanation = qObj.optString("explanation", rubric),
                         rubric = if (qObj.isNull("rubric")) rubric else qObj.optString("rubric", rubric),

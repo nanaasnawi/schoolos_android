@@ -857,8 +857,9 @@ private fun QuizQuestionVerificationCard(
                 )
             }
 
-            Text(
-                question.questionText,
+            QuestionPromptWithDiagram(
+                rawText = question.questionText,
+                explicitImageUrl = question.imageUrl,
                 fontWeight = FontWeight.SemiBold,
                 fontSize = 13.sp,
                 color = textPrimary,

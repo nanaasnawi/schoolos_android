@@ -10,6 +10,7 @@ data class GeneratedCurriculumQuestion(
     val questionText: String,
     val questionType: String, // "MULTIPLE_CHOICE", "ESSAY", "MATCHING", "ORDERING", "FILL_BLANK"
     val points: Int,
+    val imageUrl: String? = null,
     val choices: List<GeneratedCurriculumChoice> = emptyList(),
     val explanation: String? = null,
     val rubric: String? = null,

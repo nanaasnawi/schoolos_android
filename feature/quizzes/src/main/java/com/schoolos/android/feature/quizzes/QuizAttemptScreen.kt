@@ -42,6 +42,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.CheckCircle
+import com.schoolos.android.core.designsystem.QuestionPromptWithDiagram
 import com.schoolos.android.core.designsystem.SchoolOsConfirmationDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -264,33 +265,10 @@ fun QuizAttemptScreen(
                                             }
                                         }
 
-                                        // Image if present
-                                        if (question.imageUrl != null) {
-                                            Box(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(200.dp)
-                                                    .clip(RoundedCornerShape(16.dp))
-                                                    .background(innerCardBg)
-                                                    .border(1.dp, innerCardBorder, RoundedCornerShape(16.dp))
-                                            ) {
-                                                coil.compose.SubcomposeAsyncImage(
-                                                    model = question.imageUrl,
-                                                    contentDescription = "Gambar Soal",
-                                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                                    modifier = Modifier.fillMaxSize(),
-                                                    loading = {
-                                                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                                            CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
-                                                        }
-                                                    }
-                                                )
-                                            }
-                                        }
-
-                                        // Question stem text
-                                        Text(
-                                            text = question.questionText,
+                                        // Diagram / Image + Question stem text
+                                        QuestionPromptWithDiagram(
+                                            rawText = question.questionText,
+                                            explicitImageUrl = question.imageUrl,
                                             fontSize = 15.sp,
                                             fontWeight = FontWeight.SemiBold,
                                             color = textPrimary,

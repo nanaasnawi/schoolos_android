@@ -9,22 +9,29 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
@@ -39,6 +46,130 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
+
+/**
+ * Resolves relative `/uploads/...` media paths from the SchoolOS backend into absolute URLs
+ * while keeping full URLs, `data:`, `content://`, and `file://` URIs untouched.
+ */
+fun resolveServerMediaUrl(rawUrl: String): String {
+    val trimmed = rawUrl.trim()
+    if (trimmed.isBlank()) return ""
+    if (trimmed.startsWith("http://", ignoreCase = true) ||
+        trimmed.startsWith("https://", ignoreCase = true) ||
+        trimmed.startsWith("data:", ignoreCase = true) ||
+        trimmed.startsWith("content://", ignoreCase = true) ||
+        trimmed.startsWith("file://", ignoreCase = true)
+    ) {
+        return trimmed
+    }
+    val rawApi = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.trimEnd('/')
+    val rootBase = when {
+        rawApi.endsWith("/api/v1") -> rawApi.removeSuffix("/api/v1").trimEnd('/')
+        rawApi.endsWith("/api") -> rawApi.removeSuffix("/api").trimEnd('/')
+        else -> rawApi
+    }
+    return when {
+        trimmed.startsWith("/") -> "$rootBase$trimmed"
+        trimmed.startsWith("uploads/", ignoreCase = true) -> "$rootBase/$trimmed"
+        else -> "$rootBase/uploads/$trimmed"
+    }
+}
+
+private val QUESTION_MD_IMAGE_REGEX = Regex("""!\[[^\]\n]*\]\(([^)\s]+)\)""")
+
+/**
+ * Extracts a safe diagram/image URL embedded in question text (`![Diagram Soal](...)`)
+ * and returns `(resolvedImageUrlOrNull, cleanedQuestionText)`.
+ */
+fun extractQuestionDiagramAndText(rawText: String, explicitImageUrl: String? = null): Pair<String?, String> {
+    val firstMdUrl = QUESTION_MD_IMAGE_REGEX.find(rawText)?.groupValues?.getOrNull(1)?.trim()
+    val cleanedText = QUESTION_MD_IMAGE_REGEX.replace(rawText, "").trim()
+    val chosenRaw = explicitImageUrl?.trim()?.takeIf { it.isNotBlank() } ?: firstMdUrl
+    val resolved = chosenRaw
+        ?.takeIf { !it.contains("unsplash.com", ignoreCase = true) }
+        ?.let { resolveServerMediaUrl(it) }
+        ?.takeIf { it.isNotBlank() }
+    return resolved to cleanedText
+}
+
+/**
+ * Crisp white-card diagram viewer ensuring SVG charts, geometry, and science schemas
+ * remain sharp and high-contrast across both Light and Dark app themes.
+ */
+@Composable
+fun QuestionDiagramCard(
+    imageUrl: String?,
+    modifier: Modifier = Modifier,
+    maxHeight: Dp = 210.dp,
+) {
+    val resolved = remember(imageUrl) {
+        imageUrl?.trim()?.takeIf { it.isNotBlank() }?.let { resolveServerMediaUrl(it) }
+    }
+    if (resolved.isNullOrBlank()) return
+
+    val context = LocalContext.current
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .heightIn(min = 120.dp, max = maxHeight)
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(12.dp))
+            .padding(8.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        SubcomposeAsyncImage(
+            model = remember(resolved) {
+                ImageRequest.Builder(context)
+                    .data(resolved)
+                    .crossfade(true)
+                    .build()
+            },
+            contentDescription = "Diagram Soal",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize(),
+            loading = {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+                }
+            },
+        )
+    }
+}
+
+/**
+ * Renders optional diagram stimulus card above cleaned question text.
+ */
+@Composable
+fun QuestionPromptWithDiagram(
+    rawText: String,
+    explicitImageUrl: String? = null,
+    color: Color = Color.Unspecified,
+    fontSize: TextUnit = 13.sp,
+    lineHeight: TextUnit = 20.sp,
+    fontWeight: FontWeight = FontWeight.SemiBold,
+    modifier: Modifier = Modifier,
+) {
+    val (diagramUrl, cleanedText) = remember(rawText, explicitImageUrl) {
+        extractQuestionDiagramAndText(rawText, explicitImageUrl)
+    }
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!diagramUrl.isNullOrBlank()) {
+            QuestionDiagramCard(imageUrl = diagramUrl)
+        }
+        if (cleanedText.isNotBlank()) {
+            Text(
+                text = cleanedText,
+                color = color,
+                fontSize = fontSize,
+                lineHeight = lineHeight,
+                fontWeight = fontWeight,
+            )
+        }
+    }
+}
 
 /**
  * Strips raw Markdown syntax cleanly for single-line chat list previews.
