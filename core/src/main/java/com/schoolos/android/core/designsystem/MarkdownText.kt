@@ -2,6 +2,8 @@ package com.schoolos.android.core.designsystem
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -17,19 +19,33 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.ZoomIn
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -46,8 +62,70 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import coil.ImageLoader
 import coil.compose.SubcomposeAsyncImage
+import coil.decode.DecodeResult
+import coil.decode.Decoder
+import coil.decode.ImageSource
+import coil.decode.SvgDecoder
+import coil.fetch.SourceResult
 import coil.request.ImageRequest
+import coil.request.Options
+import okio.Buffer
+
+/**
+ * SVG-1.1 compatibility decoder wrapping Coil's [SvgDecoder].
+ * Rewrites SVG 2 attributes such as `orient="auto-start-reverse"` (which crashes AndroidSVG 1.4
+ * with `SVGParseException` when rendering marker arrows) into `orient="auto"` before decoding.
+ */
+class CompatSvgDecoder(
+    private val source: SourceResult,
+    private val options: Options,
+) : Decoder {
+
+    override suspend fun decode(): DecodeResult? {
+        val rawUtf8 = source.source.source().use { it.readUtf8() }
+        val sanitized = if (rawUtf8.contains("auto-start-reverse", ignoreCase = true)) {
+            rawUtf8
+                .replace("""orient="auto-start-reverse"""", """orient="auto"""")
+                .replace("""orient='auto-start-reverse'""", """orient='auto'""")
+        } else {
+            rawUtf8
+        }
+        val buffer = Buffer().writeUtf8(sanitized)
+        val wrappedSource = ImageSource(buffer, options.context)
+        return SvgDecoder(
+            source = wrappedSource,
+            options = options,
+            useViewBoundsAsIntrinsicSize = true,
+        ).decode()
+    }
+
+    class Factory : Decoder.Factory {
+        override fun create(
+            result: SourceResult,
+            options: Options,
+            imageLoader: ImageLoader,
+        ): Decoder? {
+            val mime = result.mimeType.orEmpty()
+            val isSvgMime = mime.contains("svg", ignoreCase = true)
+            if (!isSvgMime) {
+                val headerSnippet = runCatching {
+                    val peek = result.source.source().peek()
+                    val toRead = if (peek.request(4096L)) 4096L else peek.buffer.size
+                    peek.readUtf8(toRead)
+                }.getOrDefault("")
+                if (!headerSnippet.contains("<svg", ignoreCase = true)) return null
+            }
+            return CompatSvgDecoder(result, options)
+        }
+
+        override fun equals(other: Any?): Boolean = other is Factory
+        override fun hashCode(): Int = javaClass.hashCode()
+    }
+}
 
 /**
  * Resolves relative `/uploads/...` media paths from the SchoolOS backend into absolute URLs
@@ -78,6 +156,7 @@ fun resolveServerMediaUrl(rawUrl: String): String {
 }
 
 private val QUESTION_MD_IMAGE_REGEX = Regex("""!\[[^\]\n]*\]\(([^)\s]+)\)""")
+private val QUESTION_DIAGRAM_TAG_REGEX = Regex("""\[(?:Diagram|Grafik|Bagan|Gambar|Chart):\s*[^\]\n]+\]""", RegexOption.IGNORE_CASE)
 
 /**
  * Extracts a safe diagram/image URL embedded in question text (`![Diagram Soal](...)`)
@@ -85,24 +164,27 @@ private val QUESTION_MD_IMAGE_REGEX = Regex("""!\[[^\]\n]*\]\(([^)\s]+)\)""")
  */
 fun extractQuestionDiagramAndText(rawText: String, explicitImageUrl: String? = null): Pair<String?, String> {
     val firstMdUrl = QUESTION_MD_IMAGE_REGEX.find(rawText)?.groupValues?.getOrNull(1)?.trim()
-    val cleanedText = QUESTION_MD_IMAGE_REGEX.replace(rawText, "").trim()
     val chosenRaw = explicitImageUrl?.trim()?.takeIf { it.isNotBlank() } ?: firstMdUrl
     val resolved = chosenRaw
         ?.takeIf { !it.contains("unsplash.com", ignoreCase = true) }
         ?.let { resolveServerMediaUrl(it) }
         ?.takeIf { it.isNotBlank() }
+    var cleanedText = QUESTION_MD_IMAGE_REGEX.replace(rawText, "").trim()
+    if (!resolved.isNullOrBlank()) {
+        cleanedText = QUESTION_DIAGRAM_TAG_REGEX.replace(cleanedText, "").replace(Regex("""\n{3,}"""), "\n\n").trim()
+    }
     return resolved to cleanedText
 }
 
 /**
  * Crisp white-card diagram viewer ensuring SVG charts, geometry, and science schemas
- * remain sharp and high-contrast across both Light and Dark app themes.
+ * remain sharp and high-contrast across both Light and Dark app themes, with tap-to-zoom and retry fallback.
  */
 @Composable
 fun QuestionDiagramCard(
     imageUrl: String?,
     modifier: Modifier = Modifier,
-    maxHeight: Dp = 210.dp,
+    maxHeight: Dp = 215.dp,
 ) {
     val resolved = remember(imageUrl) {
         imageUrl?.trim()?.takeIf { it.isNotBlank() }?.let { resolveServerMediaUrl(it) }
@@ -110,32 +192,153 @@ fun QuestionDiagramCard(
     if (resolved.isNullOrBlank()) return
 
     val context = LocalContext.current
+    var reloadNonce by remember(resolved) { mutableIntStateOf(0) }
+    var showZoomLightbox by remember(resolved) { mutableStateOf(false) }
+
+    val diagramRequest = remember(resolved, reloadNonce) {
+        val cacheBustedUrl = if (reloadNonce == 0) resolved else "$resolved${if (resolved.contains('?')) '&' else '?'}r=$reloadNonce"
+        ImageRequest.Builder(context)
+            .data(cacheBustedUrl)
+            .decoderFactory(CompatSvgDecoder.Factory())
+            .crossfade(true)
+            .build()
+    }
+
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = 120.dp, max = maxHeight)
             .clip(RoundedCornerShape(12.dp))
             .background(Color.White)
             .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(12.dp))
+            .clickable { showZoomLightbox = true }
             .padding(8.dp),
         contentAlignment = Alignment.Center,
     ) {
         SubcomposeAsyncImage(
-            model = remember(resolved) {
-                ImageRequest.Builder(context)
-                    .data(resolved)
-                    .crossfade(true)
-                    .build()
-            },
+            model = diagramRequest,
             contentDescription = "Diagram Soal",
             contentScale = ContentScale.Fit,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(maxHeight),
             loading = {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(strokeWidth = 2.dp, modifier = Modifier.size(22.dp))
+                    CircularProgressIndicator(
+                        strokeWidth = 2.5.dp,
+                        color = Color(0xFF0284C7),
+                        modifier = Modifier.size(26.dp),
+                    )
+                }
+            },
+            error = {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { reloadNonce++ }
+                        .padding(12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Refresh,
+                        contentDescription = "Muat ulang diagram",
+                        tint = Color(0xFF0284C7),
+                        modifier = Modifier.size(26.dp),
+                    )
+                    Text(
+                        text = "Diagram belum termuat — ketuk untuk muat ulang",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color(0xFF334155),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
                 }
             },
         )
+
+        // Subtle tap-to-zoom chip at bottom-right of diagram
+        Box(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .clip(RoundedCornerShape(6.dp))
+                .background(Color(0xE6F1F5F9))
+                .border(0.5.dp, Color(0xFFCBD5E1), RoundedCornerShape(6.dp))
+                .padding(horizontal = 6.dp, vertical = 3.dp)
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(3.dp),
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ZoomIn,
+                    contentDescription = "Perbesar diagram",
+                    tint = Color(0xFF0369A1),
+                    modifier = Modifier.size(12.dp),
+                )
+                Text(
+                    text = "Perbesar",
+                    fontSize = 9.5.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF0369A1),
+                )
+            }
+        }
+    }
+
+    if (showZoomLightbox) {
+        Dialog(
+            onDismissRequest = { showZoomLightbox = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false),
+        ) {
+            var scale by remember { mutableFloatStateOf(1f) }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.92f))
+                    .clickable { showZoomLightbox = false },
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color.White)
+                        .padding(10.dp)
+                        .pointerInput(Unit) {
+                            detectTransformGestures { _, _, zoom, _ ->
+                                scale = (scale * zoom).coerceIn(1f, 3f)
+                            }
+                        }
+                ) {
+                    SubcomposeAsyncImage(
+                        model = diagramRequest,
+                        contentDescription = "Perbesar Diagram Soal",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 240.dp, max = 420.dp)
+                            .graphicsLayer(scaleX = scale, scaleY = scale),
+                    )
+                }
+
+                IconButton(
+                    onClick = { showZoomLightbox = false },
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(top = 36.dp, end = 16.dp)
+                        .clip(CircleShape)
+                        .background(Color.White.copy(alpha = 0.18f)),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Close,
+                        contentDescription = "Tutup",
+                        tint = Color.White,
+                    )
+                }
+            }
+        }
     }
 }
 

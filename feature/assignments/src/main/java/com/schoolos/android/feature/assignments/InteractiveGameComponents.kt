@@ -18,10 +18,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.InlineTextContent
+import androidx.compose.foundation.text.appendInlineContent
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
@@ -47,9 +50,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.Placeholder
+import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
@@ -234,6 +241,51 @@ private fun countTemplateBlanks(template: String): Int {
     val norm = normalizeFillBlankTemplate(template)
     val numbered = Regex("\\{\\{(\\d+)\\}\\}").findAll(norm).count()
     return maxOf(numbered, 1)
+}
+
+/**
+ * Strips duplicated cloze `{{1}}` / `___` template sentences from `questionText` when
+ * rendering `FILL_BLANK` cards so the student sees a clean single interactive reading card.
+ */
+private fun extractFillBlankStudentHeadline(rawQuestionText: String, configJson: String?): String {
+    val defaultInstr = "Lengkapi kotak kosong pada kalimat berikut menggunakan kata dari Bank Kata:"
+    val trimmed = rawQuestionText.trim()
+    if (trimmed.isBlank()) return defaultInstr
+
+    val imageRegex = Regex("!\\[[^\\]\\n]*\\]\\([^)\\s]+\\)")
+    val images = imageRegex.findAll(trimmed).map { it.value }.toList()
+    val textOnly = imageRegex.replace(trimmed, "").trim()
+    if (textOnly.isBlank()) {
+        return if (images.isNotEmpty()) "${images.joinToString("\n\n")}\n\n$defaultInstr" else defaultInstr
+    }
+
+    val rawTpl = runCatching { JSONObject(configJson ?: "{}").optString("template", "") }.getOrDefault("")
+    val tplNorm = normalizeFillBlankTemplate(rawTpl)
+        .lowercase()
+        .replace(Regex("\\{\\{\\d+\\}\\}"), "")
+        .replace(Regex("\\s+"), " ")
+        .trim()
+    val blankRegex = Regex("\\{\\{\\d+\\}\\}|(?<!\\{)\\{\\d+\\}(?!\\})|\\[\\s*(?:\\d+|_+|[Bb]lank)\\s*]|\\{\\s*(?:_+|[Bb]lank)\\s*\\}|_{2,}")
+
+    val keptLines = textOnly.lines()
+        .map { it.trim() }
+        .filter { line ->
+            if (line.isBlank()) return@filter false
+            if (blankRegex.containsMatchIn(line)) return@filter false
+            if (tplNorm.length > 18) {
+                val lineClean = line.lowercase().replace(Regex("\\s+"), " ")
+                if (tplNorm.contains(lineClean) || lineClean.contains(tplNorm.take(24))) return@filter false
+            }
+            true
+        }
+
+    val headline = if (keptLines.isNotEmpty()) keptLines.joinToString("\n") else defaultInstr
+    return if (images.isNotEmpty()) "${images.joinToString("\n\n")}\n\n$headline" else headline
+}
+
+private fun <T> shuffleDeterministic(items: List<T>, seed: String): List<T> {
+    if (items.size <= 1) return items
+    return items.shuffled(java.util.Random(seed.hashCode().toLong()))
 }
 
 private fun parseFillBlankStudentConfig(configJson: String?): ParsedFillBlank {
@@ -521,8 +573,15 @@ fun InteractiveGameStudentCard(
                             }
                         }
                         Spacer(Modifier.height(6.dp))
+                        val studentPrompt = remember(normType, question.questionText, question.interactionConfigJson) {
+                            if (normType == "FILL_BLANK") {
+                                extractFillBlankStudentHeadline(question.questionText, question.interactionConfigJson)
+                            } else {
+                                question.questionText
+                            }
+                        }
                         QuestionPromptWithDiagram(
-                            rawText = question.questionText,
+                            rawText = studentPrompt,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary,
@@ -609,44 +668,66 @@ private fun MatchingGamePlayer(
         onAnswerJsonChanged(root.toString())
     }
 
+    val matchedCount = matchesMap.size
+    val activeIdx = leftItems.indexOfFirst { it.id == activeLeftId }
+
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color(0xFF0284C7).copy(alpha = 0.12f))
+                .border(1.dp, Color(0xFF0284C7).copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
-            Text(
-                text = if (activeLeftId != null) {
-                    "Sekarang ketuk pasangan di bawah untuk mencocokkan"
-                } else {
-                    "Ketuk item di bawah, lalu ketuk pasangannya"
-                },
-                fontSize = 11.sp,
-                color = if (activeLeftId != null) Color(0xFF38BDF8) else TextTertiary,
-                fontWeight = if (activeLeftId != null) FontWeight.Bold else FontWeight.Normal,
-                modifier = Modifier.weight(1f)
-            )
-            if (!readOnly && matchesMap.isNotEmpty()) {
-                Row(
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(6.dp))
-                        .clickable {
-                            matchesMap.clear()
-                            activeLeftId = null
-                            emitMatches()
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = when {
+                        activeIdx >= 0 -> "Langkah 2: Ketuk pasangan jawaban untuk Soal #${activeIdx + 1}"
+                        leftItems.isNotEmpty() && matchedCount >= leftItems.size -> "Semua pasangan terhubung! Ketuk ulang jika ingin ubah."
+                        else -> "Langkah 1: Ketuk soal bernomor, lalu pilih pasangannya di bawah"
+                    },
+                    fontSize = 11.sp,
+                    color = Color(0xFF38BDF8),
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 15.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "$matchedCount / ${leftItems.size}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color(0xFF38BDF8)
+                    )
+                    if (!readOnly && matchesMap.isNotEmpty()) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable {
+                                    matchesMap.clear()
+                                    activeLeftId = leftItems.firstOrNull()?.id
+                                    emitMatches()
+                                }
+                                .padding(top = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, null, tint = TextTertiary, modifier = Modifier.size(11.dp))
+                            Text("Reset", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.SemiBold)
                         }
-                        .padding(horizontal = 6.dp, vertical = 2.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(Icons.Default.Refresh, null, tint = TextTertiary, modifier = Modifier.size(12.dp))
-                    Text("Reset", fontSize = 10.5.sp, color = TextTertiary, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
 
         // Left items
-        Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             leftItems.forEachIndexed { idx, item ->
                 val pairColor = MATCH_PAIR_COLORS[idx % MATCH_PAIR_COLORS.size]
                 val isSelected = activeLeftId == item.id
@@ -680,7 +761,7 @@ private fun MatchingGamePlayer(
                         )
                         .padding(11.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             verticalAlignment = Alignment.CenterVertically,
@@ -692,7 +773,7 @@ private fun MatchingGamePlayer(
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(20.dp)
+                                        .size(21.dp)
                                         .clip(CircleShape)
                                         .background(pairColor),
                                     contentAlignment = Alignment.Center
@@ -722,6 +803,7 @@ private fun MatchingGamePlayer(
                                         .size(16.dp)
                                         .clickable {
                                             matchesMap.remove(item.id)
+                                            activeLeftId = item.id
                                             emitMatches()
                                         }
                                 )
@@ -732,9 +814,13 @@ private fun MatchingGamePlayer(
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier.padding(start = 28.dp)
+                                modifier = Modifier
+                                    .padding(start = 29.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(pairColor.copy(alpha = 0.14f))
+                                    .padding(horizontal = 8.dp, vertical = 4.dp)
                             ) {
-                                Text("→", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = pairColor)
+                                Text("↔", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = pairColor)
                                 Text(
                                     chosenRight!!,
                                     fontSize = 11.5.sp,
@@ -743,26 +829,30 @@ private fun MatchingGamePlayer(
                                     lineHeight = 16.sp
                                 )
                             }
+                        } else if (!readOnly) {
+                            Text(
+                                text = if (isSelected) "Dipilih — ketuk jawaban yang cocok di bawah" else "Ketuk kartu ini untuk memilih pasangannya",
+                                fontSize = 10.5.sp,
+                                color = if (isSelected) pairColor else TextTertiary,
+                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                                modifier = Modifier.padding(start = 29.dp)
+                            )
                         }
                     }
                 }
             }
         }
 
-        // Right options pool
+        // Right options pool (clean tappable cards instead of cramped pills)
         if (rightOptions.isNotEmpty() && !readOnly) {
             Text(
-                "Pilihan Pasangan:",
+                "Pilihan Jawaban Pasangan:",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextSecondary
             )
-            FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                rightOptions.forEach { optionText ->
+            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
+                rightOptions.forEachIndexed { rIdx, optionText ->
                     val pairedIdx = leftItems.indexOfFirst { matchesMap[it.id] == optionText }
                     val isPaired = pairedIdx >= 0
                     val pairColor = if (isPaired) {
@@ -770,6 +860,7 @@ private fun MatchingGamePlayer(
                     } else {
                         Color(0xFF38BDF8)
                     }
+                    val letter = ('A' + (rIdx % 26)).toString()
 
                     Surface(
                         shape = RoundedCornerShape(10.dp),
@@ -783,50 +874,58 @@ private fun MatchingGamePlayer(
                             }
                         ),
                         modifier = Modifier
+                            .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
                             .clickable {
                                 val targetLeftId = activeLeftId
                                     ?: leftItems.firstOrNull { matchesMap[it.id].isNullOrBlank() }?.id
                                     ?: leftItems.firstOrNull()?.id
                                 if (targetLeftId != null) {
-                                    // Unassign previous left owner if same right option clicked
                                     val prevOwner = matchesMap.entries.firstOrNull { it.value == optionText }?.key
                                     if (prevOwner != null && prevOwner != targetLeftId) {
                                         matchesMap.remove(prevOwner)
                                     }
                                     matchesMap[targetLeftId] = optionText
-                                    activeLeftId = null
+                                    activeLeftId = leftItems.firstOrNull { it.id != targetLeftId && matchesMap[it.id].isNullOrBlank() }?.id
                                     emitMatches()
                                 }
                             }
                     ) {
                         Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            if (isPaired) {
-                                Box(
-                                    modifier = Modifier
-                                        .size(16.dp)
-                                        .clip(CircleShape)
-                                        .background(pairColor),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        "${pairedIdx + 1}",
-                                        fontSize = 9.sp,
-                                        fontWeight = FontWeight.Black,
-                                        color = Color.White
-                                    )
-                                }
+                            Box(
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (isPaired) pairColor else GlassBorder2),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = if (isPaired) "#${pairedIdx + 1}" else letter,
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.Black,
+                                    color = if (isPaired) Color.White else TextSecondary
+                                )
                             }
                             Text(
                                 text = optionText,
                                 fontSize = 12.sp,
                                 fontWeight = if (isPaired) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isPaired) pairColor else TextPrimary
+                                color = if (isPaired) pairColor else TextPrimary,
+                                lineHeight = 17.sp,
+                                modifier = Modifier.weight(1f)
                             )
+                            if (isPaired) {
+                                Icon(
+                                    Icons.Default.Check,
+                                    contentDescription = "Terpasang",
+                                    tint = pairColor,
+                                    modifier = Modifier.size(15.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -886,11 +985,38 @@ private fun OrderingGamePlayer(
     val amber = Color(0xFFD97706)
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            text = "Gunakan tombol ▲ dan ▼ untuk menyusun urutan langkah yang benar.",
-            fontSize = 11.sp,
-            color = TextTertiary
-        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(amber.copy(alpha = 0.12f))
+                .border(1.dp, amber.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Susun dari Tahap #1 (Paling Awal) hingga Terakhir menggunakan tombol ▲ / ▼",
+                    fontSize = 11.sp,
+                    color = amber,
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 15.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                if (isSaved) {
+                    Spacer(Modifier.width(8.dp))
+                    Text(
+                        text = "✓ Tersimpan",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonSuccess
+                    )
+                }
+            }
+        }
 
         orderedIds.forEachIndexed { idx, id ->
             val itemText = itemById[id]?.text ?: id
@@ -923,14 +1049,23 @@ private fun OrderingGamePlayer(
                     )
                 }
 
-                Text(
-                    text = itemText,
-                    fontSize = 12.5.sp,
-                    color = TextPrimary,
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 17.sp,
-                    modifier = Modifier.weight(1f)
-                )
+                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    if (idx == 0 || idx == orderedIds.lastIndex) {
+                        Text(
+                            text = if (idx == 0) "URUTAN PALING AWAL" else "URUTAN PALING AKHIR",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = amber
+                        )
+                    }
+                    Text(
+                        text = itemText,
+                        fontSize = 12.5.sp,
+                        color = TextPrimary,
+                        fontWeight = FontWeight.Medium,
+                        lineHeight = 17.sp,
+                    )
+                }
 
                 if (!readOnly) {
                     Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -939,7 +1074,7 @@ private fun OrderingGamePlayer(
                             color = if (idx > 0) amber.copy(alpha = 0.16f) else Color.Transparent,
                             border = BorderStroke(1.dp, if (idx > 0) amber.copy(alpha = 0.4f) else GlassBorder),
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(30.dp)
                                 .clip(RoundedCornerShape(7.dp))
                                 .clickable(enabled = idx > 0) {
                                     val tmp = orderedIds[idx - 1]
@@ -953,7 +1088,7 @@ private fun OrderingGamePlayer(
                                     Icons.Default.ArrowUpward,
                                     contentDescription = "Naik",
                                     tint = if (idx > 0) amber else TextTertiary.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(15.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
@@ -963,7 +1098,7 @@ private fun OrderingGamePlayer(
                             color = if (idx < orderedIds.lastIndex) amber.copy(alpha = 0.16f) else Color.Transparent,
                             border = BorderStroke(1.dp, if (idx < orderedIds.lastIndex) amber.copy(alpha = 0.4f) else GlassBorder),
                             modifier = Modifier
-                                .size(28.dp)
+                                .size(30.dp)
                                 .clip(RoundedCornerShape(7.dp))
                                 .clickable(enabled = idx < orderedIds.lastIndex) {
                                     val tmp = orderedIds[idx + 1]
@@ -977,7 +1112,7 @@ private fun OrderingGamePlayer(
                                     Icons.Default.ArrowDownward,
                                     contentDescription = "Turun",
                                     tint = if (idx < orderedIds.lastIndex) amber else TextTertiary.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(15.dp)
+                                    modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
@@ -1001,7 +1136,7 @@ private fun OrderingGamePlayer(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "Konfirmasi Urutan Ini",
+                        "Tetapkan Urutan Ini sebagai Jawaban",
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = amber
@@ -1050,21 +1185,175 @@ private fun FillBlankGamePlayer(
         onAnswerJsonChanged(obj.toString())
     }
 
-    val renderedSentence = remember(cfg.template, fills.toList()) {
-        val normTpl = normalizeFillBlankTemplate(cfg.template)
-        var idx = 0
-        Regex("\\{\\{(\\d+)\\}\\}").replace(normTpl) { m ->
-            val slotIdx = (m.groupValues[1].toIntOrNull() ?: (idx + 1)) - 1
-            val w = fills.getOrNull(slotIdx)?.takeIf { it.isNotBlank() }
-            idx++
-            if (w != null) " [ #${slotIdx + 1}: $w ] " else " [ ___ #${slotIdx + 1} ___ ] "
+    val normTemplate = remember(cfg.template) { normalizeFillBlankTemplate(cfg.template) }
+    val shuffledWordBank = remember(questionId, cfg.wordBank) {
+        shuffleDeterministic(cfg.wordBank, questionId.ifBlank { cfg.template })
+    }
+    val filledCount = fills.count { it.isNotBlank() }
+    val emerald = Color(0xFF10B981)
+    val sky = Color(0xFF38BDF8)
+
+    val (annotatedSentence, inlineContentMap) = remember(
+        normTemplate,
+        fills.toList(),
+        activeSlot,
+        readOnly,
+        cfg.blankCount,
+    ) {
+        val inlineMap = mutableMapOf<String, InlineTextContent>()
+        val tokenRegex = Regex("\\{\\{(\\d+)\\}\\}")
+        val annotated = buildAnnotatedString {
+            var cursor = 0
+            tokenRegex.findAll(normTemplate).forEach { match ->
+                if (match.range.first > cursor) {
+                    append(normTemplate.substring(cursor, match.range.first))
+                }
+                val slotNum = match.groupValues[1].toIntOrNull() ?: 1
+                val slotIdx = (slotNum - 1).coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0))
+                val inlineKey = "slot_$slotIdx"
+                val filledWord = fills.getOrNull(slotIdx)?.takeIf { it.isNotBlank() }
+                val isFocused = activeSlot == slotIdx && !readOnly
+
+                val chipLabel = when {
+                    filledWord != null -> "${slotIdx + 1}. $filledWord"
+                    isFocused -> "${slotIdx + 1}. pilih kata"
+                    else -> "${slotIdx + 1}. kosong"
+                }
+                val estEm = (chipLabel.length * 0.62f + if (filledWord != null && !readOnly) 3.0f else 1.8f)
+                    .coerceIn(5.8f, 18.5f)
+                    .em
+
+                inlineMap[inlineKey] = InlineTextContent(
+                    placeholder = Placeholder(
+                        width = estEm,
+                        height = 2.05.em,
+                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
+                    )
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = when {
+                            filledWord != null -> emerald.copy(alpha = 0.20f)
+                            isFocused -> sky.copy(alpha = 0.20f)
+                            else -> CosmicNavy
+                        },
+                        border = BorderStroke(
+                            width = if (isFocused) 1.5.dp else 1.dp,
+                            color = when {
+                                filledWord != null -> emerald
+                                isFocused -> sky
+                                else -> GlassBorder2
+                            }
+                        ),
+                        modifier = Modifier
+                            .padding(horizontal = 2.dp, vertical = 1.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable(enabled = !readOnly) {
+                                if (filledWord != null) {
+                                    fills[slotIdx] = ""
+                                    activeSlot = slotIdx
+                                    emitFills()
+                                } else {
+                                    activeSlot = slotIdx
+                                }
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Text(
+                                text = chipLabel,
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = when {
+                                    filledWord != null -> emerald
+                                    isFocused -> sky
+                                    else -> TextSecondary
+                                },
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            if (filledWord != null && !readOnly) {
+                                Icon(
+                                    imageVector = Icons.Default.Close,
+                                    contentDescription = "Kosongkan kotak",
+                                    tint = emerald,
+                                    modifier = Modifier.size(12.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+                appendInlineContent(inlineKey, "[#$slotNum]")
+                cursor = match.range.last + 1
+            }
+            if (cursor < normTemplate.length) {
+                append(normTemplate.substring(cursor))
+            }
         }
+        annotated to inlineMap
     }
 
-    val emerald = Color(0xFF10B981)
-
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        // Sentence Box
+        // Clear 1-line guidance + progress badge
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(10.dp))
+                .background(emerald.copy(alpha = 0.12f))
+                .border(1.dp, emerald.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = if (filledCount < cfg.blankCount) {
+                        "Kotak #${activeSlot.coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0)) + 1} aktif — ketuk kata di Bank Kata di bawah"
+                    } else {
+                        "Semua kotak terisi! Ketuk kata di kotak jika ingin diganti."
+                    },
+                    fontSize = 11.sp,
+                    color = emerald,
+                    fontWeight = FontWeight.SemiBold,
+                    lineHeight = 15.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                Spacer(Modifier.width(8.dp))
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = "$filledCount / ${cfg.blankCount}",
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = emerald
+                    )
+                    if (!readOnly && filledCount > 0) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable {
+                                    for (i in fills.indices) fills[i] = ""
+                                    activeSlot = 0
+                                    emitFills()
+                                }
+                                .padding(top = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(3.dp)
+                        ) {
+                            Icon(Icons.Default.Refresh, null, tint = TextTertiary, modifier = Modifier.size(11.dp))
+                            Text("Reset", fontSize = 10.sp, color = TextTertiary, fontWeight = FontWeight.SemiBold)
+                        }
+                    }
+                }
+            }
+        }
+
+        // Single clean reading box with interactive inline pills
         Box(
             modifier = Modifier
                 .fillMaxWidth()
@@ -1073,87 +1362,28 @@ private fun FillBlankGamePlayer(
                 .border(1.dp, GlassBorder2, RoundedCornerShape(12.dp))
                 .padding(12.dp)
         ) {
-            Text(
-                text = renderedSentence.ifBlank { "(Kalimat rumpang belum dikonfigurasi)" },
-                fontSize = 13.sp,
-                color = TextPrimary,
-                lineHeight = 20.sp
-            )
-        }
-
-        // Blank Slots Row
-        FlowRow(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            for (slotIdx in 0 until cfg.blankCount) {
-                val word = fills.getOrNull(slotIdx).orEmpty()
-                val isFilled = word.isNotBlank()
-                val isFocused = activeSlot == slotIdx && !readOnly
-
-                Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = when {
-                        isFocused -> emerald.copy(alpha = 0.2f)
-                        isFilled -> emerald.copy(alpha = 0.12f)
-                        else -> CosmicBlack
-                    },
-                    border = BorderStroke(
-                        width = if (isFocused) 1.5.dp else 1.dp,
-                        color = if (isFocused || isFilled) emerald else GlassBorder2
-                    ),
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(10.dp))
-                        .clickable(enabled = !readOnly) {
-                            if (isFilled && isFocused) {
-                                fills[slotIdx] = ""
-                                emitFills()
-                            } else {
-                                activeSlot = slotIdx
-                            }
-                        }
-                ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Text(
-                            "#${slotIdx + 1}:",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = emerald
-                        )
-                        Text(
-                            text = if (isFilled) word else "Ketuk kata...",
-                            fontSize = 12.sp,
-                            fontWeight = if (isFilled) FontWeight.Bold else FontWeight.Normal,
-                            color = if (isFilled) TextPrimary else TextTertiary
-                        )
-                        if (isFilled && !readOnly) {
-                            Icon(
-                                Icons.Default.Close,
-                                contentDescription = "Hapus isian",
-                                tint = TextTertiary,
-                                modifier = Modifier
-                                    .size(14.dp)
-                                    .clickable {
-                                        fills[slotIdx] = ""
-                                        activeSlot = slotIdx
-                                        emitFills()
-                                    }
-                            )
-                        }
-                    }
-                }
+            if (normTemplate.isBlank()) {
+                Text(
+                    text = "(Kalimat rumpang belum dikonfigurasi)",
+                    fontSize = 13.sp,
+                    color = TextTertiary,
+                    lineHeight = 20.sp
+                )
+            } else {
+                Text(
+                    text = annotatedSentence,
+                    inlineContent = inlineContentMap,
+                    fontSize = 13.5.sp,
+                    color = TextPrimary,
+                    lineHeight = 26.sp
+                )
             }
         }
 
-        // Word Bank Pills
-        if (cfg.wordBank.isNotEmpty() && !readOnly) {
+        // Word Bank Pills (clean words without leaking slot # answer keys!)
+        if (shuffledWordBank.isNotEmpty() && !readOnly) {
             Text(
-                "Bank Kata (ketuk untuk mengisi slot #${activeSlot + 1}):",
+                "Bank Kata (ketuk kata untuk mengisi Kotak #${activeSlot.coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0)) + 1}):",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextSecondary
@@ -1163,7 +1393,7 @@ private fun FillBlankGamePlayer(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
-                cfg.wordBank.forEach { word ->
+                shuffledWordBank.forEach { word ->
                     val usedInSlot = fills.indexOfFirst { it == word }
                     val isUsed = usedInSlot >= 0
 
@@ -1186,13 +1416,26 @@ private fun FillBlankGamePlayer(
                                 emitFills()
                             }
                     ) {
-                        Text(
-                            text = if (isUsed) "$word (#${usedInSlot + 1})" else word,
-                            fontSize = 12.sp,
-                            fontWeight = if (isUsed) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isUsed) emerald else TextPrimary,
-                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp)
-                        )
+                        Row(
+                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        ) {
+                            if (isUsed) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Sudah dipakai",
+                                    tint = emerald,
+                                    modifier = Modifier.size(13.dp)
+                                )
+                            }
+                            Text(
+                                text = word,
+                                fontSize = 12.sp,
+                                fontWeight = if (isUsed) FontWeight.Bold else FontWeight.Medium,
+                                color = if (isUsed) emerald else TextPrimary,
+                            )
+                        }
                     }
                 }
             }
@@ -1239,8 +1482,15 @@ fun SubmittedInteractiveGameReviewCard(
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
+                    val reviewPrompt = remember(normType, question.questionText, question.interactionConfigJson) {
+                        if (normType == "FILL_BLANK") {
+                            extractFillBlankStudentHeadline(question.questionText, question.interactionConfigJson)
+                        } else {
+                            question.questionText
+                        }
+                    }
                     QuestionPromptWithDiagram(
-                        rawText = question.questionText,
+                        rawText = reviewPrompt,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,

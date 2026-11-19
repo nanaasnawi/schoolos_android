@@ -4,6 +4,7 @@ import android.app.Application
 import coil.ImageLoader
 import coil.ImageLoaderFactory
 import coil.decode.SvgDecoder
+import com.schoolos.android.core.designsystem.CompatSvgDecoder
 import com.schoolos.android.core.notification.SystemNotificationHelper
 import dagger.hilt.android.HiltAndroidApp
 import kotlinx.coroutines.flow.first
@@ -16,6 +17,7 @@ class SchoolOsApp : Application(), ImageLoaderFactory {
     override fun newImageLoader(): ImageLoader {
         return ImageLoader.Builder(this)
             .components {
+                add(CompatSvgDecoder.Factory())
                 add(SvgDecoder.Factory())
             }
             .crossfade(true)
