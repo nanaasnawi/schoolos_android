@@ -58,6 +58,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -1642,6 +1643,58 @@ private fun QuestionsSection(
                     fontSize = 10.sp,
                     color = TextTertiary
                 )
+            }
+        }
+
+        val gameQuestions = questions.filter { isInteractiveGameQuestionType(it.questionType) }
+        if (gameQuestions.isNotEmpty() && !isParent) {
+            val doneGames = gameQuestions.count { q ->
+                val qId = q.id ?: return@count false
+                isInteractiveAnswerComplete(q.questionType, interactiveAnswers[qId], q.interactionConfigJson)
+            }
+            val pct = (doneGames.toFloat() / gameQuestions.size.toFloat()).coerceIn(0f, 1f)
+            val allDone = doneGames >= gameQuestions.size
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(CosmicNavy)
+                    .border(
+                        1.dp,
+                        if (allDone) NeonSuccess.copy(alpha = 0.5f) else NeonBlue.copy(alpha = 0.35f),
+                        RoundedCornerShape(14.dp)
+                    )
+                    .padding(12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = if (allDone) "🎮 Semua Misi Game Siap Dikirim!" else "🎮 Arena Misi Game Interaktif",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = if (allDone) NeonSuccess else TextPrimary
+                        )
+                        Text(
+                            text = "$doneGames / ${gameQuestions.size} Misi",
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (allDone) NeonSuccess else NeonBlue
+                        )
+                    }
+                    LinearProgressIndicator(
+                        progress = { pct },
+                        color = if (allDone) NeonSuccess else NeonBlue,
+                        trackColor = CosmicBlack,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(7.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                    )
+                }
             }
         }
 

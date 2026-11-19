@@ -1,18 +1,31 @@
 package com.schoolos.android.feature.assignments
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -24,10 +37,12 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DeleteOutline
+import androidx.compose.material.icons.filled.DragIndicator
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SportsEsports
 import androidx.compose.material3.HorizontalDivider
@@ -40,6 +55,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
@@ -49,7 +65,21 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.text.buildAnnotatedString
@@ -58,6 +88,9 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
+import kotlin.math.cos
+import kotlin.math.sin
 import com.schoolos.android.core.designsystem.CosmicBlack
 import com.schoolos.android.core.designsystem.CosmicNavy
 import com.schoolos.android.core.designsystem.GlassBorder
@@ -495,6 +528,24 @@ fun InteractiveGameStudentCard(
     val accent = questionTypeAccentColor(normType)
     val typeLabel = questionTypeDisplayLabel(normType)
     val isCompleted = isInteractiveAnswerComplete(normType, answerJson, question.interactionConfigJson)
+    val haptic = LocalHapticFeedback.current
+    var wasCompleted by remember(question.id) { mutableStateOf(isCompleted) }
+    val confettiProgress = remember(question.id) { Animatable(0f) }
+
+    LaunchedEffect(isCompleted) {
+        if (isCompleted && !wasCompleted) {
+            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+            confettiProgress.snapTo(0.01f)
+            confettiProgress.animateTo(1f, animationSpec = tween(durationMillis = 900))
+            confettiProgress.snapTo(0f)
+        }
+        wasCompleted = isCompleted
+    }
+
+    val animatedBorderColor by animateColorAsState(
+        targetValue = if (isCompleted) NeonSuccess.copy(alpha = 0.7f) else GlassBorder,
+        label = "gameCardBorder",
+    )
 
     Box(
         modifier = Modifier
@@ -502,12 +553,41 @@ fun InteractiveGameStudentCard(
             .clip(RoundedCornerShape(18.dp))
             .background(CosmicNavy)
             .border(
-                width = 1.dp,
-                color = if (isCompleted) accent.copy(alpha = 0.55f) else GlassBorder,
+                width = if (isCompleted) 1.5.dp else 1.dp,
+                color = animatedBorderColor,
                 shape = RoundedCornerShape(18.dp)
             )
             .padding(14.dp)
     ) {
+        if (confettiProgress.value > 0f && confettiProgress.value < 1f) {
+            val burst = confettiProgress.value
+            val particleColors = listOf(
+                Color(0xFF10B981),
+                Color(0xFF38BDF8),
+                Color(0xFFF59E0B),
+                Color(0xFFA78BFA),
+                Color(0xFFF43F5E),
+            )
+            Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+                    .zIndex(5f)
+            ) {
+                val origin = Offset(size.width * 0.85f, 24.dp.toPx())
+                val count = 14
+                for (i in 0 until count) {
+                    val angle = (i * (360f / count)) * (Math.PI / 180.0)
+                    val radius = (18f + 135f * burst)
+                    val px = origin.x + (cos(angle) * radius).toFloat()
+                    val py = origin.y + (sin(angle) * radius * 0.72f).toFloat() + (burst * burst * 38f)
+                    drawCircle(
+                        color = particleColors[i % particleColors.size].copy(alpha = (1f - burst).coerceIn(0f, 1f)),
+                        radius = (5.dp.toPx() * (1f - burst * 0.45f)),
+                        center = Offset(px, py)
+                    )
+                }
+            }
+        }
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -591,12 +671,28 @@ fun InteractiveGameStudentCard(
                 }
 
                 if (isCompleted) {
-                    Icon(
-                        imageVector = Icons.Default.CheckCircle,
-                        contentDescription = "Lengkap",
-                        tint = NeonSuccess,
-                        modifier = Modifier.size(18.dp)
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(NeonSuccess.copy(alpha = 0.16f))
+                            .border(1.dp, NeonSuccess.copy(alpha = 0.4f), RoundedCornerShape(999.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Celebration,
+                            contentDescription = "Lengkap",
+                            tint = NeonSuccess,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "Siap",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = NeonSuccess
+                        )
+                    }
                 }
             }
 
@@ -629,7 +725,6 @@ fun InteractiveGameStudentCard(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun MatchingGamePlayer(
     questionId: String,
@@ -641,6 +736,17 @@ private fun MatchingGamePlayer(
     val (leftItems, rightOptions) = remember(configJson) { parseMatchingStudentItems(configJson) }
     val matchesMap = remember(questionId, configJson) { mutableStateMapOf<String, String>() }
     var activeLeftId by remember(questionId) { mutableStateOf<String?>(null) }
+    val haptic = LocalHapticFeedback.current
+
+    var boardCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+    val leftPinCenters = remember(questionId) { mutableStateMapOf<String, Offset>() }
+    val rightPinCenters = remember(questionId) { mutableStateMapOf<Int, Offset>() }
+    val rightCardRects = remember(questionId) { mutableStateMapOf<Int, Rect>() }
+
+    var dragSourceLeftId by remember { mutableStateOf<String?>(null) }
+    var dragSourceIdx by remember { mutableIntStateOf(-1) }
+    var dragPointerOffset by remember { mutableStateOf<Offset?>(null) }
+    var hoveredRightIdx by remember { mutableStateOf<Int?>(null) }
 
     LaunchedEffect(answerJson) {
         if (!answerJson.isNullOrBlank()) {
@@ -668,16 +774,34 @@ private fun MatchingGamePlayer(
         onAnswerJsonChanged(root.toString())
     }
 
+    fun assignPair(targetLeftId: String, rightOption: String) {
+        val prevOwner = matchesMap.entries.firstOrNull { it.value == rightOption }?.key
+        if (prevOwner != null && prevOwner != targetLeftId) {
+            matchesMap.remove(prevOwner)
+        }
+        matchesMap[targetLeftId] = rightOption
+        activeLeftId = leftItems.firstOrNull { it.id != targetLeftId && matchesMap[it.id].isNullOrBlank() }?.id
+        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+        emitMatches()
+    }
+
     val matchedCount = matchesMap.size
     val activeIdx = leftItems.indexOfFirst { it.id == activeLeftId }
+    val isAllMatched = leftItems.isNotEmpty() && matchedCount >= leftItems.size
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(10.dp))
-                .background(Color(0xFF0284C7).copy(alpha = 0.12f))
-                .border(1.dp, Color(0xFF0284C7).copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                .clip(RoundedCornerShape(12.dp))
+                .background(
+                    if (isAllMatched) NeonSuccess.copy(alpha = 0.13f) else Color(0xFF0284C7).copy(alpha = 0.12f)
+                )
+                .border(
+                    1.dp,
+                    if (isAllMatched) NeonSuccess.copy(alpha = 0.4f) else Color(0xFF0284C7).copy(alpha = 0.3f),
+                    RoundedCornerShape(12.dp)
+                )
                 .padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
             Row(
@@ -687,12 +811,13 @@ private fun MatchingGamePlayer(
             ) {
                 Text(
                     text = when {
-                        activeIdx >= 0 -> "Langkah 2: Ketuk pasangan jawaban untuk Soal #${activeIdx + 1}"
-                        leftItems.isNotEmpty() && matchedCount >= leftItems.size -> "Semua pasangan terhubung! Ketuk ulang jika ingin ubah."
-                        else -> "Langkah 1: Ketuk soal bernomor, lalu pilih pasangannya di bawah"
+                        dragSourceLeftId != null -> "Tarik kabel ke kartu pasangan di sebelah kanan!"
+                        activeIdx >= 0 -> "Langkah 2: Ketuk pasangan di kanan untuk Soal #${activeIdx + 1}"
+                        isAllMatched -> "Semua kabel tersambung! Ketuk kartu jika ingin mengubah."
+                        else -> "Seret dari pin bulat ● atau ketuk kartu kiri → kanan"
                     },
                     fontSize = 11.sp,
-                    color = Color(0xFF38BDF8),
+                    color = if (isAllMatched) NeonSuccess else Color(0xFF38BDF8),
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 15.sp,
                     modifier = Modifier.weight(1f)
@@ -700,10 +825,10 @@ private fun MatchingGamePlayer(
                 Spacer(Modifier.width(8.dp))
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
-                        text = "$matchedCount / ${leftItems.size}",
+                        text = "$matchedCount/${leftItems.size}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        color = Color(0xFF38BDF8)
+                        color = if (isAllMatched) NeonSuccess else Color(0xFF38BDF8)
                     )
                     if (!readOnly && matchesMap.isNotEmpty()) {
                         Row(
@@ -726,204 +851,336 @@ private fun MatchingGamePlayer(
             }
         }
 
-        // Left items
-        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            leftItems.forEachIndexed { idx, item ->
-                val pairColor = MATCH_PAIR_COLORS[idx % MATCH_PAIR_COLORS.size]
-                val isSelected = activeLeftId == item.id
-                val chosenRight = matchesMap[item.id]
-                val hasPair = !chosenRight.isNullOrBlank()
+        // 2-Column Tactile Wire Board with Bezier Wires Overlay
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .onGloballyPositioned { boardCoords = it }
+        ) {
+            // Draw connected & active curved Bezier wires cleanly across the center gap
+            Canvas(
+                modifier = Modifier
+                    .matchParentSize()
+                    .zIndex(2f)
+            ) {
+                leftItems.forEachIndexed { idx, item ->
+                    val chosenRight = matchesMap[item.id] ?: return@forEachIndexed
+                    val rIdx = rightOptions.indexOf(chosenRight)
+                    if (rIdx < 0) return@forEachIndexed
+                    val p1 = leftPinCenters[item.id] ?: return@forEachIndexed
+                    val p2 = rightPinCenters[rIdx] ?: return@forEachIndexed
+                    val wireColor = MATCH_PAIR_COLORS[idx % MATCH_PAIR_COLORS.size]
+                    val midX = (p1.x + p2.x) / 2f
+                    val wirePath = Path().apply {
+                        moveTo(p1.x, p1.y)
+                        cubicTo(midX, p1.y, midX, p2.y, p2.x, p2.y)
+                    }
+                    drawPath(
+                        path = wirePath,
+                        color = wireColor.copy(alpha = 0.24f),
+                        style = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round)
+                    )
+                    drawPath(
+                        path = wirePath,
+                        color = wireColor,
+                        style = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round)
+                    )
+                    drawCircle(wireColor, radius = 4.5.dp.toPx(), center = p1)
+                    drawCircle(wireColor, radius = 4.5.dp.toPx(), center = p2)
+                }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(
-                            when {
-                                isSelected -> pairColor.copy(alpha = 0.18f)
-                                hasPair -> pairColor.copy(alpha = 0.10f)
-                                else -> CosmicBlack
-                            }
+                val activeDragId = dragSourceLeftId
+                val livePointer = dragPointerOffset
+                if (activeDragId != null && livePointer != null) {
+                    val p1 = leftPinCenters[activeDragId]
+                    if (p1 != null) {
+                        val dragColor = MATCH_PAIR_COLORS[(dragSourceIdx.coerceAtLeast(0)) % MATCH_PAIR_COLORS.size]
+                        val midX = (p1.x + livePointer.x) / 2f
+                        val livePath = Path().apply {
+                            moveTo(p1.x, p1.y)
+                            cubicTo(midX, p1.y, midX, livePointer.y, livePointer.x, livePointer.y)
+                        }
+                        drawPath(
+                            path = livePath,
+                            color = dragColor,
+                            style = Stroke(
+                                width = 3.5.dp.toPx(),
+                                cap = StrokeCap.Round,
+                                pathEffect = PathEffect.dashPathEffect(floatArrayOf(12f, 10f))
+                            )
                         )
-                        .border(
-                            width = if (isSelected || hasPair) 1.5.dp else 1.dp,
-                            color = when {
-                                isSelected -> pairColor
-                                hasPair -> pairColor.copy(alpha = 0.65f)
-                                else -> GlassBorder
-                            },
-                            shape = RoundedCornerShape(12.dp)
-                        )
-                        .then(
-                            if (!readOnly) Modifier.clickable {
-                                activeLeftId = if (isSelected) null else item.id
-                            } else Modifier
-                        )
-                        .padding(11.dp)
+                        drawCircle(dragColor, radius = 5.5.dp.toPx(), center = p1)
+                        drawCircle(dragColor, radius = 6.dp.toPx(), center = livePointer)
+                    }
+                }
+            }
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(26.dp),
+                verticalAlignment = Alignment.Top
+            ) {
+                // Left Column: Prompts with right-edge draggable pins
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                    Text(
+                        text = "KOLOM A",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextTertiary,
+                        letterSpacing = 0.6.sp
+                    )
+                    leftItems.forEachIndexed { idx, item ->
+                        val pairColor = MATCH_PAIR_COLORS[idx % MATCH_PAIR_COLORS.size]
+                        val isSelected = activeLeftId == item.id || dragSourceLeftId == item.id
+                        val hasPair = !matchesMap[item.id].isNullOrBlank()
+                        var pinLocalCoords by remember { mutableStateOf<LayoutCoordinates?>(null) }
+
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    when {
+                                        isSelected -> pairColor.copy(alpha = 0.18f)
+                                        hasPair -> pairColor.copy(alpha = 0.12f)
+                                        else -> CosmicBlack
+                                    }
+                                )
+                                .border(
+                                    width = if (isSelected || hasPair) 1.5.dp else 1.dp,
+                                    color = when {
+                                        isSelected -> pairColor
+                                        hasPair -> pairColor.copy(alpha = 0.7f)
+                                        else -> GlassBorder
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .then(
+                                    if (!readOnly) Modifier.clickable {
+                                        haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                        if (hasPair && activeLeftId != item.id) {
+                                            matchesMap.remove(item.id)
+                                            activeLeftId = item.id
+                                            emitMatches()
+                                        } else {
+                                            activeLeftId = if (isSelected) null else item.id
+                                        }
+                                    } else Modifier
+                                )
                         ) {
                             Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 8.dp, end = 4.dp, top = 9.dp, bottom = 9.dp),
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.weight(1f)
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
                                 Box(
                                     modifier = Modifier
-                                        .size(21.dp)
+                                        .size(19.dp)
                                         .clip(CircleShape)
                                         .background(pairColor),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
                                         "${idx + 1}",
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.ExtraBold,
+                                        fontSize = 9.5.sp,
+                                        fontWeight = FontWeight.Black,
                                         color = Color.White
                                     )
                                 }
-                                Spacer(Modifier.width(8.dp))
                                 Text(
-                                    item.text,
-                                    fontSize = 12.5.sp,
+                                    text = item.text,
+                                    fontSize = 11.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     color = TextPrimary,
-                                    lineHeight = 18.sp
+                                    lineHeight = 15.sp,
+                                    modifier = Modifier.weight(1f)
                                 )
-                            }
-                            if (hasPair && !readOnly) {
-                                Icon(
-                                    Icons.Default.Close,
-                                    contentDescription = "Lepas pasangan",
-                                    tint = TextTertiary,
+                                // Draggable Wire Pin Handle (does not hijack card vertical scroll!)
+                                Box(
                                     modifier = Modifier
-                                        .size(16.dp)
-                                        .clickable {
-                                            matchesMap.remove(item.id)
-                                            activeLeftId = item.id
-                                            emitMatches()
+                                        .size(24.dp)
+                                        .onGloballyPositioned { coords ->
+                                            pinLocalCoords = coords
+                                            val parent = boardCoords
+                                            if (parent != null && coords.isAttached && parent.isAttached) {
+                                                leftPinCenters[item.id] = parent.localPositionOf(
+                                                    coords,
+                                                    Offset(coords.size.width / 2f, coords.size.height / 2f)
+                                                )
+                                            }
                                         }
-                                )
+                                        .then(
+                                            if (!readOnly) Modifier.pointerInput(item.id, rightOptions) {
+                                                detectDragGestures(
+                                                    onDragStart = { startOffset ->
+                                                        val parent = boardCoords
+                                                        val local = pinLocalCoords
+                                                        if (parent != null && local != null && parent.isAttached && local.isAttached) {
+                                                            dragSourceLeftId = item.id
+                                                            dragSourceIdx = idx
+                                                            dragPointerOffset = parent.localPositionOf(local, startOffset)
+                                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        }
+                                                    },
+                                                    onDrag = { change, dragAmount ->
+                                                        change.consume()
+                                                        val nextPt = (dragPointerOffset ?: Offset.Zero) + dragAmount
+                                                        dragPointerOffset = nextPt
+                                                        val hit = rightCardRects.entries.firstOrNull { (_, r) ->
+                                                            nextPt.x >= r.left - 18f && nextPt.x <= r.right + 18f &&
+                                                                nextPt.y >= r.top - 12f && nextPt.y <= r.bottom + 12f
+                                                        }?.key
+                                                        if (hit != hoveredRightIdx) {
+                                                            hoveredRightIdx = hit
+                                                            if (hit != null) haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                        }
+                                                    },
+                                                    onDragEnd = {
+                                                        val dropIdx = hoveredRightIdx
+                                                        if (dropIdx != null && dropIdx in rightOptions.indices) {
+                                                            assignPair(item.id, rightOptions[dropIdx])
+                                                        }
+                                                        dragSourceLeftId = null
+                                                        dragSourceIdx = -1
+                                                        dragPointerOffset = null
+                                                        hoveredRightIdx = null
+                                                    },
+                                                    onDragCancel = {
+                                                        dragSourceLeftId = null
+                                                        dragSourceIdx = -1
+                                                        dragPointerOffset = null
+                                                        hoveredRightIdx = null
+                                                    }
+                                                )
+                                            } else Modifier
+                                        ),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(12.dp)
+                                            .clip(CircleShape)
+                                            .background(if (hasPair || isSelected) pairColor else Color(0xFF38BDF8).copy(alpha = 0.55f))
+                                            .border(2.dp, CosmicNavy, CircleShape)
+                                    )
+                                }
                             }
-                        }
-
-                        if (hasPair) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                                modifier = Modifier
-                                    .padding(start = 29.dp)
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(pairColor.copy(alpha = 0.14f))
-                                    .padding(horizontal = 8.dp, vertical = 4.dp)
-                            ) {
-                                Text("↔", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = pairColor)
-                                Text(
-                                    chosenRight!!,
-                                    fontSize = 11.5.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = pairColor,
-                                    lineHeight = 16.sp
-                                )
-                            }
-                        } else if (!readOnly) {
-                            Text(
-                                text = if (isSelected) "Dipilih — ketuk jawaban yang cocok di bawah" else "Ketuk kartu ini untuk memilih pasangannya",
-                                fontSize = 10.5.sp,
-                                color = if (isSelected) pairColor else TextTertiary,
-                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                modifier = Modifier.padding(start = 29.dp)
-                            )
                         }
                     }
                 }
-            }
-        }
 
-        // Right options pool (clean tappable cards instead of cramped pills)
-        if (rightOptions.isNotEmpty() && !readOnly) {
-            Text(
-                "Pilihan Jawaban Pasangan:",
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextSecondary
-            )
-            Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                rightOptions.forEachIndexed { rIdx, optionText ->
-                    val pairedIdx = leftItems.indexOfFirst { matchesMap[it.id] == optionText }
-                    val isPaired = pairedIdx >= 0
-                    val pairColor = if (isPaired) {
-                        MATCH_PAIR_COLORS[pairedIdx % MATCH_PAIR_COLORS.size]
-                    } else {
-                        Color(0xFF38BDF8)
-                    }
-                    val letter = ('A' + (rIdx % 26)).toString()
+                // Right Column: Target answers with left-edge pins
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "KOLOM B",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = TextTertiary,
+                        letterSpacing = 0.6.sp,
+                        modifier = Modifier.align(Alignment.End)
+                    )
+                    rightOptions.forEachIndexed { rIdx, optionText ->
+                        val pairedIdx = leftItems.indexOfFirst { matchesMap[it.id] == optionText }
+                        val isPaired = pairedIdx >= 0
+                        val pairColor = if (isPaired) {
+                            MATCH_PAIR_COLORS[pairedIdx % MATCH_PAIR_COLORS.size]
+                        } else {
+                            Color(0xFF38BDF8)
+                        }
+                        val isHoverTarget = hoveredRightIdx == rIdx
 
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isPaired) pairColor.copy(alpha = 0.15f) else CosmicBlack,
-                        border = BorderStroke(
-                            width = 1.dp,
-                            color = when {
-                                isPaired -> pairColor
-                                activeLeftId != null -> Color(0xFF38BDF8).copy(alpha = 0.65f)
-                                else -> GlassBorder2
-                            }
-                        ),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable {
-                                val targetLeftId = activeLeftId
-                                    ?: leftItems.firstOrNull { matchesMap[it.id].isNullOrBlank() }?.id
-                                    ?: leftItems.firstOrNull()?.id
-                                if (targetLeftId != null) {
-                                    val prevOwner = matchesMap.entries.firstOrNull { it.value == optionText }?.key
-                                    if (prevOwner != null && prevOwner != targetLeftId) {
-                                        matchesMap.remove(prevOwner)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { coords ->
+                                    val parent = boardCoords
+                                    if (parent != null && coords.isAttached && parent.isAttached) {
+                                        val tl = parent.localPositionOf(coords, Offset.Zero)
+                                        rightCardRects[rIdx] = Rect(
+                                            offset = tl,
+                                            size = Size(coords.size.width.toFloat(), coords.size.height.toFloat())
+                                        )
                                     }
-                                    matchesMap[targetLeftId] = optionText
-                                    activeLeftId = leftItems.firstOrNull { it.id != targetLeftId && matchesMap[it.id].isNullOrBlank() }?.id
-                                    emitMatches()
                                 }
-                            }
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 9.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(20.dp)
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(if (isPaired) pairColor else GlassBorder2),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = if (isPaired) "#${pairedIdx + 1}" else letter,
-                                    fontSize = 9.5.sp,
-                                    fontWeight = FontWeight.Black,
-                                    color = if (isPaired) Color.White else TextSecondary
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    when {
+                                        isHoverTarget -> Color(0xFF38BDF8).copy(alpha = 0.22f)
+                                        isPaired -> pairColor.copy(alpha = 0.14f)
+                                        else -> CosmicBlack
+                                    }
                                 )
-                            }
-                            Text(
-                                text = optionText,
-                                fontSize = 12.sp,
-                                fontWeight = if (isPaired) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isPaired) pairColor else TextPrimary,
-                                lineHeight = 17.sp,
-                                modifier = Modifier.weight(1f)
-                            )
-                            if (isPaired) {
-                                Icon(
-                                    Icons.Default.Check,
-                                    contentDescription = "Terpasang",
-                                    tint = pairColor,
-                                    modifier = Modifier.size(15.dp)
+                                .border(
+                                    width = if (isHoverTarget || isPaired) 1.5.dp else 1.dp,
+                                    color = when {
+                                        isHoverTarget -> Color(0xFF38BDF8)
+                                        isPaired -> pairColor.copy(alpha = 0.75f)
+                                        activeLeftId != null -> Color(0xFF38BDF8).copy(alpha = 0.55f)
+                                        else -> GlassBorder2
+                                    },
+                                    shape = RoundedCornerShape(12.dp)
+                                )
+                                .then(
+                                    if (!readOnly) Modifier.clickable {
+                                        val targetLeftId = activeLeftId
+                                            ?: leftItems.firstOrNull { matchesMap[it.id].isNullOrBlank() }?.id
+                                        if (targetLeftId != null) {
+                                            assignPair(targetLeftId, optionText)
+                                        } else if (isPaired) {
+                                            val owner = leftItems.getOrNull(pairedIdx)?.id
+                                            if (owner != null) {
+                                                matchesMap.remove(owner)
+                                                activeLeftId = owner
+                                                emitMatches()
+                                            }
+                                        }
+                                    } else Modifier
+                                )
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 4.dp, end = 8.dp, top = 9.dp, bottom = 9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .onGloballyPositioned { coords ->
+                                            val parent = boardCoords
+                                            if (parent != null && coords.isAttached && parent.isAttached) {
+                                                rightPinCenters[rIdx] = parent.localPositionOf(
+                                                    coords,
+                                                    Offset(coords.size.width / 2f, coords.size.height / 2f)
+                                                )
+                                            }
+                                        },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(11.dp)
+                                            .clip(CircleShape)
+                                            .background(if (isHoverTarget) Color(0xFF38BDF8) else if (isPaired) pairColor else GlassBorder2)
+                                            .border(2.dp, CosmicNavy, CircleShape)
+                                    )
+                                }
+                                Text(
+                                    text = optionText,
+                                    fontSize = 11.5.sp,
+                                    fontWeight = if (isPaired) FontWeight.Bold else FontWeight.Medium,
+                                    color = if (isPaired) pairColor else TextPrimary,
+                                    lineHeight = 15.sp,
+                                    modifier = Modifier.weight(1f)
                                 )
                             }
                         }
@@ -983,14 +1240,22 @@ private fun OrderingGamePlayer(
 
     val isSaved = isInteractiveAnswerComplete("ORDERING", answerJson, configJson)
     val amber = Color(0xFFD97706)
+    val haptic = LocalHapticFeedback.current
+    var draggedIndex by remember(questionId) { mutableStateOf<Int?>(null) }
+    var dragDeltaY by remember { mutableFloatStateOf(0f) }
+    val rowHeights = remember(questionId) { mutableStateMapOf<Int, Float>() }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(10.dp))
-                .background(amber.copy(alpha = 0.12f))
-                .border(1.dp, amber.copy(alpha = 0.3f), RoundedCornerShape(10.dp))
+                .background(if (isSaved) NeonSuccess.copy(alpha = 0.12f) else amber.copy(alpha = 0.12f))
+                .border(
+                    1.dp,
+                    if (isSaved) NeonSuccess.copy(alpha = 0.35f) else amber.copy(alpha = 0.3f),
+                    RoundedCornerShape(10.dp)
+                )
                 .padding(horizontal = 10.dp, vertical = 8.dp)
         ) {
             Row(
@@ -999,9 +1264,9 @@ private fun OrderingGamePlayer(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Susun dari Tahap #1 (Paling Awal) hingga Terakhir menggunakan tombol ▲ / ▼",
+                    text = "Seret pegangan ⋮⋮ atau tekan ▲ / ▼ untuk mengurutkan Awal → Akhir",
                     fontSize = 11.sp,
-                    color = amber,
+                    color = if (isSaved) NeonSuccess else amber,
                     fontWeight = FontWeight.SemiBold,
                     lineHeight = 15.sp,
                     modifier = Modifier.weight(1f)
@@ -1009,111 +1274,220 @@ private fun OrderingGamePlayer(
                 if (isSaved) {
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        text = "✓ Tersimpan",
+                        text = "✓ Siap",
                         fontSize = 10.5.sp,
-                        fontWeight = FontWeight.Bold,
+                        fontWeight = FontWeight.ExtraBold,
                         color = NeonSuccess
                     )
                 }
             }
         }
 
-        orderedIds.forEachIndexed { idx, id ->
-            val itemText = itemById[id]?.text ?: id
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(CosmicBlack)
-                    .border(
-                        1.dp,
-                        if (isSaved) amber.copy(alpha = 0.45f) else GlassBorder,
-                        RoundedCornerShape(12.dp)
-                    )
-                    .padding(horizontal = 10.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Box(
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            orderedIds.forEachIndexed { idx, id ->
+                val itemText = itemById[id]?.text ?: id
+                val isFirst = idx == 0
+                val isLast = idx == orderedIds.lastIndex
+                val isDragging = draggedIndex == idx
+                val scaleAnim by animateFloatAsState(if (isDragging) 1.025f else 1f, label = "orderDragScale")
+
+                Row(
                     modifier = Modifier
-                        .size(22.dp)
-                        .clip(CircleShape)
-                        .background(amber.copy(alpha = 0.18f)),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min)
+                        .zIndex(if (isDragging) 3f else 0f)
+                        .graphicsLayer {
+                            translationY = if (isDragging) dragDeltaY else 0f
+                            scaleX = scaleAnim
+                            scaleY = scaleAnim
+                        }
+                        .onSizeChanged { rowHeights[idx] = it.height.toFloat() },
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        "${idx + 1}",
-                        fontSize = 10.5.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = amber
-                    )
-                }
-
-                Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                    if (idx == 0 || idx == orderedIds.lastIndex) {
-                        Text(
-                            text = if (idx == 0) "URUTAN PALING AWAL" else "URUTAN PALING AKHIR",
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = amber
-                        )
-                    }
-                    Text(
-                        text = itemText,
-                        fontSize = 12.5.sp,
-                        color = TextPrimary,
-                        fontWeight = FontWeight.Medium,
-                        lineHeight = 17.sp,
-                    )
-                }
-
-                if (!readOnly) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                        Surface(
-                            shape = RoundedCornerShape(7.dp),
-                            color = if (idx > 0) amber.copy(alpha = 0.16f) else Color.Transparent,
-                            border = BorderStroke(1.dp, if (idx > 0) amber.copy(alpha = 0.4f) else GlassBorder),
+                    // Vertical Timeline Rail Track + Number Node
+                    Box(
+                        modifier = Modifier
+                            .width(24.dp)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Canvas(modifier = Modifier.fillMaxSize()) {
+                            val cx = size.width / 2f
+                            if (!isFirst) {
+                                drawLine(
+                                    color = amber.copy(alpha = 0.5f),
+                                    start = Offset(cx, 0f),
+                                    end = Offset(cx, size.height / 2f),
+                                    strokeWidth = 2.dp.toPx()
+                                )
+                            }
+                            if (!isLast) {
+                                drawLine(
+                                    color = Color(0xFF10B981).copy(alpha = 0.45f),
+                                    start = Offset(cx, size.height / 2f),
+                                    end = Offset(cx, size.height),
+                                    strokeWidth = 2.dp.toPx()
+                                )
+                            }
+                        }
+                        Box(
                             modifier = Modifier
-                                .size(30.dp)
-                                .clip(RoundedCornerShape(7.dp))
-                                .clickable(enabled = idx > 0) {
-                                    val tmp = orderedIds[idx - 1]
-                                    orderedIds[idx - 1] = orderedIds[idx]
-                                    orderedIds[idx] = tmp
-                                    emitOrder()
-                                }
+                                .size(22.dp)
+                                .clip(CircleShape)
+                                .background(if (isFirst) amber else if (isLast) NeonSuccess else Color(0xFF1E293B))
+                                .border(1.5.dp, if (isFirst) amber else if (isLast) NeonSuccess else amber.copy(alpha = 0.6f), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                "${idx + 1}",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                color = if (isFirst || isLast) Color.White else amber
+                            )
+                        }
+                    }
+
+                    // Draggable Tactile Step Card
+                    Row(
+                        modifier = Modifier
+                            .weight(1f)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isDragging) amber.copy(alpha = 0.14f) else CosmicBlack)
+                            .border(
+                                width = if (isDragging) 1.5.dp else 1.dp,
+                                color = if (isDragging) amber else if (isSaved) amber.copy(alpha = 0.45f) else GlassBorder,
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .padding(horizontal = 8.dp, vertical = 9.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        if (!readOnly) {
+                            Box(
+                                modifier = Modifier
+                                    .size(28.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(amber.copy(alpha = if (isDragging) 0.25f else 0.1f))
+                                    .pointerInput(id, orderedIds.size) {
+                                        detectDragGestures(
+                                            onDragStart = {
+                                                draggedIndex = idx
+                                                dragDeltaY = 0f
+                                                haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            },
+                                            onDrag = { change, dragAmount ->
+                                                change.consume()
+                                                val cur = draggedIndex ?: return@detectDragGestures
+                                                dragDeltaY += dragAmount.y
+                                                val stepH = (rowHeights[cur] ?: 72f).coerceAtLeast(48f) * 0.65f
+                                                if (dragDeltaY > stepH && cur < orderedIds.lastIndex) {
+                                                    val tmp = orderedIds[cur + 1]
+                                                    orderedIds[cur + 1] = orderedIds[cur]
+                                                    orderedIds[cur] = tmp
+                                                    draggedIndex = cur + 1
+                                                    dragDeltaY -= (rowHeights[cur + 1] ?: 72f)
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                } else if (dragDeltaY < -stepH && cur > 0) {
+                                                    val tmp = orderedIds[cur - 1]
+                                                    orderedIds[cur - 1] = orderedIds[cur]
+                                                    orderedIds[cur] = tmp
+                                                    draggedIndex = cur - 1
+                                                    dragDeltaY += (rowHeights[cur - 1] ?: 72f)
+                                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                                }
+                                            },
+                                            onDragEnd = {
+                                                draggedIndex = null
+                                                dragDeltaY = 0f
+                                                emitOrder()
+                                            },
+                                            onDragCancel = {
+                                                draggedIndex = null
+                                                dragDeltaY = 0f
+                                            }
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Icon(
-                                    Icons.Default.ArrowUpward,
-                                    contentDescription = "Naik",
-                                    tint = if (idx > 0) amber else TextTertiary.copy(alpha = 0.4f),
+                                    imageVector = Icons.Default.DragIndicator,
+                                    contentDescription = "Seret urutan",
+                                    tint = amber,
                                     modifier = Modifier.size(16.dp)
                                 )
                             }
                         }
 
-                        Surface(
-                            shape = RoundedCornerShape(7.dp),
-                            color = if (idx < orderedIds.lastIndex) amber.copy(alpha = 0.16f) else Color.Transparent,
-                            border = BorderStroke(1.dp, if (idx < orderedIds.lastIndex) amber.copy(alpha = 0.4f) else GlassBorder),
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(RoundedCornerShape(7.dp))
-                                .clickable(enabled = idx < orderedIds.lastIndex) {
-                                    val tmp = orderedIds[idx + 1]
-                                    orderedIds[idx + 1] = orderedIds[idx]
-                                    orderedIds[idx] = tmp
-                                    emitOrder()
-                                }
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Icon(
-                                    Icons.Default.ArrowDownward,
-                                    contentDescription = "Turun",
-                                    tint = if (idx < orderedIds.lastIndex) amber else TextTertiary.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(16.dp)
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                            if (isFirst || isLast) {
+                                Text(
+                                    text = if (isFirst) "AWAL PROSES" else "TAHAP AKHIR",
+                                    fontSize = 8.5.sp,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    color = if (isFirst) amber else NeonSuccess
                                 )
+                            }
+                            Text(
+                                text = itemText,
+                                fontSize = 12.sp,
+                                color = TextPrimary,
+                                fontWeight = FontWeight.Medium,
+                                lineHeight = 16.sp,
+                            )
+                        }
+
+                        if (!readOnly) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Surface(
+                                    shape = RoundedCornerShape(7.dp),
+                                    color = if (idx > 0) amber.copy(alpha = 0.16f) else Color.Transparent,
+                                    border = BorderStroke(1.dp, if (idx > 0) amber.copy(alpha = 0.4f) else GlassBorder),
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(7.dp))
+                                        .clickable(enabled = idx > 0) {
+                                            val tmp = orderedIds[idx - 1]
+                                            orderedIds[idx - 1] = orderedIds[idx]
+                                            orderedIds[idx] = tmp
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            emitOrder()
+                                        }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.ArrowUpward,
+                                            contentDescription = "Naik",
+                                            tint = if (idx > 0) amber else TextTertiary.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
+
+                                Surface(
+                                    shape = RoundedCornerShape(7.dp),
+                                    color = if (idx < orderedIds.lastIndex) amber.copy(alpha = 0.16f) else Color.Transparent,
+                                    border = BorderStroke(1.dp, if (idx < orderedIds.lastIndex) amber.copy(alpha = 0.4f) else GlassBorder),
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(RoundedCornerShape(7.dp))
+                                        .clickable(enabled = idx < orderedIds.lastIndex) {
+                                            val tmp = orderedIds[idx + 1]
+                                            orderedIds[idx + 1] = orderedIds[idx]
+                                            orderedIds[idx] = tmp
+                                            haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                            emitOrder()
+                                        }
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            Icons.Default.ArrowDownward,
+                                            contentDescription = "Turun",
+                                            tint = if (idx < orderedIds.lastIndex) amber else TextTertiary.copy(alpha = 0.4f),
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
@@ -1129,14 +1503,17 @@ private fun OrderingGamePlayer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .clickable { emitOrder() }
+                    .clickable {
+                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                        emitOrder()
+                    }
             ) {
                 Box(
                     modifier = Modifier.padding(vertical = 9.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        "Tetapkan Urutan Ini sebagai Jawaban",
+                        "✓ Tetapkan Urutan Ini sebagai Jawaban",
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.Bold,
                         color = amber
@@ -1380,10 +1757,11 @@ private fun FillBlankGamePlayer(
             }
         }
 
-        // Word Bank Pills (clean words without leaking slot # answer keys!)
+        // Word Bank: Duolingo-style 3D Tactile Word Tiles
         if (shuffledWordBank.isNotEmpty() && !readOnly) {
+            val haptic = LocalHapticFeedback.current
             Text(
-                "Bank Kata (ketuk kata untuk mengisi Kotak #${activeSlot.coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0)) + 1}):",
+                "Bank Kata (ketuk ubin untuk mengisi Kotak #${activeSlot.coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0)) + 1}):",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextSecondary
@@ -1396,45 +1774,71 @@ private fun FillBlankGamePlayer(
                 shuffledWordBank.forEach { word ->
                     val usedInSlot = fills.indexOfFirst { it == word }
                     val isUsed = usedInSlot >= 0
+                    val interactionSource = remember { MutableInteractionSource() }
+                    val isPressed by interactionSource.collectIsPressedAsState()
+                    val topOffset by animateDpAsState(
+                        targetValue = when {
+                            isUsed -> 3.dp
+                            isPressed -> 3.dp
+                            else -> 0.dp
+                        },
+                        label = "tilePressOffset"
+                    )
 
-                    Surface(
-                        shape = RoundedCornerShape(10.dp),
-                        color = if (isUsed) emerald.copy(alpha = 0.14f) else CosmicBlack,
-                        border = BorderStroke(1.dp, if (isUsed) emerald.copy(alpha = 0.6f) else GlassBorder2),
+                    // Outer 3D Lip Container
+                    Box(
                         modifier = Modifier
-                            .clip(RoundedCornerShape(10.dp))
-                            .clickable {
-                                val targetSlot = activeSlot.coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0))
-                                if (isUsed && usedInSlot == targetSlot) {
-                                    fills[targetSlot] = ""
-                                } else {
-                                    if (isUsed) fills[usedInSlot] = ""
-                                    fills[targetSlot] = word
-                                    val nextEmpty = (0 until cfg.blankCount).firstOrNull { fills[it].isBlank() }
-                                    if (nextEmpty != null) activeSlot = nextEmpty
-                                }
-                                emitFills()
-                            }
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(if (isUsed) Color.Transparent else Color(0xFF047857))
+                            .padding(bottom = if (isUsed) 0.dp else 3.5.dp)
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 11.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(5.dp)
+                        Surface(
+                            shape = RoundedCornerShape(11.dp),
+                            color = if (isUsed) emerald.copy(alpha = 0.12f) else CosmicBlack,
+                            border = BorderStroke(
+                                width = 1.2.dp,
+                                color = if (isUsed) emerald.copy(alpha = 0.45f) else emerald
+                            ),
+                            modifier = Modifier
+                                .offset(y = topOffset)
+                                .clip(RoundedCornerShape(11.dp))
+                                .clickable(
+                                    interactionSource = interactionSource,
+                                    indication = null,
+                                ) {
+                                    haptic.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                                    val targetSlot = activeSlot.coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0))
+                                    if (isUsed && usedInSlot == targetSlot) {
+                                        fills[targetSlot] = ""
+                                    } else {
+                                        if (isUsed) fills[usedInSlot] = ""
+                                        fills[targetSlot] = word
+                                        val nextEmpty = (0 until cfg.blankCount).firstOrNull { fills[it].isBlank() }
+                                        if (nextEmpty != null) activeSlot = nextEmpty
+                                    }
+                                    emitFills()
+                                }
                         ) {
-                            if (isUsed) {
-                                Icon(
-                                    imageVector = Icons.Default.Check,
-                                    contentDescription = "Sudah dipakai",
-                                    tint = emerald,
-                                    modifier = Modifier.size(13.dp)
+                            Row(
+                                modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(5.dp)
+                            ) {
+                                if (isUsed) {
+                                    Icon(
+                                        imageVector = Icons.Default.Check,
+                                        contentDescription = "Sudah dipakai",
+                                        tint = emerald,
+                                        modifier = Modifier.size(13.dp)
+                                    )
+                                }
+                                Text(
+                                    text = word,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (isUsed) emerald else TextPrimary,
                                 )
                             }
-                            Text(
-                                text = word,
-                                fontSize = 12.sp,
-                                fontWeight = if (isUsed) FontWeight.Bold else FontWeight.Medium,
-                                color = if (isUsed) emerald else TextPrimary,
-                            )
                         }
                     }
                 }
