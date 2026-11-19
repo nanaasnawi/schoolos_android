@@ -122,7 +122,7 @@ class QuizBuilderViewModel @Inject constructor(
                             questionText = q.questionText,
                             questionType = if (q.questionType == "MULTIPLE_CHOICE") "multiple_choice" else "essay",
                             points = q.points,
-                            imageUrl = null,
+                            imageUrl = q.imageUrl,
                             choices = choicesInputs
                         )
 
@@ -266,7 +266,7 @@ class QuizBuilderViewModel @Inject constructor(
                         questionText = q.questionText,
                         questionType = if (q.questionType == "MULTIPLE_CHOICE") "multiple_choice" else "essay",
                         points = q.points,
-                        imageUrl = null,
+                        imageUrl = q.imageUrl,
                         choices = choicesInputs
                     )
                 }

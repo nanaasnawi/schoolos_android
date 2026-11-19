@@ -897,6 +897,13 @@ private fun FlatQuestionEditor(
             }
         }
 
+        val (previewDiagramUrl, _) = remember(question.questionText) {
+            extractQuestionDiagramAndText(question.questionText)
+        }
+        if (!previewDiagramUrl.isNullOrBlank()) {
+            QuestionDiagramCard(imageUrl = previewDiagramUrl)
+        }
+
         // Clean Question Text Input
         OutlinedTextField(
             value = question.questionText,
@@ -1329,8 +1336,8 @@ private fun AssignmentReviewAndPublishScreen(
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
-                                Text(
-                                    q.questionText.ifBlank { "(Pertanyaan belum diisi)" },
+                                QuestionPromptWithDiagram(
+                                    rawText = q.questionText.ifBlank { "(Pertanyaan belum diisi)" },
                                     color = textPrimary,
                                     fontSize = 13.sp,
                                     fontWeight = FontWeight.Medium,

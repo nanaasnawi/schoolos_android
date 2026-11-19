@@ -377,9 +377,9 @@ fun TeacherAssignmentDetailContent(
                                 )
                             }
 
-                            // Question Text
-                            Text(
-                                text = q.questionText,
+                            // Question Text & Diagram
+                            QuestionPromptWithDiagram(
+                                rawText = q.questionText,
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = textPrimary,

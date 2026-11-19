@@ -103,6 +103,7 @@ import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.common.formatPublishTimestamp
 import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
+import com.schoolos.android.core.designsystem.QuestionPromptWithDiagram
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.AssignmentQuestion
 import com.schoolos.android.domain.model.AssignmentSubmission
@@ -1702,8 +1703,8 @@ private fun MultipleChoiceCard(
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = question.questionText,
+                    QuestionPromptWithDiagram(
+                        rawText = question.questionText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
@@ -1800,8 +1801,8 @@ private fun EssayQuestionCard(
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = question.questionText,
+                    QuestionPromptWithDiagram(
+                        rawText = question.questionText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
@@ -1933,9 +1934,10 @@ private fun EssayQuestionCard(
                         .border(1.dp, GlassBorder, RoundedCornerShape(12.dp))
                         .padding(12.dp)
                 ) {
-                    Text(
-                        text = question.questionText,
+                    QuestionPromptWithDiagram(
+                        rawText = question.questionText,
                         fontSize = 13.sp,
+                        fontWeight = FontWeight.Normal,
                         color = TextPrimary,
                         lineHeight = 19.sp
                     )
@@ -2112,8 +2114,8 @@ private fun SubmittedMultipleChoiceCard(
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = question.questionText,
+                    QuestionPromptWithDiagram(
+                        rawText = question.questionText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,
@@ -2312,8 +2314,8 @@ private fun SubmittedEssayCard(
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = question.questionText,
+                    QuestionPromptWithDiagram(
+                        rawText = question.questionText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,

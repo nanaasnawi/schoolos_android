@@ -57,6 +57,7 @@ import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.GlassBorder2
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.NeonSuccess
+import com.schoolos.android.core.designsystem.QuestionPromptWithDiagram
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
@@ -520,8 +521,8 @@ fun InteractiveGameStudentCard(
                             }
                         }
                         Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = question.questionText,
+                        QuestionPromptWithDiagram(
+                            rawText = question.questionText,
                             fontSize = 13.sp,
                             fontWeight = FontWeight.SemiBold,
                             color = TextPrimary,
@@ -1238,8 +1239,8 @@ fun SubmittedInteractiveGameReviewCard(
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = question.questionText,
+                    QuestionPromptWithDiagram(
+                        rawText = question.questionText,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
                         color = TextPrimary,

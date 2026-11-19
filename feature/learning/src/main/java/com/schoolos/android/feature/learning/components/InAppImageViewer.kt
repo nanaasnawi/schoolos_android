@@ -34,29 +34,7 @@ import kotlin.math.absoluteValue
  * Resolves relative `/uploads/...` media paths from the SchoolOS backend into absolute URLs
  * while keeping full URLs, `data:`, `content://`, and `file://` URIs untouched.
  */
-fun resolveLearningMediaUrl(rawUrl: String): String {
-    val trimmed = rawUrl.trim()
-    if (trimmed.isBlank()) return ""
-    if (trimmed.startsWith("http://", ignoreCase = true) ||
-        trimmed.startsWith("https://", ignoreCase = true) ||
-        trimmed.startsWith("data:", ignoreCase = true) ||
-        trimmed.startsWith("content://", ignoreCase = true) ||
-        trimmed.startsWith("file://", ignoreCase = true)
-    ) {
-        return trimmed
-    }
-    val rawApi = com.schoolos.android.core.common.BuildConfig.API_BASE_URL.trimEnd('/')
-    val rootBase = when {
-        rawApi.endsWith("/api/v1") -> rawApi.removeSuffix("/api/v1").trimEnd('/')
-        rawApi.endsWith("/api") -> rawApi.removeSuffix("/api").trimEnd('/')
-        else -> rawApi
-    }
-    return when {
-        trimmed.startsWith("/") -> "$rootBase$trimmed"
-        trimmed.startsWith("uploads/", ignoreCase = true) -> "$rootBase/$trimmed"
-        else -> "$rootBase/uploads/$trimmed"
-    }
-}
+fun resolveLearningMediaUrl(rawUrl: String): String = resolveServerMediaUrl(rawUrl)
 
 /**
  * In-App High Resolution Image & Infographic Viewer with Pinch-to-Zoom, Lightbox,

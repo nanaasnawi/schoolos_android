@@ -199,9 +199,15 @@ class AssignmentCreatorViewModel @Inject constructor(
             } else {
                 q.questionText.trim()
             }
+            val cleanImg = q.imageUrl?.trim()?.takeIf { it.isNotBlank() && !it.contains("unsplash", ignoreCase = true) }
+            val textWithDiagram = if (cleanImg != null && !cleanStem.contains(cleanImg)) {
+                "![Diagram Soal]($cleanImg)\n\n$cleanStem"
+            } else {
+                cleanStem
+            }
             AssignmentQuestion(
                 id = null,
-                questionText = cleanStem,
+                questionText = textWithDiagram,
                 questionType = q.questionType,
                 points = q.points,
                 orderIndex = idx + 1,
