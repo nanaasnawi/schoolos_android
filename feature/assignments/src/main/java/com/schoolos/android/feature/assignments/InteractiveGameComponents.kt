@@ -210,10 +210,29 @@ private fun parseOrderingItems(configJson: String?): List<GameItemPair> {
     }.getOrElse { emptyList() }
 }
 
+private fun normalizeFillBlankTemplate(template: String): String {
+    if (template.isBlank()) return template
+    var maxIdx = 0
+    Regex("\\{\\{(\\d+)\\}\\}").findAll(template).forEach { m ->
+        val n = m.groupValues[1].toIntOrNull() ?: 0
+        if (n > maxIdx) maxIdx = n
+    }
+    var next = Regex("(?<!\\{)\\{(\\d+)\\}(?!\\})").replace(template) { m ->
+        val n = m.groupValues[1].toIntOrNull() ?: 0
+        if (n > maxIdx) maxIdx = n
+        "{{${m.groupValues[1]}}}"
+    }
+    next = Regex("\\[\\s*(?:\\d+|_+|[Bb]lank)\\s*]|\\{\\s*(?:_+|[Bb]lank)\\s*\\}|_{2,}").replace(next) {
+        maxIdx += 1
+        "{{$maxIdx}}"
+    }
+    return next
+}
+
 private fun countTemplateBlanks(template: String): Int {
-    val numbered = Regex("\\{\\{(\\d+)\\}\\}").findAll(template).count()
-    val underscores = Regex("___+").findAll(template).count()
-    return maxOf(numbered + underscores, 1)
+    val norm = normalizeFillBlankTemplate(template)
+    val numbered = Regex("\\{\\{(\\d+)\\}\\}").findAll(norm).count()
+    return maxOf(numbered, 1)
 }
 
 private fun parseFillBlankStudentConfig(configJson: String?): ParsedFillBlank {
@@ -343,21 +362,12 @@ fun formatInteractiveAnswerSummary(
                 }
                 val lines = mutableListOf<String>()
                 if (cfg.template.isNotBlank()) {
-                    var rendered = cfg.template
                     var idx = 0
-                    rendered = Regex("\\{\\{(\\d+)\\}\\}").replace(rendered) { m ->
+                    val rendered = Regex("\\{\\{(\\d+)\\}\\}").replace(normalizeFillBlankTemplate(cfg.template)) { m ->
                         val slotIdx = (m.groupValues[1].toIntOrNull() ?: (idx + 1)) - 1
                         val w = fillWords.getOrNull(slotIdx)?.takeIf { it.isNotBlank() } ?: "___"
                         idx++
                         "[$w]"
-                    }
-                    if (idx == 0) {
-                        var uIdx = 0
-                        rendered = Regex("___+").replace(rendered) {
-                            val w = fillWords.getOrNull(uIdx)?.takeIf { it.isNotBlank() } ?: "___"
-                            uIdx++
-                            "[$w]"
-                        }
                     }
                     lines.add(rendered)
                 }
@@ -1040,24 +1050,13 @@ private fun FillBlankGamePlayer(
     }
 
     val renderedSentence = remember(cfg.template, fills.toList()) {
+        val normTpl = normalizeFillBlankTemplate(cfg.template)
         var idx = 0
-        val afterNumbered = Regex("\\{\\{(\\d+)\\}\\}").replace(cfg.template) { m ->
+        Regex("\\{\\{(\\d+)\\}\\}").replace(normTpl) { m ->
             val slotIdx = (m.groupValues[1].toIntOrNull() ?: (idx + 1)) - 1
             val w = fills.getOrNull(slotIdx)?.takeIf { it.isNotBlank() }
             idx++
-            if (w != null) " [ #$slotIdx -> $w ] ".replace("#$slotIdx", "${slotIdx + 1}")
-            else " [ ___ #${slotIdx + 1} ___ ] "
-        }
-        if (idx > 0) {
-            afterNumbered
-        } else {
-            var uIdx = 0
-            Regex("___+").replace(cfg.template) {
-                val cur = uIdx
-                val w = fills.getOrNull(cur)?.takeIf { it.isNotBlank() }
-                uIdx++
-                if (w != null) " [ #${cur + 1}: $w ] " else " [ ___ #${cur + 1} ___ ] "
-            }
+            if (w != null) " [ #${slotIdx + 1}: $w ] " else " [ ___ #${slotIdx + 1} ___ ] "
         }
     }
 
