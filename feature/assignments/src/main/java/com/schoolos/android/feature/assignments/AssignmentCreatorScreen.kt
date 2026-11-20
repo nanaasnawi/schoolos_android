@@ -670,6 +670,7 @@ fun AssignmentCreatorScreen(
                                     "MATCHING" to "+ Jodohkan",
                                     "ORDERING" to "+ Urutan",
                                     "FILL_BLANK" to "+ Rumpang",
+                                    "CROSSWORD" to "+ TTS",
                                 ).forEach { (gType, gLabel) ->
                                     val gColor = questionTypeAccentColor(gType)
                                     Box(
