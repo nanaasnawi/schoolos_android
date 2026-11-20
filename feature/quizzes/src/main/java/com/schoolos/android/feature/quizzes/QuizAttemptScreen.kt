@@ -159,7 +159,7 @@ fun QuizAttemptScreen(
                         horizontalArrangement = Arrangement.spacedBy(6.dp),
                     ) {
                         itemsIndexed(state.questions) { index, question ->
-                            val isAnswered = state.answers[question.id] != null
+                            val isAnswered = isAndroidQuestionAnswerComplete(question, state.answers[question.id])
                             val isCurrent = index == state.currentIndex
                             val pillBg = when {
                                 isCurrent  -> studentAccent
@@ -229,25 +229,44 @@ fun QuizAttemptScreen(
                                         modifier = Modifier.padding(18.dp),
                                         verticalArrangement = Arrangement.spacedBy(14.dp)
                                     ) {
-                                        // Header Row: Soal Number + Points Pill
+                                        // Header Row: Soal Number + Type Badge + Points Pill
+                                        val qVariatifType = normalizeAndroidQuestionType(question.questionType)
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
-                                            Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = studentAccent.copy(alpha = 0.12f),
-                                                border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.35f))
+                                            Row(
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                                verticalAlignment = Alignment.CenterVertically,
                                             ) {
-                                                Text(
-                                                    text = "SOAL NO. ${state.currentIndex + 1}",
-                                                    color = studentAccent,
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    letterSpacing = 0.5.sp,
-                                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
-                                                )
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = studentAccent.copy(alpha = 0.12f),
+                                                    border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.35f))
+                                                ) {
+                                                    Text(
+                                                        text = "SOAL NO. ${state.currentIndex + 1}",
+                                                        color = studentAccent,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        letterSpacing = 0.5.sp,
+                                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                                                    )
+                                                }
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = innerCardBg,
+                                                    border = BorderStroke(1.dp, innerCardBorder)
+                                                ) {
+                                                    Text(
+                                                        text = androidQuestionTypeLabel(qVariatifType),
+                                                        color = textSecondary,
+                                                        fontSize = 10.5.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    )
+                                                }
                                             }
 
                                             Surface(
@@ -279,9 +298,9 @@ fun QuizAttemptScreen(
 
                                 Spacer(Modifier.height(14.dp))
 
-                                // Answer Options
-                                when (question.questionType.lowercase()) {
-                                    "multiple_choice", "true_false" -> {
+                                // Answer Options (All 7 Variatif Formats)
+                                when (normalizeAndroidQuestionType(question.questionType)) {
+                                    AndroidVariatifQuestionType.MULTIPLE_CHOICE -> {
                                         question.choices.forEachIndexed { idx, choice ->
                                             val choiceKey = "choice_${choice.id}"
                                             val isSelected = state.answers[question.id] == choiceKey
@@ -303,7 +322,71 @@ fun QuizAttemptScreen(
                                             Spacer(Modifier.height(10.dp))
                                         }
                                     }
-                                    "essay" -> {
+                                    AndroidVariatifQuestionType.TRUE_FALSE_MATRIX -> {
+                                        TrueFalseMatrixSection(
+                                            question = question,
+                                            rawAnswer = state.answers[question.id],
+                                            onAnswerChange = { viewModel.setAnswer(question.id, it) },
+                                            isDark = isDark,
+                                            cardBg = cardBg,
+                                            cardBorder = cardBorder,
+                                            innerCardBg = innerCardBg,
+                                            textPrimary = textPrimary,
+                                            textSecondary = textSecondary,
+                                            studentAccent = studentAccent,
+                                        )
+                                    }
+                                    AndroidVariatifQuestionType.MULTIPLE_SELECT -> {
+                                        MultipleSelectSection(
+                                            question = question,
+                                            rawAnswer = state.answers[question.id],
+                                            onAnswerChange = { viewModel.setAnswer(question.id, it) },
+                                            isDark = isDark,
+                                            cardBg = cardBg,
+                                            cardBorder = cardBorder,
+                                            textPrimary = textPrimary,
+                                            textSecondary = textSecondary,
+                                        )
+                                    }
+                                    AndroidVariatifQuestionType.SHORT_ANSWER -> {
+                                        ShortAnswerSection(
+                                            question = question,
+                                            rawAnswer = state.answers[question.id],
+                                            onAnswerChange = { viewModel.setAnswer(question.id, it.ifBlank { null }) },
+                                            cardBg = cardBg,
+                                            cardBorder = cardBorder,
+                                            textPrimary = textPrimary,
+                                            textTertiary = textTertiary,
+                                            studentAccent = studentAccent,
+                                        )
+                                    }
+                                    AndroidVariatifQuestionType.MATCHING -> {
+                                        MatchingSection(
+                                            question = question,
+                                            rawAnswer = state.answers[question.id],
+                                            onAnswerChange = { viewModel.setAnswer(question.id, it) },
+                                            isDark = isDark,
+                                            cardBg = cardBg,
+                                            cardBorder = cardBorder,
+                                            innerCardBg = innerCardBg,
+                                            textPrimary = textPrimary,
+                                            textSecondary = textSecondary,
+                                            studentAccent = studentAccent,
+                                        )
+                                    }
+                                    AndroidVariatifQuestionType.ORDERING -> {
+                                        OrderingSection(
+                                            question = question,
+                                            rawAnswer = state.answers[question.id],
+                                            onAnswerChange = { viewModel.setAnswer(question.id, it) },
+                                            isDark = isDark,
+                                            cardBg = cardBg,
+                                            cardBorder = cardBorder,
+                                            textPrimary = textPrimary,
+                                            textSecondary = textSecondary,
+                                        )
+                                    }
+                                    AndroidVariatifQuestionType.ESSAY -> {
                                         val text = state.answers[question.id] ?: ""
                                         OutlinedTextField(
                                             value = text,
@@ -323,50 +406,6 @@ fun QuizAttemptScreen(
                                                 unfocusedTextColor = textPrimary,
                                             ),
                                         )
-                                    }
-                                    else -> {
-                                        if (question.choices.isNotEmpty()) {
-                                            question.choices.forEachIndexed { idx, choice ->
-                                                val choiceKey = "choice_${choice.id}"
-                                                val isSelected = state.answers[question.id] == choiceKey
-                                                val label = ChoiceLabels.getOrElse(idx) { "${idx + 1}" }
-
-                                                ModernAnswerBubble(
-                                                    label = label,
-                                                    text = choice.choiceText,
-                                                    isSelected = isSelected,
-                                                    onClick = { viewModel.selectAnswer(question.id, choiceKey) },
-                                                    isDark = isDark,
-                                                    cardBg = cardBg,
-                                                    cardBorder = cardBorder,
-                                                    innerCardBg = innerCardBg,
-                                                    innerCardBorder = innerCardBorder,
-                                                    textPrimary = textPrimary,
-                                                    studentAccent = studentAccent,
-                                                )
-                                                Spacer(Modifier.height(10.dp))
-                                            }
-                                        } else {
-                                            val text = state.answers[question.id] ?: ""
-                                            OutlinedTextField(
-                                                value = text,
-                                                onValueChange = { viewModel.setEssayAnswer(question.id, it) },
-                                                placeholder = { Text("Tulis jawaban kamu di sini...", color = textTertiary, fontSize = 13.sp) },
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .height(180.dp),
-                                                maxLines = 8,
-                                                shape = RoundedCornerShape(18.dp),
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    focusedContainerColor = cardBg,
-                                                    unfocusedContainerColor = cardBg,
-                                                    focusedBorderColor = studentAccent,
-                                                    unfocusedBorderColor = cardBorder,
-                                                    focusedTextColor = textPrimary,
-                                                    unfocusedTextColor = textPrimary,
-                                                ),
-                                            )
-                                        }
                                     }
                                 }
 

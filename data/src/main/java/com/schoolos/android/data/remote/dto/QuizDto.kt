@@ -2,6 +2,7 @@ package com.schoolos.android.data.remote.dto
 
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.JsonElement
 
 @Serializable
 data class QuizDto(
@@ -57,6 +58,7 @@ data class AttemptAnswerDetailDto(
     @SerialName("text_answer") val textAnswer: String? = null,
     @SerialName("points_earned") val pointsEarned: Int = 0,
     @SerialName("teacher_feedback") val teacherFeedback: String? = null,
+    @SerialName("interaction_config") val interactionConfig: JsonElement? = null,
 )
 
 @Serializable
@@ -87,6 +89,7 @@ data class QuizQuestionDto(
     @SerialName("order_index") val orderIndex: Int = 0,
     @SerialName("image_url") val imageUrl: String? = null,
     val choices: List<QuizChoiceDto> = emptyList(),
+    @SerialName("interaction_config") val interactionConfig: JsonElement? = null,
 )
 
 @Serializable

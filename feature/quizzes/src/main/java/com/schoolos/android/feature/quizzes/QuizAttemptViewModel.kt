@@ -29,7 +29,7 @@ data class QuizAttemptUiState(
     val currentQuestion: QuizQuestion? get() = questions.getOrNull(currentIndex)
     val progress: Float get() = if (questions.isEmpty()) 0f else (currentIndex + 1).toFloat() / questions.size
     val isLastQuestion: Boolean get() = currentIndex == questions.lastIndex
-    val answeredCount: Int get() = answers.count { it.value != null }
+    val answeredCount: Int get() = questions.count { q -> isAndroidQuestionAnswerComplete(q, answers[q.id]) }
 }
 
 @HiltViewModel
@@ -76,16 +76,18 @@ class QuizAttemptViewModel @Inject constructor(
         }
     }
 
-    fun selectAnswer(questionId: String, choiceId: String) {
+    fun setAnswer(questionId: String, value: String?) {
         val updated = _state.value.answers.toMutableMap()
-        updated[questionId] = choiceId
+        updated[questionId] = value
         _state.value = _state.value.copy(answers = updated)
     }
 
+    fun selectAnswer(questionId: String, choiceId: String) {
+        setAnswer(questionId, choiceId)
+    }
+
     fun setEssayAnswer(questionId: String, text: String) {
-        val updated = _state.value.answers.toMutableMap()
-        updated[questionId] = text
-        _state.value = _state.value.copy(answers = updated)
+        setAnswer(questionId, text.ifBlank { null })
     }
 
     fun nextQuestion() {
@@ -115,10 +117,9 @@ class QuizAttemptViewModel @Inject constructor(
             val answerInputs = _state.value.answers.mapNotNull { (qId, value) ->
                 if (value.isNullOrBlank()) return@mapNotNull null
                 val question = questionsMap[qId]
-                val isMultipleChoice = question?.choices?.isNotEmpty() == true ||
-                    question?.questionType?.lowercase() in listOf("multiple_choice", "true_false", "pg")
+                val variatifType = normalizeAndroidQuestionType(question?.questionType)
 
-                if (isMultipleChoice) {
+                if (variatifType == AndroidVariatifQuestionType.MULTIPLE_CHOICE) {
                     val choiceId = if (value.startsWith("choice_")) value.removePrefix("choice_") else value
                     AnswerInput(
                         questionId = qId,

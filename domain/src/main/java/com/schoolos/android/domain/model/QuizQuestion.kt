@@ -8,6 +8,7 @@ data class QuizQuestion(
     val orderIndex: Int,
     val imageUrl: String? = null,
     val choices: List<QuizChoice>,
+    val interactionConfigJson: String? = null,
 )
 
 data class QuizChoice(
