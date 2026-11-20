@@ -99,8 +99,8 @@ class AssignmentCreatorViewModel @Inject constructor(
             val effectiveEssay = if (isPureGame || isGameMixed) 0 else numEssay
             val effectiveTotal = when {
                 isHomework -> effectiveEssay
-                isPureGame -> 3
-                isGameMixed -> effectiveMcq + 3
+                isPureGame -> 4
+                isGameMixed -> effectiveMcq + 4
                 else -> effectiveMcq + effectiveEssay
             }
             generatorRepository.generateCurriculum(
@@ -170,8 +170,8 @@ class AssignmentCreatorViewModel @Inject constructor(
         val effectiveEssay = if (isPureGame || isGameMixed) 0 else numEssay
         val effectiveTotal = when {
             isHomework -> effectiveEssay
-            isPureGame -> 3
-            isGameMixed -> effectiveMcq + 3
+            isPureGame -> 4
+            isGameMixed -> effectiveMcq + 4
             else -> effectiveMcq + effectiveEssay
         }
         val res = generatorRepository.generateCurriculum(

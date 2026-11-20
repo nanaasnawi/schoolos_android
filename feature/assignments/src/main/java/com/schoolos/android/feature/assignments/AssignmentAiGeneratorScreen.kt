@@ -450,8 +450,8 @@ fun AssignmentAiGeneratorScreen(
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                                             listOf(
                                                 listOf(
-                                                    Triple("GAME_MIXED", "Paket Variatif + Game ✨", "PG + 3 Mini-Game (Tanpa Esai) • Otomatis"),
-                                                    Triple("INTERACTIVE_GAMES", "Misi Game Penuh 🎮", "100% 3 Mini-Game • Otomatis")
+                                                    Triple("GAME_MIXED", "Paket Variatif + Game ✨", "PG + 4 Mini-Game (Tanpa Esai) • Otomatis"),
+                                                    Triple("INTERACTIVE_GAMES", "Misi Game Penuh 🎮", "100% 4 Mini-Game • Otomatis")
                                                 ),
                                                 listOf(
                                                     Triple("STRUCTURED_QUESTIONS", "Terstruktur (PG / Esai)", "Murni PG, Murni Esai, atau kombinasi"),
@@ -616,7 +616,7 @@ fun AssignmentAiGeneratorScreen(
                                                 .padding(12.dp)
                                         ) {
                                             Text(
-                                                "AI akan menyusun tepat 3 Misi Game Interaktif (Menjodohkan, Urutkan Langkah, Kalimat Rumpang) — tanpa esai dan dinilai otomatis 100% oleh sistem.",
+                                                "AI akan menyusun tepat 4 Misi Game Interaktif (Menjodohkan, Urutkan Langkah, Kalimat Rumpang, Teka-Teki Silang) — tanpa esai dan dinilai otomatis 100% oleh sistem.",
                                                 fontSize = 11.5.sp,
                                                 color = amberAccent,
                                                 fontWeight = FontWeight.Medium,
@@ -815,7 +815,7 @@ fun AssignmentAiGeneratorScreen(
                                                     .padding(10.dp)
                                             ) {
                                                 Text(
-                                                    "+ 3 Mini-Game Interaktif Otomatis (Menjodohkan, Urutkan Langkah, Kalimat Rumpang) — Tanpa soal esai & 100% terkoreksi otomatis.",
+                                                    "+ 4 Mini-Game Interaktif Otomatis (Menjodohkan, Urutkan Langkah, Kalimat Rumpang, Teka-Teki Silang) — Tanpa soal esai & 100% terkoreksi otomatis.",
                                                     fontSize = 11.sp,
                                                     color = Color(0xFF38BDF8),
                                                     fontWeight = FontWeight.SemiBold,
