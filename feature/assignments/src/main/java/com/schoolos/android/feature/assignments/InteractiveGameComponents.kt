@@ -91,12 +91,19 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import kotlin.math.cos
 import kotlin.math.sin
+import com.schoolos.android.core.designsystem.AccentNeonCyan
+import com.schoolos.android.core.designsystem.AccentPurple
 import com.schoolos.android.core.designsystem.CosmicBlack
+import com.schoolos.android.core.designsystem.CosmicDark
 import com.schoolos.android.core.designsystem.CosmicNavy
+import com.schoolos.android.core.designsystem.CosmicSurface2
 import com.schoolos.android.core.designsystem.GlassBorder
 import com.schoolos.android.core.designsystem.GlassBorder2
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
+import com.schoolos.android.core.designsystem.NeonBlue
+import com.schoolos.android.core.designsystem.NeonError
 import com.schoolos.android.core.designsystem.NeonSuccess
+import com.schoolos.android.core.designsystem.NeonWarning
 import com.schoolos.android.core.designsystem.QuestionPromptWithDiagram
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
@@ -140,14 +147,15 @@ fun questionTypeShortLabel(type: String?): String {
     }
 }
 
+@Composable
 fun questionTypeAccentColor(type: String?): Color {
     return when (type?.trim()?.uppercase()) {
-        "MATCHING" -> Color(0xFF0284C7)
-        "ORDERING" -> Color(0xFFD97706)
-        "FILL_BLANK" -> Color(0xFF059669)
-        "CROSSWORD" -> Color(0xFF8B5CF6)
-        "ESSAY", "URAIAN" -> Color(0xFF0891B2)
-        else -> Color(0xFF10B981)
+        "MATCHING" -> NeonBlue
+        "ORDERING" -> NeonWarning
+        "FILL_BLANK" -> NeonSuccess
+        "CROSSWORD" -> AccentPurple
+        "ESSAY", "URAIAN" -> AccentNeonCyan
+        else -> NeonSuccess
     }
 }
 
@@ -2249,9 +2257,19 @@ private fun CrosswordGamePlayer(
     val baseGrid = remember(configJson) { parseCrosswordGrid(configJson) }
     val clues = remember(configJson) { parseCrosswordClues(configJson) }
     val haptics = LocalHapticFeedback.current
-    val violet = Color(0xFF8B5CF6)
-    val emerald = Color(0xFF10B981)
-    val amber = Color(0xFFF59E0B)
+    val isDark = LocalIsDarkTheme.current
+    val accentPurple = AccentPurple
+    val emerald = NeonSuccess
+    val amber = NeonWarning
+    val danger = NeonError
+    val boardBg = CosmicDark
+    val boardBorder = GlassBorder2
+    val playableTileBg = if (isDark) CosmicSurface2 else CosmicNavy
+    val keyBg = CosmicNavy
+    val selectedBg = MaterialTheme.colorScheme.secondary
+    val selectedContentColor = MaterialTheme.colorScheme.onSecondary
+    val activeWordBg = MaterialTheme.colorScheme.secondaryContainer
+    val activeWordContentColor = MaterialTheme.colorScheme.onSecondaryContainer
 
     val numberByStart = remember(clues) {
         val map = mutableMapOf<Pair<Int, Int>, Int>()
@@ -2385,14 +2403,14 @@ private fun CrosswordGamePlayer(
         ) {
             Surface(
                 shape = RoundedCornerShape(999.dp),
-                color = violet.copy(alpha = 0.14f),
-                border = BorderStroke(1.dp, violet.copy(alpha = 0.35f)),
+                color = accentPurple.copy(alpha = 0.14f),
+                border = BorderStroke(1.dp, accentPurple.copy(alpha = 0.35f)),
             ) {
                 Text(
                     text = "🧩 $filledPlayable/$totalPlayable kotak terisi",
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Bold,
-                    color = violet,
+                    color = accentPurple,
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                 )
             }
@@ -2404,8 +2422,8 @@ private fun CrosswordGamePlayer(
                 ) {
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = violet.copy(alpha = 0.14f),
-                        border = BorderStroke(1.dp, violet.copy(alpha = 0.35f)),
+                        color = accentPurple.copy(alpha = 0.14f),
+                        border = BorderStroke(1.dp, accentPurple.copy(alpha = 0.35f)),
                         modifier = Modifier.clickable {
                             direction = if (direction == "ACROSS") "DOWN" else "ACROSS"
                             haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
@@ -2415,14 +2433,15 @@ private fun CrosswordGamePlayer(
                             text = if (direction == "DOWN") "Menurun ↓" else "Mendatar →",
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = violet,
+                            color = accentPurple,
                             modifier = Modifier.padding(horizontal = 8.dp, vertical = 5.dp)
                         )
                     }
 
                     Surface(
                         shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        color = CosmicNavy,
+                        border = BorderStroke(1.dp, boardBorder),
                         modifier = Modifier.clickable {
                             val reset = baseGrid.map { rowStr ->
                                 rowStr.map { ch -> if (ch == '#') '#' else ' ' }.toCharArray()
@@ -2475,8 +2494,8 @@ private fun CrosswordGamePlayer(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(10.dp))
-                    .background(violet.copy(alpha = 0.10f))
-                    .border(1.dp, violet.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
+                    .background(accentPurple.copy(alpha = 0.10f))
+                    .border(1.dp, accentPurple.copy(alpha = 0.35f), RoundedCornerShape(10.dp))
                     .padding(horizontal = 10.dp, vertical = 8.dp)
             ) {
                 Text(
@@ -2494,8 +2513,8 @@ private fun CrosswordGamePlayer(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(14.dp))
-                .background(Color(0xFF0F172A))
-                .border(1.dp, violet.copy(alpha = 0.25f), RoundedCornerShape(14.dp))
+                .background(boardBg)
+                .border(1.dp, boardBorder, RoundedCornerShape(14.dp))
                 .padding(10.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -2508,27 +2527,31 @@ private fun CrosswordGamePlayer(
                     Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                         rowArr.forEachIndexed { c, ch ->
                             if (ch == '#') {
-                                Box(
-                                    modifier = Modifier
-                                        .size(cellDp)
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .background(Color(0xFF1E293B).copy(alpha = 0.45f))
-                                )
+                                Spacer(modifier = Modifier.size(cellDp))
                             } else {
                                 val isSel = selectedCell?.first == r && selectedCell?.second == c
                                 val isInActiveWord = highlightedCells.contains(r to c)
                                 val num = numberByStart[r to c]
                                 val cellBg = when {
-                                    isSel -> violet
-                                    isInActiveWord -> Color(0xFF3B2873)
-                                    ch in 'A'..'Z' -> Color(0xFF1E293B)
-                                    else -> Color(0xFF0B1324)
+                                    isSel -> selectedBg
+                                    isInActiveWord -> activeWordBg
+                                    else -> playableTileBg
                                 }
                                 val cellBorder = when {
-                                    isSel -> Color.White
-                                    isInActiveWord -> violet.copy(alpha = 0.85f)
-                                    ch in 'A'..'Z' -> emerald.copy(alpha = 0.55f)
-                                    else -> Color.White.copy(alpha = 0.18f)
+                                    isSel -> accentPurple
+                                    isInActiveWord -> accentPurple.copy(alpha = 0.70f)
+                                    ch in 'A'..'Z' -> emerald.copy(alpha = 0.65f)
+                                    else -> boardBorder
+                                }
+                                val cellTextColor = when {
+                                    isSel -> selectedContentColor
+                                    isInActiveWord -> activeWordContentColor
+                                    else -> TextPrimary
+                                }
+                                val numTextColor = when {
+                                    isSel -> selectedContentColor.copy(alpha = 0.9f)
+                                    isInActiveWord -> activeWordContentColor.copy(alpha = 0.85f)
+                                    else -> TextSecondary
                                 }
                                 Box(
                                     modifier = Modifier
@@ -2554,7 +2577,7 @@ private fun CrosswordGamePlayer(
                                             text = num.toString(),
                                             fontSize = 7.5.sp,
                                             fontWeight = FontWeight.Bold,
-                                            color = if (isSel) Color.White else Color(0xFFC4B5FD),
+                                            color = numTextColor,
                                             modifier = Modifier.align(Alignment.TopStart).padding(start = 2.dp, top = 0.dp)
                                         )
                                     }
@@ -2563,7 +2586,7 @@ private fun CrosswordGamePlayer(
                                             text = ch.toString(),
                                             fontSize = 14.sp,
                                             fontWeight = FontWeight.ExtraBold,
-                                            color = Color.White,
+                                            color = cellTextColor,
                                             modifier = Modifier.align(Alignment.Center)
                                         )
                                     }
@@ -2580,7 +2603,7 @@ private fun CrosswordGamePlayer(
         val downClues = clues.filter { it.direction == "DOWN" }
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (acrossClues.isNotEmpty()) {
-                Text("MENDATAR", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = violet)
+                Text("MENDATAR", fontSize = 10.sp, fontWeight = FontWeight.ExtraBold, color = accentPurple)
                 acrossClues.forEach { cl ->
                     val filled = (0 until cl.length).count { k ->
                         (board.getOrNull(cl.row)?.getOrNull(cl.col + k) ?: ' ') in 'A'..'Z'
@@ -2600,8 +2623,8 @@ private fun CrosswordGamePlayer(
                             selectedCell = target ?: (cl.row to cl.col)
                         },
                         shape = RoundedCornerShape(8.dp),
-                        color = if (isActive) violet.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                        border = BorderStroke(1.dp, if (isActive) violet.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant)
+                        color = if (isActive) accentPurple.copy(alpha = 0.14f) else playableTileBg,
+                        border = BorderStroke(1.dp, if (isActive) accentPurple.copy(alpha = 0.6f) else boardBorder)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -2645,8 +2668,8 @@ private fun CrosswordGamePlayer(
                             selectedCell = target ?: (cl.row to cl.col)
                         },
                         shape = RoundedCornerShape(8.dp),
-                        color = if (isActive) violet.copy(alpha = 0.14f) else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f),
-                        border = BorderStroke(1.dp, if (isActive) violet.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outlineVariant)
+                        color = if (isActive) accentPurple.copy(alpha = 0.14f) else playableTileBg,
+                        border = BorderStroke(1.dp, if (isActive) accentPurple.copy(alpha = 0.6f) else boardBorder)
                     ) {
                         Row(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -2704,8 +2727,8 @@ private fun CrosswordGamePlayer(
                                         stepWithinClue(r, c, 1, activeClue)?.let { selectedCell = it }
                                     },
                                 shape = RoundedCornerShape(7.dp),
-                                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+                                color = keyBg,
+                                border = BorderStroke(1.dp, boardBorder),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Text(
@@ -2742,8 +2765,8 @@ private fun CrosswordGamePlayer(
                                         haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                                     },
                                 shape = RoundedCornerShape(7.dp),
-                                color = Color(0xFFF43F5E).copy(alpha = 0.14f),
-                                border = BorderStroke(1.dp, Color(0xFFF43F5E).copy(alpha = 0.35f)),
+                                color = danger.copy(alpha = 0.14f),
+                                border = BorderStroke(1.dp, danger.copy(alpha = 0.35f)),
                             ) {
                                 Box(
                                     modifier = Modifier.padding(horizontal = 10.dp),
@@ -2753,7 +2776,7 @@ private fun CrosswordGamePlayer(
                                         text = "⌫",
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold,
-                                        color = Color(0xFFF43F5E)
+                                        color = danger
                                     )
                                 }
                             }
@@ -3263,7 +3286,8 @@ fun InteractiveGameTeacherEditor(
             }
         }
         "CROSSWORD" -> {
-            val violet = Color(0xFF8B5CF6)
+            val violet = AccentPurple
+            val danger = NeonError
             val words = remember(effectiveJson) {
                 runCatching {
                     val obj = JSONObject(effectiveJson)
@@ -3376,7 +3400,7 @@ fun InteractiveGameTeacherEditor(
                                 onClick = { saveWords(words.filterIndexed { i, _ -> i != idx }) },
                                 modifier = Modifier.size(30.dp)
                             ) {
-                                Icon(Icons.Default.DeleteOutline, contentDescription = "Hapus Kata", tint = Color(0xFFEF4444), modifier = Modifier.size(16.dp))
+                                Icon(Icons.Default.DeleteOutline, contentDescription = "Hapus Kata", tint = danger, modifier = Modifier.size(16.dp))
                             }
                         }
                     }
@@ -3393,26 +3417,30 @@ fun InteractiveGameTeacherEditor(
                         modifier = Modifier
                             .horizontalScroll(rememberScrollState())
                             .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFF0F172A))
+                            .background(CosmicDark)
+                            .border(1.dp, subSurfaceBorder, RoundedCornerShape(8.dp))
                             .padding(6.dp),
                         verticalArrangement = Arrangement.spacedBy(2.dp)
                     ) {
                         previewGrid.forEach { rowStr ->
                             Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                                 rowStr.forEach { ch ->
-                                    Box(
-                                        modifier = Modifier
-                                            .size(18.dp)
-                                            .clip(RoundedCornerShape(3.dp))
-                                            .background(if (ch == '#') Color(0xFF1E293B).copy(alpha = 0.45f) else violet.copy(alpha = 0.28f)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        if (ch != '#') {
+                                    if (ch == '#') {
+                                        Spacer(modifier = Modifier.size(18.dp))
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(18.dp)
+                                                .clip(RoundedCornerShape(3.dp))
+                                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                                                .border(0.75.dp, violet.copy(alpha = 0.45f), RoundedCornerShape(3.dp)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
                                             Text(
                                                 text = ch.toString(),
                                                 fontSize = 9.5.sp,
                                                 fontWeight = FontWeight.Bold,
-                                                color = Color.White,
+                                                color = MaterialTheme.colorScheme.onSecondaryContainer,
                                                 fontFamily = FontFamily.Monospace
                                             )
                                         }
