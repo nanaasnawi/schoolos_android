@@ -78,6 +78,7 @@ fun QuizQuestionDto.toDomain() = QuizQuestion(
     orderIndex = orderIndex,
     imageUrl = imageUrl,
     choices = choices.map { it.toDomain() },
+    interactionConfigJson = interactionConfig?.toString(),
 )
 
 fun QuizChoiceDto.toDomain() = QuizChoice(
