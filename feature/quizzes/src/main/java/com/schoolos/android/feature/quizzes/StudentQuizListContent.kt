@@ -29,13 +29,27 @@ import com.schoolos.android.domain.model.Quiz
 
 fun LazyListScope.studentQuizListContent(
     activeQuizzes: List<Quiz>,
+    upcomingQuizzes: List<Quiz> = emptyList(),
     doneQuizzes: List<Quiz>,
     onQuizClick: (String) -> Unit
 ) {
+    if (upcomingQuizzes.isNotEmpty()) {
+        item {
+            QuizSectionHeader(
+                title = "Jadwal Ujian Mendatang",
+                count = upcomingQuizzes.size,
+                accentColor = NeonWarning
+            )
+        }
+        items(upcomingQuizzes, key = { "upcoming-${it.id}" }) { quiz ->
+            StudentQuizCard(quiz = quiz, onClick = { onQuizClick(quiz.id) }, isDone = false)
+        }
+    }
+
     if (activeQuizzes.isNotEmpty()) {
         item {
             QuizSectionHeader(
-                title = "Kuis Aktif",
+                title = "Kuis & Ujian Aktif",
                 count = activeQuizzes.size,
                 accentColor = StudentNeon
             )
@@ -168,39 +182,104 @@ private fun StudentQuizCard(
                 }
 
                 // Status badge
-                if (isDone) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7),
-                        border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFF86EFAC)),
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                val isCompletedByStudent = quiz.studentHasCompleted ||
+                    quiz.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded")
+                when {
+                    isDone && !isCompletedByStudent && quiz.hasExpired -> {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = innerCardBg,
+                            border = BorderStroke(1.dp, innerCardBorder),
                         ) {
-                            Icon(
-                                painter = painterResource(id = CoreR.drawable.ic_modern_check_circle),
-                                contentDescription = null,
-                                tint = successColor,
-                                modifier = Modifier.size(11.dp)
+                            Text(
+                                "Sesi Berakhir",
+                                color = textSecondary,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                             )
-                            Text("Selesai", color = successColor, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
-                } else {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = if (isDark) Color(0xFF451A03) else Color(0xFFFEF3C7),
-                        border = BorderStroke(1.dp, if (isDark) Color(0xFFF59E0B).copy(alpha = 0.4f) else Color(0xFFFDE68A)),
-                    ) {
-                        Text(
-                            "Siap Dikerjakan",
-                            color = warningColor,
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
-                        )
+                    isDone -> {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFF86EFAC)),
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = CoreR.drawable.ic_modern_check_circle),
+                                    contentDescription = null,
+                                    tint = successColor,
+                                    modifier = Modifier.size(11.dp)
+                                )
+                                Text("Selesai", color = successColor, fontSize = 10.5.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    quiz.isScheduled -> {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isDark) Color(0xFF451A03) else Color(0xFFFEF3C7),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFFF59E0B).copy(alpha = 0.4f) else Color(0xFFFDE68A)),
+                        ) {
+                            Text(
+                                "Terjadwal • Belum Dibuka",
+                                color = warningColor,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    quiz.hasExpired -> {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = innerCardBg,
+                            border = BorderStroke(1.dp, innerCardBorder),
+                        ) {
+                            Text(
+                                "Sesi Berakhir",
+                                color = textSecondary,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    quiz.examPhase.equals("LIVE", ignoreCase = true) && (!quiz.startAt.isNullOrBlank() || !quiz.endAt.isNullOrBlank()) -> {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = studentAccent.copy(alpha = 0.14f),
+                            border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.4f)),
+                        ) {
+                            Text(
+                                "Sedang Live",
+                                color = studentAccent,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
+                    }
+                    else -> {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = if (isDark) Color(0xFF451A03) else Color(0xFFFEF3C7),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFFF59E0B).copy(alpha = 0.4f) else Color(0xFFFDE68A)),
+                        ) {
+                            Text(
+                                "Siap Dikerjakan",
+                                color = warningColor,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
+                        }
                     }
                 }
             }
@@ -271,6 +350,31 @@ private fun StudentQuizCard(
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
+                    }
+
+                    val scheduleLabel = when {
+                        !quiz.startAt.isNullOrBlank() && !quiz.endAt.isNullOrBlank() ->
+                            "Jadwal: ${formatPublishTimestamp(quiz.startAt!!)} — ${formatPublishTimestamp(quiz.endAt!!)}"
+                        !quiz.startAt.isNullOrBlank() ->
+                            "Mulai: ${formatPublishTimestamp(quiz.startAt!!)}"
+                        !quiz.endAt.isNullOrBlank() ->
+                            "Tenggat: ${formatPublishTimestamp(quiz.endAt!!)}"
+                        else -> null
+                    }
+                    if (scheduleLabel != null) {
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = scheduleLabel,
+                            fontSize = 10.5.sp,
+                            color = when {
+                                quiz.isScheduled -> warningColor
+                                quiz.hasExpired -> textTertiary
+                                else -> studentAccent
+                            },
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
             }

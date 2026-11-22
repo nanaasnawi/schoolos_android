@@ -30,22 +30,38 @@ data class Quiz(
     val studentLastScore: Int? = null,
     val studentLastAttemptId: String? = null,
     val releaseAt: String? = null,
+    val examPhase: String? = null,
+    val isOpenForStudent: Boolean? = null,
+    val secondsUntilStart: Long? = null,
+    val secondsRemaining: Long? = null,
 ) {
     val isScheduled: Boolean
-        get() = status.equals("draft", ignoreCase = true) || (!(releaseAt ?: startAt).isNullOrBlank() && try {
-            java.time.Instant.parse(releaseAt ?: startAt).isAfter(java.time.Instant.now())
-        } catch (_: Exception) { false })
+        get() = if (!examPhase.isNullOrBlank()) {
+            examPhase.equals("UPCOMING", ignoreCase = true) || examPhase.equals("DRAFT", ignoreCase = true)
+        } else {
+            status.equals("draft", ignoreCase = true) || (!(releaseAt ?: startAt).isNullOrBlank() && try {
+                java.time.Instant.parse(releaseAt ?: startAt).isAfter(java.time.Instant.now())
+            } catch (_: Exception) { false })
+        }
 
     val hasExpired: Boolean
-        get() = !endAt.isNullOrBlank() && try {
-            java.time.Instant.parse(endAt).isBefore(java.time.Instant.now())
-        } catch (_: Exception) { false }
+        get() = if (!examPhase.isNullOrBlank()) {
+            examPhase.equals("ENDED", ignoreCase = true)
+        } else {
+            !endAt.isNullOrBlank() && try {
+                java.time.Instant.parse(endAt).isBefore(java.time.Instant.now())
+            } catch (_: Exception) { false }
+        }
 
     val isCurrentlyOpenForExam: Boolean
-        get() = isActive &&
-            (status.equals("published", ignoreCase = true) || status.equals("active", ignoreCase = true)) &&
-            !isScheduled &&
-            !hasExpired &&
-            !studentHasCompleted &&
-            studentAttemptStatus?.lowercase() !in listOf("completed", "submitted", "graded")
+        get() = isOpenForStudent ?: (
+            isActive &&
+                (status.equals("published", ignoreCase = true) ||
+                    status.equals("active", ignoreCase = true) ||
+                    status.equals("open", ignoreCase = true)) &&
+                !isScheduled &&
+                !hasExpired &&
+                !studentHasCompleted &&
+                studentAttemptStatus?.lowercase() !in listOf("completed", "submitted", "graded")
+        )
 }

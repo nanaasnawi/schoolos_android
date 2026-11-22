@@ -37,17 +37,24 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Timer
 import com.schoolos.android.core.common.formatPublishTimestamp
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.rememberModalBottomSheetState
 import com.schoolos.android.core.designsystem.SchoolOsConfirmationDialog
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -58,7 +65,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -89,6 +102,7 @@ import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuizDetailScreen(
     onBack: (() -> Unit) = {},
@@ -103,6 +117,7 @@ fun QuizDetailScreen(
     var selectedFilter by remember { mutableStateOf("Semua") }
     var attemptToGrade by remember { mutableStateOf<com.schoolos.android.domain.model.QuizAttempt?>(null) }
     var tokenInput by remember { mutableStateOf("") }
+    var showTokenBottomSheet by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
 
     val isDark = LocalIsDarkTheme.current
@@ -127,9 +142,40 @@ fun QuizDetailScreen(
 
     LaunchedEffect(state.attempt) {
         state.attempt?.let { attempt ->
+            showTokenBottomSheet = false
             viewModel.dismissAttempt()
             onAttemptStarted(attempt.id)
         }
+    }
+
+    LaunchedEffect(state.hasCompleted) {
+        if (state.hasCompleted) {
+            showTokenBottomSheet = false
+        }
+    }
+
+    if (showTokenBottomSheet && state.quiz != null && !isTeacher) {
+        CbtTokenInputBottomSheet(
+            quizTitle = state.quiz!!.title,
+            tokenInput = tokenInput,
+            onTokenChange = { raw ->
+                tokenInput = raw.uppercase().filter { !it.isWhitespace() }.take(16)
+                viewModel.clearStartError()
+            },
+            isStarting = state.isStarting,
+            errorMessage = state.startError,
+            onSubmit = {
+                if (tokenInput.isNotBlank() && !state.isStarting) {
+                    viewModel.startAttempt(tokenInput.trim())
+                }
+            },
+            onDismiss = {
+                if (!state.isStarting) {
+                    showTokenBottomSheet = false
+                    viewModel.clearStartError()
+                }
+            },
+        )
     }
 
     if (showDeleteDialog) {
@@ -217,7 +263,7 @@ fun QuizDetailScreen(
                 state.quiz != null -> {
                     val q = state.quiz!!
                     val isDraft = q.status.lowercase() == "draft"
-                    val isAvailable = q.status.lowercase() in listOf("active", "open", "published")
+                    val isAvailable = q.isCurrentlyOpenForExam
                     val timeLimit = q.timeLimitMinutes
 
                     Column(
@@ -265,6 +311,88 @@ fun QuizDetailScreen(
                                 accentColor = NeonSuccess,
                                 modifier = Modifier.weight(1f)
                             )
+                        }
+
+                        // ── 2B. JADWAL PELAKSANAAN CBT ────────────────────────
+                        if (!q.startAt.isNullOrBlank() || !q.endAt.isNullOrBlank()) {
+                            val phaseLabel = when {
+                                isDraft -> "DRAF"
+                                q.isScheduled -> "BELUM DIMULAI"
+                                q.hasExpired -> "BERAKHIR"
+                                else -> "SEDANG LIVE"
+                            }
+                            val phaseColor = when {
+                                isDraft -> textTertiary
+                                q.isScheduled -> warningColor
+                                q.hasExpired -> textSecondary
+                                else -> studentAccent
+                            }
+                            Surface(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(18.dp),
+                                color = cardBg,
+                                border = BorderStroke(1.dp, phaseColor.copy(alpha = 0.35f)),
+                                shadowElevation = 0.dp
+                            ) {
+                                Column(
+                                    modifier = Modifier.padding(14.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.Schedule,
+                                                contentDescription = null,
+                                                tint = phaseColor,
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                            Text(
+                                                text = "JADWAL PELAKSANAAN CBT",
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = textPrimary,
+                                                letterSpacing = 0.4.sp
+                                            )
+                                        }
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = phaseColor.copy(alpha = 0.14f),
+                                            border = BorderStroke(1.dp, phaseColor.copy(alpha = 0.35f))
+                                        ) {
+                                            Text(
+                                                text = phaseLabel,
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold,
+                                                color = phaseColor,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                            )
+                                        }
+                                    }
+                                    q.startAt?.takeIf { it.isNotBlank() }?.let { start ->
+                                        Text(
+                                            text = "Mulai: ${formatPublishTimestamp(start)}",
+                                            fontSize = 12.sp,
+                                            color = textSecondary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                    q.endAt?.takeIf { it.isNotBlank() }?.let { end ->
+                                        Text(
+                                            text = "Selesai: ${formatPublishTimestamp(end)}",
+                                            fontSize = 12.sp,
+                                            color = textSecondary,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
+                                }
+                            }
                         }
 
                         // ── 3. DESKRIPSI KUIS ─────────────────────────────────
@@ -808,7 +936,9 @@ fun QuizDetailScreen(
                                     }
                                 }
                             } else {
-                                if (q.requiresToken || q.examMode == "PROCTORED_CBT") {
+                                val needsExamToken = q.requiresToken || q.examMode == "PROCTORED_CBT"
+
+                                if (needsExamToken) {
                                     Surface(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(22.dp),
@@ -856,32 +986,93 @@ fun QuizDetailScreen(
                                                 color = textSecondary,
                                                 lineHeight = 17.sp
                                             )
-                                            OutlinedTextField(
-                                                value = tokenInput,
-                                                onValueChange = { if (it.length <= 10) tokenInput = it.uppercase() },
-                                                placeholder = { Text("Contoh: TOKEN6", color = textTertiary, fontSize = 13.5.sp) },
-                                                singleLine = true,
+                                            Surface(
+                                                onClick = {
+                                                    if (isAvailable && !state.isStarting) {
+                                                        viewModel.clearStartError()
+                                                        showTokenBottomSheet = true
+                                                    }
+                                                },
+                                                enabled = isAvailable && !state.isStarting,
                                                 modifier = Modifier.fillMaxWidth(),
-                                                colors = OutlinedTextFieldDefaults.colors(
-                                                    focusedContainerColor = innerCardBg,
-                                                    unfocusedContainerColor = innerCardBg,
-                                                    focusedBorderColor = warningColor,
-                                                    unfocusedBorderColor = innerCardBorder,
-                                                    focusedTextColor = textPrimary,
-                                                    unfocusedTextColor = textPrimary,
-                                                ),
                                                 shape = RoundedCornerShape(14.dp),
-                                            )
+                                                color = innerCardBg,
+                                                border = BorderStroke(
+                                                    1.dp,
+                                                    if (tokenInput.isNotBlank()) warningColor.copy(alpha = 0.65f) else innerCardBorder
+                                                )
+                                            ) {
+                                                Row(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .padding(horizontal = 14.dp, vertical = 13.dp),
+                                                    verticalAlignment = Alignment.CenterVertically,
+                                                    horizontalArrangement = Arrangement.SpaceBetween
+                                                ) {
+                                                    Row(
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                                                        modifier = Modifier.weight(1f)
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = if (tokenInput.isNotBlank()) Icons.Default.CheckCircle else Icons.Default.Lock,
+                                                            contentDescription = null,
+                                                            tint = if (tokenInput.isNotBlank()) successColor else warningColor,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                        Text(
+                                                            text = when {
+                                                                !isAvailable && q.isScheduled -> "Menunggu jadwal ujian dibuka..."
+                                                                !isAvailable && q.hasExpired -> "Sesi ujian telah berakhir"
+                                                                tokenInput.isBlank() -> "Ketuk untuk memasukkan token ujian..."
+                                                                else -> "Token siap: $tokenInput"
+                                                            },
+                                                            fontSize = 13.sp,
+                                                            fontWeight = if (tokenInput.isBlank()) FontWeight.Medium else FontWeight.Bold,
+                                                            color = if (tokenInput.isBlank()) textTertiary else textPrimary,
+                                                        )
+                                                    }
+                                                    Surface(
+                                                        shape = RoundedCornerShape(8.dp),
+                                                        color = warningColor.copy(alpha = 0.14f)
+                                                    ) {
+                                                        Row(
+                                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 5.dp),
+                                                            verticalAlignment = Alignment.CenterVertically,
+                                                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                                                        ) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.Edit,
+                                                                contentDescription = null,
+                                                                tint = warningColor,
+                                                                modifier = Modifier.size(12.dp)
+                                                            )
+                                                            Text(
+                                                                text = if (tokenInput.isBlank()) "Input" else "Ubah",
+                                                                fontSize = 11.sp,
+                                                                fontWeight = FontWeight.Bold,
+                                                                color = warningColor,
+                                                            )
+                                                        }
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                     Spacer(Modifier.height(12.dp))
                                 }
 
-                                val needsExamToken = q.requiresToken || q.examMode == "PROCTORED_CBT"
-                                val canStartAttempt = !state.isStarting && isAvailable && (!needsExamToken || tokenInput.isNotBlank())
+                                val canStartAttempt = !state.isStarting && isAvailable
 
                                 Button(
-                                    onClick = { viewModel.startAttempt(tokenInput.takeIf { needsExamToken }) },
+                                    onClick = {
+                                        if (needsExamToken) {
+                                            viewModel.clearStartError()
+                                            showTokenBottomSheet = true
+                                        } else {
+                                            viewModel.startAttempt(null)
+                                        }
+                                    },
                                     enabled = canStartAttempt,
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(
@@ -925,8 +1116,11 @@ fun QuizDetailScreen(
                                     } else {
                                         Text(
                                             text = when {
+                                                isAvailable && needsExamToken -> "MASUKKAN TOKEN & MULAI"
                                                 isAvailable -> "MULAI KERJAKAN"
                                                 isDraft -> "KUIS MASIH DRAF"
+                                                q.isScheduled -> "BELUM MEMASUKI JAM MULAI"
+                                                q.hasExpired -> "SESI UJIAN BERAKHIR"
                                                 else -> "KUIS BELUM TERSEDIA"
                                             },
                                             fontSize = 14.sp,
@@ -1467,5 +1661,257 @@ fun TeacherGradeQuizDialog(
             }
         }
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun CbtTokenInputBottomSheet(
+    quizTitle: String,
+    tokenInput: String,
+    onTokenChange: (String) -> Unit,
+    isStarting: Boolean,
+    errorMessage: String?,
+    onSubmit: () -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val sheetBg = if (isDark) Color(0xFF111113) else Color.White
+    val innerBg = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC)
+    val innerBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val warningColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val focusRequester = remember { FocusRequester() }
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    LaunchedEffect(Unit) {
+        delay(120)
+        try {
+            focusRequester.requestFocus()
+            keyboardController?.show()
+        } catch (_: Exception) {
+        }
+    }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        containerColor = sheetBg,
+        contentColor = textPrimary,
+        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .navigationBarsPadding()
+                .imePadding()
+                .padding(horizontal = 20.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = warningColor.copy(alpha = 0.14f),
+                    border = BorderStroke(1.dp, warningColor.copy(alpha = 0.35f))
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(5.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = warningColor,
+                            modifier = Modifier.size(13.dp)
+                        )
+                        Text(
+                            text = "TOKEN UJIAN CBT PROCTORED",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = warningColor,
+                            letterSpacing = 0.5.sp
+                        )
+                    }
+                }
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    text = "Masukkan Token Ujian",
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Black,
+                    color = textPrimary
+                )
+                Text(
+                    text = quizTitle,
+                    fontSize = 12.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = textSecondary
+                )
+                Text(
+                    text = "Minta token resmi dari guru pengawas untuk membuka lembar soal ujian ini.",
+                    fontSize = 12.sp,
+                    color = textTertiary,
+                    lineHeight = 17.sp
+                )
+            }
+
+            OutlinedTextField(
+                value = tokenInput,
+                onValueChange = onTokenChange,
+                placeholder = {
+                    Text(
+                        text = "Contoh: TOKEN6",
+                        color = textTertiary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Normal,
+                        letterSpacing = 0.sp
+                    )
+                },
+                singleLine = true,
+                enabled = !isStarting,
+                textStyle = androidx.compose.ui.text.TextStyle(
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.5.sp,
+                    color = textPrimary
+                ),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Characters,
+                    keyboardType = KeyboardType.Ascii,
+                    imeAction = ImeAction.Done,
+                    autoCorrectEnabled = false,
+                ),
+                keyboardActions = KeyboardActions(
+                    onDone = {
+                        if (tokenInput.isNotBlank() && !isStarting) {
+                            keyboardController?.hide()
+                            onSubmit()
+                        }
+                    }
+                ),
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = warningColor,
+                        modifier = Modifier.size(18.dp)
+                    )
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(focusRequester),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = innerBg,
+                    unfocusedContainerColor = innerBg,
+                    focusedBorderColor = warningColor,
+                    unfocusedBorderColor = innerBorder,
+                    focusedTextColor = textPrimary,
+                    unfocusedTextColor = textPrimary,
+                ),
+                shape = RoundedCornerShape(14.dp),
+            )
+
+            if (!errorMessage.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(NeonError.copy(alpha = 0.12f))
+                        .border(1.dp, NeonError.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                        .padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ErrorOutline,
+                        contentDescription = null,
+                        tint = NeonError,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Text(
+                        text = errorMessage,
+                        color = NeonError,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+
+            val canSubmit = tokenInput.isNotBlank() && !isStarting
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 2.dp, bottom = 10.dp),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    enabled = !isStarting,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, innerBorder),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = textPrimary)
+                ) {
+                    Text(
+                        text = "Batal",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                Button(
+                    onClick = {
+                        keyboardController?.hide()
+                        onSubmit()
+                    },
+                    enabled = canSubmit,
+                    modifier = Modifier
+                        .weight(1.6f)
+                        .height(48.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = StudentNeon,
+                        disabledContainerColor = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0),
+                        contentColor = Color.White,
+                        disabledContentColor = textTertiary
+                    )
+                ) {
+                    if (isStarting) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            strokeWidth = 2.dp,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            text = "Memverifikasi...",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    } else {
+                        Text(
+                            text = "Verifikasi & Mulai",
+                            fontSize = 13.5.sp,
+                            fontWeight = FontWeight.Black,
+                            color = if (canSubmit) Color.White else textTertiary
+                        )
+                    }
+                }
+            }
+        }
+    }
 }
 

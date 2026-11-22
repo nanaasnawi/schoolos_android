@@ -74,15 +74,27 @@ fun QuizListScreen(
         state.quizzes.filter { it.isScheduled || it.status.lowercase() == "draft" }
     } else emptyList()
 
+    val upcomingStudentQuizzes = if (!isTeacher) {
+        state.quizzes.filter {
+            !it.studentHasCompleted &&
+                it.studentAttemptStatus?.lowercase() !in listOf("completed", "submitted", "graded") &&
+                it.isScheduled
+        }
+    } else emptyList()
+
     val doneQuizzes = state.quizzes.filter {
         it !in scheduledQuizzes && (
             it.studentHasCompleted ||
             it.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded") ||
+            (!isTeacher && it.hasExpired) ||
             it.status.lowercase() in listOf("closed", "archived", "graded", "submitted", "completed")
         )
     }
     val activeQuizzes = state.quizzes.filter {
-        it !in scheduledQuizzes && it !in doneQuizzes && (isTeacher || it.status.lowercase() in listOf("active", "open", "published"))
+        it !in scheduledQuizzes &&
+            it !in upcomingStudentQuizzes &&
+            it !in doneQuizzes &&
+            (isTeacher || it.isCurrentlyOpenForExam)
     }
 
     val isDark = LocalIsDarkTheme.current
@@ -325,6 +337,7 @@ fun QuizListScreen(
                     } else {
                         studentQuizListContent(
                             activeQuizzes = activeQuizzes,
+                            upcomingQuizzes = upcomingStudentQuizzes,
                             doneQuizzes = doneQuizzes,
                             onQuizClick = onQuizClick
                         )

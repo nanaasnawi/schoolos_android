@@ -34,6 +34,12 @@ interface QuizRepository {
     suspend fun getQuizAttempt(quizId: String, attemptId: String): Result<QuizAttempt>
     suspend fun gradeAttempt(quizId: String, attemptId: String, score: Int, feedback: String?): Result<QuizAttempt>
     suspend fun verifyToken(quizId: String, token: String): Result<Boolean>
+    suspend fun recordProctorEvent(
+        quizId: String,
+        attemptId: String,
+        eventType: String,
+        detail: String? = null,
+    ): Result<Unit>
 }
 
 data class ChoiceInput(

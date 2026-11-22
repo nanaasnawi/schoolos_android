@@ -36,6 +36,10 @@ data class QuizDto(
     @SerialName("student_last_score") val studentLastScore: Int? = null,
     @SerialName("student_last_attempt_id") val studentLastAttemptId: String? = null,
     @SerialName("release_at") val releaseAt: String? = null,
+    @SerialName("exam_phase") val examPhase: String? = null,
+    @SerialName("is_open_for_student") val isOpenForStudent: Boolean? = null,
+    @SerialName("seconds_until_start") val secondsUntilStart: Long? = null,
+    @SerialName("seconds_remaining") val secondsRemaining: Long? = null,
 )
 
 @Serializable
@@ -118,5 +122,12 @@ data class SubmitAnswerRequest(
 data class GradeQuizAttemptRequest(
     val score: Int? = null,
     val feedback: String? = null,
+)
+
+@Serializable
+data class RecordProctorEventRequestDto(
+    @SerialName("event_type") val eventType: String,
+    val detail: String? = null,
+    @SerialName("device_platform") val devicePlatform: String = "ANDROID",
 )
 

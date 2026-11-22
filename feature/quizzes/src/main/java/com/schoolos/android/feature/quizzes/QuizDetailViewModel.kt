@@ -154,6 +154,12 @@ class QuizDetailViewModel @Inject constructor(
         _state.value = _state.value.copy(successMessage = null)
     }
 
+    fun clearStartError() {
+        if (_state.value.startError != null) {
+            _state.value = _state.value.copy(startError = null)
+        }
+    }
+
     fun startAttempt(token: String? = null) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isStarting = true, startError = null)

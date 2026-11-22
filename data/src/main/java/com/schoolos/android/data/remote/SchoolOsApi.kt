@@ -190,6 +190,13 @@ interface SchoolOsApi {
         @Body request: GradeQuizAttemptRequest,
     ): ApiResponse<QuizAttemptDto>
 
+    @POST("learning/quizzes/{id}/attempts/{attempt_id}/proctor-event")
+    suspend fun recordProctorEvent(
+        @Path("id") quizId: String,
+        @Path("attempt_id") attemptId: String,
+        @Body request: RecordProctorEventRequestDto,
+    ): ApiResponse<kotlinx.serialization.json.JsonElement>
+
 
     // Sessions
     @GET("learning/sessions")

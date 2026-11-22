@@ -40,6 +40,10 @@ fun QuizDto.toDomain() = Quiz(
     studentLastScore = studentLastScore,
     studentLastAttemptId = studentLastAttemptId,
     releaseAt = releaseAt,
+    examPhase = examPhase,
+    isOpenForStudent = isOpenForStudent,
+    secondsUntilStart = secondsUntilStart,
+    secondsRemaining = secondsRemaining,
 )
 
 fun AttemptAnswerDetailDto.toDomain() = com.schoolos.android.domain.model.AttemptAnswerDetail(

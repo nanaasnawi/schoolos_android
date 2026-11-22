@@ -169,4 +169,16 @@ class QuizAttemptViewModel @Inject constructor(
     fun clearSubmitError() {
         _state.value = _state.value.copy(submitError = null)
     }
+
+    fun sendProctorEvent(eventType: String, detail: String? = null) {
+        if (quizId.isBlank() || attemptId.isBlank() || _state.value.submitSuccess) return
+        viewModelScope.launch {
+            repository.recordProctorEvent(
+                quizId = quizId,
+                attemptId = attemptId,
+                eventType = eventType,
+                detail = detail,
+            )
+        }
+    }
 }

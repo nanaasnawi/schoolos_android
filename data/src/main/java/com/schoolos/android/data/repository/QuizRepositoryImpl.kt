@@ -317,5 +317,24 @@ class QuizRepositoryImpl @Inject constructor(
     } catch (e: Throwable) {
         Result.failure(parseHttpError(e, "Token kuis tidak valid atau akun terkunci."))
     }
+
+    override suspend fun recordProctorEvent(
+        quizId: String,
+        attemptId: String,
+        eventType: String,
+        detail: String?,
+    ): Result<Unit> = runCatching {
+        if (attemptId.isBlank()) return@runCatching
+        api.recordProctorEvent(
+            quizId = quizId,
+            attemptId = attemptId,
+            request = com.schoolos.android.data.remote.dto.RecordProctorEventRequestDto(
+                eventType = eventType,
+                detail = detail,
+                devicePlatform = "ANDROID",
+            ),
+        )
+        Unit
+    }
 }
 

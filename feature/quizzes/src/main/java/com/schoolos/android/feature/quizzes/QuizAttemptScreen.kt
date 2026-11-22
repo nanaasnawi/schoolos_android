@@ -91,6 +91,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.schoolos.android.core.R as CoreR
 import com.schoolos.android.core.designsystem.*
+import kotlinx.coroutines.delay
 
 private val ChoiceLabels = listOf("A", "B", "C", "D", "E")
 
@@ -149,15 +150,21 @@ fun QuizAttemptScreen(
         }
     }
 
-    // Immediate notice toast when the exam session starts
+    // Immediate notice toast when the exam session starts + periodic proctor heartbeat
     LaunchedEffect(isExamLocked) {
-        if (isExamLocked && !hasShownStartToast) {
+        if (!isExamLocked) return@LaunchedEffect
+        if (!hasShownStartToast) {
             hasShownStartToast = true
             Toast.makeText(
                 context,
                 "Ujian dimulai! Selama mengerjakan dilarang keluar dari aplikasi sebelum mengumpulkan jawaban.",
                 Toast.LENGTH_LONG
             ).show()
+        }
+        viewModel.sendProctorEvent("HEARTBEAT", "Siswa masuk layar ujian Android CBT")
+        while (true) {
+            delay(25_000L)
+            viewModel.sendProctorEvent("HEARTBEAT", "Siswa aktif di aplikasi Android CBT")
         }
     }
 
@@ -195,6 +202,10 @@ fun QuizAttemptScreen(
                     if (!state.isSubmitting && elapsedSinceLock > 2500L) {
                         leaveViolationCount += 1
                         showLeaveViolationDialog = true
+                        viewModel.sendProctorEvent(
+                            "APP_BACKGROUND",
+                            "Siswa keluar / meminimalkan aplikasi Android (${leaveViolationCount}x)"
+                        )
                         Toast.makeText(
                             context,
                             "PERINGATAN UJIAN ($leaveViolationCount x): Dilarang keluar dari aplikasi saat ujian berlangsung!",
