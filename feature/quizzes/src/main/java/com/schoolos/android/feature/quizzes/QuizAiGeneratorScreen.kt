@@ -586,7 +586,7 @@ fun QuizAiGeneratorScreen(
                                                     color = textPrimary
                                                 )
                                                 Text(
-                                                    "Ilustrasi sains, geometri & grafik edukatif",
+                                                    "Ilustrasi & visual FLUX.1 AI akurat sesuai soal",
                                                     fontSize = 10.sp,
                                                     color = textMuted
                                                 )

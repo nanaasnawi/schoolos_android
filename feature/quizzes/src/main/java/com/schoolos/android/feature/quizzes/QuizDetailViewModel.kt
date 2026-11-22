@@ -69,10 +69,11 @@ class QuizDetailViewModel @Inject constructor(
                     if (isStudent) {
                         val attemptsResult = repository.getQuizAttempts(quizId).getOrNull()
                         if (!attemptsResult.isNullOrEmpty()) {
-                            completedAttempt = attemptsResult.firstOrNull {
+                            val finishedAttempts = attemptsResult.filter {
                                 it.status.lowercase() in listOf("completed", "submitted", "graded")
-                            } ?: attemptsResult.firstOrNull()
-                            if (completedAttempt != null || attemptsResult.size >= quiz.maxAttempts) {
+                            }
+                            completedAttempt = finishedAttempts.firstOrNull()
+                            if (completedAttempt != null || finishedAttempts.size >= quiz.maxAttempts) {
                                 hasCompleted = true
                             }
                         }
