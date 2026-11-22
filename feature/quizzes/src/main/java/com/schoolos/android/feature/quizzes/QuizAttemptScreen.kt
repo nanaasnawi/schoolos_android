@@ -1,5 +1,12 @@
 package com.schoolos.android.feature.quizzes
 
+import android.app.Activity
+import android.app.ActivityManager
+import android.content.Context
+import android.content.ContextWrapper
+import android.view.WindowManager
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -39,6 +46,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.CheckCircle
@@ -56,12 +64,19 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,6 +94,31 @@ import com.schoolos.android.core.designsystem.*
 
 private val ChoiceLabels = listOf("A", "B", "C", "D", "E")
 
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+private fun tryEngageExamLockTask(activity: Activity?) {
+    if (activity == null) return
+    try {
+        val am = activity.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        if (am?.lockTaskModeState == ActivityManager.LOCK_TASK_MODE_NONE) {
+            activity.startLockTask()
+        }
+    } catch (_: Throwable) {
+    }
+}
+
+private fun tryReleaseExamLockTask(activity: Activity?) {
+    if (activity == null) return
+    try {
+        activity.stopLockTask()
+    } catch (_: Throwable) {
+    }
+}
+
 @Composable
 fun QuizAttemptScreen(
     onBack: () -> Unit = {},
@@ -89,6 +129,97 @@ fun QuizAttemptScreen(
     var showConfirm by remember { mutableStateOf(false) }
 
     val xpReward by viewModel.xpRewardEvent.collectAsState()
+    val context = LocalContext.current
+    val activity = remember(context) { context.findActivity() }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    val isExamLocked = !state.isLoading && state.questions.isNotEmpty() && !state.submitSuccess
+    var hasShownStartToast by remember { mutableStateOf(false) }
+    var examLockStartedAtMs by remember { mutableLongStateOf(0L) }
+    var leaveViolationCount by remember { mutableIntStateOf(0) }
+    var showLeaveViolationDialog by remember { mutableStateOf(false) }
+
+    val showBlockedExitToast = remember(context) {
+        {
+            Toast.makeText(
+                context,
+                "Ujian sedang dikerjakan! Dilarang keluar dari aplikasi sebelum jawaban dikumpulkan.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    // Immediate notice toast when the exam session starts
+    LaunchedEffect(isExamLocked) {
+        if (isExamLocked && !hasShownStartToast) {
+            hasShownStartToast = true
+            Toast.makeText(
+                context,
+                "Ujian dimulai! Selama mengerjakan dilarang keluar dari aplikasi sebelum mengumpulkan jawaban.",
+                Toast.LENGTH_LONG
+            ).show()
+        }
+    }
+
+    // Hard-block Android Back button & swipe gesture while exam is active
+    BackHandler(enabled = isExamLocked) {
+        showBlockedExitToast()
+    }
+
+    // Enforce FLAG_SECURE + Screen Pinning while exam is active; release cleanly on finish/dispose
+    DisposableEffect(isExamLocked, activity) {
+        if (isExamLocked && activity != null) {
+            examLockStartedAtMs = System.currentTimeMillis()
+            activity.window?.addFlags(
+                WindowManager.LayoutParams.FLAG_SECURE or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            )
+            tryEngageExamLockTask(activity)
+        }
+        onDispose {
+            activity?.window?.clearFlags(
+                WindowManager.LayoutParams.FLAG_SECURE or
+                    WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON
+            )
+            tryReleaseExamLockTask(activity)
+        }
+    }
+
+    // Detect & warn immediately if student switches away from or backgrounds the exam app
+    DisposableEffect(lifecycleOwner, isExamLocked, state.isSubmitting) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (!isExamLocked) return@LifecycleEventObserver
+            when (event) {
+                Lifecycle.Event.ON_STOP -> {
+                    val elapsedSinceLock = System.currentTimeMillis() - examLockStartedAtMs
+                    if (!state.isSubmitting && elapsedSinceLock > 2500L) {
+                        leaveViolationCount += 1
+                        showLeaveViolationDialog = true
+                        Toast.makeText(
+                            context,
+                            "PERINGATAN UJIAN ($leaveViolationCount x): Dilarang keluar dari aplikasi saat ujian berlangsung!",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                Lifecycle.Event.ON_RESUME -> {
+                    if (leaveViolationCount > 0) {
+                        Toast.makeText(
+                            context,
+                            "Dilarang meninggalkan layar ujian! Pelanggaran tercatat: ${leaveViolationCount}x.",
+                            Toast.LENGTH_LONG
+                        ).show()
+                        tryEngageExamLockTask(activity)
+                    }
+                }
+                else -> {}
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -142,7 +273,15 @@ fun QuizAttemptScreen(
                         totalQuestions = state.questions.size,
                         progress = state.progress,
                         answeredCount = state.answeredCount,
-                        onClose = onBack,
+                        isExamLocked = isExamLocked,
+                        leaveViolationCount = leaveViolationCount,
+                        onClose = {
+                            if (isExamLocked) {
+                                showBlockedExitToast()
+                            } else {
+                                onBack()
+                            }
+                        },
                         isDark = isDark,
                         cardBg = cardBg,
                         cardBorder = cardBorder,
@@ -480,6 +619,52 @@ fun QuizAttemptScreen(
         )
     }
 
+    if (showLeaveViolationDialog && isExamLocked) {
+        AlertDialog(
+            onDismissRequest = {
+                showLeaveViolationDialog = false
+                tryEngageExamLockTask(activity)
+            },
+            containerColor = cardBg,
+            shape = RoundedCornerShape(22.dp),
+            icon = {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = null,
+                    tint = Color(0xFFF59E0B),
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    "Dilarang Keluar Aplikasi!",
+                    color = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    "Anda terdeteksi meninggalkan layar aplikasi sebanyak ${leaveViolationCount}x saat ujian sedang berlangsung. Tetap berada di dalam aplikasi hingga jawaban dikumpulkan.",
+                    color = textSecondary,
+                    fontSize = 13.sp,
+                    lineHeight = 19.sp,
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showLeaveViolationDialog = false
+                        tryEngageExamLockTask(activity)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = studentAccent, contentColor = Color.White),
+                    shape = RoundedCornerShape(10.dp),
+                ) {
+                    Text("Kembali ke Ujian", fontWeight = FontWeight.Bold)
+                }
+            },
+        )
+    }
+
     com.schoolos.android.core.designsystem.XpCelebrationDialog(
         reward = xpReward,
         onDismiss = {
@@ -498,6 +683,8 @@ private fun QuizTopBar(
     totalQuestions: Int,
     progress: Float,
     answeredCount: Int,
+    isExamLocked: Boolean,
+    leaveViolationCount: Int,
     onClose: () -> Unit,
     isDark: Boolean,
     cardBg: Color,
@@ -513,6 +700,7 @@ private fun QuizTopBar(
         animationSpec = tween(400, easing = FastOutSlowInEasing),
         label = "progressAnim",
     )
+    val lockAmber = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
 
     Column(
         modifier = Modifier
@@ -528,10 +716,10 @@ private fun QuizTopBar(
         ) {
             IconButton(onClick = onClose, modifier = Modifier.size(36.dp)) {
                 Icon(
-                    imageVector = Icons.Default.Close,
-                    contentDescription = "Keluar",
-                    tint = textSecondary,
-                    modifier = Modifier.size(20.dp)
+                    imageVector = if (isExamLocked) Icons.Default.Lock else Icons.Default.Close,
+                    contentDescription = if (isExamLocked) "Ujian Terkunci" else "Keluar",
+                    tint = if (isExamLocked) lockAmber else textSecondary,
+                    modifier = Modifier.size(19.dp)
                 )
             }
 
@@ -555,15 +743,54 @@ private fun QuizTopBar(
 
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = studentAccent.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.35f))
+                color = if (isExamLocked) lockAmber.copy(alpha = 0.14f) else studentAccent.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, if (isExamLocked) lockAmber.copy(alpha = 0.45f) else studentAccent.copy(alpha = 0.35f))
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                ) {
+                    if (isExamLocked) {
+                        Icon(
+                            imageVector = Icons.Default.Lock,
+                            contentDescription = null,
+                            tint = lockAmber,
+                            modifier = Modifier.size(11.dp),
+                        )
+                    }
+                    Text(
+                        text = if (isExamLocked) "TERKUNCI" else "CBT",
+                        fontSize = 10.5.sp,
+                        color = if (isExamLocked) lockAmber else studentAccent,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+            }
+        }
+
+        if (isExamLocked) {
+            Spacer(Modifier.height(6.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(8.dp))
+                    .background(lockAmber.copy(alpha = 0.10f))
+                    .border(0.5.dp, lockAmber.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                    .padding(horizontal = 10.dp, vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
             ) {
                 Text(
-                    text = "CBT",
-                    fontSize = 11.sp,
-                    color = studentAccent,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                    text = if (leaveViolationCount > 0) {
+                        "Dilarang keluar aplikasi • Peringatan keluar: ${leaveViolationCount}x"
+                    } else {
+                        "Mode Anti-Keluar Aktif • Selesaikan & kumpulkan ujian sebelum keluar"
+                    },
+                    fontSize = 10.5.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = lockAmber,
+                    textAlign = TextAlign.Center,
                 )
             }
         }

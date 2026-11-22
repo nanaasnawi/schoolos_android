@@ -18,9 +18,12 @@ data class Quiz(
     val sessionId: String? = null,
     val examMode: String = "HOMEWORK_QUIZ",
     val examToken: String? = null,
+    val requiresToken: Boolean = false,
     val tokenExpiresAt: String? = null,
     val maxTokenAttempts: Int = 5,
     val maxAttempts: Int = 1,
+    val startAt: String? = null,
+    val endAt: String? = null,
     val studentAttemptStatus: String? = null,
     val studentAttemptsCount: Int = 0,
     val studentHasCompleted: Boolean = false,
@@ -29,7 +32,20 @@ data class Quiz(
     val releaseAt: String? = null,
 ) {
     val isScheduled: Boolean
-        get() = status.equals("draft", ignoreCase = true) || (!releaseAt.isNullOrBlank() && try {
-            java.time.Instant.parse(releaseAt).isAfter(java.time.Instant.now())
+        get() = status.equals("draft", ignoreCase = true) || (!(releaseAt ?: startAt).isNullOrBlank() && try {
+            java.time.Instant.parse(releaseAt ?: startAt).isAfter(java.time.Instant.now())
         } catch (_: Exception) { false })
+
+    val hasExpired: Boolean
+        get() = !endAt.isNullOrBlank() && try {
+            java.time.Instant.parse(endAt).isBefore(java.time.Instant.now())
+        } catch (_: Exception) { false }
+
+    val isCurrentlyOpenForExam: Boolean
+        get() = isActive &&
+            (status.equals("published", ignoreCase = true) || status.equals("active", ignoreCase = true)) &&
+            !isScheduled &&
+            !hasExpired &&
+            !studentHasCompleted &&
+            studentAttemptStatus?.lowercase() !in listOf("completed", "submitted", "graded")
 }

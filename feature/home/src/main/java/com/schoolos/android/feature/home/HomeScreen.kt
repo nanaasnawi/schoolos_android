@@ -91,6 +91,8 @@ import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
 
+private val ShownStartedExamToasts = java.util.Collections.synchronizedSet(mutableSetOf<String>())
+
 @Composable
 fun HomeScreen(
     onNavigateToNotifications: () -> Unit = {},
@@ -166,8 +168,36 @@ fun HomeScreen(
         }
     }
 
+    val context = LocalContext.current
+
     LaunchedEffect(Unit) {
         viewModel.refresh(isPullRefresh = false)
+    }
+
+    LaunchedEffect(
+        state.activeStartedQuizId,
+        state.activeStartedQuizTitle,
+        state.activeStartedQuizIsResume,
+        isPrincipal,
+        isTeacher,
+        isParent,
+    ) {
+        val qId = state.activeStartedQuizId
+        val qTitle = state.activeStartedQuizTitle
+        if (!isPrincipal && !isTeacher && !isParent && !qId.isNullOrBlank() && !qTitle.isNullOrBlank()) {
+            if (ShownStartedExamToasts.add(qId)) {
+                val msg = if (state.activeStartedQuizIsResume) {
+                    "Ujian CBT '$qTitle' sedang berlangsung! Segera lanjutkan & dilarang keluar aplikasi saat mengerjakan."
+                } else {
+                    "Ujian CBT '$qTitle' sudah dimulai! Buka menu Kuis & CBT dan dilarang keluar aplikasi saat ujian."
+                }
+                android.widget.Toast.makeText(
+                    context,
+                    msg,
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            }
+        }
     }
 
     val isDark = com.schoolos.android.core.designsystem.LocalIsDarkTheme.current

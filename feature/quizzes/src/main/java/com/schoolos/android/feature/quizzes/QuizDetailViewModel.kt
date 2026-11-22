@@ -158,7 +158,7 @@ class QuizDetailViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = _state.value.copy(isStarting = true, startError = null)
             val quiz = _state.value.quiz
-            if (quiz?.examMode == "PROCTORED_CBT" && !token.isNullOrBlank()) {
+            if ((quiz?.requiresToken == true || quiz?.examMode == "PROCTORED_CBT") && !token.isNullOrBlank()) {
                 val verifyRes = repository.verifyToken(quizId, token)
                 if (verifyRes.isFailure) {
                     _state.value = _state.value.copy(

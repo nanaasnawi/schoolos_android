@@ -886,10 +886,28 @@ fun LearningMaterialDetailScreen(
                     }
                 }
 
-                // ── RINGKASAN & TUJUAN PEMBELAJARAN (Structured) ───────────
-                val matDesc = material.description
-                val isDescJson = matDesc?.trim()?.let { it.startsWith("[") || it.startsWith("{") } == true
-                if (!matDesc.isNullOrBlank() && !isDescJson && material.materialType != MaterialType.IMAGE) {
+                // ── RESOLVE ARTICLE BODY & DISTINCT CAPAIAN SUMMARY ───────
+                val articleContent = if (material.materialType == MaterialType.ARTICLE) {
+                    if (richBlocks != null && richBlocks.isNotEmpty()) {
+                        richBlocks.filter { it.type.name == "TEXT" }.joinToString("\n\n") { it.content }
+                    } else {
+                        extractCleanMaterialBody(
+                            material.contentBody ?: material.description,
+                            material.subject,
+                        ) ?: ""
+                    }
+                } else {
+                    ""
+                }
+
+                // ── RINGKASAN & TUJUAN PEMBELAJARAN (Structured, never duplicates article/infographic) ──
+                val capaianTujuanText = resolveCapaianTujuanText(
+                    materialType = material.materialType,
+                    rawDescription = material.description,
+                    subjectName = material.subject,
+                    articleContent = articleContent,
+                )
+                if (!capaianTujuanText.isNullOrBlank()) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -912,7 +930,7 @@ fun LearningMaterialDetailScreen(
 
                             Spacer(Modifier.height(10.dp))
 
-                            val bulletPoints = matDesc.split("\n").filter { it.isNotBlank() }
+                            val bulletPoints = capaianTujuanText.split("\n").filter { it.isNotBlank() }
                             if (bulletPoints.size > 1) {
                                 bulletPoints.forEach { point ->
                                     Row(
@@ -937,7 +955,7 @@ fun LearningMaterialDetailScreen(
                                 }
                             } else {
                                 Text(
-                                    text = matDesc,
+                                    text = capaianTujuanText,
                                     color = TextSecondary,
                                     fontSize = (12 * textSizeMultiplier).sp,
                                     lineHeight = (18 * textSizeMultiplier).sp
@@ -991,7 +1009,7 @@ fun LearningMaterialDetailScreen(
                                 pdfUrl = mediaUrl ?: "",
                                 title = material.title,
                                 subject = material.subject,
-                                description = material.description ?: "",
+                                description = capaianTujuanText ?: "",
                                 startPage = material.startPage,
                                 endPage = material.endPage,
                                 isTeacher = isTeacher,
@@ -1003,12 +1021,6 @@ fun LearningMaterialDetailScreen(
 
                 // ── ARTICLE TEXT READER ──────────────────────────────────────
                 if (material.materialType == MaterialType.ARTICLE) {
-                    val articleContent = if (richBlocks != null && richBlocks.isNotEmpty()) {
-                        richBlocks.filter { it.type.name == "TEXT" }.joinToString("\n\n") { it.content }
-                    } else {
-                        val raw = material.contentBody ?: material.description ?: ""
-                        if (raw.trim().startsWith("[") || raw.trim().startsWith("{")) "" else raw
-                    }
                     ArticleReaderView(
                         title = material.title,
                         content = articleContent,
@@ -1740,6 +1752,55 @@ private fun EditMaterialDialog(
             }
         }
     }
+}
+
+/**
+ * Strips Web/Android metadata prefixes (`"Subject • Class • Teacher • Body"` or `"Subject • Body"`)
+ * when present so student-facing descriptions display only the actual learning content.
+ */
+internal fun extractCleanMaterialBody(rawDescription: String?, subjectName: String = ""): String? {
+    val trimmed = rawDescription?.trim() ?: return null
+    if (trimmed.isBlank() || trimmed.startsWith("[") || trimmed.startsWith("{")) return null
+
+    val parts = trimmed.split(" • ")
+    if (parts.size >= 4 && parts.take(3).all { !it.contains('\n') && it.length <= 80 }) {
+        return parts.drop(3).joinToString(" • ").trim().ifBlank { null }
+    }
+    if (parts.size == 2 &&
+        subjectName.isNotBlank() &&
+        parts[0].trim().equals(subjectName.trim(), ignoreCase = true) &&
+        !parts[0].contains('\n')
+    ) {
+        return parts[1].trim().ifBlank { null }
+    }
+    return trimmed
+}
+
+/**
+ * Resolves text for the "Capaian & Tujuan Pembelajaran" card, omitting it when the material
+ * is an infographic/image or when its description duplicates the article body.
+ */
+internal fun resolveCapaianTujuanText(
+    materialType: MaterialType,
+    rawDescription: String?,
+    subjectName: String,
+    articleContent: String,
+): String? {
+    if (materialType == MaterialType.IMAGE || materialType == MaterialType.INFOGRAPHIC) {
+        return null
+    }
+    val cleanDesc = extractCleanMaterialBody(rawDescription, subjectName) ?: return null
+    if (materialType == MaterialType.ARTICLE) {
+        val normDesc = cleanDesc.trim()
+        val normArticle = articleContent.trim()
+        if (normArticle.isBlank() || normDesc == normArticle || normArticle.contains(normDesc)) {
+            return null
+        }
+        if (normDesc.length > 350 || normDesc.startsWith("#") || normDesc.contains("\n#")) {
+            return null
+        }
+    }
+    return cleanDesc
 }
 
 /**

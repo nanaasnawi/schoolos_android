@@ -808,7 +808,7 @@ fun QuizDetailScreen(
                                     }
                                 }
                             } else {
-                                if (q.examMode == "PROCTORED_CBT") {
+                                if (q.requiresToken || q.examMode == "PROCTORED_CBT") {
                                     Surface(
                                         modifier = Modifier.fillMaxWidth(),
                                         shape = RoundedCornerShape(22.dp),
@@ -877,10 +877,11 @@ fun QuizDetailScreen(
                                     Spacer(Modifier.height(12.dp))
                                 }
 
-                                val canStartAttempt = !state.isStarting && isAvailable && (q.examMode != "PROCTORED_CBT" || tokenInput.isNotBlank())
+                                val needsExamToken = q.requiresToken || q.examMode == "PROCTORED_CBT"
+                                val canStartAttempt = !state.isStarting && isAvailable && (!needsExamToken || tokenInput.isNotBlank())
 
                                 Button(
-                                    onClick = { viewModel.startAttempt(tokenInput.takeIf { q.examMode == "PROCTORED_CBT" }) },
+                                    onClick = { viewModel.startAttempt(tokenInput.takeIf { needsExamToken }) },
                                     enabled = canStartAttempt,
                                     shape = RoundedCornerShape(14.dp),
                                     colors = ButtonDefaults.buttonColors(

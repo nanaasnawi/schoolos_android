@@ -101,16 +101,17 @@ class QuizListViewModel @Inject constructor(
                                 quiz.copy(studentHasCompleted = true)
                             } else {
                                 val attemptsResult = repository.getQuizAttempts(quiz.id).getOrNull()
-                                val hasCompleted = attemptsResult?.any {
+                                val finishedAttempts = attemptsResult?.filter {
                                     it.status.lowercase() in listOf("completed", "submitted", "graded")
-                                } == true || (attemptsResult != null && attemptsResult.isNotEmpty() && attemptsResult.size >= quiz.maxAttempts)
+                                } ?: emptyList()
+                                val hasCompleted = finishedAttempts.isNotEmpty() && finishedAttempts.size >= quiz.maxAttempts
                                 if (hasCompleted) {
                                     quiz.copy(
                                         studentHasCompleted = true,
-                                        studentAttemptStatus = "completed",
-                                        studentAttemptsCount = attemptsResult?.size ?: 1,
-                                        studentLastAttemptId = attemptsResult?.firstOrNull()?.id,
-                                        studentLastScore = attemptsResult?.firstOrNull()?.score,
+                                        studentAttemptStatus = finishedAttempts.firstOrNull()?.status ?: "completed",
+                                        studentAttemptsCount = finishedAttempts.size,
+                                        studentLastAttemptId = finishedAttempts.firstOrNull()?.id,
+                                        studentLastScore = finishedAttempts.firstOrNull()?.score,
                                     )
                                 } else {
                                     quiz

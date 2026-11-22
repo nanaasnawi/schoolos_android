@@ -117,6 +117,9 @@ data class HomeUiState(
     val streakDays: Int = 5,
     val isExecutingDecision: Boolean = false,
     val isRefreshing: Boolean = false,
+    val activeStartedQuizId: String? = null,
+    val activeStartedQuizTitle: String? = null,
+    val activeStartedQuizIsResume: Boolean = false,
 )
 
 @HiltViewModel
@@ -552,6 +555,28 @@ class HomeViewModel @Inject constructor(
                     }
                 } else assignments
                 _state.update { it.copy(assignmentsCount = scopedAssignments.size.toString(), studentAssignments = scopedAssignments) }
+            }
+
+            quizRepository.getQuizzes(classId = "").onSuccess { quizzes ->
+                val openExams = quizzes.filter { q ->
+                    val classMatch = studentEnrolledClass == null ||
+                        com.schoolos.android.core.designsystem.matchesClassFilter(q.className, studentEnrolledClass) ||
+                        (q.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(q.title, studentEnrolledClass))
+                    classMatch && q.isCurrentlyOpenForExam
+                }
+                val prioritizedExam = openExams.firstOrNull {
+                    it.studentAttemptStatus.equals("in_progress", ignoreCase = true)
+                } ?: openExams.firstOrNull {
+                    it.examMode == "PROCTORED_CBT" || it.requiresToken
+                } ?: openExams.firstOrNull()
+
+                _state.update { current ->
+                    current.copy(
+                        activeStartedQuizId = prioritizedExam?.id,
+                        activeStartedQuizTitle = prioritizedExam?.title,
+                        activeStartedQuizIsResume = prioritizedExam?.studentAttemptStatus.equals("in_progress", ignoreCase = true),
+                    )
+                }
             }
 
             achievementRepository.getAchievements().onSuccess { achievements ->
