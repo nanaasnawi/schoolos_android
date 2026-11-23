@@ -62,7 +62,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                     }
                     ?: dto.teacherName
 
-                val rawUrl = resolveMaterialMediaUrl(dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey)
+                val rawUrl = resolveMaterialPdfCandidate(dto.externalUrl, dto.youtubeUrl, dto.storageKey)
 
                 LearningMaterial(
                     id = dto.id,
@@ -194,7 +194,7 @@ class LearningMaterialRepositoryImpl @Inject constructor(
                 }
                 ?: dto.teacherName
 
-            val rawUrl = resolveMaterialMediaUrl(dto.externalUrl ?: dto.youtubeUrl ?: dto.storageKey)
+            val rawUrl = resolveMaterialPdfCandidate(dto.externalUrl, dto.youtubeUrl, dto.storageKey)
 
             val domain = LearningMaterial(
                 id = dto.id,
@@ -564,6 +564,22 @@ class LearningMaterialRepositoryImpl @Inject constructor(
             )
         )
     }
+}
+
+fun resolveMaterialPdfCandidate(
+    externalUrl: String?,
+    youtubeUrl: String?,
+    storageKey: String?,
+): String? {
+    val candidate = externalUrl?.takeIf { it.isNotBlank() }
+        ?: youtubeUrl?.takeIf { it.isNotBlank() }
+        ?: storageKey?.takeIf {
+            it.startsWith("http://", ignoreCase = true) ||
+                it.startsWith("https://", ignoreCase = true) ||
+                it.startsWith("/") ||
+                it.startsWith("uploads/", ignoreCase = true)
+        }
+    return resolveMaterialMediaUrl(candidate)
 }
 
 /**

@@ -187,6 +187,7 @@ fun MaterialCreatorScreen(
     var endPageInput by remember { mutableStateOf("10") }
     var showPrePublishDialog by remember { mutableStateOf(false) }
     var previewingSelectedBook by remember { mutableStateOf(false) }
+    var previewingUploadedPdf by remember { mutableStateOf(false) }
     var previewingYoutubeVideo by remember { mutableStateOf<YoutubeVideoResult?>(null) }
     var isChangingYoutubeVideo by remember { mutableStateOf(false) }
     var infographicViewMode by remember { mutableStateOf("EDIT") } // "EDIT" vs "CANVAS"
@@ -284,6 +285,15 @@ fun MaterialCreatorScreen(
             startPage = startPageInput.toIntOrNull(),
             endPage = endPageInput.toIntOrNull(),
             onDismiss = { previewingSelectedBook = false }
+        )
+    }
+
+    if (previewingUploadedPdf && mediaUrl.isNotBlank()) {
+        BookReaderDialog(
+            title = title.ifBlank { state.uploadedFileName ?: "Pratinjau Modul PDF" },
+            pdfUrl = mediaUrl,
+            subject = selectedSubject,
+            onDismiss = { previewingUploadedPdf = false }
         )
     }
 
@@ -969,7 +979,10 @@ fun MaterialCreatorScreen(
                                                 icon = Icons.Default.PictureAsPdf,
                                                 iconTint = Color(0xFFEF4444),
                                                 accentColor = NeonSuccess,
-                                                onReplace = { documentPickerLauncher.launch("application/pdf") }
+                                                onReplace = { documentPickerLauncher.launch("application/pdf") },
+                                                onPreview = if (mediaUrl.isNotBlank()) {
+                                                    { previewingUploadedPdf = true }
+                                                } else null
                                             )
                                         } else {
                                             FileDropzone(
@@ -1250,7 +1263,8 @@ private fun FileUploadedCard(
     icon: ImageVector,
     iconTint: Color,
     accentColor: Color,
-    onReplace: () -> Unit
+    onReplace: () -> Unit,
+    onPreview: (() -> Unit)? = null,
 ) {
     Row(
         modifier = Modifier
@@ -1260,7 +1274,7 @@ private fun FileUploadedCard(
             .border(1.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(14.dp))
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Box(
             modifier = Modifier
@@ -1274,6 +1288,17 @@ private fun FileUploadedCard(
         Column(modifier = Modifier.weight(1f)) {
             Text(fileName, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 13.sp, maxLines = 1)
             Text(statusText, color = accentColor, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
+        if (onPreview != null) {
+            OutlinedButton(
+                onClick = onPreview,
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = accentColor),
+                border = BorderStroke(1.dp, accentColor),
+                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+            ) {
+                Text("Preview", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+            }
         }
         OutlinedButton(
             onClick = onReplace,

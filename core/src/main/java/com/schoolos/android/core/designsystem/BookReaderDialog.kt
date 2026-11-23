@@ -122,6 +122,30 @@ private class BookPdfRenderSession(
     }
 }
 
+private fun resolveBookPdfCandidates(rawUrl: String): List<String> {
+    val trimmed = rawUrl.trim()
+    if (trimmed.isBlank()) return emptyList()
+    if (trimmed.startsWith("http://", ignoreCase = true) || trimmed.startsWith("https://", ignoreCase = true)) {
+        val urls = mutableListOf(trimmed)
+        if (trimmed.contains("akselerasi-edu.id/uploads/")) {
+            urls.add(trimmed.replace("www.akselerasi-edu.id", "schoolosbackend-production.up.railway.app").replace("akselerasi-edu.id", "schoolosbackend-production.up.railway.app"))
+        } else if (trimmed.contains("schoolosbackend-production.up.railway.app/uploads/")) {
+            urls.add(trimmed.replace("schoolosbackend-production.up.railway.app", "www.akselerasi-edu.id"))
+        }
+        return urls.distinct()
+    }
+    val path = when {
+        trimmed.startsWith("/uploads/") -> trimmed
+        trimmed.startsWith("uploads/") -> "/$trimmed"
+        trimmed.startsWith("/") -> trimmed
+        else -> "/uploads/$trimmed"
+    }
+    return listOf(
+        "https://schoolosbackend-production.up.railway.app$path",
+        "https://www.akselerasi-edu.id$path"
+    )
+}
+
 /**
  * Full-screen in-app book reader dialog for SIBI Kemendikdasmen textbooks and learning modules.
  * Renders pages lazily on-demand with a bounded 5-page LruCache and RGB_565 bitmaps.
@@ -166,51 +190,78 @@ fun BookReaderDialog(
 
                 val cacheFileName = "book_pdf_${cleanUrl.hashCode().toString().replace("-", "n")}.pdf"
                 val pdfFile = File(context.cacheDir, cacheFileName)
-                var downloadSuccess = pdfFile.exists() && pdfFile.length() > 5000
+                var downloadSuccess = pdfFile.exists() && pdfFile.length() > 200
 
-                if (!downloadSuccess && (cleanUrl.startsWith("http://", ignoreCase = true) || cleanUrl.startsWith("https://", ignoreCase = true))) {
-                    var connection: HttpURLConnection? = null
-                    try {
-                        connection = (URL(cleanUrl).openConnection() as HttpURLConnection).apply {
-                            connectTimeout = 15000
-                            readTimeout = 60000
-                            instanceFollowRedirects = true
-                            setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
-                        }
-                        connection.connect()
-
-                        val code = connection.responseCode
-                        if (code in 200..299) {
-                            val tempFile = File(context.cacheDir, "${cacheFileName}.tmp")
-                            connection.inputStream.use { inputStream ->
-                                FileOutputStream(tempFile).use { outputStream ->
-                                    val buffer = ByteArray(16384)
-                                    var bytesRead: Int
-                                    while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-                                        outputStream.write(buffer, 0, bytesRead)
-                                    }
-                                    outputStream.flush()
+                val candidateUrls = resolveBookPdfCandidates(cleanUrl)
+                if (!downloadSuccess && candidateUrls.isNotEmpty()) {
+                    for (candidate in candidateUrls) {
+                        if (downloadSuccess) break
+                        var currentTarget = candidate
+                        var redirectCount = 0
+                        while (redirectCount < 5) {
+                            var connection: HttpURLConnection? = null
+                            try {
+                                val urlObj = URL(currentTarget)
+                                connection = (urlObj.openConnection() as HttpURLConnection).apply {
+                                    connectTimeout = 15000
+                                    readTimeout = 60000
+                                    instanceFollowRedirects = true
+                                    setRequestProperty("User-Agent", "Akselerasi-Edu-Android-Client/1.0")
+                                    setRequestProperty("Accept", "application/pdf,application/octet-stream,*/*")
                                 }
-                            }
+                                connection.connect()
 
-                            if (tempFile.length() > 5000) {
-                                if (pdfFile.exists()) pdfFile.delete()
-                                tempFile.renameTo(pdfFile)
-                                downloadSuccess = true
+                                val code = connection.responseCode
+                                if (code in 300..399) {
+                                    val redirectLoc = connection.getHeaderField("Location")
+                                    connection.disconnect()
+                                    if (!redirectLoc.isNullOrBlank()) {
+                                        currentTarget = if (redirectLoc.startsWith("http://", true) || redirectLoc.startsWith("https://", true)) {
+                                            redirectLoc
+                                        } else {
+                                            URL(urlObj, redirectLoc).toString()
+                                        }
+                                        redirectCount++
+                                        continue
+                                    }
+                                }
+
+                                if (code in 200..299) {
+                                    val tempFile = File(context.cacheDir, "${cacheFileName}.tmp")
+                                    connection.inputStream.use { inputStream ->
+                                        FileOutputStream(tempFile).use { outputStream ->
+                                            val buffer = ByteArray(16384)
+                                            var bytesRead: Int
+                                            while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                                                outputStream.write(buffer, 0, bytesRead)
+                                            }
+                                            outputStream.flush()
+                                        }
+                                    }
+
+                                    if (tempFile.length() > 200) {
+                                        if (pdfFile.exists()) pdfFile.delete()
+                                        tempFile.renameTo(pdfFile)
+                                        downloadSuccess = true
+                                        break
+                                    }
+                                }
+                                break
+                            } catch (e: Exception) {
+                                Timber.e(e, "Failed to download PDF: $currentTarget")
+                                break
+                            } finally {
+                                try {
+                                    connection?.disconnect()
+                                } catch (_: Throwable) {}
                             }
                         }
-                    } catch (e: Exception) {
-                        Timber.e(e, "Failed to download PDF: $cleanUrl")
-                    } finally {
-                        try {
-                            connection?.disconnect()
-                        } catch (_: Throwable) {}
                     }
                 }
 
-                if (!downloadSuccess || !pdfFile.exists() || pdfFile.length() < 1000) {
+                if (!downloadSuccess || !pdfFile.exists() || pdfFile.length() < 200) {
                     withContext(Dispatchers.Main) {
-                        errorMessage = "Gagal mengunduh berkas buku dari server SIBI. Periksa koneksi internet Anda."
+                        errorMessage = "Gagal mengunduh berkas PDF dari server. Periksa koneksi internet Anda."
                         isLoading = false
                     }
                     return@withContext
