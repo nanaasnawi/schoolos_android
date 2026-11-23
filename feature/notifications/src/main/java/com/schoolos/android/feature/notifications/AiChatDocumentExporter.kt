@@ -28,8 +28,28 @@ data class ExportedDocumentResult(
     val mimeType: String,
 )
 
+fun normalizeAiIndonesianText(markdown: String): String {
+    return markdown
+        .replace("Produkturnya", "Produktivitasnya")
+        .replace("produkturnya", "produktivitasnya")
+        .replace("Produktifitasnya", "Produktivitasnya")
+        .replace("produktifitasnya", "produktivitasnya")
+        .replace("Produktifitas", "Produktivitas")
+        .replace("produktifitas", "produktivitas")
+        .replace("Komarasi", "Kolaborasi")
+        .replace("komarasi", "kolaborasi")
+        .replace("Aktifitas", "Aktivitas")
+        .replace("aktifitas", "aktivitas")
+        .replace("Efektifitas", "Efektivitas")
+        .replace("efektifitas", "efektivitas")
+        .replace("Kwalitas", "Kualitas")
+        .replace("kwalitas", "kualitas")
+        .replace("Sistim", "Sistem")
+        .replace("sistim", "sistem")
+}
+
 fun suggestAiDocumentTitle(markdown: String, fallback: String = "Jawaban Akselerasi Edu AI"): String {
-    val lines = markdown.replace("\r\n", "\n").split("\n")
+    val lines = normalizeAiIndonesianText(markdown).replace("\r\n", "\n").split("\n")
     val heading = lines.firstOrNull { it.trim().startsWith("#") }
         ?.replace(Regex("^#{1,6}\\s+"), "")
         ?.replace("**", "")
@@ -48,7 +68,7 @@ fun suggestAiDocumentTitle(markdown: String, fallback: String = "Jawaban Akseler
 }
 
 fun markdownToReadablePlainText(markdown: String): String {
-    return markdown
+    return normalizeAiIndonesianText(markdown)
         .replace("\r\n", "\n")
         .split("\n")
         .joinToString("\n") { line ->
@@ -83,7 +103,7 @@ private fun escapeHtml(raw: String): String = raw
 
 private fun markdownToWordHtml(title: String, authorLabel: String, markdown: String): String {
     val dateLabel = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date())
-    val lines = markdown.replace("\r\n", "\n").split("\n")
+    val lines = normalizeAiIndonesianText(markdown).replace("\r\n", "\n").split("\n")
     val bodyBuilder = StringBuilder()
     var inList = false
 
