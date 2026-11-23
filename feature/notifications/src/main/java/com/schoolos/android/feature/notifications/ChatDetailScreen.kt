@@ -1,5 +1,9 @@
 package com.schoolos.android.feature.notifications
 
+import android.content.Intent
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Surface
 
 import com.schoolos.android.core.R as CoreR
@@ -45,12 +49,18 @@ import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.automirrored.filled.MenuBook
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Attachment
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Forum
+import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.ThumbDown
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.outlined.ThumbDown
@@ -77,9 +87,11 @@ import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.AnnotatedString
 import coil.compose.AsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
@@ -108,7 +120,10 @@ import com.schoolos.android.core.designsystem.TeacherNeon
 import com.schoolos.android.core.designsystem.TextPrimary
 import com.schoolos.android.core.designsystem.TextSecondary
 import com.schoolos.android.core.designsystem.TextTertiary
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import timber.log.Timber
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -1173,6 +1188,11 @@ private fun MessageBubble(
     val innerCardBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
     val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
     val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val bubbleContext = LocalContext.current
+    val clipboardManager = LocalClipboardManager.current
+    val bubbleScope = rememberCoroutineScope()
+    var copiedAiText by remember(message.id) { mutableStateOf(false) }
+    var showExportMenu by remember(message.id) { mutableStateOf(false) }
 
     val align = if (isMe) Alignment.End else Alignment.Start
     val timeStr = remember(message.timestamp) {
@@ -1345,6 +1365,136 @@ private fun MessageBubble(
                             color = textPrimary,
                             lineHeight = 20.sp,
                         )
+                    }
+                }
+
+                if (isAi && message.content.isNotBlank()) {
+                    HorizontalDivider(
+                        color = bubbleBorder.copy(alpha = 0.6f),
+                        modifier = Modifier.padding(top = 8.dp, bottom = 6.dp)
+                    )
+                    val aiAuthor = message.senderName.ifBlank { "Akselerasi Edu AI" }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(if (copiedAiText) Color(0xFF10B981).copy(alpha = 0.14f) else innerCardBg)
+                                .border(
+                                    0.75.dp,
+                                    if (copiedAiText) Color(0xFF10B981).copy(alpha = 0.55f) else bubbleBorder,
+                                    RoundedCornerShape(8.dp)
+                                )
+                                .clickable {
+                                    clipboardManager.setText(AnnotatedString(markdownToReadablePlainText(message.content)))
+                                    copiedAiText = true
+                                    Toast.makeText(bubbleContext, "Jawaban AI disalin ke clipboard.", Toast.LENGTH_SHORT).show()
+                                    bubbleScope.launch {
+                                        delay(2000L)
+                                        copiedAiText = false
+                                    }
+                                }
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = if (copiedAiText) Icons.Default.Check else Icons.Default.ContentCopy,
+                                contentDescription = "Salin Teks",
+                                tint = if (copiedAiText) Color(0xFF10B981) else textPrimary,
+                                modifier = Modifier.size(12.dp),
+                            )
+                            Text(
+                                text = if (copiedAiText) "Tersalin" else "Salin Teks",
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = if (copiedAiText) Color(0xFF10B981) else textPrimary,
+                            )
+                        }
+
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(innerCardBg)
+                                    .border(0.75.dp, bubbleBorder, RoundedCornerShape(8.dp))
+                                    .clickable { showExportMenu = true }
+                                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Download,
+                                    contentDescription = "Unduh Dokumen",
+                                    tint = NeonBlue,
+                                    modifier = Modifier.size(12.dp),
+                                )
+                                Text(
+                                    text = "Unduh Dokumen",
+                                    fontSize = 10.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = textPrimary,
+                                )
+                            }
+
+                            DropdownMenu(
+                                expanded = showExportMenu,
+                                onDismissRequest = { showExportMenu = false },
+                            ) {
+                                DropdownMenuItem(
+                                    leadingIcon = { Icon(Icons.Default.PictureAsPdf, null, tint = Color(0xFFDC2626), modifier = Modifier.size(18.dp)) },
+                                    text = { Text("Unduh PDF (.pdf)", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold) },
+                                    onClick = {
+                                        showExportMenu = false
+                                        bubbleScope.launch {
+                                            val result = withContext(Dispatchers.IO) {
+                                                exportAiReplyAsPdfToDownloads(bubbleContext, message.content, aiAuthor)
+                                            }
+                                            result.onSuccess { exported ->
+                                                Toast.makeText(bubbleContext, "Tersimpan di Downloads: ${exported.fileName}", Toast.LENGTH_LONG).show()
+                                                tryOpenExportedDocument(bubbleContext, exported)
+                                            }.onFailure { err ->
+                                                Toast.makeText(bubbleContext, err.message ?: "Gagal menyimpan PDF.", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    leadingIcon = { Icon(Icons.Default.Description, null, tint = Color(0xFF2563EB), modifier = Modifier.size(18.dp)) },
+                                    text = { Text("Unduh Word (.doc)", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold) },
+                                    onClick = {
+                                        showExportMenu = false
+                                        bubbleScope.launch {
+                                            val result = withContext(Dispatchers.IO) {
+                                                exportAiReplyAsWordToDownloads(bubbleContext, message.content, aiAuthor)
+                                            }
+                                            result.onSuccess { exported ->
+                                                Toast.makeText(bubbleContext, "Tersimpan di Downloads: ${exported.fileName}", Toast.LENGTH_LONG).show()
+                                                tryOpenExportedDocument(bubbleContext, exported)
+                                            }.onFailure { err ->
+                                                Toast.makeText(bubbleContext, err.message ?: "Gagal menyimpan Word.", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    leadingIcon = { Icon(Icons.Default.Share, null, tint = Color(0xFF059669), modifier = Modifier.size(18.dp)) },
+                                    text = { Text("Bagikan Teks", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold) },
+                                    onClick = {
+                                        showExportMenu = false
+                                        val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                            type = "text/plain"
+                                            putExtra(Intent.EXTRA_SUBJECT, suggestAiDocumentTitle(message.content))
+                                            putExtra(Intent.EXTRA_TEXT, markdownToReadablePlainText(message.content))
+                                        }
+                                        bubbleContext.startActivity(Intent.createChooser(shareIntent, "Bagikan Hasil AI"))
+                                    }
+                                )
+                            }
+                        }
                     }
                 }
 
