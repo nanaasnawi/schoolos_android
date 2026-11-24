@@ -3,7 +3,11 @@ package com.schoolos.android.core.designsystem
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -15,8 +19,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -26,6 +32,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.ZoomIn
+import androidx.compose.material.icons.filled.ZoomOut
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -46,7 +53,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -59,6 +68,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -73,6 +83,7 @@ import coil.decode.SvgDecoder
 import coil.fetch.SourceResult
 import coil.request.ImageRequest
 import coil.request.Options
+import coil.size.Scale
 import okio.Buffer
 
 /**
@@ -177,14 +188,14 @@ fun extractQuestionDiagramAndText(rawText: String, explicitImageUrl: String? = n
 }
 
 /**
- * Crisp white-card diagram viewer ensuring SVG charts, geometry, and science schemas
- * remain sharp and high-contrast across both Light and Dark app themes, with tap-to-zoom and retry fallback.
+ * Cardless, natural-aspect question image/diagram renderer with unboxed full-screen pinch/pan zoom
+ * and automatic high-resolution vector rendering inside the lightbox.
  */
 @Composable
 fun QuestionDiagramCard(
     imageUrl: String?,
     modifier: Modifier = Modifier,
-    maxHeight: Dp = 215.dp,
+    maxHeight: Dp = 320.dp,
 ) {
     val resolved = remember(imageUrl) {
         imageUrl?.trim()?.takeIf { it.isNotBlank() }?.let { resolveServerMediaUrl(it) }
@@ -192,11 +203,16 @@ fun QuestionDiagramCard(
     if (resolved.isNullOrBlank()) return
 
     val context = LocalContext.current
+    val isDark = LocalIsDarkTheme.current
     var reloadNonce by remember(resolved) { mutableIntStateOf(0) }
+    var isDiagramLoaded by remember(resolved, reloadNonce) { mutableStateOf(false) }
     var showZoomLightbox by remember(resolved) { mutableStateOf(false) }
 
-    val diagramRequest = remember(resolved, reloadNonce) {
-        val cacheBustedUrl = if (reloadNonce == 0) resolved else "$resolved${if (resolved.contains('?')) '&' else '?'}r=$reloadNonce"
+    val cacheBustedUrl = remember(resolved, reloadNonce) {
+        if (reloadNonce == 0) resolved else "$resolved${if (resolved.contains('?')) '&' else '?'}r=$reloadNonce"
+    }
+
+    val diagramRequest = remember(cacheBustedUrl) {
         ImageRequest.Builder(context)
             .data(cacheBustedUrl)
             .decoderFactory(CompatSvgDecoder.Factory())
@@ -207,22 +223,27 @@ fun QuestionDiagramCard(
     Box(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color.White)
-            .border(1.dp, Color(0xFFCBD5E1), RoundedCornerShape(12.dp))
-            .clickable { showZoomLightbox = true }
-            .padding(8.dp),
+            .clip(RoundedCornerShape(10.dp))
+            .clickable(enabled = isDiagramLoaded) { showZoomLightbox = true },
         contentAlignment = Alignment.Center,
     ) {
         SubcomposeAsyncImage(
             model = diagramRequest,
             contentDescription = "Diagram Soal",
             contentScale = ContentScale.Fit,
+            onLoading = { isDiagramLoaded = false },
+            onSuccess = { isDiagramLoaded = true },
+            onError = { isDiagramLoaded = false },
             modifier = Modifier
                 .fillMaxWidth()
-                .height(maxHeight),
+                .heightIn(max = maxHeight),
             loading = {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(140.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
                     CircularProgressIndicator(
                         strokeWidth = 2.5.dp,
                         color = Color(0xFF0284C7),
@@ -233,9 +254,9 @@ fun QuestionDiagramCard(
             error = {
                 Column(
                     modifier = Modifier
-                        .fillMaxSize()
+                        .fillMaxWidth()
                         .clickable { reloadNonce++ }
-                        .padding(12.dp),
+                        .padding(14.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
                 ) {
@@ -249,7 +270,7 @@ fun QuestionDiagramCard(
                         text = "Diagram belum termuat — ketuk untuk muat ulang",
                         fontSize = 11.5.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF334155),
+                        color = if (isDark) Color(0xFFCBD5E1) else Color(0xFF334155),
                         textAlign = TextAlign.Center,
                         modifier = Modifier.padding(top = 6.dp),
                     )
@@ -257,85 +278,214 @@ fun QuestionDiagramCard(
             },
         )
 
-        // Subtle tap-to-zoom chip at bottom-right of diagram
-        Box(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .clip(RoundedCornerShape(6.dp))
-                .background(Color(0xE6F1F5F9))
-                .border(0.5.dp, Color(0xFFCBD5E1), RoundedCornerShape(6.dp))
-                .padding(horizontal = 6.dp, vertical = 3.dp)
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(3.dp),
+        // Subtle floating zoom hint tucked in the bottom-right corner without any card frame
+        if (isDiagramLoaded) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(6.dp)
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xA60F172A))
+                    .padding(horizontal = 6.dp, vertical = 3.dp)
             ) {
-                Icon(
-                    imageVector = Icons.Default.ZoomIn,
-                    contentDescription = "Perbesar diagram",
-                    tint = Color(0xFF0369A1),
-                    modifier = Modifier.size(12.dp),
-                )
-                Text(
-                    text = "Perbesar",
-                    fontSize = 9.5.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF0369A1),
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ZoomIn,
+                        contentDescription = "Perbesar diagram",
+                        tint = Color.White,
+                        modifier = Modifier.size(11.dp),
+                    )
+                    Text(
+                        text = "Perbesar",
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White,
+                    )
+                }
             }
         }
     }
 
     if (showZoomLightbox) {
+        val zoomDiagramRequest = remember(cacheBustedUrl) {
+            ImageRequest.Builder(context)
+                .data(cacheBustedUrl)
+                .decoderFactory(CompatSvgDecoder.Factory())
+                .size(2400, 2400)
+                .scale(Scale.FIT)
+                .crossfade(false)
+                .build()
+        }
+
         Dialog(
             onDismissRequest = { showZoomLightbox = false },
-            properties = DialogProperties(usePlatformDefaultWidth = false),
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+            ),
         ) {
             var scale by remember { mutableFloatStateOf(1f) }
+            var offsetX by remember { mutableFloatStateOf(0f) }
+            var offsetY by remember { mutableFloatStateOf(0f) }
+            var containerSize by remember { mutableStateOf(IntSize.Zero) }
+
+            fun applyZoom(newScale: Float, newX: Float = offsetX, newY: Float = offsetY) {
+                val clampedScale = newScale.coerceIn(1f, 6f)
+                scale = clampedScale
+                if (clampedScale <= 1.02f) {
+                    offsetX = 0f
+                    offsetY = 0f
+                } else {
+                    val maxX = ((containerSize.width * (clampedScale - 1f)) / 2f).coerceAtLeast(0f)
+                    val maxY = ((containerSize.height * (clampedScale - 1f)) / 2f).coerceAtLeast(0f)
+                    offsetX = newX.coerceIn(-maxX, maxX)
+                    offsetY = newY.coerceIn(-maxY, maxY)
+                }
+            }
+
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.92f))
-                    .clickable { showZoomLightbox = false },
+                    .background(Color(0xF505070C))
+                    .onSizeChanged { containerSize = it }
+                    .pointerInput(cacheBustedUrl) {
+                        detectTapGestures(
+                            onTap = {
+                                if (scale <= 1.02f) {
+                                    showZoomLightbox = false
+                                }
+                            },
+                            onDoubleTap = {
+                                if (scale > 1.2f) {
+                                    applyZoom(1f, 0f, 0f)
+                                } else {
+                                    applyZoom(2.5f, 0f, 0f)
+                                }
+                            },
+                        )
+                    }
+                    .pointerInput(cacheBustedUrl) {
+                        awaitEachGesture {
+                            awaitFirstDown(requireUnconsumed = false)
+                            do {
+                                val event = awaitPointerEvent()
+                                val pointerCount = event.changes.count { it.pressed }
+                                if (pointerCount >= 2) {
+                                    val zoomChange = event.calculateZoom()
+                                    val panChange = event.calculatePan()
+                                    if (zoomChange != 1f || panChange != androidx.compose.ui.geometry.Offset.Zero) {
+                                        val nextScale = (scale * zoomChange).coerceIn(1f, 6f)
+                                        applyZoom(
+                                            nextScale,
+                                            offsetX + panChange.x,
+                                            offsetY + panChange.y,
+                                        )
+                                        event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                    }
+                                } else if (scale > 1.03f && pointerCount == 1) {
+                                    val panChange = event.calculatePan()
+                                    if (panChange != androidx.compose.ui.geometry.Offset.Zero) {
+                                        applyZoom(scale, offsetX + panChange.x, offsetY + panChange.y)
+                                        event.changes.forEach { if (it.positionChanged()) it.consume() }
+                                    }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
+                    },
                 contentAlignment = Alignment.Center,
             ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(Color.White)
-                        .padding(10.dp)
-                        .pointerInput(Unit) {
-                            detectTransformGestures { _, _, zoom, _ ->
-                                scale = (scale * zoom).coerceIn(1f, 3f)
-                            }
+                SubcomposeAsyncImage(
+                    model = zoomDiagramRequest,
+                    contentDescription = "Perbesar Diagram Soal",
+                    contentScale = ContentScale.Fit,
+                    loading = {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = Color.White, strokeWidth = 2.5.dp)
                         }
-                ) {
-                    SubcomposeAsyncImage(
-                        model = diagramRequest,
-                        contentDescription = "Perbesar Diagram Soal",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .heightIn(min = 240.dp, max = 420.dp)
-                            .graphicsLayer(scaleX = scale, scaleY = scale),
-                    )
-                }
+                    },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .graphicsLayer(
+                            scaleX = scale,
+                            scaleY = scale,
+                            translationX = offsetX,
+                            translationY = offsetY,
+                        ),
+                )
 
                 IconButton(
                     onClick = { showZoomLightbox = false },
                     modifier = Modifier
                         .align(Alignment.TopEnd)
-                        .padding(top = 36.dp, end = 16.dp)
+                        .statusBarsPadding()
+                        .padding(top = 12.dp, end = 16.dp)
+                        .size(40.dp)
                         .clip(CircleShape)
-                        .background(Color.White.copy(alpha = 0.18f)),
+                        .background(Color(0xB30F172A))
+                        .border(1.dp, Color.White.copy(alpha = 0.22f), CircleShape),
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
                         contentDescription = "Tutup",
                         tint = Color.White,
                     )
+                }
+
+                // Bottom floating zoom controls for one-handed precision
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    modifier = Modifier
+                        .align(Alignment.BottomCenter)
+                        .navigationBarsPadding()
+                        .padding(bottom = 18.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xCC0F172A))
+                        .border(1.dp, Color.White.copy(alpha = 0.18f), CircleShape)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                ) {
+                    IconButton(
+                        onClick = { applyZoom(scale - 0.75f) },
+                        enabled = scale > 1.02f,
+                        modifier = Modifier.size(34.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ZoomOut,
+                            contentDescription = "Perkecil",
+                            tint = if (scale > 1.02f) Color.White else Color.White.copy(alpha = 0.35f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+
+                    Text(
+                        text = if (scale <= 1.02f) "Ketuk 2x / Cubit Zoom" else String.format(java.util.Locale.US, "%.1fx • Reset", scale),
+                        color = Color.White,
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .clickable {
+                                if (scale > 1.02f) applyZoom(1f, 0f, 0f)
+                                else applyZoom(2.5f, 0f, 0f)
+                            }
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                    )
+
+                    IconButton(
+                        onClick = { applyZoom(scale + 0.75f) },
+                        enabled = scale < 5.95f,
+                        modifier = Modifier.size(34.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ZoomIn,
+                            contentDescription = "Perbesar",
+                            tint = if (scale < 5.95f) Color.White else Color.White.copy(alpha = 0.35f),
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
                 }
             }
         }

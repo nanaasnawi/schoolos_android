@@ -43,8 +43,6 @@ import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -206,19 +204,56 @@ fun HomeScreen(
         containerColor = CosmicBlack,
         contentWindowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0),
         floatingActionButton = {
-            Image(
-                painter = painterResource(id = CoreR.drawable.mascot_akselerasi_edu),
-                contentDescription = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Tanya Guru AI",
+            Box(
                 modifier = Modifier
-                    .offset(y = 10.dp)
-                    .size(70.dp)
-                    .clickable(
-                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
-                        indication = null,
-                        onClick = onNavigateToAiChat,
-                    ),
-                contentScale = androidx.compose.ui.layout.ContentScale.Fit,
-            )
+                    .offset(y = 6.dp)
+                    .size(60.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(58.dp)
+                        .shadow(
+                            elevation = 10.dp,
+                            shape = CircleShape,
+                            ambientColor = Color(0xFF0284C7).copy(alpha = 0.35f),
+                            spotColor = Color(0xFF0284C7).copy(alpha = 0.45f),
+                        )
+                        .clip(CircleShape)
+                        .background(
+                            Brush.linearGradient(
+                                colors = listOf(
+                                    Color.White,
+                                    Color(0xFFF1F5F9),
+                                )
+                            )
+                        )
+                        .border(2.dp, Color(0xFF0284C7), CircleShape)
+                        .clickable(onClick = onNavigateToAiChat),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(
+                        painter = painterResource(id = CoreR.drawable.logo_akselerasi_edu),
+                        contentDescription = if (isPrincipal) "AI Analitik Kepala Sekolah" else "Tanya Guru AI",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(3.dp)
+                            .clip(CircleShape),
+                        contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    )
+                }
+
+                // Online status badge matching web dashboard AI chat FAB
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .offset(x = (-1).dp, y = 1.dp)
+                        .size(15.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF10B981))
+                        .border(2.dp, Color.White, CircleShape)
+                )
+            }
         }
     ) { padding ->
         PullRefreshContainer(
