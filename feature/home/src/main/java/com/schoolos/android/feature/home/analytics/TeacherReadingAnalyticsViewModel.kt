@@ -1,7 +1,18 @@
 package com.schoolos.android.feature.home.analytics
 
+import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Typeface
+import android.graphics.pdf.PdfDocument
+import android.net.Uri
+import android.os.Build
+import android.os.Environment
+import android.provider.MediaStore
+import android.text.TextPaint
+import android.text.TextUtils
 import androidx.core.content.FileProvider
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,7 +28,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
+import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -220,52 +233,195 @@ class TeacherReadingAnalyticsViewModel @Inject constructor(
         _state.update { it.copy(userMessage = null) }
     }
 
-    fun exportCsv(context: Context) {
+    fun exportPdf(context: Context) {
         val currentRows = _state.value.filteredRows
         if (currentRows.isEmpty()) {
             _state.update { it.copy(userMessage = "Tidak ada data pembaca untuk diekspor.") }
             return
         }
 
+        val pdf = PdfDocument()
         try {
             val timeStamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
-            val fileName = "Rekap_Literasi_Membaca_$timeStamp.csv"
-            val file = File(context.cacheDir, fileName)
+            val printDate = SimpleDateFormat("dd MMM yyyy, HH:mm 'WIB'", Locale("id", "ID")).format(Date())
+            val fileName = "Rekap_Literasi_Membaca_$timeStamp.pdf"
 
-            val header = "No,NISN,Nama Siswa,Rombel,Materi/Buku,Halaman Dibaca,Total Halaman,Progress (%),Status,Terakhir Dibaca\n"
-            val sb = StringBuilder()
-            sb.append("\uFEFF") // UTF-8 BOM for Excel
-            sb.append(header)
+            // A4 Landscape dimensions in PostScript points
+            val pageWidth = 842
+            val pageHeight = 595
+            val margin = 32f
+            val tableWidth = pageWidth - margin * 2f
 
-            currentRows.forEachIndexed { idx, r ->
-                val status = if (r.isCompleted) "Selesai" else if (r.currentPage > 0) "Sedang Baca" else "Belum Mulai"
-                val lastRead = r.lastReadAt ?: "-"
-                sb.append("${idx + 1},\"${r.nisn}\",\"${r.studentName}\",\"${r.className}\",\"${r.materialTitle}\",${r.currentPage},${r.totalPages},${r.completionPercentage}%,$status,\"$lastRead\"\n")
+            val brandPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#0284C7")
+                textSize = 8.5f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+            val titlePaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#0F172A")
+                textSize = 14f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+            val metaPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#475569")
+                textSize = 8.5f
+            }
+            val headerBgPaint = Paint().apply {
+                color = Color.parseColor("#0F172A")
+                style = Paint.Style.FILL
+            }
+            val zebraBgPaint = Paint().apply {
+                color = Color.parseColor("#F8FAFC")
+                style = Paint.Style.FILL
+            }
+            val borderPaint = Paint().apply {
+                color = Color.parseColor("#CBD5E1")
+                style = Paint.Style.STROKE
+                strokeWidth = 0.7f
+            }
+            val headerTextPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                textSize = 8.5f
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+            val cellPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.parseColor("#1E293B")
+                textSize = 8.3f
             }
 
-            file.writeText(sb.toString())
+            // Column proportions summing cleanly to tableWidth (~778pt)
+            val colHeaders = listOf("No", "NISN", "Nama Siswa", "Rombel", "Materi / Buku", "Hal.", "%", "Status", "Terakhir")
+            val colRatios = listOf(0.04f, 0.11f, 0.21f, 0.11f, 0.25f, 0.08f, 0.05f, 0.08f, 0.07f)
+            val colWidths = colRatios.map { it * tableWidth }
+            val rowHeight = 20f
+            val headerRowHeight = 22f
 
-            val uri = FileProvider.getUriForFile(
-                context,
-                "${context.packageName}.fileprovider",
-                file
-            )
-
-            val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                type = "text/csv"
-                putExtra(Intent.EXTRA_STREAM, uri)
-                putExtra(Intent.EXTRA_SUBJECT, "Rekapitulasi Literasi Membaca Siswa")
-                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            fun fitCell(text: String, width: Float, paint: TextPaint): String {
+                return TextUtils.ellipsize(text, paint, (width - 8f).coerceAtLeast(10f), TextUtils.TruncateAt.END).toString()
             }
 
-            val chooser = Intent.createChooser(shareIntent, "Bagikan Rekap Literasi (CSV)").apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            var rowIdx = 0
+            var pageNum = 1
+            val rowsPerFirstPage = 19
+            val rowsPerLaterPage = 23
+            val totalPages = if (currentRows.size <= rowsPerFirstPage) 1 else 1 + ((currentRows.size - rowsPerFirstPage + rowsPerLaterPage - 1) / rowsPerLaterPage)
+
+            while (rowIdx < currentRows.size) {
+                val pageInfo = PdfDocument.PageInfo.Builder(pageWidth, pageHeight, pageNum).create()
+                val page = pdf.startPage(pageInfo)
+                val canvas = page.canvas
+                var y = margin
+
+                if (pageNum == 1) {
+                    canvas.drawText("AKSELERASI EDU • REKAPITULASI LITERASI & MEMBACA", margin, y + 8f, brandPaint)
+                    y += 16f
+                    canvas.drawText("Laporan Progress Membaca Peserta Didik", margin, y + 12f, titlePaint)
+                    y += 20f
+                    canvas.drawText("Dicetak: $printDate • Total Rekaman: ${currentRows.size} siswa", margin, y + 8f, metaPaint)
+                    y += 18f
+                } else {
+                    canvas.drawText("Laporan Progress Membaca Peserta Didik (Halaman $pageNum / $totalPages)", margin, y + 8f, metaPaint)
+                    y += 18f
+                }
+
+                // Draw table header
+                canvas.drawRect(margin, y, margin + tableWidth, y + headerRowHeight, headerBgPaint)
+                var x = margin
+                colHeaders.forEachIndexed { idx, label ->
+                    canvas.drawText(fitCell(label, colWidths[idx], headerTextPaint), x + 4f, y + 14.5f, headerTextPaint)
+                    x += colWidths[idx]
+                }
+                y += headerRowHeight
+
+                val footerReserve = margin + 22f
+                while (rowIdx < currentRows.size && y + rowHeight <= pageHeight - footerReserve) {
+                    val r = currentRows[rowIdx]
+                    if (rowIdx % 2 == 1) {
+                        canvas.drawRect(margin, y, margin + tableWidth, y + rowHeight, zebraBgPaint)
+                    }
+                    canvas.drawRect(margin, y, margin + tableWidth, y + rowHeight, borderPaint)
+
+                    val status = if (r.isCompleted) "Selesai" else if (r.currentPage > 0) "Baca" else "Belum"
+                    val values = listOf(
+                        "${rowIdx + 1}",
+                        r.nisn.ifBlank { "-" },
+                        r.studentName,
+                        r.className,
+                        r.materialTitle,
+                        "${r.currentPage}/${r.totalPages}",
+                        "${r.completionPercentage}%",
+                        status,
+                        r.lastReadAt ?: "-"
+                    )
+
+                    var cellX = margin
+                    values.forEachIndexed { cIdx, v ->
+                        canvas.drawText(fitCell(v, colWidths[cIdx], cellPaint), cellX + 4f, y + 13.5f, cellPaint)
+                        if (cIdx > 0) {
+                            canvas.drawLine(cellX, y, cellX, y + rowHeight, borderPaint)
+                        }
+                        cellX += colWidths[cIdx]
+                    }
+                    y += rowHeight
+                    rowIdx++
+                }
+
+                canvas.drawText("Halaman $pageNum dari $totalPages • Dokumen PDF Resmi Akselerasi Edu", margin, pageHeight - 18f, metaPaint)
+                pdf.finishPage(page)
+                pageNum++
             }
-            context.startActivity(chooser)
-            _state.update { it.copy(userMessage = "File rekap CSV berhasil disiapkan.") }
+
+            val outStream = ByteArrayOutputStream()
+            pdf.writeTo(outStream)
+            val bytes = outStream.toByteArray()
+
+            val targetUri: Uri? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Downloads.DISPLAY_NAME, fileName)
+                    put(MediaStore.Downloads.MIME_TYPE, "application/pdf")
+                    put(MediaStore.Downloads.IS_PENDING, 1)
+                }
+                val resolver = context.contentResolver
+                val uri = resolver.insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, values)
+                    ?: throw IllegalStateException("Gagal membuat berkas PDF di folder Downloads.")
+                resolver.openOutputStream(uri)?.use { it.write(bytes); it.flush() }
+                    ?: throw IllegalStateException("Gagal menulis isi PDF.")
+                values.clear()
+                values.put(MediaStore.Downloads.IS_PENDING, 0)
+                resolver.update(uri, values, null, null)
+                uri
+            } else {
+                val file = File(context.cacheDir, fileName)
+                FileOutputStream(file).use { it.write(bytes); it.flush() }
+                FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+            }
+
+            targetUri?.let { uri ->
+                val viewIntent = Intent(Intent.ACTION_VIEW).apply {
+                    setDataAndType(uri, "application/pdf")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                    type = "application/pdf"
+                    putExtra(Intent.EXTRA_STREAM, uri)
+                    putExtra(Intent.EXTRA_SUBJECT, "Rekapitulasi Literasi Membaca Siswa")
+                    addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                }
+                runCatching { context.startActivity(viewIntent) }.onFailure {
+                    context.startActivity(
+                        Intent.createChooser(shareIntent, "Buka / Bagikan Rekap Literasi (PDF)").apply {
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                    )
+                }
+            }
+
+            _state.update { it.copy(userMessage = "Dokumen PDF berhasil disimpan: $fileName") }
         } catch (e: Exception) {
-            Timber.e(e, "Error exporting CSV")
-            _state.update { it.copy(userMessage = e.toHumanReadableError("Gagal menyiapkan berkas rekap CSV.")) }
+            Timber.e(e, "Error exporting PDF")
+            _state.update { it.copy(userMessage = e.toHumanReadableError("Gagal menyiapkan dokumen PDF.")) }
+        } finally {
+            pdf.close()
         }
     }
 }

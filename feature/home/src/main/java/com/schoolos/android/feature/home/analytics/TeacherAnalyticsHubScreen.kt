@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -39,6 +40,7 @@ fun TeacherAnalyticsHubScreen(
     atRiskViewModel: AtRiskMonitoringViewModel = hiltViewModel(),
 ) {
     val isDark = LocalIsDarkTheme.current
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
 
     // Strictly 2 tabs: 0 for Literasi & Bacaan, 1 for Early Warning
@@ -102,6 +104,7 @@ fun TeacherAnalyticsHubScreen(
                             onSelectMaterialFilter = readingViewModel::onSelectMaterialFilter,
                             onSelectStatusFilter = readingViewModel::onSelectStatusFilter,
                             onSearchQueryChange = readingViewModel::onSearchQueryChange,
+                            onExportPdf = { readingViewModel.exportPdf(context) },
                             onNavigateToStudentDetail = onNavigateToStudentDetail,
                         )
                     }

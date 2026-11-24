@@ -15,6 +15,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -79,10 +80,14 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -596,12 +601,45 @@ private fun countTemplateBlanks(template: String): Int {
 }
 
 /**
+ * Cleans leaked AI visual-prompt metadata (e.g. "Gambar visual FLUX AI:",
+ * "(Gambar dipresentasikan secara deskriptif untuk AI generasi)") from student-facing
+ * `FILL_BLANK` prose while keeping `word_bank` / `blanks` tokens untouched for grading.
+ */
+private fun sanitizeFillBlankStudentProse(raw: String, isTemplate: Boolean): String {
+    if (raw.isBlank()) return ""
+    var cleaned = raw
+        .replace(Regex("\\(\\s*gambar\\s+dipresentasikan\\s+secara\\s+deskriptif[^)]*\\)", RegexOption.IGNORE_CASE), " ")
+        .replace(Regex("\\(\\s*AI\\s+generasi[^)]*\\)", RegexOption.IGNORE_CASE), " ")
+        .replace(Regex("\\[\\s*(?:Diagram|Grafik|Bagan|Gambar|Chart)\\s*:[^\\]]*]", RegexOption.IGNORE_CASE), " ")
+        .replace(Regex("(?:Gambar\\s+visual|Visual|Ilustrasi)\\s+FLUX\\s*AI\\s*:?", RegexOption.IGNORE_CASE), "Gambaran sikap yang tepat:")
+        .replace(Regex("Pilihlah\\s+gambar\\s+yang\\s+sesuai", RegexOption.IGNORE_CASE), "Pilihlah pernyataan yang sesuai")
+        .replace(Regex("Pilihan\\s+gambar\\s+yang\\s+tepat", RegexOption.IGNORE_CASE), "Pilihan pernyataan yang tepat")
+
+    if (isTemplate) {
+        // Normalize space right before punctuation (e.g. "{{1}} ." -> "{{1}}.")
+        cleaned = cleaned
+            .lines()
+            .joinToString("\n") { line ->
+                line.replace(Regex("[ \\t]+([.,;!?])"), "$1")
+                    .replace(Regex("[ \\t]{2,}"), " ")
+                    .trim()
+            }
+    } else {
+        cleaned = cleaned
+            .replace(Regex("[ \\t]+([.,;!?])"), "$1")
+            .replace(Regex("[ \\t]{2,}"), " ")
+            .trim()
+    }
+    return cleaned.trim()
+}
+
+/**
  * Strips duplicated cloze `{{1}}` / `___` template sentences from `questionText` when
  * rendering `FILL_BLANK` cards so the student sees a clean single interactive reading card.
  */
 private fun extractFillBlankStudentHeadline(rawQuestionText: String, configJson: String?): String {
     val defaultInstr = "Lengkapi kotak kosong pada kalimat berikut menggunakan kata dari Bank Kata:"
-    val trimmed = rawQuestionText.trim()
+    val trimmed = sanitizeFillBlankStudentProse(rawQuestionText.trim(), isTemplate = false)
     if (trimmed.isBlank()) return defaultInstr
 
     val imageRegex = Regex("!\\[[^\\]\\n]*\\]\\([^)\\s]+\\)")
@@ -644,7 +682,7 @@ private fun parseFillBlankStudentConfig(configJson: String?): ParsedFillBlank {
     if (configJson.isNullOrBlank()) return ParsedFillBlank("", 1, emptyList())
     return runCatching {
         val obj = JSONObject(configJson)
-        val template = obj.optString("template", "")
+        val template = sanitizeFillBlankStudentProse(obj.optString("template", ""), isTemplate = true)
         val wordBank = mutableListOf<String>()
         val wbArr = obj.optJSONArray("word_bank")
         val blanksArr = obj.optJSONArray("blanks")
@@ -1968,112 +2006,145 @@ private fun FillBlankGamePlayer(
     val filledCount = fills.count { it.isNotBlank() }
     val emerald = Color(0xFF10B981)
     val sky = Color(0xFF38BDF8)
+    val textMeasurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val chipTextStyle = remember {
+        TextStyle(
+            fontSize = 11.5.sp,
+            fontWeight = FontWeight.Bold,
+            lineHeight = 15.sp,
+        )
+    }
 
-    val (annotatedSentence, inlineContentMap) = remember(
-        normTemplate,
-        fills.toList(),
-        activeSlot,
-        readOnly,
-        cfg.blankCount,
-    ) {
-        val inlineMap = mutableMapOf<String, InlineTextContent>()
-        val tokenRegex = Regex("\\{\\{(\\d+)\\}\\}")
-        val annotated = buildAnnotatedString {
-            var cursor = 0
-            tokenRegex.findAll(normTemplate).forEach { match ->
-                if (match.range.first > cursor) {
-                    append(normTemplate.substring(cursor, match.range.first))
-                }
-                val slotNum = match.groupValues[1].toIntOrNull() ?: 1
-                val slotIdx = (slotNum - 1).coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0))
-                val inlineKey = "slot_$slotIdx"
-                val filledWord = fills.getOrNull(slotIdx)?.takeIf { it.isNotBlank() }
-                val isFocused = activeSlot == slotIdx && !readOnly
+    BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        val maxChipSlotWidthPx = remember(maxWidth, density) {
+            with(density) { (maxWidth - 28.dp).toPx().toInt().coerceAtLeast(120) }
+        }
 
-                val chipLabel = when {
-                    filledWord != null -> "${slotIdx + 1}. $filledWord"
-                    isFocused -> "${slotIdx + 1}. pilih kata"
-                    else -> "${slotIdx + 1}. kosong"
-                }
-                val estEm = (chipLabel.length * 0.62f + if (filledWord != null && !readOnly) 3.0f else 1.8f)
-                    .coerceIn(5.8f, 18.5f)
-                    .em
+        val (annotatedSentence, inlineContentMap) = remember(
+            normTemplate,
+            fills.toList(),
+            activeSlot,
+            readOnly,
+            cfg.blankCount,
+            maxChipSlotWidthPx,
+        ) {
+            val inlineMap = mutableMapOf<String, InlineTextContent>()
+            val tokenRegex = Regex("\\{\\{(\\d+)\\}\\}")
+            val annotated = buildAnnotatedString {
+                var cursor = 0
+                tokenRegex.findAll(normTemplate).forEach { match ->
+                    if (match.range.first > cursor) {
+                        append(normTemplate.substring(cursor, match.range.first))
+                    }
+                    val slotNum = match.groupValues[1].toIntOrNull() ?: 1
+                    val slotIdx = (slotNum - 1).coerceIn(0, (cfg.blankCount - 1).coerceAtLeast(0))
+                    val inlineKey = "slot_$slotIdx"
+                    val filledWord = fills.getOrNull(slotIdx)?.takeIf { it.isNotBlank() }
+                    val isFocused = activeSlot == slotIdx && !readOnly
 
-                inlineMap[inlineKey] = InlineTextContent(
-                    placeholder = Placeholder(
-                        width = estEm,
-                        height = 2.05.em,
-                        placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
+                    val chipLabel = when {
+                        filledWord != null -> "${slotIdx + 1}. $filledWord"
+                        isFocused -> "${slotIdx + 1}. pilih kata"
+                        else -> "${slotIdx + 1}. kosong"
+                    }
+
+                    val chromeWidthPx = with(density) {
+                        (if (filledWord != null && !readOnly) 32.dp else 16.dp).toPx().toInt()
+                    }
+                    val maxTextWidthPx = (maxChipSlotWidthPx - chromeWidthPx).coerceAtLeast(64)
+                    val measuredLayout = textMeasurer.measure(
+                        text = chipLabel,
+                        style = chipTextStyle,
+                        maxLines = 3,
+                        constraints = Constraints(maxWidth = maxTextWidthPx),
                     )
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = when {
-                            filledWord != null -> emerald.copy(alpha = 0.20f)
-                            isFocused -> sky.copy(alpha = 0.20f)
-                            else -> CosmicNavy
-                        },
-                        border = BorderStroke(
-                            width = if (isFocused) 1.5.dp else 1.dp,
-                            color = when {
-                                filledWord != null -> emerald
-                                isFocused -> sky
-                                else -> GlassBorder2
-                            }
-                        ),
-                        modifier = Modifier
-                            .padding(horizontal = 2.dp, vertical = 1.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                            .clickable(enabled = !readOnly) {
-                                if (filledWord != null) {
-                                    fills[slotIdx] = ""
-                                    activeSlot = slotIdx
-                                    emitFills()
-                                } else {
-                                    activeSlot = slotIdx
-                                }
-                            }
+                    val exactWidthSp = with(density) {
+                        (measuredLayout.size.width + chromeWidthPx + 4)
+                            .coerceIn(with(density) { 64.dp.toPx().toInt() }, maxChipSlotWidthPx)
+                            .toSp()
+                    }
+                    val exactHeightSp = with(density) {
+                        (measuredLayout.size.height + 8.dp.toPx().toInt())
+                            .coerceAtLeast(24.dp.toPx().toInt())
+                            .toSp()
+                    }
+
+                    inlineMap[inlineKey] = InlineTextContent(
+                        placeholder = Placeholder(
+                            width = exactWidthSp,
+                            height = exactHeightSp,
+                            placeholderVerticalAlign = PlaceholderVerticalAlign.TextCenter
+                        )
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            Text(
-                                text = chipLabel,
-                                fontSize = 11.5.sp,
-                                fontWeight = FontWeight.Bold,
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = when {
+                                filledWord != null -> emerald.copy(alpha = 0.20f)
+                                isFocused -> sky.copy(alpha = 0.20f)
+                                else -> CosmicNavy
+                            },
+                            border = BorderStroke(
+                                width = if (isFocused) 1.5.dp else 1.dp,
                                 color = when {
                                     filledWord != null -> emerald
                                     isFocused -> sky
-                                    else -> TextSecondary
-                                },
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            if (filledWord != null && !readOnly) {
-                                Icon(
-                                    imageVector = Icons.Default.Close,
-                                    contentDescription = "Kosongkan kotak",
-                                    tint = emerald,
-                                    modifier = Modifier.size(12.dp)
+                                    else -> GlassBorder2
+                                }
+                            ),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable(enabled = !readOnly) {
+                                    if (filledWord != null) {
+                                        fills[slotIdx] = ""
+                                        activeSlot = slotIdx
+                                        emitFills()
+                                    } else {
+                                        activeSlot = slotIdx
+                                    }
+                                }
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 7.dp, vertical = 3.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = chipLabel,
+                                    fontSize = 11.5.sp,
+                                    lineHeight = 15.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = when {
+                                        filledWord != null -> emerald
+                                        isFocused -> sky
+                                        else -> TextSecondary
+                                    },
+                                    maxLines = 3,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
                                 )
+                                if (filledWord != null && !readOnly) {
+                                    Icon(
+                                        imageVector = Icons.Default.Close,
+                                        contentDescription = "Kosongkan kotak",
+                                        tint = emerald,
+                                        modifier = Modifier.size(12.dp)
+                                    )
+                                }
                             }
                         }
                     }
+                    appendInlineContent(inlineKey, "[#$slotNum]")
+                    cursor = match.range.last + 1
                 }
-                appendInlineContent(inlineKey, "[#$slotNum]")
-                cursor = match.range.last + 1
+                if (cursor < normTemplate.length) {
+                    append(normTemplate.substring(cursor))
+                }
             }
-            if (cursor < normTemplate.length) {
-                append(normTemplate.substring(cursor))
-            }
+            annotated to inlineMap
         }
-        annotated to inlineMap
-    }
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         // Clear 1-line guidance + progress badge
         Box(
             modifier = Modifier
@@ -2184,12 +2255,13 @@ private fun FillBlankGamePlayer(
                         label = "tilePressOffset"
                     )
 
-                    // Outer 3D Lip Container
+                    // Outer 3D Lip Container (avoid downward offset clipping by animating padding)
+                    val bottomLip = if (isUsed || isPressed) 0.dp else 3.5.dp
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(12.dp))
                             .background(if (isUsed) Color.Transparent else Color(0xFF047857))
-                            .padding(bottom = if (isUsed) 0.dp else 3.5.dp)
+                            .padding(top = topOffset, bottom = bottomLip)
                     ) {
                         Surface(
                             shape = RoundedCornerShape(11.dp),
@@ -2199,7 +2271,6 @@ private fun FillBlankGamePlayer(
                                 color = if (isUsed) emerald.copy(alpha = 0.45f) else emerald
                             ),
                             modifier = Modifier
-                                .offset(y = topOffset)
                                 .clip(RoundedCornerShape(11.dp))
                                 .clickable(
                                     interactionSource = interactionSource,
@@ -2242,6 +2313,7 @@ private fun FillBlankGamePlayer(
                     }
                 }
             }
+        }
         }
     }
 }

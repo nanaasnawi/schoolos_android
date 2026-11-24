@@ -54,7 +54,6 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Download
@@ -1458,24 +1457,6 @@ private fun MessageBubble(
                                                 tryOpenExportedDocument(bubbleContext, exported)
                                             }.onFailure { err ->
                                                 Toast.makeText(bubbleContext, err.message ?: "Gagal menyimpan PDF.", Toast.LENGTH_LONG).show()
-                                            }
-                                        }
-                                    }
-                                )
-                                DropdownMenuItem(
-                                    leadingIcon = { Icon(Icons.Default.Description, null, tint = Color(0xFF2563EB), modifier = Modifier.size(18.dp)) },
-                                    text = { Text("Unduh Word (.doc)", fontSize = 12.5.sp, fontWeight = FontWeight.SemiBold) },
-                                    onClick = {
-                                        showExportMenu = false
-                                        bubbleScope.launch {
-                                            val result = withContext(Dispatchers.IO) {
-                                                exportAiReplyAsWordToDownloads(bubbleContext, message.content, aiAuthor)
-                                            }
-                                            result.onSuccess { exported ->
-                                                Toast.makeText(bubbleContext, "Tersimpan di Downloads: ${exported.fileName}", Toast.LENGTH_LONG).show()
-                                                tryOpenExportedDocument(bubbleContext, exported)
-                                            }.onFailure { err ->
-                                                Toast.makeText(bubbleContext, err.message ?: "Gagal menyimpan Word.", Toast.LENGTH_LONG).show()
                                             }
                                         }
                                     }

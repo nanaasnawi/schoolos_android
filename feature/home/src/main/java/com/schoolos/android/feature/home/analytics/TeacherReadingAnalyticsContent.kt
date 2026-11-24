@@ -46,6 +46,7 @@ fun TeacherReadingAnalyticsContent(
     onSelectMaterialFilter: (String) -> Unit,
     onSelectStatusFilter: (String) -> Unit,
     onSearchQueryChange: (String) -> Unit,
+    onExportPdf: (() -> Unit)? = null,
     onNavigateToStudentDetail: ((studentId: String, name: String, nisn: String, className: String) -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
@@ -64,6 +65,7 @@ fun TeacherReadingAnalyticsContent(
             item {
                 ReadingAnalyticsHeroHeader(
                     isDark = isDark,
+                    onExportPdf = onExportPdf,
                 )
             }
 
@@ -174,6 +176,7 @@ fun TeacherReadingAnalyticsContent(
 @Composable
 private fun ReadingAnalyticsHeroHeader(
     isDark: Boolean,
+    onExportPdf: (() -> Unit)? = null,
 ) {
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
     val cardBorder = if (isDark) Color(0xFF232326) else Color(0xFFE2E8F0)
@@ -234,28 +237,61 @@ private fun ReadingAnalyticsHeroHeader(
                 }
             }
 
-            Surface(
-                shape = RoundedCornerShape(8.dp),
-                color = emeraldAccent.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, emeraldAccent.copy(alpha = 0.3f))
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                if (onExportPdf != null) {
+                    Surface(
+                        onClick = onExportPdf,
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFDC2626).copy(alpha = 0.12f),
+                        border = BorderStroke(1.dp, Color(0xFFDC2626).copy(alpha = 0.35f))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.PictureAsPdf,
+                                contentDescription = "Ekspor PDF",
+                                tint = Color(0xFFDC2626),
+                                modifier = Modifier.size(12.dp)
+                            )
+                            Text(
+                                text = "PDF",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFDC2626)
+                            )
+                        }
+                    }
+                }
+
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = emeraldAccent.copy(alpha = 0.12f),
+                    border = BorderStroke(1.dp, emeraldAccent.copy(alpha = 0.3f))
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(6.dp)
-                            .clip(CircleShape)
-                            .background(emeraldAccent)
-                    )
-                    Text(
-                        text = "Live Sync",
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = emeraldAccent
-                    )
+                    Row(
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(6.dp)
+                                .clip(CircleShape)
+                                .background(emeraldAccent)
+                        )
+                        Text(
+                            text = "Live Sync",
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = emeraldAccent
+                        )
+                    }
                 }
             }
         }
