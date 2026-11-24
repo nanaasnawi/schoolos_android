@@ -24,6 +24,7 @@ import com.schoolos.android.domain.model.SubjectGradeSummary
 import com.schoolos.android.domain.model.toSubjectSummary
 import com.schoolos.android.domain.model.SchoolHealthMetrics
 import com.schoolos.android.domain.model.ExecutiveDecisionType
+import com.schoolos.android.domain.model.GtkSupervisionOverview
 import com.schoolos.android.domain.repository.AcademicRepository
 import com.schoolos.android.domain.repository.AchievementRepository
 import com.schoolos.android.domain.repository.AnalyticsRepository
@@ -112,6 +113,7 @@ data class HomeUiState(
     val recommendedSibiBook: LibraryBook? = null,
     val totalStudentsCount: String = "0",
     val schoolHealthMetrics: SchoolHealthMetrics? = null,
+    val gtkSupervisionOverview: GtkSupervisionOverview? = null,
     val userIdentifier: String = "",
     val studentAssignments: List<Assignment> = emptyList(),
     val streakDays: Int = 5,
@@ -735,6 +737,11 @@ class HomeViewModel @Inject constructor(
             // ── PRINCIPAL EXECUTIVE SUITE & SCHOOL STABILITY ANALYTICS ──
             analyticsRepository.getSchoolStabilityMetrics().onSuccess { metrics ->
                 _state.update { it.copy(schoolHealthMetrics = metrics) }
+            }
+            viewModelScope.launch {
+                analyticsRepository.getGtkSupervisionOverview().onSuccess { overview ->
+                    _state.update { it.copy(gtkSupervisionOverview = overview) }
+                }
             }
             academicRepository.getClassStudents("ALL").onSuccess { students ->
                 _state.update { it.copy(totalStudentsCount = students.size.toString()) }

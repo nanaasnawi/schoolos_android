@@ -30,6 +30,8 @@ import com.schoolos.android.feature.home.analytics.TeacherAnalyticsHubScreen
 import com.schoolos.android.feature.home.HomeScreen
 import com.schoolos.android.feature.home.RombelStudentsScreen
 import com.schoolos.android.feature.home.StudentDetailScreen
+import com.schoolos.android.feature.home.TeacherPerformanceDetailScreen
+import com.schoolos.android.feature.home.TeacherStaffSupervisionScreen
 import com.schoolos.android.feature.learning.LearningMaterialDetailScreen
 import com.schoolos.android.feature.learning.LearningMaterialListScreen
 import com.schoolos.android.feature.notifications.BroadcastCenterScreen
@@ -284,6 +286,9 @@ fun NavGraph(
                         } else {
                             navController.navigate(Screen.RombelStudents.createRoute(className))
                         }
+                    },
+                    onNavigateToTeacherStaffSupervision = {
+                        navController.navigate(Screen.TeacherStaffSupervision.route)
                     },
                     onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) },
                     onNavigateToDailyQuest = { navController.navigate(Screen.DailyQuest.route) }
@@ -849,6 +854,45 @@ fun NavGraph(
                             )
                         )
                     }
+                )
+            }
+
+            // Executive Supervision GTK (Principal — Daftar Guru / Tutor & Tenaga Kependidikan)
+            composable(Screen.TeacherStaffSupervision.route) {
+                TeacherStaffSupervisionScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToTeacherDetail = { teacherId ->
+                        navController.navigate(Screen.TeacherDetail.createRoute(teacherId))
+                    }
+                )
+            }
+
+            // Teacher Performance & Official GTK Detail (Principal Supervision)
+            composable(
+                route = Screen.TeacherDetail.route,
+                arguments = listOf(navArgument("teacherId") { type = NavType.StringType }),
+            ) {
+                TeacherPerformanceDetailScreen(
+                    onBack = { navController.popBackStack() },
+                    onNavigateToChatThread = { threadId, recipientName ->
+                        navController.navigate(Screen.ChatDetail.createRoute(threadId, recipientName))
+                    },
+                    onNavigateToAiChat = { navController.navigate(Screen.AiChat.route) },
+                    onNavigateToMaterialDetail = { materialId ->
+                        navController.navigate(Screen.LearningDetail.createRoute(materialId))
+                    },
+                    onNavigateToAssignmentDetail = { assignmentId ->
+                        navController.navigate(Screen.AssignmentDetail.createRoute(assignmentId))
+                    },
+                    onNavigateToQuizDetail = { quizId ->
+                        navController.navigate(Screen.QuizDetail.createRoute(quizId))
+                    },
+                    onNavigateToSessionDetail = { sessionId ->
+                        navController.navigate(Screen.SessionDetail.createRoute(sessionId))
+                    },
+                    onNavigateToRombelStudents = { className ->
+                        navController.navigate(Screen.RombelStudents.createRoute(className))
+                    },
                 )
             }
 

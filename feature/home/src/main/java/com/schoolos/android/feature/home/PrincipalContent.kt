@@ -44,6 +44,7 @@ import com.schoolos.android.core.auth.isPkbmInstitution
 import com.schoolos.android.core.designsystem.*
 import com.schoolos.android.domain.model.AcademicClass
 import com.schoolos.android.domain.model.Assignment
+import com.schoolos.android.domain.model.GtkSupervisionOverview
 import com.schoolos.android.domain.model.LearningSession
 import com.schoolos.android.domain.model.Notification
 import com.schoolos.android.domain.model.SchoolHealthMetrics
@@ -114,6 +115,7 @@ fun LazyListScope.principalContent(
     onNavigateToBroadcastCenter: () -> Unit,
     onNavigateToLearning: () -> Unit = {},
     onNavigateToRombelStudents: (String) -> Unit = {},
+    onNavigateToTeacherStaffSupervision: () -> Unit = {},
     onNavigateToAiChat: () -> Unit = {},
     principalName: String = "",
     schoolClasses: List<AcademicClass> = emptyList(),
@@ -126,6 +128,7 @@ fun LazyListScope.principalContent(
     scheduleCount: String = "0",
     quizzesCount: String = "0",
     schoolHealthMetrics: SchoolHealthMetrics? = null,
+    gtkSupervisionOverview: GtkSupervisionOverview? = null,
     schoolName: String = "",
 ) {
     val isPkbm = isPkbmInstitution(schoolName)
@@ -593,6 +596,180 @@ fun LazyListScope.principalContent(
                             color = textSecondary,
                             maxLines = 2,
                             overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    // ── 1.5. SUPERVISI GURU / TUTOR & TENAGA KEPENDIDIKAN (GTK EXECUTIVE) ──
+    item {
+        val isDark = LocalIsDarkTheme.current
+        val cardBg = if (isDark) Color(0xFF111113) else Color.White
+        val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
+        val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
+        val innerCardBorder = if (isDark) Color(0xFF2E2E32) else Color(0xFFE2E8F0)
+        val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+        val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
+        val gtkAccent = if (isDark) NeonBlue else Color(0xFF0284C7)
+
+        val teacherTotal = gtkSupervisionOverview?.totalTeachers?.takeIf { it > 0 }
+            ?: schoolHealthMetrics?.totalActiveTeachers ?: 0
+        val staffTotal = gtkSupervisionOverview?.totalStaff ?: 0
+        val productiveTeachers = gtkSupervisionOverview?.productiveTeachersCount ?: 0
+        val needsCoaching = gtkSupervisionOverview?.needsCoachingCount ?: 0
+        val avgScore = gtkSupervisionOverview?.averagePerformanceScore ?: 0
+        val gtkLoaded = gtkSupervisionOverview != null && (teacherTotal > 0 || staffTotal > 0)
+
+        val titleText = when {
+            teacherTotal > 0 && staffTotal > 0 ->
+                if (isPkbm) "Supervisi $teacherTotal Tutor & $staffTotal Tendik" else "Supervisi $teacherTotal Guru & $staffTotal Tendik"
+            teacherTotal > 0 ->
+                if (isPkbm) "Supervisi $teacherTotal Tutor & Tendik PKBM" else "Supervisi $teacherTotal Guru & Tendik"
+            else ->
+                if (isPkbm) "Supervisi Tutor & Tendik" else "Supervisi Guru & Tendik"
+        }
+
+        val subtitleText = if (gtkLoaded) {
+            if (needsCoaching > 0) {
+                "$productiveTeachers tutor produktif • $needsCoaching perlu pembinaan • Skor rata-rata $avgScore/100"
+            } else {
+                "$productiveTeachers pendidik produktif • $staffTotal tendik aktif • Skor rata-rata $avgScore/100"
+            }
+        } else {
+            if (isPkbm) {
+                "Pantau profil GTK, produktivitas modul tutor, tugas, kuis & data tendik"
+            } else {
+                "Pantau profil GTK, kinerja mengajar guru, tugas, kuis & data tendik"
+            }
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(22.dp))
+                .background(cardBg)
+                .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
+                .clickable(onClick = onNavigateToTeacherStaffSupervision)
+                .padding(16.dp),
+        ) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .background(gtkAccent.copy(alpha = 0.12f))
+                            .border(0.5.dp, gtkAccent.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
+                    ) {
+                        Text(
+                            text = if (isPkbm) "SUPERVISI TUTOR & TENDIK" else "SUPERVISI GURU & TENDIK",
+                            fontSize = 9.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = gtkAccent,
+                            letterSpacing = 0.5.sp,
+                        )
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                    ) {
+                        Text(
+                            text = "Lihat GTK",
+                            fontSize = 11.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = gtkAccent,
+                        )
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Outlined.ArrowForward,
+                            contentDescription = null,
+                            tint = gtkAccent,
+                            modifier = Modifier.size(12.dp),
+                        )
+                    }
+                }
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Outlined.Badge,
+                            contentDescription = null,
+                            tint = textPrimary,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
+
+                    Spacer(Modifier.width(12.dp))
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = titleText,
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = textPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Text(
+                            text = subtitleText,
+                            fontSize = 11.5.sp,
+                            color = textSecondary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                if (gtkLoaded) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(innerCardBg)
+                            .border(1.dp, innerCardBorder, RoundedCornerShape(12.dp))
+                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        MicroHealthStat(
+                            label = if (isPkbm) "Tutor" else "Guru",
+                            value = "$teacherTotal",
+                            accent = gtkAccent,
+                        )
+                        Box(modifier = Modifier.width(1.dp).height(18.dp).background(innerCardBorder))
+                        MicroHealthStat(
+                            label = "Tendik",
+                            value = "$staffTotal",
+                            accent = TeacherNeon,
+                        )
+                        Box(modifier = Modifier.width(1.dp).height(18.dp).background(innerCardBorder))
+                        MicroHealthStat(
+                            label = "Produktif",
+                            value = "$productiveTeachers",
+                            accent = NeonSuccess,
+                        )
+                        Box(modifier = Modifier.width(1.dp).height(18.dp).background(innerCardBorder))
+                        MicroHealthStat(
+                            label = "Perlu Bina",
+                            value = "$needsCoaching",
+                            accent = if (needsCoaching > 0) NeonWarning else textSecondary,
                         )
                     }
                 }

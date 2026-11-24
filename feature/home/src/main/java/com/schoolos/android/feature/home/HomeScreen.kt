@@ -113,6 +113,7 @@ fun HomeScreen(
     onNavigateToQuizzesWithSubject: (String) -> Unit = {},
     onNavigateToLearningWithSubject: (String) -> Unit = {},
     onNavigateToRombelStudents: (String) -> Unit = {},
+    onNavigateToTeacherStaffSupervision: () -> Unit = {},
     onNavigateToAiChat: () -> Unit = {},
     onNavigateToDailyQuest: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel(),
@@ -464,6 +465,7 @@ fun HomeScreen(
                             onNavigateToBroadcastCenter = onNavigateToBroadcastCenter,
                             onNavigateToLearning        = onNavigateToLearning,
                             onNavigateToRombelStudents  = onNavigateToRombelStudents,
+                            onNavigateToTeacherStaffSupervision = onNavigateToTeacherStaffSupervision,
                             onNavigateToAiChat          = onNavigateToAiChat,
                             principalName               = userName,
                             schoolClasses               = state.teacherClasses,
@@ -476,6 +478,7 @@ fun HomeScreen(
                             scheduleCount               = state.teacherScheduleCount,
                             quizzesCount                = state.teacherQuizzesCount,
                             schoolHealthMetrics         = state.schoolHealthMetrics,
+                            gtkSupervisionOverview      = state.gtkSupervisionOverview,
                             schoolName                  = state.schoolName,
                         )
                     }

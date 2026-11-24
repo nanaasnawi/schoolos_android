@@ -80,6 +80,23 @@ interface SchoolOsApi {
         @Query("search") search: String? = null,
     ): ApiResponse<List<OfficialTeacherBiodataDto>>
 
+    @GET("teachers/{id}")
+    suspend fun getTeacherById(
+        @Path("id") id: String,
+    ): ApiResponse<OfficialTeacherBiodataDto>
+
+    @GET("staff")
+    suspend fun getStaff(
+        @Query("page") page: Int? = null,
+        @Query("page_size") pageSize: Int? = null,
+        @Query("search") search: String? = null,
+    ): ApiResponse<List<StaffMemberDto>>
+
+    @GET("staff/{id}")
+    suspend fun getStaffById(
+        @Path("id") id: String,
+    ): ApiResponse<StaffMemberDto>
+
     // Academic (Classes & Subjects)
     @GET("academic/classes")
     suspend fun getClasses(
