@@ -118,7 +118,17 @@ fun AssignmentDetailScreen(
                             }
                         }
                         val mime = context.contentResolver.getType(it) ?: "application/octet-stream"
-                        val name = resolvedName ?: it.lastPathSegment?.substringAfterLast('/') ?: "lampiran_tugas_${System.currentTimeMillis()}"
+                        val inferredExt = android.webkit.MimeTypeMap.getSingleton()
+                            .getExtensionFromMimeType(mime)
+                            ?.lowercase()
+                            ?.takeIf { ext -> ext.isNotBlank() }
+                        var name = (resolvedName ?: it.lastPathSegment?.substringAfterLast('/') ?: "lampiran_tugas_${System.currentTimeMillis()}")
+                            .trim()
+                            .replace(':', '_')
+                            .ifBlank { "lampiran_tugas_${System.currentTimeMillis()}" }
+                        if (!name.contains('.') && inferredExt != null) {
+                            name = "$name.$inferredExt"
+                        }
                         val data = context.contentResolver.openInputStream(it)?.use { stream -> stream.readBytes() }
                             ?: throw IllegalArgumentException("Gagal membaca berkas lampiran.")
                         if (data.size > maxBytes) {

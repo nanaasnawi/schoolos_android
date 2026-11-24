@@ -38,7 +38,6 @@ data class AssignmentDetailUiState(
 class AssignmentDetailViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val repository: AssignmentRepository,
-    private val learningMaterialRepository: com.schoolos.android.domain.repository.LearningMaterialRepository,
     private val academicRepository: com.schoolos.android.domain.repository.AcademicRepository,
     private val authManager: com.schoolos.android.core.auth.AuthManager,
     private val gamificationRepository: com.schoolos.android.domain.repository.GamificationRepository,
@@ -156,7 +155,7 @@ class AssignmentDetailViewModel @Inject constructor(
     fun uploadAttachment(bytes: ByteArray, fileName: String, mimeType: String) {
         viewModelScope.launch {
             _state.value = _state.value.copy(isUploadingFile = true, submitError = null)
-            learningMaterialRepository.uploadMaterialFile(bytes, fileName, mimeType)
+            repository.uploadAssignmentFile(bytes, fileName, mimeType)
                 .onSuccess { url ->
                     _state.value = _state.value.copy(
                         isUploadingFile = false,

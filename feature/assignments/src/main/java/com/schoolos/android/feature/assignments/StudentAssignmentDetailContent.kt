@@ -37,14 +37,18 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.MenuBook
+import androidx.compose.material.icons.filled.Attachment
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.DeleteOutline
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Forum
 import androidx.compose.material.icons.filled.Grade
 import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.OpenInNew
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Schedule
@@ -52,6 +56,7 @@ import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -105,6 +110,7 @@ import com.schoolos.android.core.common.formatPublishTimestamp
 import com.schoolos.android.core.designsystem.TextTertiary
 import com.schoolos.android.core.designsystem.LocalIsDarkTheme
 import com.schoolos.android.core.designsystem.QuestionPromptWithDiagram
+import com.schoolos.android.core.designsystem.resolveServerMediaUrl
 import com.schoolos.android.domain.model.Assignment
 import com.schoolos.android.domain.model.AssignmentQuestion
 import com.schoolos.android.domain.model.AssignmentSubmission
@@ -546,6 +552,11 @@ fun StudentAssignmentDetailContent(
                     content = content,
                     onContentChange = onContentChange,
                     onSubmitClick = onSubmitClick,
+                    attachedFileUrl = attachedFileUrl,
+                    attachedFileName = attachedFileName,
+                    isUploadingFile = isUploadingFile,
+                    onPickAttachment = onPickAttachment,
+                    onClearAttachment = onClearAttachment,
                 )
             } else {
                 SubmissionEditor(
@@ -556,7 +567,12 @@ fun StudentAssignmentDetailContent(
                     onContentChange = onContentChange,
                     onSubmitClick = onSubmitClick,
                     hasQuestions = false,
-                    allAnswered = content.isNotBlank(),
+                    allAnswered = content.isNotBlank() || !attachedFileUrl.isNullOrBlank(),
+                    attachedFileUrl = attachedFileUrl,
+                    attachedFileName = attachedFileName,
+                    isUploadingFile = isUploadingFile,
+                    onPickAttachment = onPickAttachment,
+                    onClearAttachment = onClearAttachment,
                 )
             }
         }
@@ -1095,6 +1111,214 @@ private fun MaterialRow(
     }
 }
 
+// ── SHARED ATTACHMENT UPLOAD BOX ──────────────────────────────────────────────
+@Composable
+private fun AssignmentAttachmentBox(
+    attachedFileUrl: String?,
+    attachedFileName: String?,
+    isUploadingFile: Boolean,
+    enabled: Boolean,
+    onPickAttachment: (() -> Unit)?,
+    onClearAttachment: (() -> Unit)?,
+    optionalLabel: Boolean = false,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val hasAttachment = !attachedFileUrl.isNullOrBlank()
+    val displayFileName = attachedFileName?.takeIf { it.isNotBlank() }
+        ?: attachedFileUrl?.substringAfterLast('/')
+        ?: "Berkas lampiran"
+
+    when {
+        isUploadingFile -> {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(NeonBlue.copy(alpha = if (isDark) 0.14f else 0.08f))
+                    .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                    .padding(14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                CircularProgressIndicator(
+                    color = NeonBlue,
+                    strokeWidth = 2.5.dp,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Mengunggah berkas lampiran...",
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonBlue,
+                    )
+                    Text(
+                        text = "Mohon tunggu hingga berkas tersimpan ke server",
+                        fontSize = 10.5.sp,
+                        color = TextSecondary,
+                    )
+                }
+            }
+        }
+
+        hasAttachment -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(NeonSuccess.copy(alpha = if (isDark) 0.14f else 0.08f))
+                    .border(1.dp, NeonSuccess.copy(alpha = 0.40f), RoundedCornerShape(14.dp))
+                    .padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(NeonSuccess.copy(alpha = 0.18f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Attachment,
+                            contentDescription = null,
+                            tint = NeonSuccess,
+                            modifier = Modifier.size(18.dp),
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Berkas Terlampir ✓",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Black,
+                            color = NeonSuccess,
+                        )
+                        Text(
+                            text = displayFileName,
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+
+                if (enabled) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        if (onPickAttachment != null) {
+                            OutlinedButton(
+                                onClick = onPickAttachment,
+                                modifier = Modifier.weight(1f),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, NeonSuccess.copy(alpha = 0.45f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonSuccess),
+                            ) {
+                                Icon(Icons.Default.CloudUpload, null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("Ganti Berkas", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                        if (onClearAttachment != null) {
+                            OutlinedButton(
+                                onClick = onClearAttachment,
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, NeonError.copy(alpha = 0.40f)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = NeonError),
+                            ) {
+                                Icon(Icons.Default.DeleteOutline, null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(4.dp))
+                                Text("Hapus", fontSize = 11.5.sp, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        onPickAttachment != null -> {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(StudentNeon.copy(alpha = if (isDark) 0.10f else 0.06f))
+                    .border(1.dp, StudentNeon.copy(alpha = 0.35f), RoundedCornerShape(14.dp))
+                    .clickable(enabled = enabled) { onPickAttachment() }
+                    .padding(14.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(38.dp)
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(StudentNeon.copy(alpha = 0.16f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.CloudUpload,
+                            contentDescription = null,
+                            tint = StudentNeon,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = if (optionalLabel) "Unggah Berkas Lampiran (Opsional)" else "Unggah Berkas / Foto Lembar Kerja",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                        )
+                        Text(
+                            text = "Pilih foto bukti skor, PDF, atau Word (Maks. 25 MB)",
+                            fontSize = 11.sp,
+                            color = TextSecondary,
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(StudentNeon)
+                        .padding(vertical = 9.dp),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = Color.White,
+                            modifier = Modifier.size(16.dp),
+                        )
+                        Text(
+                            text = "Pilih Berkas / Foto dari HP",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White,
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ── SUBMISSION EDITOR ─────────────────────────────────────────────────────────
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -1107,12 +1331,19 @@ private fun SubmissionEditor(
     onSubmitClick: () -> Unit,
     hasQuestions: Boolean = false,
     allAnswered: Boolean = true,
+    attachedFileUrl: String? = null,
+    attachedFileName: String? = null,
+    isUploadingFile: Boolean = false,
+    onPickAttachment: (() -> Unit)? = null,
+    onClearAttachment: (() -> Unit)? = null,
 ) {
     var showEditorSheet by remember { mutableStateOf(false) }
     val isDark = LocalIsDarkTheme.current
     val submitBtnBg = if (isDark) Color(0xFF6366F1) else Color(0xFF4F46E5)
     val disabledBtnBg = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
     val disabledBtnFg = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val hasAttachment = !attachedFileUrl.isNullOrBlank()
+    val canSubmitWork = if (hasQuestions) allAnswered else (content.isNotBlank() || hasAttachment)
 
     Box(
         modifier = Modifier
@@ -1133,7 +1364,7 @@ private fun SubmissionEditor(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        imageVector = Icons.Default.CloudUpload,
                         contentDescription = null,
                         tint = StudentNeon,
                         modifier = Modifier.size(16.dp)
@@ -1142,13 +1373,15 @@ private fun SubmissionEditor(
                 Spacer(Modifier.width(10.dp))
                 Column {
                     Text(
-                        if (isParent) "Jawaban Anak" else "Jawaban Kamu",
+                        if (isParent) "Pengumpulan Tugas Anak" else "Pengumpulan Berkas & Jawaban",
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Black,
                         color = TextPrimary
                     )
                     Text(
-                        if (!isActive) "Tugas telah ditutup" else "Ketuk untuk menulis & mengirim jawaban",
+                        if (!isActive) "Tugas telah ditutup"
+                        else if (isParent) "Mode pratinjau orang tua"
+                        else "Unggah foto/PDF lembar kerja atau tulis jawaban langsung",
                         fontSize = 10.sp,
                         color = TextTertiary
                     )
@@ -1157,7 +1390,24 @@ private fun SubmissionEditor(
 
             HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
 
-            if (!isActive) {
+            if (isParent) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(CosmicBlack)
+                        .border(1.dp, GlassBorder2, RoundedCornerShape(12.dp))
+                        .padding(14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "Mode Pratinjau Orang Tua (Hanya siswa yang dapat mengunggah berkas & mengumpulkan tugas)",
+                        fontSize = 11.5.sp,
+                        color = TextTertiary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            } else if (!isActive) {
                 // Closed state
                 Box(
                     modifier = Modifier
@@ -1188,7 +1438,18 @@ private fun SubmissionEditor(
                     }
                 }
             } else {
-                // Clickable summary box that opens ModalBottomSheet
+                // Prominent file/photo upload section for upload-based & document assignments
+                AssignmentAttachmentBox(
+                    attachedFileUrl = attachedFileUrl,
+                    attachedFileName = attachedFileName,
+                    isUploadingFile = isUploadingFile,
+                    enabled = !isSubmitting,
+                    onPickAttachment = onPickAttachment,
+                    onClearAttachment = onClearAttachment,
+                    optionalLabel = false,
+                )
+
+                // Clickable text note/answer box that opens ModalBottomSheet
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -1209,8 +1470,8 @@ private fun SubmissionEditor(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = if (content.isNotBlank()) content else "Ketuk di sini untuk menulis jawaban tugasmu...",
-                                fontSize = 12.5.sp,
+                                text = if (content.isNotBlank()) content else "Ketuk untuk menulis uraian jawaban / catatan (opsional jika unggah berkas)...",
+                                fontSize = 12.sp,
                                 color = if (content.isNotBlank()) TextPrimary else TextTertiary,
                                 maxLines = 4,
                                 overflow = TextOverflow.Ellipsis,
@@ -1236,16 +1497,16 @@ private fun SubmissionEditor(
                     }
                 }
 
-                // Primary button: opens bottom sheet if empty, or submits/opens sheet
+                // Primary submit button
                 Button(
                     onClick = {
-                        if (content.isBlank() && !hasQuestions) {
-                            showEditorSheet = true
-                        } else {
+                        if (canSubmitWork) {
                             onSubmitClick()
+                        } else {
+                            showEditorSheet = true
                         }
                     },
-                    enabled = (if (hasQuestions) allAnswered else true) && !isSubmitting,
+                    enabled = canSubmitWork && !isSubmitting && !isUploadingFile,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),
@@ -1272,17 +1533,17 @@ private fun SubmissionEditor(
                         )
                     } else {
                         Icon(
-                            imageVector = if (content.isBlank() && !hasQuestions) Icons.Default.Edit else Icons.Default.Send,
+                            imageVector = Icons.Default.Send,
                             contentDescription = null,
-                            tint = Color.White,
+                            tint = if (canSubmitWork) Color.White else disabledBtnFg,
                             modifier = Modifier.size(16.dp)
                         )
                         Spacer(Modifier.width(8.dp))
                         Text(
-                            if (content.isBlank() && !hasQuestions) "Tulis Jawaban & Kumpulkan" else "Kumpulkan Tugas",
+                            text = if (canSubmitWork) "Kirim / Serahkan Tugas" else "Lampirkan Berkas atau Isi Jawaban",
                             fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            fontSize = 14.sp
+                            color = if (canSubmitWork) Color.White else disabledBtnFg,
+                            fontSize = 13.5.sp
                         )
                     }
                 }
@@ -1315,13 +1576,13 @@ private fun SubmissionEditor(
                 ) {
                     Column {
                         Text(
-                            text = "Lembar Jawaban Tugas",
+                            text = "Lembar Jawaban & Lampiran",
                             fontSize = 16.sp,
                             fontWeight = FontWeight.Black,
                             color = TextPrimary
                         )
                         Text(
-                            text = "Tulis jawabanmu dengan jelas dan lengkap",
+                            text = "Tulis uraian atau lampirkan berkas jawaban",
                             fontSize = 11.5.sp,
                             color = TextSecondary
                         )
@@ -1334,19 +1595,29 @@ private fun SubmissionEditor(
                     )
                 }
 
+                AssignmentAttachmentBox(
+                    attachedFileUrl = attachedFileUrl,
+                    attachedFileName = attachedFileName,
+                    isUploadingFile = isUploadingFile,
+                    enabled = !isSubmitting,
+                    onPickAttachment = onPickAttachment,
+                    onClearAttachment = onClearAttachment,
+                    optionalLabel = true,
+                )
+
                 OutlinedTextField(
                     value = content,
                     onValueChange = onContentChange,
                     placeholder = {
                         Text(
-                            "Tulis jawabanmu di sini dengan jelas dan lengkap sebelum dikirim...",
+                            "Tulis jawaban atau catatan tambahan di sini...",
                             fontSize = 12.5.sp,
                             color = TextTertiary
                         )
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .heightIn(min = 150.dp),
+                        .heightIn(min = 140.dp),
                     maxLines = 8,
                     shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1382,7 +1653,7 @@ private fun SubmissionEditor(
                             showEditorSheet = false
                             onSubmitClick()
                         },
-                        enabled = (if (hasQuestions) allAnswered else content.isNotBlank()) && !isSubmitting,
+                        enabled = canSubmitWork && !isSubmitting && !isUploadingFile,
                         modifier = Modifier
                             .weight(1.4f)
                             .height(48.dp),
@@ -1394,9 +1665,9 @@ private fun SubmissionEditor(
                             disabledContentColor = disabledBtnFg
                         )
                     ) {
-                        Icon(Icons.Default.Send, null, tint = Color.White, modifier = Modifier.size(16.dp))
+                        Icon(Icons.Default.Send, null, tint = if (canSubmitWork) Color.White else disabledBtnFg, modifier = Modifier.size(16.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Kumpulkan", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 13.sp)
+                        Text("Kumpulkan", fontWeight = FontWeight.Bold, color = if (canSubmitWork) Color.White else disabledBtnFg, fontSize = 13.sp)
                     }
                 }
             }
@@ -1506,6 +1777,77 @@ private fun SubmissionStatusCard(
                                 color = TextTertiary,
                                 fontWeight = FontWeight.SemiBold
                             )
+                        }
+                    }
+                }
+            }
+
+            // Submitted attachment preview
+            if (!submission.fileUrl.isNullOrBlank()) {
+                val context = LocalContext.current
+                val rawFileUrl = submission.fileUrl!!
+                val resolvedUrl = remember(rawFileUrl) { resolveServerMediaUrl(rawFileUrl) }
+                HorizontalDivider(color = GlassBorder, thickness = 0.5.dp)
+                Column {
+                    Text(
+                        "BERKAS LAMPIRAN YANG DIKIRIM",
+                        fontSize = 10.sp,
+                        color = TextTertiary,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.8.sp
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(NeonBlue.copy(alpha = 0.10f))
+                            .border(1.dp, NeonBlue.copy(alpha = 0.35f), RoundedCornerShape(12.dp))
+                            .clickable {
+                                runCatching {
+                                    val intent = android.content.Intent(
+                                        android.content.Intent.ACTION_VIEW,
+                                        android.net.Uri.parse(resolvedUrl)
+                                    ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    context.startActivity(intent)
+                                }.onFailure {
+                                    android.widget.Toast.makeText(
+                                        context,
+                                        "Tidak ada aplikasi untuk membuka berkas ini.",
+                                        android.widget.Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Icon(Icons.Default.Attachment, null, tint = NeonBlue, modifier = Modifier.size(17.dp))
+                            Text(
+                                text = rawFileUrl.substringAfterLast('/'),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = TextPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(NeonBlue)
+                                .padding(horizontal = 9.dp, vertical = 5.dp),
+                        ) {
+                            Icon(Icons.Default.OpenInNew, null, tint = Color.White, modifier = Modifier.size(12.dp))
+                            Text("Buka", fontSize = 10.5.sp, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     }
                 }
@@ -2487,6 +2829,11 @@ private fun QuestionsSubmissionCard(
     content: String,
     onContentChange: (String) -> Unit,
     onSubmitClick: () -> Unit,
+    attachedFileUrl: String? = null,
+    attachedFileName: String? = null,
+    isUploadingFile: Boolean = false,
+    onPickAttachment: (() -> Unit)? = null,
+    onClearAttachment: (() -> Unit)? = null,
 ) {
     var showNoteAndSubmitSheet by remember { mutableStateOf(false) }
 
@@ -2744,6 +3091,25 @@ private fun QuestionsSubmissionCard(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
                         )
                     }
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "LAMPIRAN BERKAS TAMBAHAN (OPSIONAL)",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textTertiary,
+                        letterSpacing = 0.5.sp
+                    )
+                    AssignmentAttachmentBox(
+                        attachedFileUrl = attachedFileUrl,
+                        attachedFileName = attachedFileName,
+                        isUploadingFile = isUploadingFile,
+                        enabled = !isSubmitting,
+                        onPickAttachment = onPickAttachment,
+                        onClearAttachment = onClearAttachment,
+                        optionalLabel = true,
+                    )
                 }
 
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {

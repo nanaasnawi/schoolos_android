@@ -115,6 +115,12 @@ interface SchoolOsApi {
     @GET("learning/assignments")
     suspend fun getAssignments(@Query("class_id") classId: String? = null): ApiResponse<List<AssignmentDto>>
 
+    @Multipart
+    @POST("learning/assignments/upload")
+    suspend fun uploadAssignmentFile(
+        @Part file: okhttp3.MultipartBody.Part,
+    ): ApiResponse<FileUploadResponse>
+
     @GET("learning/assignments/{id}")
     suspend fun getAssignment(@Path("id") id: String): ApiResponse<AssignmentDto>
 

@@ -851,6 +851,28 @@ private fun TeacherSubmissionRow(
                         maxLines = 1
                     )
                 }
+                if (!submission.fileUrl.isNullOrBlank() && !isUnsubmitted) {
+                    Spacer(Modifier.height(3.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Attachment,
+                            contentDescription = null,
+                            tint = Color(0xFF0284C7),
+                            modifier = Modifier.size(12.dp)
+                        )
+                        Text(
+                            "Berkas: ${submission.fileUrl!!.substringAfterLast('/')}",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF0284C7),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
             }
 
             Spacer(Modifier.width(8.dp))
@@ -1608,6 +1630,12 @@ private fun TeacherInlineGradingCard(
                                             android.net.Uri.parse(resolvedFileUrl)
                                         ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
                                         context.startActivity(intent)
+                                    }.onFailure {
+                                        android.widget.Toast.makeText(
+                                            context,
+                                            "Tidak ada aplikasi untuk membuka berkas ini.",
+                                            android.widget.Toast.LENGTH_SHORT
+                                        ).show()
                                     }
                                 }
                                 .padding(horizontal = 12.dp, vertical = 10.dp)

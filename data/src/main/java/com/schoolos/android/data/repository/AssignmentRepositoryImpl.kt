@@ -16,6 +16,8 @@ import com.schoolos.android.domain.repository.AssignmentRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -138,6 +140,21 @@ class AssignmentRepositoryImpl @Inject constructor(
         )
         val response = api.createAssignment(request)
         response.data?.dtoToDomain() ?: throw Exception(response.error?.message ?: "Gagal membuat tugas.")
+    }
+
+    override suspend fun uploadAssignmentFile(
+        bytes: ByteArray,
+        fileName: String,
+        mimeType: String,
+    ): Result<String> = runCatching {
+        if (bytes.size > 25 * 1024 * 1024) {
+            throw IllegalArgumentException("Ukuran berkas melebihi batas maksimal 25 MB.")
+        }
+        val mediaType = mimeType.toMediaTypeOrNull()
+        val requestBody = bytes.toRequestBody(mediaType)
+        val part = okhttp3.MultipartBody.Part.createFormData("file", fileName, requestBody)
+        val response = api.uploadAssignmentFile(part)
+        response.data?.url ?: throw Exception(response.error?.message ?: "Gagal mengunggah berkas lampiran.")
     }
 
     override suspend fun submitAssignment(

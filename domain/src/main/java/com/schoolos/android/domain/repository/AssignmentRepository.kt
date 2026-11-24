@@ -18,6 +18,11 @@ interface AssignmentRepository {
         releaseAt: String? = null,
         status: String? = "published",
     ): Result<Assignment>
+    suspend fun uploadAssignmentFile(
+        bytes: ByteArray,
+        fileName: String,
+        mimeType: String,
+    ): Result<String>
     // answers: list of Pair(questionId, chosenChoiceId or textAnswer)
     suspend fun submitAssignment(
         assignmentId: String,
