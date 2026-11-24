@@ -2,11 +2,32 @@ package com.schoolos.android.domain.repository
 
 import com.schoolos.android.domain.model.Quiz
 import com.schoolos.android.domain.model.QuizAttempt
+import com.schoolos.android.domain.model.QuizProctorMonitor
+import com.schoolos.android.domain.model.QuizProctorScheduleDashboard
 import com.schoolos.android.domain.model.QuizQuestion
 
 interface QuizRepository {
     suspend fun getQuizzes(classId: String): Result<List<Quiz>>
+    suspend fun getProctorSchedule(): Result<QuizProctorScheduleDashboard>
     suspend fun getQuiz(id: String): Result<Quiz>
+    suspend fun updateQuiz(
+        id: String,
+        durationMinutes: Int? = null,
+        startAt: String? = null,
+        endAt: String? = null,
+        examMode: String? = null,
+        examToken: String? = null,
+        status: String? = null,
+    ): Result<Quiz>
+    suspend fun getProctorMonitor(id: String): Result<QuizProctorMonitor>
+    suspend fun rotateProctorToken(
+        id: String,
+        customToken: String? = null,
+        expiresInMinutes: Int? = null,
+    ): Result<Quiz>
+    suspend fun extendProctorTime(id: String, extraMinutes: Int): Result<Quiz>
+    suspend fun forceSubmitAttempt(quizId: String, attemptId: String): Result<Unit>
+    suspend fun reopenAttempt(quizId: String, attemptId: String): Result<Unit>
     suspend fun createQuiz(
         title: String,
         description: String?,

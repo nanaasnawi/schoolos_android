@@ -10,10 +10,15 @@ import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.data.remote.StartAttemptRequest
 import com.schoolos.android.data.remote.CreateQuizQuestionRequestDto
 import com.schoolos.android.data.remote.CreateQuizOptionRequestDto
+import com.schoolos.android.data.remote.dto.ExtendTimeRequestDto
+import com.schoolos.android.data.remote.dto.RotateTokenRequestDto
 import com.schoolos.android.data.remote.dto.SubmitAnswerRequest
 import com.schoolos.android.data.remote.dto.SubmitAttemptRequest
+import com.schoolos.android.data.remote.dto.UpdateQuizRequestDto
 import com.schoolos.android.domain.model.Quiz
 import com.schoolos.android.domain.model.QuizAttempt
+import com.schoolos.android.domain.model.QuizProctorMonitor
+import com.schoolos.android.domain.model.QuizProctorScheduleDashboard
 import com.schoolos.android.domain.model.QuizQuestion
 import com.schoolos.android.domain.repository.AnswerInput
 import com.schoolos.android.domain.repository.ChoiceInput
@@ -57,6 +62,100 @@ class QuizRepositoryImpl @Inject constructor(
 
     fun getCachedQuizzes(): Flow<List<Quiz>> {
         return quizDao.getQuizzes().map { list -> list.map { it.toDomain() } }
+    }
+
+    override suspend fun getProctorSchedule(): Result<QuizProctorScheduleDashboard> = try {
+        val response = api.getProctorSchedule()
+        val data = response.data?.dtoToDomain()
+            ?: throw Exception(response.error?.message ?: "Gagal memuat jadwal pengawas CBT.")
+        Result.success(data)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal memuat jadwal pengawas CBT."))
+    }
+
+    override suspend fun updateQuiz(
+        id: String,
+        durationMinutes: Int?,
+        startAt: String?,
+        endAt: String?,
+        examMode: String?,
+        examToken: String?,
+        status: String?,
+    ): Result<Quiz> = try {
+        val response = api.updateQuiz(
+            id = id,
+            request = UpdateQuizRequestDto(
+                durationMinutes = durationMinutes,
+                startAt = startAt,
+                endAt = endAt,
+                examMode = examMode,
+                examToken = examToken,
+                status = status,
+            ),
+        )
+        val domain = response.data?.dtoToDomain()
+            ?: throw Exception(response.error?.message ?: "Gagal memperbarui jadwal ujian CBT.")
+        try { quizDao.insert(domain.toEntity()) } catch (_: Exception) {}
+        Result.success(domain)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal memperbarui jadwal ujian CBT."))
+    }
+
+    override suspend fun getProctorMonitor(id: String): Result<QuizProctorMonitor> = try {
+        val response = api.getProctorMonitor(id)
+        val data = response.data?.dtoToDomain()
+            ?: throw Exception(response.error?.message ?: "Gagal memuat monitor proktor CBT.")
+        try { quizDao.insert(data.quiz.toEntity()) } catch (_: Exception) {}
+        Result.success(data)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal memuat monitor proktor CBT."))
+    }
+
+    override suspend fun rotateProctorToken(
+        id: String,
+        customToken: String?,
+        expiresInMinutes: Int?,
+    ): Result<Quiz> = try {
+        val response = api.rotateProctorToken(
+            id = id,
+            request = RotateTokenRequestDto(
+                customToken = customToken?.trim()?.uppercase()?.takeIf { it.isNotBlank() },
+                expiresInMinutes = expiresInMinutes,
+            ),
+        )
+        val domain = response.data?.dtoToDomain()
+            ?: throw Exception(response.error?.message ?: "Gagal memperbarui token ujian CBT.")
+        try { quizDao.insert(domain.toEntity()) } catch (_: Exception) {}
+        Result.success(domain)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal memperbarui token ujian CBT."))
+    }
+
+    override suspend fun extendProctorTime(id: String, extraMinutes: Int): Result<Quiz> = try {
+        val response = api.extendProctorTime(
+            id = id,
+            request = ExtendTimeRequestDto(extraMinutes = extraMinutes),
+        )
+        val domain = response.data?.dtoToDomain()
+            ?: throw Exception(response.error?.message ?: "Gagal memperpanjang waktu ujian CBT.")
+        try { quizDao.insert(domain.toEntity()) } catch (_: Exception) {}
+        Result.success(domain)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal memperpanjang waktu ujian CBT."))
+    }
+
+    override suspend fun forceSubmitAttempt(quizId: String, attemptId: String): Result<Unit> = try {
+        api.forceSubmitQuizAttempt(quizId, attemptId)
+        Result.success(Unit)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal menyelesaikan sesi ujian peserta."))
+    }
+
+    override suspend fun reopenAttempt(quizId: String, attemptId: String): Result<Unit> = try {
+        api.reopenQuizAttempt(quizId, attemptId)
+        Result.success(Unit)
+    } catch (e: Throwable) {
+        Result.failure(parseHttpError(e, "Gagal membuka ulang sesi ujian peserta."))
     }
 
     override suspend fun getQuiz(id: String): Result<Quiz> = runCatching {
@@ -113,6 +212,7 @@ class QuizRepositoryImpl @Inject constructor(
                                 id = it.id,
                                 choiceText = it.choiceText,
                                 orderIndex = it.orderIndex,
+                                isCorrect = it.isCorrect,
                             )
                         }
                         com.schoolos.android.core.database.entity.QuizQuestionEntity(

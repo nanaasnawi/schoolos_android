@@ -284,7 +284,7 @@ fun LazyListScope.principalContent(
                 HomeMenuGridCard(
                     modifier = Modifier.weight(1f),
                     title = "Kuis & Ujian",
-                    subtitle = "Rekap asesmen CBT & kuis seluruh rombel",
+                    subtitle = "Token ujian, jadwal sesi & pantau proktor CBT",
                     badgeText = quizBadge,
                     badgeBg = kuisBadgeBg,
                     badgeColor = kuisColor,

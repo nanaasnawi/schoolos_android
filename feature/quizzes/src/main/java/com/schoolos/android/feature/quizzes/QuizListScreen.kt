@@ -1,8 +1,5 @@
 package com.schoolos.android.feature.quizzes
 
-import com.schoolos.android.core.R as CoreR
-import androidx.compose.ui.res.painterResource
-
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
@@ -13,21 +10,56 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.rounded.CalendarMonth
+import androidx.compose.material.icons.rounded.FactCheck
+import androidx.compose.material.icons.rounded.Key
+import androidx.compose.material.icons.rounded.MonitorHeart
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -40,7 +72,25 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
-import com.schoolos.android.core.designsystem.*
+import com.schoolos.android.core.auth.isPrincipalRole
+import com.schoolos.android.core.auth.isTeacherRole
+import com.schoolos.android.core.auth.resolveRoleDisplay
+import com.schoolos.android.core.designsystem.CosmicBlack
+import com.schoolos.android.core.designsystem.ErrorState
+import com.schoolos.android.core.designsystem.ExecutiveTopBar
+import com.schoolos.android.core.designsystem.LoadingState
+import com.schoolos.android.core.designsystem.LocalIsDarkTheme
+import com.schoolos.android.core.designsystem.NeonBlue
+import com.schoolos.android.core.designsystem.NeonError
+import com.schoolos.android.core.designsystem.NeonSuccess
+import com.schoolos.android.core.designsystem.NeonWarning
+import com.schoolos.android.core.designsystem.PullRefreshContainer
+import com.schoolos.android.core.designsystem.SessionDateFilterBadge
+import com.schoolos.android.core.designsystem.StudentNeon
+import com.schoolos.android.core.designsystem.SubjectFilterChip
+import com.schoolos.android.core.designsystem.TeacherNeon
+import com.schoolos.android.domain.model.Quiz
+import com.schoolos.android.domain.model.QuizProctorScheduleDashboard
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,15 +103,21 @@ fun QuizListScreen(
     viewModel: QuizListViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsState()
-    val isPrincipal = com.schoolos.android.core.auth.isPrincipalRole(state.userRole)
-    val isTeacher = com.schoolos.android.core.auth.isTeacherRole(state.userRole) || isPrincipal
+    val isPrincipal = isPrincipalRole(state.userRole)
+    val isTeacher = isTeacherRole(state.userRole) || isPrincipal
     var isSpeedDialOpen by remember { mutableStateOf(false) }
+
+    var staffMainTab by rememberSaveable { mutableIntStateOf(0) } // 0: Daftar & Token, 1: Jadwal & Pantau
+    var searchQuery by rememberSaveable { mutableStateOf("") }
+    var statusFilter by rememberSaveable { mutableStateOf("ALL") }
+
+    val nowMs = rememberTickerMillis(1000L)
 
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
-                viewModel.refresh()
+                viewModel.forceRefresh()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -70,31 +126,72 @@ fun QuizListScreen(
         }
     }
 
-    val scheduledQuizzes = if (isTeacher) {
-        state.quizzes.filter { it.isScheduled || it.status.lowercase() == "draft" }
-    } else emptyList()
-
-    val upcomingStudentQuizzes = if (!isTeacher) {
-        state.quizzes.filter {
-            !it.studentHasCompleted &&
-                it.studentAttemptStatus?.lowercase() !in listOf("completed", "submitted", "graded") &&
-                it.isScheduled
+    val queryLower = searchQuery.trim().lowercase()
+    val searchMatchedQuizzes = remember(state.quizzes, queryLower) {
+        if (queryLower.isEmpty()) {
+            state.quizzes
+        } else {
+            state.quizzes.filter { q ->
+                q.title.lowercase().contains(queryLower) ||
+                    (q.subjectName?.lowercase()?.contains(queryLower) == true) ||
+                    (q.effectiveDisplayClass?.lowercase()?.contains(queryLower) == true) ||
+                    (q.teacherName?.lowercase()?.contains(queryLower) == true) ||
+                    (q.examToken?.lowercase()?.contains(queryLower) == true)
+            }
         }
-    } else emptyList()
-
-    val doneQuizzes = state.quizzes.filter {
-        it !in scheduledQuizzes && (
-            it.studentHasCompleted ||
-            it.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded") ||
-            (!isTeacher && it.hasExpired) ||
-            it.status.lowercase() in listOf("closed", "archived", "graded", "submitted", "completed")
-        )
     }
-    val activeQuizzes = state.quizzes.filter {
-        it !in scheduledQuizzes &&
-            it !in upcomingStudentQuizzes &&
-            it !in doneQuizzes &&
-            (isTeacher || it.isCurrentlyOpenForExam)
+
+    val statusMatchedQuizzes = remember(searchMatchedQuizzes, statusFilter, isTeacher) {
+        when (statusFilter) {
+            "LIVE" -> searchMatchedQuizzes.filter { q ->
+                if (!isTeacher) {
+                    val done = q.studentHasCompleted || q.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded")
+                    !done && q.effectivePhase == "LIVE"
+                } else {
+                    q.effectivePhase == "LIVE"
+                }
+            }
+            "UPCOMING" -> searchMatchedQuizzes.filter { it.effectivePhase == "UPCOMING" }
+            "DRAFT" -> searchMatchedQuizzes.filter { it.effectivePhase == "DRAFT" }
+            "ENDED" -> searchMatchedQuizzes.filter { q ->
+                q.effectivePhase == "ENDED" || (!isTeacher && (q.studentHasCompleted || q.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded")))
+            }
+            else -> searchMatchedQuizzes
+        }
+    }
+
+    val liveStaffQuizzes = statusMatchedQuizzes.filter { it.effectivePhase == "LIVE" }
+    val upcomingStaffQuizzes = statusMatchedQuizzes.filter { it.effectivePhase == "UPCOMING" }
+    val draftStaffQuizzes = statusMatchedQuizzes.filter { it.effectivePhase == "DRAFT" }
+    val endedStaffQuizzes = statusMatchedQuizzes.filter { it.effectivePhase == "ENDED" }
+
+    val doneStudentQuizzes = statusMatchedQuizzes.filter {
+        it.effectivePhase == "ENDED" ||
+            it.studentHasCompleted ||
+            it.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded")
+    }
+    val upcomingStudentQuizzes = statusMatchedQuizzes.filter {
+        it !in doneStudentQuizzes && it.effectivePhase == "UPCOMING"
+    }
+    val activeStudentQuizzes = statusMatchedQuizzes.filter {
+        it !in doneStudentQuizzes && it !in upcomingStudentQuizzes && it.isCurrentlyOpenForExam
+    }
+
+    val sessionsById = remember(state.proctorSchedule) {
+        state.proctorSchedule?.sessions?.associateBy { it.id }.orEmpty()
+    }
+    val filteredScheduleSessions = remember(state.proctorSchedule, queryLower, statusFilter) {
+        val base = state.proctorSchedule?.sessions.orEmpty()
+        base.filter { s ->
+            val matchQ = queryLower.isEmpty() ||
+                s.title.lowercase().contains(queryLower) ||
+                (s.subjectName?.lowercase()?.contains(queryLower) == true) ||
+                (s.className?.lowercase()?.contains(queryLower) == true) ||
+                (s.teacherName?.lowercase()?.contains(queryLower) == true) ||
+                (s.examToken?.lowercase()?.contains(queryLower) == true)
+            val matchStatus = statusFilter == "ALL" || s.examPhase.equals(statusFilter, ignoreCase = true)
+            matchQ && matchStatus
+        }
     }
 
     val isDark = LocalIsDarkTheme.current
@@ -105,35 +202,43 @@ fun QuizListScreen(
     val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
     val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
     val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
+    val primaryAccent = if (isTeacher) TeacherNeon else StudentNeon
 
     Scaffold(
         containerColor = CosmicBlack,
         topBar = {
             ExecutiveTopBar(
-                title = if (isPrincipal) "Monitoring Kuis & CBT" else "Kuis & Evaluasi",
+                title = when {
+                    isPrincipal -> "Supervisi Ujian & CBT"
+                    isTeacher -> "Kendali Kuis & Ujian CBT"
+                    else -> "Portal Ujian & CBT Siswa"
+                },
                 subtitle = when {
-                    isPrincipal -> "Pemantauan pelaksanaan kuis & ujian CBT sekolah"
-                    isTeacher -> "Kelola & pantau kuis kelas"
-                    else -> "Kerjakan kuis & pantau hasil belajar"
+                    isPrincipal -> "Token, jadwal & pantauan room proktor seluruh rombel"
+                    isTeacher -> "Kelola jadwal, bagikan token & pantau peserta realtime"
+                    else -> "Jadwal ujian CBT, persiapan token & hasil evaluasi"
                 },
                 onBack = onBack,
                 actions = {
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(if (isTeacher) TeacherNeon.copy(alpha = 0.12f) else StudentNeon.copy(alpha = 0.12f))
-                            .border(0.5.dp, if (isTeacher) TeacherNeon.copy(alpha = 0.25f) else StudentNeon.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
-                            .padding(horizontal = 8.dp, vertical = 3.dp)
+                            .background(primaryAccent.copy(alpha = 0.12f))
+                            .border(0.5.dp, primaryAccent.copy(alpha = 0.25f), RoundedCornerShape(6.dp))
+                            .padding(horizontal = 8.dp, vertical = 3.dp),
                     ) {
                         Text(
-                            text = com.schoolos.android.core.auth.resolveRoleDisplay(if (isPrincipal) "principal" else if (isTeacher) "teacher" else "student", isFormalUpper = true),
+                            text = resolveRoleDisplay(
+                                if (isPrincipal) "principal" else if (isTeacher) "teacher" else "student",
+                                isFormalUpper = true,
+                            ),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (isTeacher) TeacherNeon else StudentNeon,
-                            letterSpacing = 0.5.sp
+                            color = primaryAccent,
+                            letterSpacing = 0.5.sp,
                         )
                     }
-                }
+                },
             )
         },
         floatingActionButton = {
@@ -145,13 +250,13 @@ fun QuizListScreen(
                 val rotation by animateFloatAsState(
                     targetValue = if (isSpeedDialOpen) 135f else 0f,
                     animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                    label = "fabRotation"
+                    label = "fabRotation",
                 )
 
                 Column(
                     horizontalAlignment = Alignment.End,
                     verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp)
+                    modifier = Modifier.navigationBarsPadding().padding(bottom = 8.dp),
                 ) {
                     AnimatedVisibility(
                         visible = isSpeedDialOpen,
@@ -166,7 +271,7 @@ fun QuizListScreen(
                                 .clickable {
                                     isSpeedDialOpen = false
                                     onCreateQuiz()
-                                }
+                                },
                         ) {
                             Surface(
                                 shape = RoundedCornerShape(8.dp),
@@ -175,11 +280,11 @@ fun QuizListScreen(
                                 shadowElevation = 0.dp,
                             ) {
                                 Text(
-                                    text = "Buat Kuis",
+                                    text = "Buat Kuis / Ujian",
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (isDark) Color(0xFF34D399) else Color(0xFF047857),
-                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                                 )
                             }
                             Surface(
@@ -190,25 +295,19 @@ fun QuizListScreen(
                                 modifier = Modifier.size(42.dp),
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Default.Add,
-                                        contentDescription = "Buat Kuis",
-                                        tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
-                                    )
+                                    Icon(Icons.Default.Add, contentDescription = "Buat Kuis", tint = Color.White, modifier = Modifier.size(20.dp))
                                 }
                             }
                         }
                     }
 
-                    // Main Executive Floating Button
                     Surface(
                         onClick = { isSpeedDialOpen = !isSpeedDialOpen },
                         shape = CircleShape,
                         color = if (isSpeedDialOpen) (if (isDark) Color(0xFF27272A) else Color(0xFFF1F5F9)) else primaryColor,
                         border = BorderStroke(1.dp, if (isSpeedDialOpen) speedDialBorder else primaryBorder),
                         shadowElevation = 0.dp,
-                        modifier = Modifier.size(52.dp)
+                        modifier = Modifier.size(52.dp),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -217,13 +316,13 @@ fun QuizListScreen(
                                 tint = if (isSpeedDialOpen) (if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)) else Color.White,
                                 modifier = Modifier
                                     .size(22.dp)
-                                    .graphicsLayer { rotationZ = rotation }
+                                    .graphicsLayer { rotationZ = rotation },
                             )
                         }
                     }
                 }
             }
-        }
+        },
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             PullRefreshContainer(
@@ -231,145 +330,367 @@ fun QuizListScreen(
                 onRefresh = { viewModel.refresh(isPullRefresh = true) },
                 modifier = Modifier.fillMaxSize(),
             ) {
-            if (state.isLoading) {
-                LoadingState()
-            } else if (state.error != null) {
-                ErrorState(message = state.error!!, onRetry = viewModel::refresh)
-            } else {
-                LazyColumn(
-                    modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 12.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                ) {
-                    // Active Subject / Class Filter (from session/schedule)
-                    if (state.subjectFilter != null || state.classFilter != null || state.dateFilter != null) {
-                        item {
-                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                if (state.subjectFilter != null || state.classFilter != null) {
-                                    SubjectFilterChip(
-                                        subject = state.subjectFilter.orEmpty(),
-                                        className = state.classFilter,
-                                        canClear = false,
-                                    )
-                                }
-                                if (state.dateFilter != null) {
-                                    SessionDateFilterBadge(
-                                        dateStr = state.dateFilter!!,
-                                        onShowAllArchive = { viewModel.clearDateFilter() }
-                                    )
-                                }
-                            }
-                        }
-                    }
+                when {
+                    state.isLoading -> LoadingState()
+                    state.error != null -> ErrorState(message = state.error!!, onRetry = viewModel::forceRefresh)
+                    else -> {
+                        AdaptiveQuizWidthContainer(maxWidth = 1160.dp) { widthClass ->
+                            val columns = if (widthClass == QuizWindowWidthClass.COMPACT) 1 else 2
+                            val hPadding = widthClass.contentHorizontalPadding()
 
-                    // Hero Banner
-                    item {
-                        if (isTeacher) {
-                            TeacherQuizHeroBanner(
-                                activeCount = activeQuizzes.size,
-                                totalCount = state.quizzes.size
-                            )
-                        } else {
-                            StudentQuizHeroBanner(
-                                activeCount = activeQuizzes.size,
-                                doneCount = doneQuizzes.size,
-                                totalCount = state.quizzes.size
-                            )
-                        }
-                    }
-
-                    // Empty State
-                    if (state.quizzes.isEmpty()) {
-                        item {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(22.dp))
-                                    .background(cardBg)
-                                    .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
-                                    .padding(36.dp),
-                                contentAlignment = Alignment.Center
+                            LazyColumn(
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(
+                                    start = hPadding,
+                                    end = hPadding,
+                                    top = 12.dp,
+                                    bottom = 90.dp,
+                                ),
+                                verticalArrangement = Arrangement.spacedBy(10.dp),
                             ) {
-                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(52.dp)
-                                            .clip(CircleShape)
-                                            .background(innerCardBg)
-                                            .border(1.dp, innerCardBorder, CircleShape),
-                                        contentAlignment = Alignment.Center,
-                                    ) {
-                                        Icon(
-                                            painter = painterResource(id = CoreR.drawable.ic_modern_quiz),
-                                            contentDescription = null,
-                                            tint = textTertiary,
-                                            modifier = Modifier.size(24.dp)
+                                // Active route filters
+                                if (state.subjectFilter != null || state.classFilter != null || state.dateFilter != null) {
+                                    item(key = "nav-filters") {
+                                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                            if (state.subjectFilter != null || state.classFilter != null) {
+                                                SubjectFilterChip(
+                                                    subject = state.subjectFilter.orEmpty(),
+                                                    className = state.classFilter,
+                                                    canClear = false,
+                                                )
+                                            }
+                                            if (state.dateFilter != null) {
+                                                SessionDateFilterBadge(
+                                                    dateStr = state.dateFilter!!,
+                                                    onShowAllArchive = { viewModel.clearDateFilter() },
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Hero / Spotlight Banner
+                                item(key = "hero-banner") {
+                                    if (isTeacher) {
+                                        TeacherProctorHeroBanner(
+                                            isPrincipal = isPrincipal,
+                                            quizzes = state.quizzes,
+                                            schedule = state.proctorSchedule,
+                                            widthClass = widthClass,
+                                        )
+                                    } else {
+                                        val spotlightQuiz = state.quizzes.firstOrNull { q ->
+                                            val done = q.studentHasCompleted || q.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded")
+                                            !done && (q.effectivePhase == "LIVE" || q.effectivePhase == "UPCOMING")
+                                        }
+                                        StudentQuizHeroBanner(
+                                            activeCount = state.quizzes.count { it.isCurrentlyOpenForExam },
+                                            upcomingCount = state.quizzes.count {
+                                                !it.studentHasCompleted && it.effectivePhase == "UPCOMING"
+                                            },
+                                            doneCount = state.quizzes.count {
+                                                it.studentHasCompleted ||
+                                                    it.studentAttemptStatus?.lowercase() in listOf("completed", "submitted", "graded") ||
+                                                    it.effectivePhase == "ENDED"
+                                            },
+                                            totalCount = state.quizzes.size,
+                                            spotlightQuiz = spotlightQuiz,
+                                            nowMs = nowMs,
+                                            onOpenSpotlight = { qId -> onQuizClick(qId) },
                                         )
                                     }
-                                    Spacer(Modifier.height(12.dp))
-                                    Text(
-                                        text = "Belum Ada Kuis",
-                                        color = textPrimary,
-                                        fontSize = 16.sp,
-                                        fontWeight = FontWeight.Bold
+                                }
+
+                                // Staff Primary Mode Tabs: Daftar & Token vs Jadwal & Pantau
+                                if (isTeacher) {
+                                    item(key = "staff-mode-tabs") {
+                                        StaffHubModeTabs(
+                                            selectedTab = staffMainTab,
+                                            onSelectTab = { staffMainTab = it },
+                                            scheduleCount = state.proctorSchedule?.sessions?.size ?: state.quizzes.size,
+                                            conflictCount = state.proctorSchedule?.summary?.conflictCount ?: 0,
+                                        )
+                                    }
+                                }
+
+                                // Search + Status Filter Chips
+                                item(key = "search-and-filter") {
+                                    QuizSearchAndFilterBar(
+                                        query = searchQuery,
+                                        onQueryChange = { searchQuery = it },
+                                        selectedStatus = statusFilter,
+                                        onSelectStatus = { statusFilter = it },
+                                        isTeacher = isTeacher,
+                                        quizzes = state.quizzes,
                                     )
-                                    Spacer(Modifier.height(4.dp))
-                                    Text(
-                                        text = if (isTeacher) "Buat kuis baru melalui tombol tambah kuis di pojok kanan bawah" else "Guru belum menambahkan kuis untuk kelas ini",
-                                        color = textSecondary,
-                                        fontSize = 12.sp,
-                                        textAlign = TextAlign.Center,
-                                        lineHeight = 17.sp
+                                }
+
+                                if (isTeacher && staffMainTab == 1) {
+                                    if (filteredScheduleSessions.isEmpty()) {
+                                        item(key = "empty-schedule") {
+                                            EmptyQuizStateCard(
+                                                title = "Belum Ada Jadwal Ujian",
+                                                subtitle = "Tidak ada sesi ujian CBT yang cocok dengan filter pencarian Anda.",
+                                                cardBg = cardBg,
+                                                cardBorder = cardBorder,
+                                                innerCardBg = innerCardBg,
+                                                innerCardBorder = innerCardBorder,
+                                                textPrimary = textPrimary,
+                                                textSecondary = textSecondary,
+                                                textTertiary = textTertiary,
+                                            )
+                                        }
+                                    } else {
+                                        proctorScheduleTabContent(
+                                            dashboard = state.proctorSchedule,
+                                            filteredSessions = filteredScheduleSessions,
+                                            columns = columns,
+                                            nowMs = nowMs,
+                                            onQuizClick = onQuizClick,
+                                        )
+                                    }
+                                } else if (statusMatchedQuizzes.isEmpty()) {
+                                    item(key = "empty-quizzes") {
+                                        EmptyQuizStateCard(
+                                            title = if (state.quizzes.isEmpty()) "Belum Ada Paket Ujian" else "Tidak Ditemukan",
+                                            subtitle = if (state.quizzes.isEmpty()) {
+                                                if (isTeacher) "Buat paket kuis atau ujian baru melalui tombol + di pojok kanan bawah"
+                                                else "Guru belum menerbitkan jadwal kuis atau ujian CBT untuk kelas Anda"
+                                            } else {
+                                                "Ubah kata kunci pencarian atau pilih filter status lainnya."
+                                            },
+                                            cardBg = cardBg,
+                                            cardBorder = cardBorder,
+                                            innerCardBg = innerCardBg,
+                                            innerCardBorder = innerCardBorder,
+                                            textPrimary = textPrimary,
+                                            textSecondary = textSecondary,
+                                            textTertiary = textTertiary,
+                                        )
+                                    }
+                                } else if (isTeacher) {
+                                    teacherQuizListContent(
+                                        liveQuizzes = liveStaffQuizzes,
+                                        upcomingQuizzes = upcomingStaffQuizzes,
+                                        draftQuizzes = draftStaffQuizzes,
+                                        endedQuizzes = endedStaffQuizzes,
+                                        sessionsById = sessionsById,
+                                        columns = columns,
+                                        nowMs = nowMs,
+                                        onQuizClick = onQuizClick,
+                                    )
+                                } else {
+                                    studentQuizListContent(
+                                        activeQuizzes = activeStudentQuizzes,
+                                        upcomingQuizzes = upcomingStudentQuizzes,
+                                        doneQuizzes = doneStudentQuizzes,
+                                        columns = columns,
+                                        nowMs = nowMs,
+                                        onQuizClick = onQuizClick,
                                     )
                                 }
                             }
                         }
-                    }
-
-                    // Quiz list content
-                    if (isTeacher) {
-                        teacherQuizListContent(
-                            activeQuizzes = activeQuizzes,
-                            doneQuizzes = doneQuizzes,
-                            scheduledQuizzes = scheduledQuizzes,
-                            onQuizClick = onQuizClick
-                        )
-                    } else {
-                        studentQuizListContent(
-                            activeQuizzes = activeQuizzes,
-                            upcomingQuizzes = upcomingStudentQuizzes,
-                            doneQuizzes = doneQuizzes,
-                            onQuizClick = onQuizClick
-                        )
                     }
                 }
             }
         }
+    }
+}
 
-        // Speed dial scrim
-        AnimatedVisibility(
-            visible = isSpeedDialOpen,
-            enter = fadeIn(tween(200)),
-            exit = fadeOut(tween(150))
+@Composable
+private fun StaffHubModeTabs(
+    selectedTab: Int,
+    onSelectTab: (Int) -> Unit,
+    scheduleCount: Int,
+    conflictCount: Int,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val trackBg = if (isDark) Color(0xFF141416) else Color(0xFFF1F5F9)
+    val trackBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val activeBg = if (isDark) Color(0xFF064E3B) else Color.White
+    val activeText = if (isDark) Color(0xFF34D399) else Color(0xFF059669)
+    val inactiveText = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        color = trackBg,
+        border = BorderStroke(1.dp, trackBorder),
+    ) {
+        Row(
+            modifier = Modifier.padding(4.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.32f))
-                    .clickable { isSpeedDialOpen = false }
-            )
+            listOf(
+                Triple(0, Icons.Rounded.Key, "Daftar & Token"),
+                Triple(1, Icons.Rounded.CalendarMonth, "Jadwal & Pantau ($scheduleCount)"),
+            ).forEach { (idx, icon, label) ->
+                val isSelected = selectedTab == idx
+                Surface(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onSelectTab(idx) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) activeBg else Color.Transparent,
+                    border = if (isSelected) BorderStroke(1.dp, activeText.copy(alpha = 0.35f)) else null,
+                    shadowElevation = if (isSelected && !isDark) 1.dp else 0.dp,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(vertical = 9.dp, horizontal = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = if (isSelected) activeText else inactiveText,
+                            modifier = Modifier.size(15.dp),
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = label,
+                            fontSize = 12.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                            color = if (isSelected) activeText else inactiveText,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (idx == 1 && conflictCount > 0) {
+                            Spacer(Modifier.width(5.dp))
+                            Box(
+                                modifier = Modifier
+                                    .size(7.dp)
+                                    .clip(CircleShape)
+                                    .background(NeonError)
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }
-}
 
-// ── STUDENT QUIZ HERO BANNER ──────────────────────────────────────────────────
+@Composable
+private fun QuizSearchAndFilterBar(
+    query: String,
+    onQueryChange: (String) -> Unit,
+    selectedStatus: String,
+    onSelectStatus: (String) -> Unit,
+    isTeacher: Boolean,
+    quizzes: List<Quiz>,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val inputBg = if (isDark) Color(0xFF141416) else Color.White
+    val inputBorder = if (isDark) Color(0xFF27272A) else Color(0xFFE2E8F0)
+    val textPrimary = if (isDark) Color(0xFFF4F4F5) else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
+    val accent = if (isTeacher) TeacherNeon else StudentNeon
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChange,
+            singleLine = true,
+            placeholder = {
+                Text(
+                    text = if (isTeacher) {
+                        "Cari judul ujian, mapel, kelas (PAKET A), guru, atau token..."
+                    } else {
+                        "Cari ujian atau mata pelajaran..."
+                    },
+                    fontSize = 12.5.sp,
+                    color = textSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            },
+            leadingIcon = {
+                Icon(Icons.Rounded.Search, contentDescription = null, tint = textSecondary, modifier = Modifier.size(18.dp))
+            },
+            trailingIcon = {
+                if (query.isNotEmpty()) {
+                    IconButton(onClick = { onQueryChange("") }, modifier = Modifier.size(28.dp)) {
+                        Icon(Icons.Default.Close, contentDescription = "Hapus Pencarian", tint = textSecondary, modifier = Modifier.size(16.dp))
+                    }
+                }
+            },
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = inputBg,
+                unfocusedContainerColor = inputBg,
+                focusedBorderColor = accent,
+                unfocusedBorderColor = inputBorder,
+                focusedTextColor = textPrimary,
+                unfocusedTextColor = textPrimary,
+            ),
+            modifier = Modifier.fillMaxWidth(),
+        )
+
+        val liveCount = quizzes.count { it.effectivePhase == "LIVE" }
+        val upcomingCount = quizzes.count { it.effectivePhase == "UPCOMING" }
+        val draftCount = quizzes.count { it.effectivePhase == "DRAFT" }
+        val endedCount = quizzes.count { it.effectivePhase == "ENDED" }
+
+        val chips = if (isTeacher) {
+            listOf(
+                "ALL" to "Semua (${quizzes.size})",
+                "LIVE" to "Live ($liveCount)",
+                "UPCOMING" to "Terjadwal ($upcomingCount)",
+                "DRAFT" to "Draf ($draftCount)",
+                "ENDED" to "Berakhir ($endedCount)",
+            )
+        } else {
+            listOf(
+                "ALL" to "Semua (${quizzes.size})",
+                "LIVE" to "Dibuka ($liveCount)",
+                "UPCOMING" to "Terjadwal ($upcomingCount)",
+                "ENDED" to "Selesai ($endedCount)",
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            chips.forEach { (key, label) ->
+                val isSelected = selectedStatus == key
+                Surface(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .clickable { onSelectStatus(key) },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (isSelected) accent.copy(alpha = 0.14f) else inputBg,
+                    border = BorderStroke(1.dp, if (isSelected) accent else inputBorder),
+                ) {
+                    Text(
+                        text = label,
+                        fontSize = 11.5.sp,
+                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                        color = if (isSelected) accent else textSecondary,
+                        modifier = Modifier.padding(horizontal = 11.dp, vertical = 6.dp),
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
+            }
+        }
+    }
+}
 
 @Composable
 private fun StudentQuizHeroBanner(
     activeCount: Int,
+    upcomingCount: Int,
     doneCount: Int,
     totalCount: Int,
+    spotlightQuiz: Quiz?,
+    nowMs: Long,
+    onOpenSpotlight: (String) -> Unit,
 ) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
@@ -384,7 +705,7 @@ private fun StudentQuizHeroBanner(
     val progressFraction = if (totalCount > 0) doneCount.toFloat() / totalCount.toFloat() else 0f
     val animatedProgress by animateFloatAsState(targetValue = progressFraction, label = "quizProgress")
     val completionPercent = (progressFraction * 100).toInt()
-    val allDone = activeCount == 0 && totalCount > 0
+    val allDone = activeCount == 0 && upcomingCount == 0 && totalCount > 0
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -394,132 +715,173 @@ private fun StudentQuizHeroBanner(
         shadowElevation = 0.dp,
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = studentAccent.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.35f))
+                    border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.35f)),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_modern_quiz),
-                            contentDescription = null,
-                            tint = studentAccent,
-                            modifier = Modifier.size(13.dp)
-                        )
-                        Text(
-                            "PORTAL EVALUASI & CBT",
-                            color = studentAccent,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.6.sp
-                        )
+                        Icon(Icons.Rounded.FactCheck, contentDescription = null, tint = studentAccent, modifier = Modifier.size(14.dp))
+                        Text("PORTAL UJIAN & CBT", color = studentAccent, fontSize = 10.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.5.sp)
                     }
                 }
 
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = if (allDone) (if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7)) else innerCardBg,
-                    border = BorderStroke(1.dp, if (allDone) (if (isDark) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFF86EFAC)) else innerCardBorder)
+                    border = BorderStroke(1.dp, if (allDone) NeonSuccess.copy(alpha = 0.5f) else innerCardBorder),
                 ) {
                     Text(
-                        text = if (allDone) "Semua Selesai ✓" else "$completionPercent% Selesai",
-                        color = if (allDone) (if (isDark) Color(0xFF34D399) else Color(0xFF15803D)) else textSecondary,
+                        text = if (allDone) "Semua Selesai" else "$completionPercent% Tuntas",
+                        color = if (allDone) NeonSuccess else textSecondary,
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                     )
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
-                Text(
-                    text = if (allDone) "Semua kuis telah tuntas diselesaikan" else "Uji Pemahaman Materi & CBT",
-                    color = textPrimary,
-                    fontSize = 15.sp,
-                    lineHeight = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                )
-                Text(
-                    text = if (activeCount > 0) "$activeCount kuis siap untuk dikerjakan hari ini" else "Pantau hasil evaluasi dan ulas materi pembelajaranmu.",
-                    color = textSecondary,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp
-                )
+            if (spotlightQuiz != null) {
+                val spPhase = spotlightQuiz.effectivePhase
+                val spWindow = formatExamWindowWib(spotlightQuiz.startAt, spotlightQuiz.endAt, spotlightQuiz.releaseAt)
+                val spCountdown = if (spPhase == "LIVE") {
+                    computeSecondsRemaining(spotlightQuiz.endAt, spotlightQuiz.secondsRemaining, nowMs)?.let { "Berakhir ${formatCountdownHuman(it)}" }
+                } else {
+                    computeSecondsUntilStart(spotlightQuiz.startAt, spotlightQuiz.releaseAt, spotlightQuiz.secondsUntilStart, nowMs)?.let { "Dimulai ${formatCountdownHuman(it)}" }
+                }
+                Surface(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(14.dp))
+                        .clickable { onOpenSpotlight(spotlightQuiz.id) },
+                    shape = RoundedCornerShape(14.dp),
+                    color = (if (spPhase == "LIVE") studentAccent else NeonWarning).copy(alpha = 0.11f),
+                    border = BorderStroke(1.dp, (if (spPhase == "LIVE") studentAccent else NeonWarning).copy(alpha = 0.4f)),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(
+                                text = if (spPhase == "LIVE") "UJIAN SEDANG BERLANGSUNG" else "UJIAN BERIKUTNYA",
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = if (spPhase == "LIVE") studentAccent else NeonWarning,
+                                letterSpacing = 0.4.sp,
+                            )
+                            Text(
+                                text = spotlightQuiz.title,
+                                fontSize = 13.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = textPrimary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Text(
+                                text = listOfNotNull(spWindow.combinedLabel, spCountdown).joinToString(" • "),
+                                fontSize = 11.sp,
+                                color = textSecondary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Button(
+                            onClick = { onOpenSpotlight(spotlightQuiz.id) },
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (spPhase == "LIVE") studentAccent else NeonWarning,
+                                contentColor = Color.White,
+                            ),
+                            modifier = Modifier.height(34.dp),
+                        ) {
+                            if (spPhase == "LIVE") {
+                                Icon(Icons.Rounded.PlayArrow, null, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(2.dp))
+                            }
+                            Text(if (spPhase == "LIVE") "Mulai" else "Jadwal", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
             }
 
-            // Quick stats
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 ModernQuizStatCard(
-                    title = "Total Kuis",
-                    value = "$totalCount",
-                    iconRes = CoreR.drawable.ic_modern_quiz,
-                    valueColor = textPrimary,
-                    innerCardBg = innerCardBg,
-                    innerCardBorder = innerCardBorder,
-                    textTertiary = textTertiary,
-                    modifier = Modifier.weight(1f)
-                )
-                ModernQuizStatCard(
-                    title = "Dikerjakan",
-                    value = "$doneCount",
-                    iconRes = CoreR.drawable.ic_modern_check_circle,
-                    valueColor = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A),
-                    innerCardBg = innerCardBg,
-                    innerCardBorder = innerCardBorder,
-                    textTertiary = textTertiary,
-                    modifier = Modifier.weight(1f)
-                )
-                ModernQuizStatCard(
-                    title = "Kuis Aktif",
+                    title = "Aktif Live",
                     value = "$activeCount",
-                    iconRes = CoreR.drawable.ic_modern_clock,
-                    valueColor = if (activeCount > 0) (if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)) else textSecondary,
+                    icon = Icons.Rounded.PlayArrow,
+                    valueColor = if (activeCount > 0) studentAccent else textSecondary,
                     innerCardBg = innerCardBg,
                     innerCardBorder = innerCardBorder,
                     textTertiary = textTertiary,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
+                )
+                ModernQuizStatCard(
+                    title = "Terjadwal",
+                    value = "$upcomingCount",
+                    icon = Icons.Rounded.CalendarMonth,
+                    valueColor = if (upcomingCount > 0) NeonWarning else textSecondary,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
+                    modifier = Modifier.weight(1f),
+                )
+                ModernQuizStatCard(
+                    title = "Selesai",
+                    value = "$doneCount",
+                    icon = Icons.Rounded.FactCheck,
+                    valueColor = NeonSuccess,
+                    innerCardBg = innerCardBg,
+                    innerCardBorder = innerCardBorder,
+                    textTertiary = textTertiary,
+                    modifier = Modifier.weight(1f),
                 )
             }
 
-            // Progress bar
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(5.dp)
                     .clip(RoundedCornerShape(3.dp))
-                    .background(innerCardBorder)
+                    .background(innerCardBorder),
             ) {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth(animatedProgress)
                         .fillMaxHeight()
                         .clip(RoundedCornerShape(3.dp))
-                        .background(studentAccent)
+                        .background(studentAccent),
                 )
             }
         }
     }
 }
 
-// ── TEACHER QUIZ HERO BANNER ──────────────────────────────────────────────────
-
 @Composable
-private fun TeacherQuizHeroBanner(activeCount: Int, totalCount: Int) {
+private fun TeacherProctorHeroBanner(
+    isPrincipal: Boolean,
+    quizzes: List<Quiz>,
+    schedule: QuizProctorScheduleDashboard?,
+    widthClass: QuizWindowWidthClass,
+) {
     val isDark = LocalIsDarkTheme.current
     val cardBg = if (isDark) Color(0xFF111113) else Color.White
     val cardBorder = if (isDark) Color(0xFF1F1F23) else Color(0xFFE2E8F0)
@@ -529,6 +891,12 @@ private fun TeacherQuizHeroBanner(activeCount: Int, totalCount: Int) {
     val textSecondary = if (isDark) Color(0xFFA1A1AA) else Color(0xFF64748B)
     val textTertiary = if (isDark) Color(0xFF71717A) else Color(0xFF94A3B8)
     val teacherAccent = if (isDark) Color(0xFF10B981) else Color(0xFF059669)
+    val warningColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+
+    val liveCount = schedule?.summary?.liveCount ?: quizzes.count { it.effectivePhase == "LIVE" }
+    val upcomingCount = schedule?.summary?.upcomingCount ?: quizzes.count { it.effectivePhase == "UPCOMING" }
+    val tokenCount = quizzes.count { !it.examToken.isNullOrBlank() }
+    val flaggedOrConflict = (schedule?.summary?.flaggedStudentsTotal ?: 0L) + (schedule?.summary?.conflictCount?.toLong() ?: 0L)
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
@@ -538,36 +906,31 @@ private fun TeacherQuizHeroBanner(activeCount: Int, totalCount: Int) {
         shadowElevation = 0.dp,
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
+            modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
             ) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = teacherAccent.copy(alpha = 0.12f),
-                    border = BorderStroke(1.dp, teacherAccent.copy(alpha = 0.35f))
+                    border = BorderStroke(1.dp, teacherAccent.copy(alpha = 0.35f)),
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(5.dp),
                     ) {
-                        Icon(
-                            painter = painterResource(id = CoreR.drawable.ic_modern_quiz),
-                            contentDescription = null,
-                            tint = teacherAccent,
-                            modifier = Modifier.size(13.dp)
-                        )
+                        Icon(Icons.Rounded.MonitorHeart, contentDescription = null, tint = teacherAccent, modifier = Modifier.size(14.dp))
                         Text(
-                            "MANAJEMEN KUIS & CBT",
+                            text = if (isPrincipal) "SUPERVISI PROKTOR & CBT" else "KENDALI PROKTOR & CBT",
                             color = teacherAccent,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.6.sp
+                            letterSpacing = 0.5.sp,
                         )
                     }
                 }
@@ -575,58 +938,69 @@ private fun TeacherQuizHeroBanner(activeCount: Int, totalCount: Int) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
                     color = innerCardBg,
-                    border = BorderStroke(1.dp, innerCardBorder)
+                    border = BorderStroke(1.dp, innerCardBorder),
                 ) {
                     Text(
-                        "$totalCount Total Kuis",
+                        text = "${quizzes.size} Paket Ujian",
                         color = textSecondary,
                         fontSize = 10.5.sp,
                         fontWeight = FontWeight.SemiBold,
-                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                     )
                 }
             }
 
-            Column(verticalArrangement = Arrangement.spacedBy(1.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 Text(
-                    text = "Evaluasi & Kuis CBT Siswa",
+                    text = if (isPrincipal) "Pusat Kendali Ujian Sekolah" else "Manajemen Sesi & Token CBT",
                     color = textPrimary,
-                    fontSize = 15.sp,
-                    lineHeight = 18.sp,
+                    fontSize = 15.5.sp,
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    text = "Pantau pengerjaan siswa, berikan koreksi dan distribusi nilai secara realtime.",
+                    text = "Lihat & salin token, cek jadwal bentrok, serta pantau kehadiran dan pelanggaran siswa langsung dari perangkat Anda.",
                     color = textSecondary,
-                    fontSize = 11.sp,
-                    lineHeight = 14.sp
+                    fontSize = 11.5.sp,
+                    lineHeight = 16.sp,
                 )
             }
 
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                ModernQuizStatCard(
-                    title = "Kuis Aktif",
-                    value = "$activeCount",
-                    iconRes = CoreR.drawable.ic_modern_clock,
-                    valueColor = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706),
-                    innerCardBg = innerCardBg,
-                    innerCardBorder = innerCardBorder,
-                    textTertiary = textTertiary,
-                    modifier = Modifier.weight(1f)
-                )
-                ModernQuizStatCard(
-                    title = "Total Dibuat",
-                    value = "$totalCount",
-                    iconRes = CoreR.drawable.ic_modern_quiz,
-                    valueColor = textPrimary,
-                    innerCardBg = innerCardBg,
-                    innerCardBorder = innerCardBorder,
-                    textTertiary = textTertiary,
-                    modifier = Modifier.weight(1f)
-                )
+            if (widthClass == QuizWindowWidthClass.COMPACT) {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ModernQuizStatCard("Sedang Live", "$liveCount", Icons.Rounded.MonitorHeart, teacherAccent, innerCardBg, innerCardBorder, textTertiary, Modifier.weight(1f))
+                        ModernQuizStatCard("Terjadwal", "$upcomingCount", Icons.Rounded.CalendarMonth, warningColor, innerCardBg, innerCardBorder, textTertiary, Modifier.weight(1f))
+                    }
+                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        ModernQuizStatCard("Token Siap", "$tokenCount", Icons.Rounded.Key, NeonBlue, innerCardBg, innerCardBorder, textTertiary, Modifier.weight(1f))
+                        ModernQuizStatCard(
+                            title = if (flaggedOrConflict > 0L) "Alert / Bentrok" else "Aman",
+                            value = "$flaggedOrConflict",
+                            icon = Icons.Rounded.FactCheck,
+                            valueColor = if (flaggedOrConflict > 0L) NeonError else textPrimary,
+                            innerCardBg = innerCardBg,
+                            innerCardBorder = innerCardBorder,
+                            textTertiary = textTertiary,
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                }
+            } else {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ModernQuizStatCard("Sedang Live", "$liveCount", Icons.Rounded.MonitorHeart, teacherAccent, innerCardBg, innerCardBorder, textTertiary, Modifier.weight(1f))
+                    ModernQuizStatCard("Terjadwal", "$upcomingCount", Icons.Rounded.CalendarMonth, warningColor, innerCardBg, innerCardBorder, textTertiary, Modifier.weight(1f))
+                    ModernQuizStatCard("Token Siap", "$tokenCount", Icons.Rounded.Key, NeonBlue, innerCardBg, innerCardBorder, textTertiary, Modifier.weight(1f))
+                    ModernQuizStatCard(
+                        title = if (flaggedOrConflict > 0L) "Alert / Bentrok" else "Total Ujian",
+                        value = if (flaggedOrConflict > 0L) "$flaggedOrConflict" else "${quizzes.size}",
+                        icon = Icons.Rounded.FactCheck,
+                        valueColor = if (flaggedOrConflict > 0L) NeonError else textPrimary,
+                        innerCardBg = innerCardBg,
+                        innerCardBorder = innerCardBorder,
+                        textTertiary = textTertiary,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
             }
         }
     }
@@ -636,7 +1010,7 @@ private fun TeacherQuizHeroBanner(activeCount: Int, totalCount: Int) {
 private fun ModernQuizStatCard(
     title: String,
     value: String,
-    iconRes: Int,
+    icon: ImageVector,
     valueColor: Color,
     innerCardBg: Color,
     innerCardBorder: Color,
@@ -644,7 +1018,7 @@ private fun ModernQuizStatCard(
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.height(64.dp),
+        modifier = modifier.height(60.dp),
         shape = RoundedCornerShape(14.dp),
         color = innerCardBg,
         border = BorderStroke(1.dp, innerCardBorder),
@@ -655,17 +1029,12 @@ private fun ModernQuizStatCard(
             verticalArrangement = Arrangement.Center,
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    painter = painterResource(id = iconRes),
-                    contentDescription = null,
-                    tint = valueColor,
-                    modifier = Modifier.size(14.dp)
-                )
+                Icon(imageVector = icon, contentDescription = null, tint = valueColor, modifier = Modifier.size(15.dp))
                 Spacer(Modifier.width(5.dp))
                 Text(
                     text = value,
                     color = valueColor,
-                    fontSize = 15.sp,
+                    fontSize = 15.5.sp,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -679,6 +1048,52 @@ private fun ModernQuizStatCard(
                 fontWeight = FontWeight.Medium,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyQuizStateCard(
+    title: String,
+    subtitle: String,
+    cardBg: Color,
+    cardBorder: Color,
+    innerCardBg: Color,
+    innerCardBorder: Color,
+    textPrimary: Color,
+    textSecondary: Color,
+    textTertiary: Color,
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .background(cardBg)
+            .border(1.dp, cardBorder, RoundedCornerShape(22.dp))
+            .padding(32.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                modifier = Modifier
+                    .size(52.dp)
+                    .clip(CircleShape)
+                    .background(innerCardBg)
+                    .border(1.dp, innerCardBorder, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.FactCheck, contentDescription = null, tint = textTertiary, modifier = Modifier.size(24.dp))
+            }
+            Spacer(Modifier.height(12.dp))
+            Text(text = title, color = textPrimary, fontSize = 15.5.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = subtitle,
+                color = textSecondary,
+                fontSize = 12.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 17.sp,
             )
         }
     }

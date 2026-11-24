@@ -60,6 +60,17 @@ fun Quiz.toEntity() = QuizEntity(
     createdAt = createdAt,
     updatedAt = updatedAt,
     releaseAt = releaseAt,
+    subjectName = subjectName,
+    classId = classId,
+    className = className,
+    teacherName = teacherName,
+    examMode = examMode,
+    assessmentCategory = assessmentCategory,
+    examToken = examToken,
+    requiresToken = requiresToken,
+    startAt = startAt,
+    endAt = endAt,
+    examPhase = examPhase,
 )
 
 fun QuizEntity.toDomain() = Quiz(
@@ -75,6 +86,17 @@ fun QuizEntity.toDomain() = Quiz(
     createdAt = createdAt,
     updatedAt = updatedAt,
     releaseAt = releaseAt,
+    subjectName = subjectName,
+    classId = classId,
+    className = className,
+    teacherName = teacherName,
+    examMode = examMode,
+    assessmentCategory = assessmentCategory,
+    examToken = examToken,
+    requiresToken = requiresToken,
+    startAt = startAt,
+    endAt = endAt,
+    examPhase = examPhase,
 )
 
 fun Notification.toEntity(userId: String) = NotificationEntity(

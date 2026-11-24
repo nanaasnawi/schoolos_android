@@ -24,6 +24,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -50,6 +51,15 @@ private enum class GeneratorStep {
     GENERATING,
     VERIFY
 }
+
+private data class AssignmentFormatOption(
+    val key: String,
+    val title: String,
+    val subtitle: String,
+    val badge: String,
+    val icon: ImageVector,
+    val accent: Color,
+)
 
 @Composable
 fun AssignmentAiGeneratorScreen(
@@ -97,6 +107,44 @@ fun AssignmentAiGeneratorScreen(
     val amberAccent = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
     val amberSoftBg = if (isDark) Color(0xFF451A03).copy(alpha = 0.4f) else Color(0xFFFEF3C7)
     val amberSoftBorder = if (isDark) Color(0xFFD97706).copy(alpha = 0.45f) else Color(0xFFFDE68A)
+    val skyAccent = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+
+    val formatOptions = remember(isDark, emeraldAccent, skyAccent, amberAccent, purpleAccent) {
+        listOf(
+            AssignmentFormatOption(
+                key = "GAME_MIXED",
+                title = "Paket Variatif + Game",
+                subtitle = "Soal PG + 4 Mini-Game interaktif (Tanpa esai • Otomatis)",
+                badge = "Rekomendasi",
+                icon = Icons.Default.AutoAwesome,
+                accent = emeraldAccent,
+            ),
+            AssignmentFormatOption(
+                key = "INTERACTIVE_GAMES",
+                title = "Misi Game Penuh",
+                subtitle = "100% 4 Mini-Game interaktif • Dinilai otomatis sistem",
+                badge = "Auto-Nilai",
+                icon = Icons.Default.SportsEsports,
+                accent = skyAccent,
+            ),
+            AssignmentFormatOption(
+                key = "STRUCTURED_QUESTIONS",
+                title = "Terstruktur (PG / Esai)",
+                subtitle = "Murni Pilihan Ganda, murni Esai, atau kombinasi",
+                badge = "Klasik",
+                icon = Icons.Default.AssignmentTurnedIn,
+                accent = amberAccent,
+            ),
+            AssignmentFormatOption(
+                key = "HOMEWORK_PR",
+                title = "Tugas Mandiri (PR)",
+                subtitle = "Instruksi lembar kerja terstruktur & rubrik penilaian",
+                badge = "Uraian",
+                icon = Icons.Default.EditNote,
+                accent = purpleAccent,
+            ),
+        )
+    }
 
     var currentStep by remember { mutableStateOf(GeneratorStep.CONFIGURE) }
     var generatedResult by remember { mutableStateOf<GeneratedCurriculumResult?>(null) }
@@ -440,96 +488,138 @@ fun AssignmentAiGeneratorScreen(
                                     modifier = Modifier.padding(16.dp),
                                     verticalArrangement = Arrangement.spacedBy(14.dp)
                                 ) {
-                                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        Text(
-                                            "Format Penugasan",
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 13.5.sp,
-                                            color = textPrimary
-                                        )
+                                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Text(
+                                                "Format Penugasan",
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.5.sp,
+                                                color = textPrimary
+                                            )
+                                            Text(
+                                                "4 mode aktif",
+                                                fontSize = 10.5.sp,
+                                                fontWeight = FontWeight.SemiBold,
+                                                color = textTertiary
+                                            )
+                                        }
+
                                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                                            listOf(
-                                                listOf(
-                                                    Triple("GAME_MIXED", "Paket Variatif + Game ✨", "PG + 4 Mini-Game (Tanpa Esai) • Otomatis"),
-                                                    Triple("INTERACTIVE_GAMES", "Misi Game Penuh 🎮", "100% 4 Mini-Game • Otomatis")
-                                                ),
-                                                listOf(
-                                                    Triple("STRUCTURED_QUESTIONS", "Terstruktur (PG / Esai)", "Murni PG, Murni Esai, atau kombinasi"),
-                                                    Triple("HOMEWORK_PR", "Tugas Mandiri (PR)", "Instruksi lembar kerja & rubrik")
-                                                )
-                                            ).forEach { rowPair ->
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            formatOptions.forEach { option ->
+                                                val isSel = selectedFormat == option.key
+                                                Surface(
+                                                    modifier = Modifier
+                                                        .fillMaxWidth()
+                                                        .clip(RoundedCornerShape(14.dp))
+                                                        .clickable {
+                                                            selectedFormat = option.key
+                                                            if (option.key == "GAME_MIXED" && numMcq < 1) {
+                                                                numMcq = 4
+                                                                customMcqInput = "4"
+                                                            }
+                                                            if (option.key == "HOMEWORK_PR" && numEssay < 1) {
+                                                                numEssay = 2
+                                                                customEssayInput = "2"
+                                                            }
+                                                            if (option.key == "STRUCTURED_QUESTIONS") {
+                                                                if (structuredMode != "ESSAY_ONLY" && numMcq < 1) {
+                                                                    numMcq = 4
+                                                                    customMcqInput = "4"
+                                                                }
+                                                                if (structuredMode != "MCQ_ONLY" && numEssay < 1) {
+                                                                    numEssay = 2
+                                                                    customEssayInput = "2"
+                                                                }
+                                                            }
+                                                        },
+                                                    shape = RoundedCornerShape(14.dp),
+                                                    color = if (isSel) {
+                                                        option.accent.copy(alpha = if (isDark) 0.16f else 0.08f)
+                                                    } else {
+                                                        subSurfaceBg
+                                                    },
+                                                    border = BorderStroke(
+                                                        width = if (isSel) 1.5.dp else 1.dp,
+                                                        color = if (isSel) option.accent else subSurfaceBorder
+                                                    )
                                                 ) {
-                                                    rowPair.forEach { (fmtKey, titleLabel, descLabel) ->
-                                                        val isSel = selectedFormat == fmtKey
-                                                        Surface(
+                                                    Row(
+                                                        modifier = Modifier
+                                                            .fillMaxWidth()
+                                                            .padding(horizontal = 12.dp, vertical = 11.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                                    ) {
+                                                        Box(
                                                             modifier = Modifier
-                                                                .weight(1f)
-                                                                .clip(RoundedCornerShape(13.dp))
-                                                                .clickable {
-                                                                    selectedFormat = fmtKey
-                                                                    if (fmtKey == "GAME_MIXED" && numMcq < 1) {
-                                                                        numMcq = 4
-                                                                        customMcqInput = "4"
-                                                                    }
-                                                                    if (fmtKey == "HOMEWORK_PR" && numEssay < 1) {
-                                                                        numEssay = 2
-                                                                        customEssayInput = "2"
-                                                                    }
-                                                                    if (fmtKey == "STRUCTURED_QUESTIONS") {
-                                                                        if (structuredMode != "ESSAY_ONLY" && numMcq < 1) {
-                                                                            numMcq = 4
-                                                                            customMcqInput = "4"
-                                                                        }
-                                                                        if (structuredMode != "MCQ_ONLY" && numEssay < 1) {
-                                                                            numEssay = 2
-                                                                            customEssayInput = "2"
-                                                                        }
-                                                                    }
-                                                                },
-                                                            shape = RoundedCornerShape(13.dp),
-                                                            color = if (isSel) emeraldSoftBg else subSurfaceBg,
-                                                            border = BorderStroke(
-                                                                width = if (isSel) 1.5.dp else 1.dp,
-                                                                color = if (isSel) emeraldAccent else subSurfaceBorder
-                                                            )
+                                                                .size(40.dp)
+                                                                .clip(RoundedCornerShape(11.dp))
+                                                                .background(
+                                                                    if (isSel) option.accent
+                                                                    else option.accent.copy(alpha = if (isDark) 0.18f else 0.12f)
+                                                                ),
+                                                            contentAlignment = Alignment.Center
                                                         ) {
-                                                            Column(
-                                                                modifier = Modifier.padding(12.dp),
-                                                                verticalArrangement = Arrangement.spacedBy(4.dp)
+                                                            Icon(
+                                                                imageVector = option.icon,
+                                                                contentDescription = null,
+                                                                tint = if (isSel) Color.White else option.accent,
+                                                                modifier = Modifier.size(20.dp)
+                                                            )
+                                                        }
+
+                                                        Column(
+                                                            modifier = Modifier.weight(1f),
+                                                            verticalArrangement = Arrangement.spacedBy(3.dp)
+                                                        ) {
+                                                            Row(
+                                                                verticalAlignment = Alignment.CenterVertically,
+                                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
                                                             ) {
-                                                                Row(
-                                                                    verticalAlignment = Alignment.CenterVertically,
-                                                                    horizontalArrangement = Arrangement.SpaceBetween,
-                                                                    modifier = Modifier.fillMaxWidth()
+                                                                Text(
+                                                                    text = option.title,
+                                                                    fontWeight = FontWeight.Bold,
+                                                                    fontSize = 13.sp,
+                                                                    color = if (isSel) option.accent else textPrimary,
+                                                                )
+                                                                Surface(
+                                                                    shape = RoundedCornerShape(6.dp),
+                                                                    color = option.accent.copy(alpha = if (isDark) 0.22f else 0.12f),
                                                                 ) {
                                                                     Text(
-                                                                        titleLabel,
+                                                                        text = option.badge,
+                                                                        fontSize = 9.5.sp,
                                                                         fontWeight = FontWeight.Bold,
-                                                                        fontSize = 11.5.sp,
-                                                                        color = if (isSel) emeraldAccent else textPrimary,
-                                                                        modifier = Modifier.weight(1f),
-                                                                        maxLines = 1,
-                                                                        overflow = TextOverflow.Ellipsis
+                                                                        color = option.accent,
+                                                                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                                     )
-                                                                    if (isSel) {
-                                                                        Icon(
-                                                                            Icons.Default.CheckCircle,
-                                                                            contentDescription = null,
-                                                                            tint = emeraldAccent,
-                                                                            modifier = Modifier.size(14.dp)
-                                                                        )
-                                                                    }
                                                                 }
-                                                                Text(
-                                                                    descLabel,
-                                                                    fontSize = 10.sp,
-                                                                    color = textSecondary,
-                                                                    lineHeight = 14.sp
-                                                                )
                                                             }
+                                                            Text(
+                                                                text = option.subtitle,
+                                                                fontSize = 11.sp,
+                                                                color = textSecondary,
+                                                                lineHeight = 15.sp
+                                                            )
+                                                        }
+
+                                                        if (isSel) {
+                                                            Icon(
+                                                                imageVector = Icons.Default.CheckCircle,
+                                                                contentDescription = null,
+                                                                tint = option.accent,
+                                                                modifier = Modifier.size(20.dp)
+                                                            )
+                                                        } else {
+                                                            Box(
+                                                                modifier = Modifier
+                                                                    .size(18.dp)
+                                                                    .border(1.5.dp, cardBorder, CircleShape)
+                                                            )
                                                         }
                                                     }
                                                 }
@@ -547,7 +637,9 @@ fun AssignmentAiGeneratorScreen(
                                             color = textPrimary
                                         )
                                         Row(
-                                            modifier = Modifier.fillMaxWidth(),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .height(IntrinsicSize.Max),
                                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                                         ) {
                                             listOf(
@@ -559,6 +651,7 @@ fun AssignmentAiGeneratorScreen(
                                                 Surface(
                                                     modifier = Modifier
                                                         .weight(1f)
+                                                        .fillMaxHeight()
                                                         .clip(RoundedCornerShape(12.dp))
                                                         .clickable { selectedDifficulty = diffKey },
                                                     shape = RoundedCornerShape(12.dp),
@@ -817,7 +910,7 @@ fun AssignmentAiGeneratorScreen(
                                                 Text(
                                                     "+ 4 Mini-Game Interaktif Otomatis (Menjodohkan, Urutkan Langkah, Kalimat Rumpang, Teka-Teki Silang) — Tanpa soal esai & 100% terkoreksi otomatis.",
                                                     fontSize = 11.sp,
-                                                    color = Color(0xFF38BDF8),
+                                                    color = if (isDark) Color(0xFF38BDF8) else Color(0xFF0369A1),
                                                     fontWeight = FontWeight.SemiBold,
                                                     lineHeight = 16.sp
                                                 )

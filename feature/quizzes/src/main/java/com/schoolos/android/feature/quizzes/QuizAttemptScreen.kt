@@ -23,9 +23,12 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +38,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -47,22 +53,29 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Quiz
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material.icons.rounded.Bookmark
+import androidx.compose.material.icons.rounded.BookmarkBorder
+import androidx.compose.material.icons.rounded.FactCheck
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Timer
 import com.schoolos.android.core.designsystem.QuestionPromptWithDiagram
 import com.schoolos.android.core.designsystem.SchoolOsConfirmationDialog
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -120,6 +133,7 @@ private fun tryReleaseExamLockTask(activity: Activity?) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun QuizAttemptScreen(
     onBack: () -> Unit = {},
@@ -128,6 +142,7 @@ fun QuizAttemptScreen(
 ) {
     val state by viewModel.state.collectAsState()
     var showConfirm by remember { mutableStateOf(false) }
+    var showQuestionMapSheet by remember { mutableStateOf(false) }
 
     val xpReward by viewModel.xpRewardEvent.collectAsState()
     val context = LocalContext.current
@@ -278,14 +293,16 @@ fun QuizAttemptScreen(
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
 
-                    // ── 1. TOP BAR ──────────────────────────────────────────
+                    // ── 1. TOP BAR WITH LIVE COUNTDOWN TIMER ─────────────────
                     QuizTopBar(
                         currentIndex = state.currentIndex,
                         totalQuestions = state.questions.size,
                         progress = state.progress,
                         answeredCount = state.answeredCount,
+                        remainingSeconds = state.remainingSeconds,
                         isExamLocked = isExamLocked,
                         leaveViolationCount = leaveViolationCount,
+                        onOpenQuestionMap = { showQuestionMapSheet = true },
                         onClose = {
                             if (isExamLocked) {
                                 showBlockedExitToast()
@@ -310,19 +327,24 @@ fun QuizAttemptScreen(
                     ) {
                         itemsIndexed(state.questions) { index, question ->
                             val isAnswered = isAndroidQuestionAnswerComplete(question, state.answers[question.id])
+                            val isFlagged = question.id in state.flaggedIds
                             val isCurrent = index == state.currentIndex
+                            val warnAmber = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
                             val pillBg = when {
                                 isCurrent  -> studentAccent
+                                isFlagged  -> warnAmber.copy(alpha = 0.16f)
                                 isAnswered -> if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7)
                                 else       -> innerCardBg
                             }
                             val pillBorder = when {
                                 isCurrent  -> studentAccent
+                                isFlagged  -> warnAmber
                                 isAnswered -> if (isDark) Color(0xFF10B981).copy(alpha = 0.5f) else Color(0xFF86EFAC)
                                 else       -> innerCardBorder
                             }
                             val pillTextColor = when {
                                 isCurrent  -> Color.White
+                                isFlagged  -> warnAmber
                                 isAnswered -> if (isDark) Color(0xFF34D399) else Color(0xFF15803D)
                                 else       -> textTertiary
                             }
@@ -346,7 +368,7 @@ fun QuizAttemptScreen(
                         }
                     }
 
-                    // ── 3. QUESTION CONTENT (animated slide) ────────────────
+                    // ── 3. RESPONSIVE QUESTION CONTENT (Single-Pane Phone / Two-Pane Tablet) ──
                     val question = state.currentQuestion
                     if (question != null) {
                         AnimatedContent(
@@ -361,15 +383,13 @@ fun QuizAttemptScreen(
                             label = "questionSlide",
                             modifier = Modifier.weight(1f),
                         ) { _ ->
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .verticalScroll(rememberScrollState())
-                                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                            ) {
-                                // Question Card
+                            val isFlagged = question.id in state.flaggedIds
+                            val warnAmber = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+
+                            @Composable
+                            fun QuestionStemCard(modifier: Modifier = Modifier) {
                                 Surface(
-                                    modifier = Modifier.fillMaxWidth(),
+                                    modifier = modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(22.dp),
                                     color = cardBg,
                                     border = BorderStroke(1.dp, cardBorder),
@@ -377,14 +397,13 @@ fun QuizAttemptScreen(
                                 ) {
                                     Column(
                                         modifier = Modifier.padding(18.dp),
-                                        verticalArrangement = Arrangement.spacedBy(14.dp)
+                                        verticalArrangement = Arrangement.spacedBy(14.dp),
                                     ) {
-                                        // Header Row: Soal Number + Type Badge + Points Pill
                                         val qVariatifType = normalizeAndroidQuestionType(question.questionType)
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
+                                            verticalAlignment = Alignment.CenterVertically,
                                         ) {
                                             Row(
                                                 horizontalArrangement = Arrangement.spacedBy(6.dp),
@@ -393,48 +412,76 @@ fun QuizAttemptScreen(
                                                 Surface(
                                                     shape = RoundedCornerShape(8.dp),
                                                     color = studentAccent.copy(alpha = 0.12f),
-                                                    border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.35f))
+                                                    border = BorderStroke(1.dp, studentAccent.copy(alpha = 0.35f)),
                                                 ) {
                                                     Text(
                                                         text = "SOAL NO. ${state.currentIndex + 1}",
                                                         color = studentAccent,
                                                         fontSize = 11.sp,
                                                         fontWeight = FontWeight.Bold,
-                                                        letterSpacing = 0.5.sp,
-                                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp)
+                                                        modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
                                                     )
                                                 }
                                                 Surface(
                                                     shape = RoundedCornerShape(8.dp),
                                                     color = innerCardBg,
-                                                    border = BorderStroke(1.dp, innerCardBorder)
+                                                    border = BorderStroke(1.dp, innerCardBorder),
                                                 ) {
                                                     Text(
                                                         text = androidQuestionTypeLabel(qVariatifType),
                                                         color = textSecondary,
                                                         fontSize = 10.5.sp,
                                                         fontWeight = FontWeight.Bold,
-                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                                                     )
                                                 }
                                             }
 
-                                            Surface(
-                                                shape = RoundedCornerShape(8.dp),
-                                                color = innerCardBg,
-                                                border = BorderStroke(1.dp, innerCardBorder)
-                                            ) {
-                                                Text(
-                                                    text = "+${question.points} Poin",
-                                                    fontSize = 11.sp,
-                                                    fontWeight = FontWeight.Bold,
-                                                    color = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A),
-                                                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
-                                                )
+                                            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                                Surface(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(8.dp))
+                                                        .clickable { viewModel.toggleFlagQuestion(question.id) },
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = if (isFlagged) warnAmber.copy(alpha = 0.16f) else innerCardBg,
+                                                    border = BorderStroke(1.dp, if (isFlagged) warnAmber else innerCardBorder),
+                                                ) {
+                                                    Row(
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                        verticalAlignment = Alignment.CenterVertically,
+                                                        horizontalArrangement = Arrangement.spacedBy(3.dp),
+                                                    ) {
+                                                        Icon(
+                                                            imageVector = if (isFlagged) Icons.Rounded.Bookmark else Icons.Rounded.BookmarkBorder,
+                                                            contentDescription = "Ragu-Ragu",
+                                                            tint = if (isFlagged) warnAmber else textTertiary,
+                                                            modifier = Modifier.size(13.dp),
+                                                        )
+                                                        Text(
+                                                            text = "Ragu",
+                                                            fontSize = 10.5.sp,
+                                                            fontWeight = FontWeight.Bold,
+                                                            color = if (isFlagged) warnAmber else textSecondary,
+                                                        )
+                                                    }
+                                                }
+
+                                                Surface(
+                                                    shape = RoundedCornerShape(8.dp),
+                                                    color = innerCardBg,
+                                                    border = BorderStroke(1.dp, innerCardBorder),
+                                                ) {
+                                                    Text(
+                                                        text = "+${question.points}",
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A),
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    )
+                                                }
                                             }
                                         }
 
-                                        // Diagram / Image + Question stem text
                                         QuestionPromptWithDiagram(
                                             rawText = question.questionText,
                                             explicitImageUrl = question.imageUrl,
@@ -445,17 +492,16 @@ fun QuizAttemptScreen(
                                         )
                                     }
                                 }
+                            }
 
-                                Spacer(Modifier.height(14.dp))
-
-                                // Answer Options (All 7 Variatif Formats)
+                            @Composable
+                            fun AnswerInputBlock() {
                                 when (normalizeAndroidQuestionType(question.questionType)) {
                                     AndroidVariatifQuestionType.MULTIPLE_CHOICE -> {
                                         question.choices.forEachIndexed { idx, choice ->
                                             val choiceKey = "choice_${choice.id}"
                                             val isSelected = state.answers[question.id] == choiceKey
                                             val label = ChoiceLabels.getOrElse(idx) { "${idx + 1}" }
-
                                             ModernAnswerBubble(
                                                 label = label,
                                                 text = choice.choiceText,
@@ -472,79 +518,45 @@ fun QuizAttemptScreen(
                                             Spacer(Modifier.height(10.dp))
                                         }
                                     }
-                                    AndroidVariatifQuestionType.TRUE_FALSE_MATRIX -> {
-                                        TrueFalseMatrixSection(
-                                            question = question,
-                                            rawAnswer = state.answers[question.id],
-                                            onAnswerChange = { viewModel.setAnswer(question.id, it) },
-                                            isDark = isDark,
-                                            cardBg = cardBg,
-                                            cardBorder = cardBorder,
-                                            innerCardBg = innerCardBg,
-                                            textPrimary = textPrimary,
-                                            textSecondary = textSecondary,
-                                            studentAccent = studentAccent,
-                                        )
-                                    }
-                                    AndroidVariatifQuestionType.MULTIPLE_SELECT -> {
-                                        MultipleSelectSection(
-                                            question = question,
-                                            rawAnswer = state.answers[question.id],
-                                            onAnswerChange = { viewModel.setAnswer(question.id, it) },
-                                            isDark = isDark,
-                                            cardBg = cardBg,
-                                            cardBorder = cardBorder,
-                                            textPrimary = textPrimary,
-                                            textSecondary = textSecondary,
-                                        )
-                                    }
-                                    AndroidVariatifQuestionType.SHORT_ANSWER -> {
-                                        ShortAnswerSection(
-                                            question = question,
-                                            rawAnswer = state.answers[question.id],
-                                            onAnswerChange = { viewModel.setAnswer(question.id, it.ifBlank { null }) },
-                                            cardBg = cardBg,
-                                            cardBorder = cardBorder,
-                                            textPrimary = textPrimary,
-                                            textTertiary = textTertiary,
-                                            studentAccent = studentAccent,
-                                        )
-                                    }
-                                    AndroidVariatifQuestionType.MATCHING -> {
-                                        MatchingSection(
-                                            question = question,
-                                            rawAnswer = state.answers[question.id],
-                                            onAnswerChange = { viewModel.setAnswer(question.id, it) },
-                                            isDark = isDark,
-                                            cardBg = cardBg,
-                                            cardBorder = cardBorder,
-                                            innerCardBg = innerCardBg,
-                                            textPrimary = textPrimary,
-                                            textSecondary = textSecondary,
-                                            studentAccent = studentAccent,
-                                        )
-                                    }
-                                    AndroidVariatifQuestionType.ORDERING -> {
-                                        OrderingSection(
-                                            question = question,
-                                            rawAnswer = state.answers[question.id],
-                                            onAnswerChange = { viewModel.setAnswer(question.id, it) },
-                                            isDark = isDark,
-                                            cardBg = cardBg,
-                                            cardBorder = cardBorder,
-                                            textPrimary = textPrimary,
-                                            textSecondary = textSecondary,
-                                        )
-                                    }
+                                    AndroidVariatifQuestionType.TRUE_FALSE_MATRIX -> TrueFalseMatrixSection(
+                                        question = question, rawAnswer = state.answers[question.id],
+                                        onAnswerChange = { viewModel.setAnswer(question.id, it) },
+                                        isDark = isDark, cardBg = cardBg, cardBorder = cardBorder,
+                                        innerCardBg = innerCardBg, textPrimary = textPrimary,
+                                        textSecondary = textSecondary, studentAccent = studentAccent,
+                                    )
+                                    AndroidVariatifQuestionType.MULTIPLE_SELECT -> MultipleSelectSection(
+                                        question = question, rawAnswer = state.answers[question.id],
+                                        onAnswerChange = { viewModel.setAnswer(question.id, it) },
+                                        isDark = isDark, cardBg = cardBg, cardBorder = cardBorder,
+                                        textPrimary = textPrimary, textSecondary = textSecondary,
+                                    )
+                                    AndroidVariatifQuestionType.SHORT_ANSWER -> ShortAnswerSection(
+                                        question = question, rawAnswer = state.answers[question.id],
+                                        onAnswerChange = { viewModel.setAnswer(question.id, it.ifBlank { null }) },
+                                        cardBg = cardBg, cardBorder = cardBorder, textPrimary = textPrimary,
+                                        textTertiary = textTertiary, studentAccent = studentAccent,
+                                    )
+                                    AndroidVariatifQuestionType.MATCHING -> MatchingSection(
+                                        question = question, rawAnswer = state.answers[question.id],
+                                        onAnswerChange = { viewModel.setAnswer(question.id, it) },
+                                        isDark = isDark, cardBg = cardBg, cardBorder = cardBorder,
+                                        innerCardBg = innerCardBg, textPrimary = textPrimary,
+                                        textSecondary = textSecondary, studentAccent = studentAccent,
+                                    )
+                                    AndroidVariatifQuestionType.ORDERING -> OrderingSection(
+                                        question = question, rawAnswer = state.answers[question.id],
+                                        onAnswerChange = { viewModel.setAnswer(question.id, it) },
+                                        isDark = isDark, cardBg = cardBg, cardBorder = cardBorder,
+                                        textPrimary = textPrimary, textSecondary = textSecondary,
+                                    )
                                     AndroidVariatifQuestionType.ESSAY -> {
                                         val text = state.answers[question.id] ?: ""
                                         OutlinedTextField(
                                             value = text,
                                             onValueChange = { viewModel.setEssayAnswer(question.id, it) },
                                             placeholder = { Text("Tulis jawaban lengkap kamu di sini...", color = textTertiary, fontSize = 13.sp) },
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .height(180.dp),
+                                            modifier = Modifier.fillMaxWidth().height(180.dp),
                                             maxLines = 8,
                                             shape = RoundedCornerShape(18.dp),
                                             colors = OutlinedTextFieldDefaults.colors(
@@ -558,8 +570,49 @@ fun QuizAttemptScreen(
                                         )
                                     }
                                 }
+                            }
 
-                                Spacer(Modifier.height(24.dp))
+                            BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+                                val isWideExamPane = this.maxWidth >= 720.dp
+                                if (isWideExamPane) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .padding(horizontal = 20.dp, vertical = 10.dp),
+                                        horizontalArrangement = Arrangement.spacedBy(18.dp),
+                                    ) {
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(0.52f)
+                                                .fillMaxHeight()
+                                                .verticalScroll(rememberScrollState()),
+                                        ) {
+                                            QuestionStemCard()
+                                            Spacer(Modifier.height(16.dp))
+                                        }
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(0.48f)
+                                                .fillMaxHeight()
+                                                .verticalScroll(rememberScrollState()),
+                                        ) {
+                                            AnswerInputBlock()
+                                            Spacer(Modifier.height(16.dp))
+                                        }
+                                    }
+                                } else {
+                                    Column(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .verticalScroll(rememberScrollState())
+                                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                                    ) {
+                                        QuestionStemCard()
+                                        Spacer(Modifier.height(14.dp))
+                                        AnswerInputBlock()
+                                        Spacer(Modifier.height(24.dp))
+                                    }
+                                }
                             }
                         }
                     }
@@ -582,6 +635,97 @@ fun QuizAttemptScreen(
                         textSecondary = textSecondary,
                         studentAccent = studentAccent,
                     )
+                }
+
+                // Five-Minute Time Alert Banner Overlay
+                if (state.showFiveMinuteAlert) {
+                    AlertDialog(
+                        onDismissRequest = viewModel::dismissFiveMinuteAlert,
+                        containerColor = cardBg,
+                        shape = RoundedCornerShape(20.dp),
+                        title = { Text("Sisa Waktu Ujian 5 Menit", fontWeight = FontWeight.Bold, color = Color(0xFFD97706)) },
+                        text = { Text("Periksa kembali jawaban dan pastikan soal yang ditandai ragu-ragu telah diperiksa sebelum waktu habis.", fontSize = 13.sp, color = textSecondary) },
+                        confirmButton = {
+                            Button(onClick = viewModel::dismissFiveMinuteAlert, colors = ButtonDefaults.buttonColors(containerColor = studentAccent, contentColor = Color.White)) {
+                                Text("Lanjutkan", fontWeight = FontWeight.Bold)
+                            }
+                        },
+                    )
+                }
+
+                // Modal Question Navigator Map BottomSheet
+                if (showQuestionMapSheet) {
+                    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+                    ModalBottomSheet(
+                        onDismissRequest = { showQuestionMapSheet = false },
+                        sheetState = sheetState,
+                        containerColor = cardBg,
+                        shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 20.dp, vertical = 8.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                                Text("Peta Nomor Soal (${state.answeredCount}/${state.questions.size})", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = textPrimary)
+                                Text("${state.flaggedIds.size} Ragu", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFD97706))
+                            }
+                            LazyVerticalGrid(
+                                columns = GridCells.Adaptive(minSize = 52.dp),
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                                modifier = Modifier.fillMaxWidth().height(280.dp),
+                            ) {
+                                itemsIndexed(state.questions) { idx, q ->
+                                    val isAns = isAndroidQuestionAnswerComplete(q, state.answers[q.id])
+                                    val isFlg = q.id in state.flaggedIds
+                                    val isCur = idx == state.currentIndex
+                                    val warnAmber = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+                                    val bg = when {
+                                        isCur -> studentAccent
+                                        isFlg -> warnAmber.copy(alpha = 0.16f)
+                                        isAns -> if (isDark) Color(0xFF064E3B) else Color(0xFFDCFCE7)
+                                        else -> innerCardBg
+                                    }
+                                    val fg = when {
+                                        isCur -> Color.White
+                                        isFlg -> warnAmber
+                                        isAns -> if (isDark) Color(0xFF34D399) else Color(0xFF15803D)
+                                        else -> textSecondary
+                                    }
+                                    Box(
+                                        modifier = Modifier
+                                            .height(44.dp)
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(bg)
+                                            .border(1.dp, if (isCur) studentAccent else innerCardBorder, RoundedCornerShape(10.dp))
+                                            .clickable {
+                                                viewModel.goToQuestion(idx)
+                                                showQuestionMapSheet = false
+                                            },
+                                        contentAlignment = Alignment.Center,
+                                    ) {
+                                        Text("${idx + 1}", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = fg)
+                                    }
+                                }
+                            }
+                            Button(
+                                onClick = {
+                                    showQuestionMapSheet = false
+                                    showConfirm = true
+                                },
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = if (isDark) Color(0xFF10B981) else Color(0xFF059669), contentColor = Color.White),
+                                modifier = Modifier.fillMaxWidth().height(46.dp),
+                            ) {
+                                Text("Selesai & Kumpulkan Ujian", fontWeight = FontWeight.Bold)
+                            }
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
                 }
             }
         }
@@ -694,8 +838,10 @@ private fun QuizTopBar(
     totalQuestions: Int,
     progress: Float,
     answeredCount: Int,
+    remainingSeconds: Long?,
     isExamLocked: Boolean,
     leaveViolationCount: Int,
+    onOpenQuestionMap: () -> Unit,
     onClose: () -> Unit,
     isDark: Boolean,
     cardBg: Color,
@@ -712,6 +858,12 @@ private fun QuizTopBar(
         label = "progressAnim",
     )
     val lockAmber = if (isDark) Color(0xFFFBBF24) else Color(0xFFD97706)
+    val timerColor = when {
+        remainingSeconds == null -> if (isExamLocked) lockAmber else studentAccent
+        remainingSeconds <= 60L -> if (isDark) Color(0xFFF87171) else Color(0xFFDC2626)
+        remainingSeconds <= 300L -> lockAmber
+        else -> studentAccent
+    }
 
     Column(
         modifier = Modifier
@@ -730,23 +882,30 @@ private fun QuizTopBar(
                     imageVector = if (isExamLocked) Icons.Default.Lock else Icons.Default.Close,
                     contentDescription = if (isExamLocked) "Ujian Terkunci" else "Keluar",
                     tint = if (isExamLocked) lockAmber else textSecondary,
-                    modifier = Modifier.size(19.dp)
+                    modifier = Modifier.size(19.dp),
                 )
             }
 
             Column(
-                modifier = Modifier.weight(1f),
-                horizontalAlignment = Alignment.CenterHorizontally
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(8.dp))
+                    .clickable(onClick = onOpenQuestionMap)
+                    .padding(vertical = 2.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "Soal ${currentIndex + 1} / $totalQuestions",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = textPrimary,
+                    )
+                    Icon(Icons.Rounded.GridView, contentDescription = "Peta Soal", tint = studentAccent, modifier = Modifier.size(15.dp))
+                }
                 Text(
-                    text = "Soal ${currentIndex + 1} / $totalQuestions",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = textPrimary,
-                )
-                Text(
-                    text = "$answeredCount terjawab",
-                    fontSize = 11.sp,
+                    text = "$answeredCount terjawab • Ketuk Peta Soal",
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.Medium,
                     color = studentAccent,
                 )
@@ -754,27 +913,26 @@ private fun QuizTopBar(
 
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (isExamLocked) lockAmber.copy(alpha = 0.14f) else studentAccent.copy(alpha = 0.12f),
-                border = BorderStroke(1.dp, if (isExamLocked) lockAmber.copy(alpha = 0.45f) else studentAccent.copy(alpha = 0.35f))
+                color = timerColor.copy(alpha = 0.14f),
+                border = BorderStroke(1.dp, timerColor.copy(alpha = 0.45f)),
             ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 4.dp),
+                    modifier = Modifier.padding(horizontal = 9.dp, vertical = 5.dp),
                 ) {
-                    if (isExamLocked) {
-                        Icon(
-                            imageVector = Icons.Default.Lock,
-                            contentDescription = null,
-                            tint = lockAmber,
-                            modifier = Modifier.size(11.dp),
-                        )
-                    }
+                    Icon(
+                        imageVector = if (remainingSeconds != null) Icons.Rounded.Timer else Icons.Default.Lock,
+                        contentDescription = null,
+                        tint = timerColor,
+                        modifier = Modifier.size(13.dp),
+                    )
                     Text(
-                        text = if (isExamLocked) "TERKUNCI" else "CBT",
-                        fontSize = 10.5.sp,
-                        color = if (isExamLocked) lockAmber else studentAccent,
-                        fontWeight = FontWeight.Bold,
+                        text = if (remainingSeconds != null) formatDigitalTimer(remainingSeconds)
+                        else if (isExamLocked) "TERKUNCI" else "CBT",
+                        fontSize = 11.5.sp,
+                        color = timerColor,
+                        fontWeight = FontWeight.ExtraBold,
                     )
                 }
             }

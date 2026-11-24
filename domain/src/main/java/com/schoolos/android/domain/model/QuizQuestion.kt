@@ -15,4 +15,5 @@ data class QuizChoice(
     val id: String,
     val choiceText: String,
     val orderIndex: Int,
+    val isCorrect: Boolean? = null,
 )

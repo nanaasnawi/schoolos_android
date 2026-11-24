@@ -140,8 +140,44 @@ interface SchoolOsApi {
     @GET("learning/quizzes")
     suspend fun getQuizzes(@Query("class_id") classId: String? = null): ApiResponse<List<QuizDto>>
 
+    @GET("learning/quizzes/proctoring/schedule")
+    suspend fun getProctorSchedule(): ApiResponse<ProctorScheduleDashboardDto>
+
     @GET("learning/quizzes/{id}")
     suspend fun getQuiz(@Path("id") id: String): ApiResponse<QuizDto>
+
+    @PATCH("learning/quizzes/{id}")
+    suspend fun updateQuiz(
+        @Path("id") id: String,
+        @Body request: UpdateQuizRequestDto,
+    ): ApiResponse<QuizDto>
+
+    @GET("learning/quizzes/{id}/proctoring/monitor")
+    suspend fun getProctorMonitor(@Path("id") id: String): ApiResponse<ProctorMonitorDto>
+
+    @POST("learning/quizzes/{id}/proctoring/rotate-token")
+    suspend fun rotateProctorToken(
+        @Path("id") id: String,
+        @Body request: RotateTokenRequestDto = RotateTokenRequestDto(),
+    ): ApiResponse<QuizDto>
+
+    @POST("learning/quizzes/{id}/proctoring/extend-time")
+    suspend fun extendProctorTime(
+        @Path("id") id: String,
+        @Body request: ExtendTimeRequestDto,
+    ): ApiResponse<QuizDto>
+
+    @POST("learning/quizzes/{id}/attempts/{attempt_id}/force-submit")
+    suspend fun forceSubmitQuizAttempt(
+        @Path("id") quizId: String,
+        @Path("attempt_id") attemptId: String,
+    ): ApiResponse<kotlinx.serialization.json.JsonElement>
+
+    @POST("learning/quizzes/{id}/attempts/{attempt_id}/reopen")
+    suspend fun reopenQuizAttempt(
+        @Path("id") quizId: String,
+        @Path("attempt_id") attemptId: String,
+    ): ApiResponse<kotlinx.serialization.json.JsonElement>
 
     @GET("learning/quizzes/{id}/questions")
     suspend fun getQuizQuestions(@Path("id") id: String): ApiResponse<List<QuizQuestionDto>>

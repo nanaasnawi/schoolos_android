@@ -60,7 +60,9 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             // 2. Role-based topic
             val cleanRole = when {
                 role.isNullOrBlank() -> null
-                role.contains("teacher", true) || role.contains("guru", true) -> "teacher"
+                role.contains("principal", true) || role.contains("kepala", true) || role.contains("headmaster", true) -> "principal"
+                role.contains("admin", true) || role.contains("operator", true) || role.contains("staff", true) || role.contains("staf", true) -> "staff"
+                role.contains("teacher", true) || role.contains("guru", true) || role.contains("tutor", true) -> "teacher"
                 role.contains("parent", true) || role.contains("wali", true) -> "parent"
                 else -> "student"
             }
