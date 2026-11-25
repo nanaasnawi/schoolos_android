@@ -9,14 +9,14 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface SubmissionQueueDao {
-    @Query("SELECT * FROM submission_queue WHERE status = 'PENDING' OR status = 'FAILED' ORDER BY createdAt ASC")
-    suspend fun getPendingSubmissions(): List<SubmissionQueueEntity>
+    @Query("SELECT * FROM submission_queue WHERE tenantId = :tenantId AND userId = :userId AND (status = 'PENDING' OR status = 'FAILED') ORDER BY createdAt ASC")
+    suspend fun getPendingSubmissionsForUser(tenantId: String, userId: String): List<SubmissionQueueEntity>
 
-    @Query("SELECT COUNT(*) FROM submission_queue WHERE status = 'PENDING' OR status = 'FAILED'")
-    fun observePendingCount(): Flow<Int>
+    @Query("SELECT COUNT(*) FROM submission_queue WHERE tenantId = :tenantId AND userId = :userId AND (status = 'PENDING' OR status = 'FAILED')")
+    fun observePendingCountForUser(tenantId: String, userId: String): Flow<Int>
 
-    @Query("SELECT * FROM submission_queue ORDER BY createdAt DESC")
-    fun getAllSubmissions(): Flow<List<SubmissionQueueEntity>>
+    @Query("SELECT * FROM submission_queue WHERE tenantId = :tenantId AND userId = :userId ORDER BY createdAt DESC")
+    fun getAllSubmissionsForUser(tenantId: String, userId: String): Flow<List<SubmissionQueueEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(item: SubmissionQueueEntity)
@@ -32,4 +32,7 @@ interface SubmissionQueueDao {
 
     @Query("DELETE FROM submission_queue WHERE status = 'SYNCED'")
     suspend fun clearSynced()
+
+    @Query("DELETE FROM submission_queue")
+    suspend fun clearAll()
 }

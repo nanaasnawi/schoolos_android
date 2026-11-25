@@ -434,6 +434,11 @@ class ChatManager @Inject constructor(
                 val wasLoggedIn = cachedAuth?.isLoggedIn == true
                 val isLoggedIn = auth?.isLoggedIn == true
                 cachedAuth = auth
+                if (isLoggedIn && !auth?.tenantId.isNullOrBlank()) {
+                    firebaseRtdbManager.setTenantScope(auth?.tenantId)
+                } else {
+                    firebaseRtdbManager.clearTenantScope()
+                }
 
                 if (newUid != oldUid || wasLoggedIn != isLoggedIn) {
                     // Identity changed: immediately wipe threads from memory to prevent leak!
@@ -453,40 +458,46 @@ class ChatManager @Inject constructor(
             }
         }
 
-        // Real-time listener: Stream all inquiries from Firebase Realtime Database
-        // Automatically discovers new threads created by students, teachers, or principals in real time
+        // Real-time listener: Subscribe strictly to summaries of THIS user's known thread IDs under /tenants/{tenantId}/inquiries/{threadId}/summary
+        @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
         scope.launch {
-            firebaseRtdbManager.observeAllInquiries().collectLatest { rtdbThreads ->
-                val auth = cachedAuth ?: return@collectLatest
-                if (!auth.isLoggedIn) return@collectLatest
-
-                // Strictly filter for current authenticated user under ADR-0011 isolation rules
-                val myRtdbThreads = filterThreadsForUser(rtdbThreads, auth)
-                if (myRtdbThreads.isEmpty() && _threads.value.isEmpty()) return@collectLatest
-
-                val currentMap = _threads.value.associateBy { it.id }
-                val merged = myRtdbThreads.map { rtdbTh ->
-                    val existing = currentMap[rtdbTh.id]
-                    if (existing != null) {
-                        rtdbTh.copy(
-                            messages = if (existing.messages.isNotEmpty()) existing.messages else rtdbTh.messages,
-                            messageCount = if (existing.messages.isNotEmpty()) existing.messages.size else rtdbTh.messageCount,
-                            studentAvatarUrl = existing.studentAvatarUrl ?: rtdbTh.studentAvatarUrl,
-                            teacherAvatarUrl = existing.teacherAvatarUrl ?: rtdbTh.teacherAvatarUrl,
+            _threads
+                .map { list -> list.filterNot { it.id.startsWith("ai-") }.map { it.id }.toSet() }
+                .distinctUntilChanged()
+                .flatMapLatest { threadIds ->
+                    firebaseRtdbManager.observeThreadSummaries(threadIds)
+                }
+                .collectLatest { summariesMap ->
+                    val auth = cachedAuth ?: return@collectLatest
+                    if (!auth.isLoggedIn || summariesMap.isEmpty()) return@collectLatest
+                    val updated = _threads.value.map { th ->
+                        val s = summariesMap[th.id] ?: return@map th
+                        val statusStr = s["status"] as? String
+                        val status = when (statusStr?.uppercase()) {
+                            "ANSWERED" -> InquiryStatus.ANSWERED
+                            "WAITING_REPLY" -> InquiryStatus.WAITING_REPLY
+                            else -> th.status
+                        }
+                        val lastContent = (s["lastMessageContent"] as? String) ?: th.lastMessageContent
+                        val lastAt = (s["lastMessageAt"] as? Long) ?: th.lastUpdated
+                        val lastSender = (s["lastSenderName"] as? String) ?: th.lastSenderName
+                        val readLabel = (s["readStatusLabel"] as? String) ?: th.readStatusLabel
+                        val teacherReadAt = (s["teacherLastReadAt"] as? Long) ?: th.teacherLastReadAt
+                        th.copy(
+                            status = status,
+                            lastMessageContent = lastContent,
+                            lastUpdated = lastAt,
+                            lastSenderName = lastSender,
+                            readStatusLabel = readLabel,
+                            teacherLastReadAt = teacherReadAt,
                         )
-                    } else {
-                        rtdbTh
+                    }
+                    val isolated = consolidateAndDeduplicateThreads(filterThreadsForUser(updated, auth))
+                    if (isolated != _threads.value) {
+                        _threads.value = isolated
+                        auth.userId?.let { saveToDisk(isolated, it) }
                     }
                 }
-
-                // Preserve ALL existing in-memory threads (from PostgreSQL, disk cache, AI, etc.) not currently emitted by RTDB
-                val rtdbIds = myRtdbThreads.map { it.id }.toSet()
-                val localOnly = _threads.value.filter { it.id !in rtdbIds }
-
-                val updatedList = consolidateAndDeduplicateThreads(filterThreadsForUser(merged + localOnly, auth))
-                _threads.value = updatedList
-                saveToDisk(updatedList, auth.userId)
-            }
         }
 
         // Initial fetch from database

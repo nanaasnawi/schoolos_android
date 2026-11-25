@@ -54,30 +54,32 @@ class TeacherDirectoryViewModel @Inject constructor(
                     }.distinctBy { it.name.lowercase().replace(Regex("[^a-z0-9 ]"), "").trim() }
                      .sortedBy { it.name.lowercase() }
 
-                    // Principal contact item for student inquiry / direct chat with school management
+                    // Principal contact item for student inquiry / direct chat with school management (only if present in tenant directory)
                     val principalUser = list.firstOrNull { t ->
                         t.fullName.contains("Kepala Sekolah", ignoreCase = true) ||
                         t.subject?.contains("Kepala Sekolah", ignoreCase = true) == true
                     }
-                    val principalId = principalUser?.userId?.takeIf { it.isNotBlank() }
-                        ?: principalUser?.id
-                        ?: "01a092fc-af59-76b2-85f2-cca8b8d8d515"
-                    val principalName = principalUser?.fullName?.trim()?.takeIf { it.isNotBlank() }
-                        ?: "Kepala Sekolah"
-
-                    val principalContact = TeacherContactItem(
-                        id = principalId,
-                        userId = principalId,
-                        name = principalName,
-                        subject = if (isPkbm) "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar" else "Konsultasi Kebijakan, Akademik & Pengaduan Siswa",
-                        roleTitle = "Kepala Sekolah",
-                        isPrincipal = true,
-                    )
+                    val principalContacts = if (principalUser != null) {
+                        val principalId = principalUser.userId?.takeIf { it.isNotBlank() } ?: principalUser.id
+                        val principalName = principalUser.fullName.trim().ifBlank { "Kepala Sekolah" }
+                        listOf(
+                            TeacherContactItem(
+                                id = principalId,
+                                userId = principalId,
+                                name = principalName,
+                                subject = if (isPkbm) "Konsultasi Kebijakan, Akademik & Pengaduan Warga Belajar" else "Konsultasi Kebijakan, Akademik & Pengaduan Siswa",
+                                roleTitle = "Kepala Sekolah",
+                                isPrincipal = true,
+                            )
+                        )
+                    } else {
+                        emptyList()
+                    }
 
                     _state.update {
                         it.copy(
                             isLoading = false,
-                            teachers = listOf(principalContact) + contacts
+                            teachers = principalContacts + contacts
                         )
                     }
                 }

@@ -25,11 +25,6 @@ class BootReceiver : BroadcastReceiver() {
         }
 
         try {
-            SchoolOsFirebaseMessagingService.subscribeAllTopics()
-        } catch (e: Exception) {
-            Timber.w(e, "BootReceiver subscribe failed")
-        }
-        try {
             val entry = dagger.hilt.android.EntryPointAccessors.fromApplication(
                 context.applicationContext,
                 com.schoolos.android.SchoolOsApp.AuthEntryPoint::class.java
@@ -37,8 +32,9 @@ class BootReceiver : BroadcastReceiver() {
             val authManager = entry.authManager()
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 val auth = authManager.authState.first()
-                if (auth.isLoggedIn) {
+                if (auth.isLoggedIn && !auth.tenantId.isNullOrBlank()) {
                     SchoolOsFirebaseMessagingService.syncUserTopics(
+                        tenantId = auth.tenantId,
                         userId = auth.userId,
                         classId = auth.classId,
                         role = auth.role,

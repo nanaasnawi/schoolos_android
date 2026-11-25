@@ -17,47 +17,48 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
     companion object {
         private const val PREFS_FCM = "schoolos_fcm"
         private const val TOPIC_ANNOUNCEMENTS = "school_announcements"
-        private const val TOPIC_MATERIALS = "school_materials"
-        private const val TOPIC_ASSIGNMENTS = "school_assignments"
-        private const val TOPIC_QUIZZES = "school_quizzes"
-        private const val TOPIC_GRADES = "school_grades"
-        private const val TOPIC_SESSIONS = "school_sessions"
 
-        fun subscribeAllTopics() {
-            val topics = listOf(
-                TOPIC_ANNOUNCEMENTS,
-            )
-            topics.forEach { topic ->
-                try {
-                    FirebaseMessaging.getInstance().subscribeToTopic(topic)
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                Timber.d("FCM successfully subscribed to topic: %s", topic)
-                            } else {
-                                Timber.w(task.exception, "FCM failed to subscribe to topic: %s", topic)
-                            }
-                        }
-                } catch (e: Exception) {
-                    Timber.w(e, "FCM subscribe error: %s", topic)
-                }
-            }
-        }
+        private fun cleanHexId(raw: String): String =
+            raw.trim().replace("-", "").lowercase()
 
         fun syncUserTopics(
+            tenantId: String?,
             userId: String?,
             classId: String?,
             role: String?,
             className: String? = null,
             context: Context? = null,
         ) {
+            if (tenantId.isNullOrBlank()) {
+                Timber.d("FCM syncUserTopics skipped: tenantId is blank")
+                return
+            }
+
             val fcm = FirebaseMessaging.getInstance()
-
-            // 1. General announcement topic & general learning topics
-            fcm.subscribeToTopic(TOPIC_ANNOUNCEMENTS)
-
+            val cleanTenant = cleanHexId(tenantId)
+            val tenantPrefix = "t_$cleanTenant"
             val prefs = context?.getSharedPreferences(PREFS_FCM, Context.MODE_PRIVATE)
 
-            // 2. Role-based topic
+            // Unsubscribe from legacy unscoped topic so cross-school pushes are never received
+            fcm.unsubscribeFromTopic(TOPIC_ANNOUNCEMENTS)
+
+            // 1. Tenant-scoped general announcement topic
+            val tenantAnnTopic = "${tenantPrefix}_$TOPIC_ANNOUNCEMENTS"
+            val oldTenantAnn = prefs?.getString("subscribed_tenant_ann_topic", null)
+            if (oldTenantAnn != null && oldTenantAnn != tenantAnnTopic) {
+                fcm.unsubscribeFromTopic(oldTenantAnn)
+            }
+            fcm.subscribeToTopic(tenantAnnTopic)
+
+            prefs?.edit()
+                ?.putString("active_tenant_id", tenantId.trim())
+                ?.putString("subscribed_tenant_ann_topic", tenantAnnTopic)
+                ?.putString("active_user_id", userId?.trim())
+                ?.putString("active_class_id", classId?.trim())
+                ?.putString("active_role", role?.trim())
+                ?.apply()
+
+            // 2. Tenant-scoped role topic
             val cleanRole = when {
                 role.isNullOrBlank() -> null
                 role.contains("principal", true) || role.contains("kepala", true) || role.contains("headmaster", true) -> "principal"
@@ -67,67 +68,59 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
                 else -> "student"
             }
             if (cleanRole != null) {
+                val roleTopic = "${tenantPrefix}_role_$cleanRole"
                 val oldRole = prefs?.getString("subscribed_role_topic", null)
-                if (oldRole != null && oldRole != "role_$cleanRole") {
+                if (oldRole != null && oldRole != roleTopic) {
                     fcm.unsubscribeFromTopic(oldRole)
                 }
-                val roleTopic = "role_$cleanRole"
                 fcm.subscribeToTopic(roleTopic)
                 prefs?.edit()?.putString("subscribed_role_topic", roleTopic)?.apply()
             }
 
-            // 3. Class-targeted topic (rombel target: materi, tugas, kuis CBT hanya untuk rombel murid tersebut)
+            // 3. Tenant-scoped class topic
             if (!classId.isNullOrBlank()) {
-                val cleanClass = classId.removePrefix("class_").replace("-", "").lowercase()
-                val classTopic = "class_$cleanClass"
+                val cleanClass = cleanHexId(classId.removePrefix("class_"))
+                val classTopic = "${tenantPrefix}_class_$cleanClass"
                 val oldClass = prefs?.getString("subscribed_class_topic", null)
                 if (oldClass != null && oldClass != classTopic) {
                     fcm.unsubscribeFromTopic(oldClass)
                 }
                 fcm.subscribeToTopic(classTopic)
-                // Also subscribe to UUID with hyphens if different
-                val rawClassTopic = "class_${classId.removePrefix("class_").lowercase()}"
-                if (rawClassTopic != classTopic) {
-                    fcm.subscribeToTopic(rawClassTopic)
-                }
                 prefs?.edit()?.putString("subscribed_class_topic", classTopic)?.apply()
-                Timber.d("FCM Subscribed to class topic: %s", classTopic)
+                Timber.d("FCM Subscribed to tenant class topic: %s", classTopic)
             }
 
-            // 3b. Class-name targeted topic alias (misal: "class_paketc" atau "class_5")
-            if (!className.isNullOrBlank()) {
-                val cleanName = className.replace(" ", "").replace("-", "").lowercase()
-                if (cleanName.isNotBlank()) {
-                    val nameTopic = "class_$cleanName"
-                    fcm.subscribeToTopic(nameTopic)
-                    Timber.d("FCM Subscribed to class name topic: %s", nameTopic)
-                }
-            }
-
-            // 4. User-targeted private topic (1-to-1 chat: murid tanya guru A -> hanya guru A, guru A balas -> hanya murid A)
+            // 4. Tenant-scoped private user topic
             if (!userId.isNullOrBlank()) {
-                val cleanUser = userId.removePrefix("user_").replace("-", "").lowercase()
-                val userTopic = "user_$cleanUser"
+                val cleanUser = cleanHexId(userId.removePrefix("user_"))
+                val userTopic = "${tenantPrefix}_user_$cleanUser"
                 val oldUser = prefs?.getString("subscribed_user_topic", null)
                 if (oldUser != null && oldUser != userTopic) {
                     fcm.unsubscribeFromTopic(oldUser)
                 }
                 fcm.subscribeToTopic(userTopic)
                 prefs?.edit()?.putString("subscribed_user_topic", userTopic)?.apply()
-                Timber.d("FCM Subscribed to private user topic: %s", userTopic)
+                Timber.d("FCM Subscribed to tenant private user topic: %s", userTopic)
             }
         }
 
         fun unsubscribeUserTopics(context: Context) {
             val fcm = FirebaseMessaging.getInstance()
             val prefs = context.getSharedPreferences(PREFS_FCM, Context.MODE_PRIVATE)
+            fcm.unsubscribeFromTopic(TOPIC_ANNOUNCEMENTS)
+            prefs.getString("subscribed_tenant_ann_topic", null)?.let { fcm.unsubscribeFromTopic(it) }
             prefs.getString("subscribed_class_topic", null)?.let { fcm.unsubscribeFromTopic(it) }
             prefs.getString("subscribed_user_topic", null)?.let { fcm.unsubscribeFromTopic(it) }
             prefs.getString("subscribed_role_topic", null)?.let { fcm.unsubscribeFromTopic(it) }
             prefs.edit()
+                .remove("active_tenant_id")
+                .remove("subscribed_tenant_ann_topic")
                 .remove("subscribed_class_topic")
                 .remove("subscribed_user_topic")
                 .remove("subscribed_role_topic")
+                .remove("active_user_id")
+                .remove("active_class_id")
+                .remove("active_role")
                 .apply()
         }
     }
@@ -141,8 +134,16 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
             .putBoolean("fcm_token_synced", false)
             .apply()
 
-        // Re-subscribe SEMUA topik belajar saat token rotate.
-        subscribeAllTopics()
+        val activeTenant = prefs.getString("active_tenant_id", null)
+        if (!activeTenant.isNullOrBlank()) {
+            syncUserTopics(
+                tenantId = activeTenant,
+                userId = prefs.getString("active_user_id", null),
+                classId = prefs.getString("active_class_id", null),
+                role = prefs.getString("active_role", null),
+                context = applicationContext,
+            )
+        }
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -151,6 +152,18 @@ class SchoolOsFirebaseMessagingService : FirebaseMessagingService() {
 
         // DATA-ONLY adalah jalur utama (server tidak kirim key `notification`).
         val data = remoteMessage.data
+
+        val prefs = applicationContext.getSharedPreferences(PREFS_FCM, Context.MODE_PRIVATE)
+        val activeTenantId = prefs.getString("active_tenant_id", null)
+        val payloadTenantId = data["tenant_id"]
+        if (activeTenantId.isNullOrBlank()) {
+            Timber.w("Dropped FCM push: user not logged into any active school tenant")
+            return
+        }
+        if (!payloadTenantId.isNullOrBlank() && !payloadTenantId.equals(activeTenantId, ignoreCase = true)) {
+            Timber.w("Dropped cross-tenant FCM push: payload tenant %s != active %s", payloadTenantId, activeTenantId)
+            return
+        }
         val title = data["title"]
             ?: remoteMessage.notification?.title
             ?: "Pemberitahuan Sekolah"

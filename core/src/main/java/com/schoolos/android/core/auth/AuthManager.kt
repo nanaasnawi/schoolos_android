@@ -146,15 +146,6 @@ class AuthManager @Inject constructor(
                 android.util.Base64.URL_SAFE or android.util.Base64.NO_PADDING or android.util.Base64.NO_WRAP
             )
             val json = org.json.JSONObject(String(payloadBytes, Charsets.UTF_8))
-            val role = json.optString("role", "")
-            // Students keep permanent sessions on their device until explicit logout
-            if (role.equals("Siswa", ignoreCase = true) || role.equals("Student", ignoreCase = true)) {
-                return false
-            }
-            val storedRole = getUserRoleSync()
-            if (storedRole?.equals("Siswa", ignoreCase = true) == true || storedRole?.equals("Student", ignoreCase = true) == true) {
-                return false
-            }
             val exp = json.optLong("exp", 0L)
             if (exp > 0L) {
                 val nowSeconds = System.currentTimeMillis() / 1000
@@ -163,7 +154,7 @@ class AuthManager @Inject constructor(
                 false
             }
         } catch (_: Exception) {
-            false
+            true
         }
     }
 
@@ -209,6 +200,9 @@ class AuthManager @Inject constructor(
     private val scope = CoroutineScope(Dispatchers.IO + SupervisorJob())
     @Volatile private var cachedAccessToken: String? = null
     @Volatile private var cachedRefreshToken: String? = null
+    @Volatile private var cachedUserRole: String? = null
+    @Volatile private var cachedTenantId: String? = null
+    @Volatile private var cachedUserId: String? = null
     @Volatile private var cachedIsLoggedIn: Boolean = false
     @Volatile private var cachedCustomServerUrl: String? = null
 
@@ -218,6 +212,9 @@ class AuthManager @Inject constructor(
                 context.dataStore.data.collect { prefs ->
                     cachedAccessToken = prefs[KEY_ACCESS_TOKEN]
                     cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
+                    cachedUserRole = prefs[KEY_ROLE]
+                    cachedTenantId = prefs[KEY_TENANT_ID]
+                    cachedUserId = prefs[KEY_USER_ID]
                     val rawLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
                     val expired = rawLoggedIn && !cachedAccessToken.isNullOrBlank() && isJwtExpired(cachedAccessToken) && (cachedRefreshToken.isNullOrBlank() || isJwtExpired(cachedRefreshToken))
                     cachedIsLoggedIn = rawLoggedIn && !expired
@@ -233,6 +230,9 @@ class AuthManager @Inject constructor(
         val prefs = context.dataStore.data.first()
         cachedAccessToken = prefs[KEY_ACCESS_TOKEN]
         cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
+        cachedUserRole = prefs[KEY_ROLE]
+        cachedTenantId = prefs[KEY_TENANT_ID]
+        cachedUserId = prefs[KEY_USER_ID]
         val savedIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
         cachedCustomServerUrl = prefs[KEY_CUSTOM_SERVER_URL]
 
@@ -264,6 +264,9 @@ class AuthManager @Inject constructor(
                 val prefs = context.dataStore.data.first()
                 cachedAccessToken = prefs[KEY_ACCESS_TOKEN]
                 cachedRefreshToken = prefs[KEY_REFRESH_TOKEN]
+                cachedUserRole = prefs[KEY_ROLE]
+                cachedTenantId = prefs[KEY_TENANT_ID]
+                cachedUserId = prefs[KEY_USER_ID]
                 cachedIsLoggedIn = prefs[KEY_IS_LOGGED_IN] ?: false
                 cachedAccessToken
             }
@@ -287,15 +290,21 @@ class AuthManager @Inject constructor(
     }
 
     fun getUserRoleSync(): String? {
+        cachedUserRole?.let { return it }
         return try {
             kotlinx.coroutines.runBlocking(Dispatchers.IO) {
                 val prefs = context.dataStore.data.first()
-                prefs[KEY_ROLE]
+                cachedUserRole = prefs[KEY_ROLE]
+                cachedUserRole
             }
         } catch (_: Exception) {
             null
         }
     }
+
+    fun getTenantIdSync(): String? = cachedTenantId
+
+    fun getUserIdSync(): String? = cachedUserId
     fun getCustomServerUrlSync(): String? {
         val buildConfigUrl = com.schoolos.android.core.common.BuildConfig.API_BASE_URL
         if (buildConfigUrl.startsWith("https://")) {
@@ -346,6 +355,9 @@ class AuthManager @Inject constructor(
     ) {
         cachedAccessToken = accessToken
         cachedRefreshToken = refreshToken
+        cachedUserId = userId
+        cachedTenantId = tenantId
+        cachedUserRole = role
         cachedIsLoggedIn = true
         context.dataStore.edit { prefs ->
             prefs[KEY_ACCESS_TOKEN] = accessToken
@@ -462,6 +474,9 @@ class AuthManager @Inject constructor(
     suspend fun clearSession() {
         cachedAccessToken = null
         cachedRefreshToken = null
+        cachedUserRole = null
+        cachedTenantId = null
+        cachedUserId = null
         cachedIsLoggedIn = false
         context.dataStore.edit {
             it.remove(KEY_ACCESS_TOKEN)

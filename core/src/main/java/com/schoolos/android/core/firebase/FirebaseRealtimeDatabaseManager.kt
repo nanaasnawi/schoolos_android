@@ -47,8 +47,40 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
 
     private val rootRef: DatabaseReference by lazy { database.reference }
 
+    @Volatile
+    private var currentTenantId: String? = null
+
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected.asStateFlow()
+
+    fun setTenantScope(tenantId: String?) {
+        currentTenantId = tenantId?.trim()?.takeIf { it.isNotBlank() }
+    }
+
+    fun clearTenantScope() {
+        currentTenantId = null
+        try {
+            com.google.firebase.auth.FirebaseAuth.getInstance().signOut()
+        } catch (_: Throwable) {}
+    }
+
+    fun authenticateWithCustomToken(customToken: String) {
+        if (customToken.isBlank()) return
+        try {
+            com.google.firebase.auth.FirebaseAuth.getInstance()
+                .signInWithCustomToken(customToken)
+                .addOnFailureListener { err ->
+                    Timber.w(err, "Firebase custom token sign-in notice")
+                }
+        } catch (t: Throwable) {
+            Timber.w(t, "Firebase custom auth unavailable")
+        }
+    }
+
+    private fun scopedInquiriesRoot(): DatabaseReference? {
+        val tid = currentTenantId?.trim()?.takeIf { it.isNotBlank() } ?: return null
+        return rootRef.child("tenants").child(tid).child("inquiries")
+    }
 
     init {
         // Monitor connection status to Firebase RTDB server
@@ -76,8 +108,9 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
         teacherId: String? = null,
         teacherName: String? = null,
     ) {
+        val inquiriesRoot = scopedInquiriesRoot() ?: return
         try {
-            val threadRef = rootRef.child("inquiries").child(threadId)
+            val threadRef = inquiriesRoot.child(threadId)
             val msgRef = threadRef.child("messages").child(message.id)
 
             val msgMap = mutableMapOf<String, Any>(
@@ -151,9 +184,10 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      * Mark thread as read by teacher in Firebase RTDB in real time.
      */
     fun markThreadReadByTeacher(threadId: String) {
+        val inquiriesRoot = scopedInquiriesRoot() ?: return
         try {
             val now = System.currentTimeMillis()
-            val summaryRef = rootRef.child("inquiries").child(threadId).child("summary")
+            val summaryRef = inquiriesRoot.child(threadId).child("summary")
             summaryRef.updateChildren(
                 mapOf(
                     "teacherLastReadAt" to now,
@@ -170,8 +204,9 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      */
     fun setUserPresence(userId: String, userName: String, role: String, isOnline: Boolean) {
         if (userId.isBlank()) return
+        val inquiriesRoot = scopedInquiriesRoot() ?: return
         try {
-            val presenceRef = rootRef.child("inquiries").child("presence").child(userId)
+            val presenceRef = inquiriesRoot.child("presence").child(userId)
             if (isOnline) {
                 val onlineData = mapOf(
                     "userId" to userId,
@@ -207,9 +242,10 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      */
     fun setThreadPresence(threadId: String, role: String, userId: String, userName: String, isOnline: Boolean) {
         if (threadId.isBlank()) return
+        val inquiriesRoot = scopedInquiriesRoot() ?: return
         try {
             val roleKey = role.lowercase()
-            val threadPresenceRef = rootRef.child("inquiries").child(threadId).child("presence").child(roleKey)
+            val threadPresenceRef = inquiriesRoot.child(threadId).child("presence").child(roleKey)
             if (isOnline) {
                 val onlineData = mapOf(
                     "userId" to userId,
@@ -242,10 +278,16 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      * Observe online presence for a specific thread participant in real time.
      */
     fun observeThreadPresence(threadId: String, targetRole: String, targetUserId: String? = null): Flow<Boolean> = callbackFlow {
+        val inquiriesRoot = scopedInquiriesRoot()
+        if (inquiriesRoot == null) {
+            trySend(false)
+            awaitClose { }
+            return@callbackFlow
+        }
         val roleKey = targetRole.lowercase()
-        val threadPresenceRef = rootRef.child("inquiries").child(threadId).child("presence").child(roleKey)
+        val threadPresenceRef = inquiriesRoot.child(threadId).child("presence").child(roleKey)
         val userPresenceRef = if (!targetUserId.isNullOrBlank()) {
-            rootRef.child("inquiries").child("presence").child(targetUserId)
+            inquiriesRoot.child("presence").child(targetUserId)
         } else null
 
         var isThreadPresenceOnline = false
@@ -292,8 +334,9 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      * Sync thread metadata to Firebase RTDB.
      */
     fun syncThreadMetadata(thread: ChatThread) {
+        val inquiriesRoot = scopedInquiriesRoot() ?: return
         try {
-            val threadRef = rootRef.child("inquiries").child(thread.id).child("metadata")
+            val threadRef = inquiriesRoot.child(thread.id).child("metadata")
             val metaMap = mapOf(
                 "id" to thread.id,
                 "studentId" to thread.studentId,
@@ -319,7 +362,13 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      * Returns a map of userId -> isOnline (true if status == "online" and lastSeen < 3 minutes ago).
      */
     fun observeAllPresences(): Flow<Map<String, Boolean>> = callbackFlow {
-        val presenceRef = rootRef.child("inquiries").child("presence")
+        val inquiriesRoot = scopedInquiriesRoot()
+        if (inquiriesRoot == null) {
+            trySend(emptyMap())
+            awaitClose { }
+            return@callbackFlow
+        }
+        val presenceRef = inquiriesRoot.child("presence")
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val now = System.currentTimeMillis()
@@ -348,7 +397,13 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      * Observe real-time messages for a specific inquiry thread.
      */
     fun observeThreadMessages(threadId: String): Flow<List<ChatMessage>> = callbackFlow {
-        val messagesRef = rootRef.child("inquiries").child(threadId).child("messages")
+        val inquiriesRoot = scopedInquiriesRoot()
+        if (inquiriesRoot == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
+        val messagesRef = inquiriesRoot.child(threadId).child("messages")
 
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
@@ -421,8 +476,9 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      * Avoids subscribing to the unscoped root `/inquiries` node across all tenants.
      */
     fun observeThreadSummaries(threadIds: Set<String>): Flow<Map<String, Map<String, Any>>> = callbackFlow {
+        val inquiriesRoot = scopedInquiriesRoot()
         val cleanIds = threadIds.filter { it.isNotBlank() }.toSet()
-        if (cleanIds.isEmpty()) {
+        if (inquiriesRoot == null || cleanIds.isEmpty()) {
             trySend(emptyMap())
             awaitClose { }
             return@callbackFlow
@@ -432,7 +488,7 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
         val listeners = mutableListOf<Pair<DatabaseReference, ValueEventListener>>()
 
         for (threadId in cleanIds) {
-            val summaryRef = rootRef.child("inquiries").child(threadId).child("summary")
+            val summaryRef = inquiriesRoot.child(threadId).child("summary")
             val listener = object : ValueEventListener {
                 override fun onDataChange(snapshot: DataSnapshot) {
                     val itemMap = mutableMapOf<String, Any>("id" to threadId)
@@ -465,7 +521,12 @@ class FirebaseRealtimeDatabaseManager @Inject constructor() {
      * Guaranteed instant discovery of new threads and cross-role communication.
      */
     fun observeAllInquiries(): Flow<List<ChatThread>> = callbackFlow {
-        val inquiriesRef = rootRef.child("inquiries")
+        val inquiriesRef = scopedInquiriesRoot()
+        if (inquiriesRef == null) {
+            trySend(emptyList())
+            awaitClose { }
+            return@callbackFlow
+        }
 
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {

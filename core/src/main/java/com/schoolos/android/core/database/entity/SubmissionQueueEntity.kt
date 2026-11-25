@@ -9,6 +9,8 @@ data class SubmissionQueueEntity(
     @PrimaryKey val id: String = UUID.randomUUID().toString(),
     val assignmentId: String,
     val studentId: String,
+    val tenantId: String = "",
+    val userId: String = "",
     val content: String?,
     val fileUrl: String?,
     val status: String = "PENDING", // PENDING, SYNCING, SYNCED, FAILED

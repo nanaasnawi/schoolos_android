@@ -44,13 +44,25 @@ data class LoginResponse(
 
 @Serializable
 data class RefreshTokenRequest(
-    val refreshToken: String,
+    @SerialName("refresh_token") val refreshToken: String,
 )
 
 @Serializable
 data class RefreshTokenResponse(
-    val accessToken: String,
-    val refreshToken: String,
+    @SerialName("access_token") val accessToken: String = "",
+    @SerialName("refresh_token") val refreshToken: String = "",
+)
+
+@Serializable
+data class LogoutRequest(
+    @SerialName("refresh_token") val refreshToken: String? = null,
+)
+
+@Serializable
+data class FirebaseCustomTokenResponse(
+    @SerialName("custom_token") val customToken: String = "",
+    @SerialName("tenant_id") val tenantId: String = "",
+    @SerialName("expires_in") val expiresIn: Long = 3600,
 )
 
 @Serializable

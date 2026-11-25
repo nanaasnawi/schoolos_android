@@ -98,9 +98,10 @@ class MainActivity : ComponentActivity() {
 
             lifecycleScope.launch {
                 authManager.authState.collect { auth ->
-                    if (auth.isLoggedIn) {
+                    if (auth.isLoggedIn && !auth.tenantId.isNullOrBlank()) {
                         notificationSyncManager.start()
                         com.schoolos.android.notification.SchoolOsFirebaseMessagingService.syncUserTopics(
+                            tenantId = auth.tenantId,
                             userId = auth.userId,
                             classId = auth.classId,
                             role = auth.role,

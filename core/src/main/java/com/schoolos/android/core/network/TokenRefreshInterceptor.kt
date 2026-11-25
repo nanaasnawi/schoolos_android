@@ -16,16 +16,24 @@ import javax.inject.Singleton
 
 @Serializable
 data class RefreshBody(
-    val refreshToken: String,
-    @kotlinx.serialization.SerialName("refresh_token") val refreshTokenSnake: String = refreshToken,
+    @kotlinx.serialization.SerialName("refresh_token") val refreshToken: String,
 )
 
 @Serializable
 data class RefreshResult(
-    val accessToken: String? = null,
-    val refreshToken: String? = null,
     @kotlinx.serialization.SerialName("access_token") val accessTokenSnake: String? = null,
     @kotlinx.serialization.SerialName("refresh_token") val refreshTokenSnake: String? = null,
+    val accessToken: String? = null,
+    val refreshToken: String? = null,
+    val data: RefreshResultData? = null,
+)
+
+@Serializable
+data class RefreshResultData(
+    @kotlinx.serialization.SerialName("access_token") val accessTokenSnake: String? = null,
+    @kotlinx.serialization.SerialName("refresh_token") val refreshTokenSnake: String? = null,
+    val accessToken: String? = null,
+    val refreshToken: String? = null,
 )
 
 @Singleton
@@ -59,22 +67,15 @@ class TokenRefreshInterceptor @Inject constructor(
     override fun authenticate(route: Route?, response: Response): Request? {
         if (response.code != 401) return null
 
-        val userRole = authManager.getUserRoleSync()
-        val isStudent = userRole?.equals("Siswa", ignoreCase = true) == true || userRole?.equals("Student", ignoreCase = true) == true
-
         // Prevent infinite retry loops when authorization is denied
         if (responseCount(response) >= 2) {
-            if (!isStudent) {
-                authManager.clearSessionSync()
-            }
+            authManager.clearSessionSync()
             return null
         }
 
         // Prevent infinite retry loops if the failing request is the refresh endpoint itself
         if (response.request.url.encodedPath.contains("/auth/refresh")) {
-            if (!isStudent) {
-                authManager.clearSessionSync()
-            }
+            authManager.clearSessionSync()
             return null
         }
 
@@ -93,9 +94,7 @@ class TokenRefreshInterceptor @Inject constructor(
 
             val refreshToken = authManager.getRefreshTokenSync()
             if (refreshToken.isNullOrBlank()) {
-                if (!isStudent) {
-                    authManager.clearSessionSync()
-                }
+                authManager.clearSessionSync()
                 return null
             }
 
@@ -110,25 +109,35 @@ class TokenRefreshInterceptor @Inject constructor(
                     .query(null)
                     .build()
 
+                val tenantId = authManager.getTenantIdSync()
                 val refreshRequest = Request.Builder()
                     .url(refreshHttpUrl)
+                    .apply {
+                        if (!tenantId.isNullOrBlank()) {
+                            header("X-Tenant-ID", tenantId)
+                        }
+                    }
                     .post(body.toRequestBody("application/json".toMediaType()))
                     .build()
 
                 refreshClient.newCall(refreshRequest).execute().use { refreshResponse ->
                     if (!refreshResponse.isSuccessful) {
-                        // Any failed refresh attempt means the session token cannot be refreshed; force clear session to redirect to login
-                        if (!isStudent) {
-                            authManager.clearSessionSync()
-                        }
+                        // Any failed refresh attempt (401/403 deactivated, mutated out, reused, or expired) clears the session across all roles.
+                        authManager.clearSessionSync()
                         return null
                     }
 
                     val responseBody = refreshResponse.body?.string() ?: return null
                     val tokenResponse = json.decodeFromString<RefreshResult>(responseBody)
 
-                    val newAccessToken = tokenResponse.accessToken ?: tokenResponse.accessTokenSnake
-                    val newRefreshToken = tokenResponse.refreshToken ?: tokenResponse.refreshTokenSnake
+                    val newAccessToken = tokenResponse.data?.accessTokenSnake
+                        ?: tokenResponse.data?.accessToken
+                        ?: tokenResponse.accessTokenSnake
+                        ?: tokenResponse.accessToken
+                    val newRefreshToken = tokenResponse.data?.refreshTokenSnake
+                        ?: tokenResponse.data?.refreshToken
+                        ?: tokenResponse.refreshTokenSnake
+                        ?: tokenResponse.refreshToken
 
                     if (!newAccessToken.isNullOrBlank()) {
                         authManager.updateTokensSync(
@@ -145,7 +154,7 @@ class TokenRefreshInterceptor @Inject constructor(
                 }
             } catch (e: Exception) {
                 // If it's a network error (IOException/timeout), NEVER clear session so user is not logged out during bad signal!
-                if (e !is java.io.IOException && !isStudent) {
+                if (e !is java.io.IOException) {
                     authManager.clearSessionSync()
                 }
                 null

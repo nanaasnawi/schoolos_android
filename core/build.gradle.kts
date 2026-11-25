@@ -72,6 +72,7 @@ dependencies {
 
     // Firebase
     implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.auth)
     implementation(libs.firebase.database)
 
     // Core
@@ -79,4 +80,6 @@ dependencies {
     implementation(libs.timber)
     api(libs.coil.compose)
     api(libs.coil.svg)
+
+    testImplementation("junit:junit:4.13.2")
 }

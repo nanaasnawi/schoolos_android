@@ -2,6 +2,8 @@ package com.schoolos.android.core.di
 
 import android.content.Context
 import androidx.room.Room
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import com.schoolos.android.core.common.SettingsManager
 import com.schoolos.android.core.database.AppDatabase
 import com.schoolos.android.core.database.dao.AssignmentDao
@@ -24,11 +26,20 @@ object CoreModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
+        val migration12To13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE submission_queue ADD COLUMN tenantId TEXT NOT NULL DEFAULT ''")
+                db.execSQL("ALTER TABLE submission_queue ADD COLUMN userId TEXT NOT NULL DEFAULT ''")
+            }
+        }
         return Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "schoolos.db",
-        ).fallbackToDestructiveMigration().build()
+        )
+            .addMigrations(migration12To13)
+            .fallbackToDestructiveMigration()
+            .build()
     }
 
     @Provides

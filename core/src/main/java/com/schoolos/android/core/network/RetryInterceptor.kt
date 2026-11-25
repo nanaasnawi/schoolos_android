@@ -10,10 +10,26 @@ class RetryInterceptor : Interceptor {
 
     companion object {
         private const val MAX_RETRIES = 1
+
+        fun shouldRetryRequest(method: String, hasIdempotencyKey: Boolean): Boolean {
+            return method.equals("GET", ignoreCase = true) ||
+                method.equals("HEAD", ignoreCase = true) ||
+                method.equals("OPTIONS", ignoreCase = true) ||
+                hasIdempotencyKey
+        }
     }
 
     override fun intercept(chain: Interceptor.Chain): Response {
         val request = chain.request()
+        // Never blindly retry non-idempotent mutations (POST/PATCH/DELETE) unless caller supplied an idempotency key.
+        val hasIdempotencyKey = !request.header("X-Idempotency-Key").isNullOrBlank() ||
+            !request.header("Idempotency-Key").isNullOrBlank()
+        val isSafeToRetry = shouldRetryRequest(request.method, hasIdempotencyKey)
+
+        if (!isSafeToRetry) {
+            return chain.proceed(request)
+        }
+
         var response: Response? = null
         var attempt = 0
 

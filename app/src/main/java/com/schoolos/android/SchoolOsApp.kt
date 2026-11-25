@@ -15,7 +15,20 @@ import timber.log.Timber
 class SchoolOsApp : Application(), ImageLoaderFactory {
 
     override fun newImageLoader(): ImageLoader {
+        val okHttpClient = try {
+            dagger.hilt.android.EntryPointAccessors.fromApplication(
+                this,
+                AuthEntryPoint::class.java
+            ).apiClient().httpClient
+        } catch (_: Throwable) {
+            null
+        }
         return ImageLoader.Builder(this)
+            .apply {
+                if (okHttpClient != null) {
+                    okHttpClient(okHttpClient)
+                }
+            }
             .components {
                 add(CompatSvgDecoder.Factory())
                 add(SvgDecoder.Factory())
@@ -28,6 +41,7 @@ class SchoolOsApp : Application(), ImageLoaderFactory {
     @dagger.hilt.InstallIn(dagger.hilt.components.SingletonComponent::class)
     interface AuthEntryPoint {
         fun authManager(): com.schoolos.android.core.auth.AuthManager
+        fun apiClient(): com.schoolos.android.core.network.ApiClient
     }
 
     override fun onCreate() {
@@ -56,12 +70,7 @@ class SchoolOsApp : Application(), ImageLoaderFactory {
             SystemNotificationHelper.createNotificationChannel(this)
         } catch (_: Throwable) {}
 
-        // Subscribe to all FCM topics early
-        try {
-            com.schoolos.android.notification.SchoolOsFirebaseMessagingService.subscribeAllTopics()
-        } catch (_: Throwable) {}
-
-        // Re-sync user-targeted and class topics immediately if user is already authenticated
+        // Re-sync user-targeted and class topics strictly within the authenticated tenant
         try {
             val entry = dagger.hilt.android.EntryPointAccessors.fromApplication(
                 this,
@@ -70,8 +79,9 @@ class SchoolOsApp : Application(), ImageLoaderFactory {
             val authManager = entry.authManager()
             kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
                 val auth = authManager.authState.first()
-                if (auth.isLoggedIn) {
+                if (auth.isLoggedIn && !auth.tenantId.isNullOrBlank()) {
                     com.schoolos.android.notification.SchoolOsFirebaseMessagingService.syncUserTopics(
+                        tenantId = auth.tenantId,
                         userId = auth.userId,
                         classId = auth.classId,
                         role = auth.role,

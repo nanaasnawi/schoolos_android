@@ -13,51 +13,18 @@ class AuthInterceptor @Inject constructor(
     private val authManager: AuthManager,
 ) : Interceptor {
 
-    private fun isJwtExpired(token: String?): Boolean {
-        if (token.isNullOrBlank()) return true
-        val parts = token.split(".")
-        if (parts.size < 2) return true
-        return try {
-            val payloadBytes = Base64.decode(
-                parts[1],
-                Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP
-            )
-            val json = JSONObject(String(payloadBytes, Charsets.UTF_8))
-            val role = json.optString("role", "")
-            // Students keep permanent sessions on their device until explicit logout
-            if (role.equals("Siswa", ignoreCase = true) || role.equals("Student", ignoreCase = true)) {
-                return false
-            }
-            val storedRole = authManager.getUserRoleSync()
-            if (storedRole?.equals("Siswa", ignoreCase = true) == true || storedRole?.equals("Student", ignoreCase = true) == true) {
-                return false
-            }
-            val exp = json.optLong("exp", 0L)
-            if (exp > 0L) {
-                val nowSeconds = System.currentTimeMillis() / 1000
-                exp <= nowSeconds
-            } else {
-                false
-            }
-        } catch (_: Exception) {
-            false
-        }
-    }
-
     override fun intercept(chain: Interceptor.Chain): Response {
         val original = chain.request()
         val path = original.url.encodedPath
 
-        // Skip auth handling for public login / qr login endpoints
-        if (path.contains("/auth/login") || path.contains("/auth/qr-login")) {
+        // Skip auth handling for public login / qr login / refresh endpoints
+        if (path.contains("/auth/login") || path.contains("/auth/qr-login") || path.contains("/auth/refresh")) {
             return chain.proceed(original)
         }
 
         val token = authManager.getAccessTokenSync()
 
-        // 1. Fail-fast: If access token is present but already expired,
-        // and refresh token is also empty or expired, force-clear session immediately
-        // to avoid sending zombie requests that trigger gateway timeouts.
+        // Only clear session fail-fast if BOTH access token and 90-day refresh token are invalid/expired
         if (!token.isNullOrBlank() && authManager.isJwtExpired(token)) {
             val refreshToken = authManager.getRefreshTokenSync()
             if (refreshToken.isNullOrBlank() || authManager.isJwtExpired(refreshToken)) {
@@ -65,9 +32,15 @@ class AuthInterceptor @Inject constructor(
             }
         }
 
+        val tenantId = authManager.getTenantIdSync()
         val request = if (token != null) {
             original.newBuilder()
                 .header("Authorization", "Bearer $token")
+                .apply {
+                    if (!tenantId.isNullOrBlank()) {
+                        header("X-Tenant-ID", tenantId)
+                    }
+                }
                 .header("X-Request-ID", java.util.UUID.randomUUID().toString())
                 .build()
         } else {
@@ -76,8 +49,7 @@ class AuthInterceptor @Inject constructor(
 
         val response = chain.proceed(request)
 
-        // 2. Automatic logout on 401: If server rejects request with 401 Unauthorized
-        // on a protected endpoint, clear session immediately so the app navigates to the login screen.
+        // If 401 reaches back here (after OkHttp Authenticator tried refreshing or had no refresh token), clear session
         if (response.code == 401 && !path.contains("/auth/")) {
             authManager.clearSessionSync()
         }

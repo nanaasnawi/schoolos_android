@@ -2500,15 +2500,5 @@ private fun isSamePersonName(a: String?, b: String?): Boolean {
     val cleanA = cleanPersonName(a)
     val cleanB = cleanPersonName(b)
     if (cleanA.isBlank() || cleanB.isBlank()) return false
-    if (cleanA == cleanB) return true
-    if (cleanA.startsWith(cleanB) || cleanB.startsWith(cleanA)) return true
-    val tokensA = cleanA.split(" ")
-    val tokensB = cleanB.split(" ")
-    if (tokensA.isNotEmpty() && tokensB.isNotEmpty() && tokensA[0] == tokensB[0]) {
-        if (tokensA.size >= 2 && tokensB.size >= 2) {
-            return tokensA[1] == tokensB[1]
-        }
-        return true
-    }
-    return false
+    return cleanA == cleanB
 }

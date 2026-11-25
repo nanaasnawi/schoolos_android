@@ -2,6 +2,7 @@ package com.schoolos.android.core.reading
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.domain.model.BookReadingItem
 import dagger.hilt.android.qualifiers.ApplicationContext
 import org.json.JSONArray
@@ -14,7 +15,8 @@ import javax.inject.Singleton
 
 @Singleton
 class ReadingHistoryManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val authManager: AuthManager,
 ) {
     private val prefs: SharedPreferences =
         context.getSharedPreferences("schoolos_reading_history", Context.MODE_PRIVATE)
@@ -109,7 +111,9 @@ class ReadingHistoryManager @Inject constructor(
     }
 
     private fun getKey(studentId: String): String {
+        val tenantId = authManager.getTenantIdSync()?.takeIf { it.isNotBlank() } ?: "default_tenant"
+        val userId = authManager.getUserIdSync()?.takeIf { it.isNotBlank() } ?: "anon"
         val safeId = if (studentId.isNotBlank()) studentId else "default_student"
-        return "reading_history_$safeId"
+        return "reading_history_${tenantId}_${userId}_$safeId"
     }
 }

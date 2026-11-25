@@ -21,7 +21,10 @@ interface SchoolOsApi {
     suspend fun changePassword(@Body request: ChangePasswordRequestDto): ApiResponse<Map<String, String>>
 
     @POST("auth/logout")
-    suspend fun logout(): ApiResponse<Map<String, String>>
+    suspend fun logout(@Body request: LogoutRequest = LogoutRequest()): ApiResponse<Map<String, String>>
+
+    @GET("auth/firebase-token")
+    suspend fun getFirebaseCustomToken(): ApiResponse<FirebaseCustomTokenResponse>
 
     @PUT("auth/profile")
     suspend fun updateProfile(@Body request: UpdateProfileRequestDto): ApiResponse<UpdateProfileResponseDto>

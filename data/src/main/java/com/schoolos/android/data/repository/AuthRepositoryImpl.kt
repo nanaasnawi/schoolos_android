@@ -28,7 +28,20 @@ class AuthRepositoryImpl @Inject constructor(
     private val authManager: AuthManager,
     private val appDatabase: AppDatabase,
     private val chatManager: com.schoolos.android.core.chat.ChatManager,
+    private val firebaseRtdbManager: com.schoolos.android.core.firebase.FirebaseRealtimeDatabaseManager,
 ) : AuthRepository {
+
+    private suspend fun syncFirebaseSession(tenantId: String?) {
+        firebaseRtdbManager.setTenantScope(tenantId)
+        try {
+            val fbResp = api.getFirebaseCustomToken().data
+            if (fbResp != null && fbResp.customToken.isNotBlank()) {
+                firebaseRtdbManager.authenticateWithCustomToken(fbResp.customToken)
+            }
+        } catch (e: Exception) {
+            Timber.d(e, "Firebase custom token sync skipped")
+        }
+    }
 
     private suspend fun resolveClassId(explicitClassId: String?, className: String?): String? {
         if (!explicitClassId.isNullOrBlank()) return explicitClassId
@@ -63,6 +76,7 @@ class AuthRepositoryImpl @Inject constructor(
             avatarUrl = data.avatarUrl,
             subject = data.subject,
         )
+        syncFirebaseSession(data.tenantId)
 
         if (!data.schoolName.isNullOrBlank()) {
             authManager.saveSchoolProfile(name = data.schoolName, logoUrl = data.schoolLogoUrl)
@@ -102,6 +116,7 @@ class AuthRepositoryImpl @Inject constructor(
             avatarUrl = data.avatarUrl,
             subject = data.subject,
         )
+        syncFirebaseSession(data.tenantId)
 
         if (!data.schoolName.isNullOrBlank()) {
             authManager.saveSchoolProfile(name = data.schoolName, logoUrl = data.schoolLogoUrl)
@@ -121,10 +136,16 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout() {
         withContext(Dispatchers.IO) {
-            // 1. Invalidate authentication token on server (gracefully with timeout)
+            val currentRefreshToken = authManager.getRefreshToken()
+
+            // 1. Invalidate authentication & refresh token family on server (gracefully with timeout)
             try {
                 kotlinx.coroutines.withTimeoutOrNull(2500) {
-                    api.logout()
+                    api.logout(
+                        com.schoolos.android.data.remote.dto.LogoutRequest(
+                            refreshToken = currentRefreshToken
+                        )
+                    )
                 }
             } catch (_: Exception) {
                 // Ignore if offline or server endpoint not present; local purge must proceed
@@ -133,14 +154,15 @@ class AuthRepositoryImpl @Inject constructor(
             // 2. Invalidate tokens in memory immediately
             authManager.invalidateTokensInMemory()
 
-            // 3. Clear ChatManager state
+            // 3. Clear ChatManager & Firebase RTDB tenant/auth scope
             try {
                 chatManager.clearOnLogout()
             } catch (e: Exception) {
                 Timber.w(e, "Failed clearing ChatManager on logout")
             }
+            firebaseRtdbManager.clearTenantScope()
 
-            // 4. Purge all user-cached tables while preserving unsynced offline submissions in submission_queue
+            // 4. Purge all user-cached tables (unsynced submissions remain isolated by (tenantId, userId))
             try {
                 appDatabase.gradeDao().clearAll()
                 appDatabase.assignmentDao().clearAll()
@@ -151,18 +173,16 @@ class AuthRepositoryImpl @Inject constructor(
                 appDatabase.sessionAttendanceDao().clearAll()
                 appDatabase.sessionDao().clearAll()
                 appDatabase.submissionQueueDao().clearSynced()
-                Timber.i("Local user database tables purged on logout (unsynced submissions preserved)")
+                Timber.i("Local user database tables purged on logout")
             } catch (e: Exception) {
                 Timber.e(e, "Error clearing local database tables during logout")
             }
 
-            // 5. Clear all user-scoped SharedPreferences & cached credentials
+            // 5. Clear user-scoped SharedPreferences (leave schoolos_fcm intact until MainActivity unsubscribes saved topic names cleanly)
             val prefsToClear = listOf(
-                "schoolos_reading_history",
                 "schoolos_notif_sync",
                 "schoolos_notif_dedup",
                 "teacher_schedule_reminders",
-                "schoolos_fcm",
                 "schoolos_topics",
             )
             prefsToClear.forEach { prefName ->
