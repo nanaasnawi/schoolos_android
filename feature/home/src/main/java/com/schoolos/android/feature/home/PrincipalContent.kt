@@ -122,6 +122,7 @@ fun LazyListScope.principalContent(
     totalStudentsCount: String = "0",
     todaySessions: List<LearningSession> = emptyList(),
     teacherAssignments: List<Assignment> = emptyList(),
+    assignmentsReadyToGrade: List<Assignment> = emptyList(),
     teacherAnnouncements: List<Notification> = emptyList(),
     pendingAssignmentsCount: String = "0",
     materialsCount: String = "0",
@@ -233,6 +234,17 @@ fun LazyListScope.principalContent(
                     }
                 }
             }
+        }
+    }
+
+    // ── 0.6. EARLY WARNING TUGAS SIAP DINILAI ──────────────────────────────────
+    if (assignmentsReadyToGrade.isNotEmpty()) {
+        item {
+            GradingReadyWarningCard(
+                readyAssignments = assignmentsReadyToGrade,
+                isPrincipal = true,
+                onClick = onNavigateToAssignments,
+            )
         }
     }
 
@@ -797,7 +809,7 @@ fun LazyListScope.principalContent(
         item {
             PrincipalSectionHeader(
                 title = "Monitoring Tugas Warga Belajar",
-                subtitle = "Rekapitulasi penugasan aktif dari tutor",
+                subtitle = "Rekapitulasi status pengumpulan & tenggat tugas",
                 count = pendingAssignmentsCount.toIntOrNull() ?: teacherAssignments.size,
                 actionLabel = "Lihat Semua",
                 onActionClick = onNavigateToAssignments,
@@ -1393,8 +1405,10 @@ private fun PrincipalAssignmentItemCard(
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
     val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
 
-    val iconBg = if (isDark) Color(0xFF0C243B) else Color(0xFFE0F2FE)
-    val iconTint = if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val emeraldFg = if (isDark) Color(0xFF34D399) else Color(0xFF16A34A)
+    val statusMeta = resolveAssignmentStatusMeta(assignment = assignment, activeAccentColor = emeraldFg)
+    val iconTint = if (statusMeta.isAttentionRequired) statusMeta.color else if (isDark) Color(0xFF38BDF8) else Color(0xFF0284C7)
+    val iconBg = if (statusMeta.isAttentionRequired) statusMeta.color.copy(alpha = if (isDark) 0.16f else 0.12f) else if (isDark) Color(0xFF0C243B) else Color(0xFFE0F2FE)
 
     val subjectLabel = assignment.subjectName?.ifBlank { "Modul" } ?: "Modul"
     val classLabel = formatClassName(assignment.className, "Semua Rombel")
@@ -1487,16 +1501,33 @@ private fun PrincipalAssignmentItemCard(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Outlined.CheckCircle,
-                        contentDescription = null,
-                        tint = textTertiary,
-                        modifier = Modifier.size(12.dp)
-                    )
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(statusMeta.color.copy(alpha = if (isDark) 0.18f else 0.12f))
+                            .border(0.6.dp, statusMeta.color.copy(alpha = 0.35f), RoundedCornerShape(5.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
+                    ) {
+                        Text(
+                            text = statusMeta.label,
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = statusMeta.color,
+                            maxLines = 1,
+                        )
+                    }
+
+                    val subSuffix = when {
+                        assignment.totalStudents > 0 -> " • ${assignment.submittedCount}/${assignment.totalStudents}"
+                        assignment.submittedCount > 0 -> " • ${assignment.submittedCount} Kumpul"
+                        else -> ""
+                    }
                     Text(
-                        text = "Tugas Aktif Tutor • Penugasan Mandiri",
-                        fontSize = 11.sp,
-                        color = textTertiary,
+                        text = "${statusMeta.dueLine}$subSuffix",
+                        fontSize = 10.5.sp,
+                        color = if (statusMeta.isAttentionRequired) statusMeta.color else textTertiary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }

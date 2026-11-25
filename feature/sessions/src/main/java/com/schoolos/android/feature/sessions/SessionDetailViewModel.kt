@@ -36,6 +36,7 @@ data class SessionDetailUiState(
     val updatingStudentId: String? = null,
     val isBulkSaving: Boolean = false,
     val snackbarMessage: String? = null,
+    val isResourcesLoading: Boolean = true,
     val todayMaterials: List<com.schoolos.android.domain.model.LearningMaterial> = emptyList(),
     val todayAssignments: List<com.schoolos.android.domain.model.Assignment> = emptyList(),
 )
@@ -66,16 +67,31 @@ class SessionDetailViewModel @Inject constructor(
 
     fun load() {
         viewModelScope.launch {
-            _state.value = _state.value.copy(isLoading = true, error = null)
+            _state.value = _state.value.copy(
+                isLoading = true,
+                isResourcesLoading = true,
+                error = null,
+            )
             repository.getSession(sessionId)
                 .onSuccess { session ->
                     _state.value = _state.value.copy(isLoading = false, session = session)
-                    loadAttendanceAndStudents(session)
-                    loadSessionResources(session)
+                    kotlinx.coroutines.coroutineScope {
+                        launch { loadAttendanceAndStudents(session) }
+                        launch {
+                            try {
+                                loadSessionResources(session)
+                            } finally {
+                                if (_state.value.isResourcesLoading) {
+                                    _state.value = _state.value.copy(isResourcesLoading = false)
+                                }
+                            }
+                        }
+                    }
                 }
                 .onFailure { e ->
                     _state.value = _state.value.copy(
                         isLoading = false,
+                        isResourcesLoading = false,
                         error = e.toHumanReadableError("Sesi pelajaran tidak ditemukan atau telah berakhir.")
                     )
                 }
@@ -308,6 +324,7 @@ class SessionDetailViewModel @Inject constructor(
         _state.value = _state.value.copy(
             todayMaterials = scopedMaterials,
             todayAssignments = scopedAssignments,
+            isResourcesLoading = false,
         )
     }
 

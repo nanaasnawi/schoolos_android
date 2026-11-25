@@ -472,6 +472,7 @@ fun HomeScreen(
                             totalStudentsCount          = state.totalStudentsCount,
                             todaySessions               = state.todaySessions,
                             teacherAssignments          = state.teacherAssignments,
+                            assignmentsReadyToGrade     = state.assignmentsReadyToGrade,
                             teacherAnnouncements        = state.teacherAnnouncements,
                             pendingAssignmentsCount     = state.teacherPendingCount,
                             materialsCount              = state.teacherMaterialsCount,
@@ -505,6 +506,7 @@ fun HomeScreen(
                             teacherSubjects          = state.teacherSubjects,
                             todaySessions            = state.todaySessions,
                             teacherAssignments       = state.teacherAssignments,
+                            assignmentsReadyToGrade  = state.assignmentsReadyToGrade,
                             teacherAnnouncements     = state.teacherAnnouncements,
                             pendingAssignmentsCount  = state.teacherPendingCount,
                             materialsCount           = state.teacherMaterialsCount,
@@ -579,6 +581,7 @@ fun HomeScreen(
                         studentNisn              = state.userIdentifier,
                         streakDays               = state.streakDays,
                         studentAssignments       = state.studentAssignments,
+                        studyTracker             = state.studyTracker,
                     )
                 }
             }

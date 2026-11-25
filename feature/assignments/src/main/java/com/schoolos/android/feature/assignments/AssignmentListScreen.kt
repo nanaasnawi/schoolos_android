@@ -113,10 +113,11 @@ fun AssignmentListScreen(
     // Tab counts mapping
     val tabCounts = if (isTeacher) {
         mapOf(
-            "Semua" to (state.active.size + state.dueSoon.size + state.scheduled.size),
+            "Semua" to (state.active.size + state.dueSoon.size + state.scheduled.size + state.completed.size),
             "Terjadwal" to state.scheduled.size,
             "Aktif" to state.active.size,
-            "Perlu Dinilai" to state.dueSoon.size
+            "Perlu Dinilai" to state.dueSoon.size,
+            "Berakhir" to state.completed.size
         )
     } else {
         buildMap {
@@ -395,6 +396,7 @@ fun AssignmentListScreen(
                                 activeItems = state.active,
                                 dueSoonItems = state.dueSoon,
                                 scheduledItems = state.scheduled,
+                                closedItems = state.completed,
                                 selectedTab = selectedTab,
                                 onAssignmentClick = onAssignmentClick
                             )
@@ -914,7 +916,7 @@ private fun AssignmentTabFilter(
     }
 
     val tabs = if (isTeacher) {
-        listOf("Semua", "Terjadwal", "Aktif", "Perlu Dinilai")
+        listOf("Semua", "Terjadwal", "Aktif", "Perlu Dinilai", "Berakhir")
     } else {
         buildList {
             add("Semua")

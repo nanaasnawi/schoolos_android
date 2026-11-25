@@ -44,6 +44,7 @@ fun StudentSessionDetailContent(
     onOpenMaterials: (String) -> Unit,
     onOpenMaterialDetail: (String) -> Unit = {},
     onOpenAssignmentDetail: (String) -> Unit = {},
+    isResourcesLoading: Boolean = false,
     todayMaterials: List<com.schoolos.android.domain.model.LearningMaterial> = emptyList(),
     todayAssignments: List<com.schoolos.android.domain.model.Assignment> = emptyList(),
     accentColor: Color,
@@ -297,6 +298,23 @@ fun StudentSessionDetailContent(
         }
 
         // ── 3. REAL-TIME TODAY'S SESSION MATERIALS & ASSIGNMENTS ───────────────
+        if (todayMaterials.isEmpty() && todayAssignments.isEmpty()) {
+            SessionResourcesPlaceholderCard(
+                sectionTitle = "Materi & Tugas Sesi Ini",
+                isResourcesLoading = isResourcesLoading,
+                isTodaySession = isTodaySession,
+                isTeacherView = false,
+                teacherName = session.teacherName,
+                isDark = isDark,
+                cardBg = cardBg,
+                cardBorder = cardBorder,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                textTertiary = textTertiary,
+                accentColor = studentAccent,
+                onActionClick = { onOpenMaterials(session.subjectName?.trim().orEmpty()) },
+            )
+        }
         if (todayMaterials.isNotEmpty() || todayAssignments.isNotEmpty()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),
@@ -509,9 +527,19 @@ fun StudentSessionDetailContent(
                 Spacer(Modifier.height(14.dp))
 
                 if (myAtt == null) {
+                    val emptyAttendanceSubtitle = when {
+                        !isResourcesLoading && todayMaterials.isEmpty() && todayAssignments.isEmpty() && isTodaySession ->
+                            "Guru belum mengunggah materi atau tugas untuk hari ini. Presensi dicatat oleh guru pengampu atau otomatis 'Hadir Daring' setelah materi hari ini tersedia. Jika berhalangan hadir, ajukan Izin/Sakit maksimal 24 jam."
+                        !isResourcesLoading && todayMaterials.isEmpty() && isTodaySession ->
+                            "Guru belum mengunggah materi bacaan hari ini (baru tersedia tugas). Presensi dicatat langsung oleh guru pengampu atau otomatis saat materi tersedia. Jika berhalangan hadir, ajukan Izin/Sakit maksimal 24 jam."
+                        !isResourcesLoading && todayMaterials.isEmpty() ->
+                            "Belum ada catatan kehadiran pada sesi ini. Presensi dicatat langsung oleh guru pengampu atau otomatis saat membaca materi di hari pelaksanaan sesi."
+                        else ->
+                            "Presensi otomatis tercatat 'Hadir Daring' saat Anda membaca materi pelajaran ini hari ini. Jika berhalangan hadir, ajukan Izin/Sakit dalam kurun waktu 24 jam sebelum dinyatakan Alpa."
+                    }
                     EmptyStateContent(
                         message = "Belum Ada Presensi Tercatat",
-                        subtitle = "Presensi otomatis tercatat 'Hadir Daring' saat Anda membaca materi pelajaran ini hari ini. Jika berhalangan hadir, ajukan Izin/Sakit dalam kurun waktu 24 jam sebelum dinyatakan Alpa.",
+                        subtitle = emptyAttendanceSubtitle,
                         accentColor = studentAccent,
                         isDark = isDark,
                         textSecondary = textSecondary,

@@ -362,6 +362,19 @@ interface SchoolOsApi {
         @Query("student_id") studentId: String? = null
     ): ApiResponse<WeeklyActivityDto>
 
+    @GET("learning/progress/tracker")
+    suspend fun getMyStudyTracker(): ApiResponse<com.schoolos.android.data.remote.dto.StudyTrackerDto>
+
+    @GET("learning/progress/student/{student_id}/tracker")
+    suspend fun getStudentStudyTracker(
+        @Path("student_id") studentId: String
+    ): ApiResponse<com.schoolos.android.data.remote.dto.StudyTrackerDto>
+
+    @POST("learning/library/progress")
+    suspend fun updateReadingProgress(
+        @Body request: com.schoolos.android.data.remote.dto.UpdateReadingProgressRequestDto
+    ): ApiResponse<com.schoolos.android.data.remote.dto.ReadingProgressResponseDto>
+
     @GET("learning/progress/student/{student_id}/weekly-activity")
     suspend fun getStudentWeeklyActivity(
         @Path("student_id") studentId: String

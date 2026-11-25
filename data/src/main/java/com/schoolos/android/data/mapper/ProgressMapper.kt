@@ -60,3 +60,36 @@ fun DailyActivityItemDto.toDomain() = DailyActivityItem(
     time = time,
 )
 
+fun StudyTrackerDto.toDomain() = StudyTracker(
+    studentId = studentId,
+    studentName = studentName,
+    history = history.toDomain(),
+    missed = missed.toDomain(),
+    inProgress = inProgress.toDomain(),
+)
+
+fun TrackerCategoryDto.toDomain() = TrackerCategory(
+    key = key,
+    title = title,
+    description = description,
+    totalCount = totalCount,
+    items = items.map { it.toDomain() },
+)
+
+fun TrackerItemDto.toDomain() = StudyTrackerItem(
+    id = id,
+    title = title,
+    itemType = itemType,
+    subType = subType,
+    subjectName = subjectName,
+    progressPercent = progressPercent,
+    score = score,
+    maxScore = maxScore,
+    timestampLabel = timestampLabel,
+    dateIso = dateIso,
+    statusBadge = statusBadge,
+    badgeVariant = badgeVariant,
+    reasonNote = reasonNote,
+    actionUrl = actionUrl,
+)
+

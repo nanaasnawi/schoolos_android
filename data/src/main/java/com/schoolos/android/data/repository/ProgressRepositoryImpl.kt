@@ -4,6 +4,7 @@ import com.schoolos.android.core.auth.AuthManager
 import com.schoolos.android.data.mapper.toDomain
 import com.schoolos.android.data.remote.SchoolOsApi
 import com.schoolos.android.domain.model.Progress
+import com.schoolos.android.domain.model.StudyTracker
 import com.schoolos.android.domain.model.WeeklyActivity
 import com.schoolos.android.domain.repository.ProgressRepository
 import javax.inject.Inject
@@ -64,5 +65,32 @@ class ProgressRepositoryImpl @Inject constructor(
 
         val data = response.data ?: throw IllegalStateException(response.error?.message ?: "Data aktivitas mingguan tidak ditemukan")
         data.toDomain()
+    }
+
+    override suspend fun getStudyTracker(studentId: String?): Result<StudyTracker> = runCatching {
+        val targetStudentId = studentId ?: authManager.getChildId()
+        val response = if (!targetStudentId.isNullOrBlank()) {
+            api.getStudentStudyTracker(targetStudentId)
+        } else {
+            api.getMyStudyTracker()
+        }
+
+        val data = response.data ?: throw IllegalStateException(response.error?.message ?: "Data pusat belajar tidak ditemukan")
+        data.toDomain()
+    }
+
+    override suspend fun updateReadingProgress(
+        materialId: String,
+        currentPage: Int,
+        isCompleted: Boolean,
+    ): Result<Boolean> = runCatching {
+        val response = api.updateReadingProgress(
+            com.schoolos.android.data.remote.dto.UpdateReadingProgressRequestDto(
+                materialId = materialId,
+                currentPage = currentPage,
+                isCompleted = isCompleted,
+            )
+        )
+        response.data != null
     }
 }

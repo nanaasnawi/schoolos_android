@@ -33,6 +33,7 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Quiz
+import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
@@ -143,6 +144,7 @@ fun LazyListScope.teacherContent(
     teacherSubjects: List<AcademicSubject> = emptyList(),
     todaySessions: List<LearningSession> = emptyList(),
     teacherAssignments: List<Assignment> = emptyList(),
+    assignmentsReadyToGrade: List<Assignment> = emptyList(),
     teacherAnnouncements: List<Notification> = emptyList(),
     pendingAssignmentsCount: String = "0",
     materialsCount: String = "0",
@@ -166,6 +168,17 @@ fun LazyListScope.teacherContent(
                 onAddMaterial = onNavigateToLearning,
                 onCreateAssignment = onNavigateToAssignmentCreator,
                 onCreateQuiz = onNavigateToQuizBuilder,
+            )
+        }
+    }
+
+    // ── 0.5. WARNING TUGAS SIAP DINILAI ─────────────────────────────────────────
+    if (assignmentsReadyToGrade.isNotEmpty()) {
+        item {
+            GradingReadyWarningCard(
+                readyAssignments = assignmentsReadyToGrade,
+                isPrincipal = false,
+                onClick = onNavigateToAssignments,
             )
         }
     }
@@ -458,7 +471,7 @@ fun LazyListScope.teacherContent(
     item {
         TeacherSectionHeader(
             title = "Penugasan & Antrean Tugas",
-            subtitle = "Tinjau pengumpulan tugas siswa yang aktif",
+            subtitle = "Pantau pengumpulan tugas dan status tenggat",
             count = teacherAssignments.size,
             actionLabel = "Kelola Semua",
             onActionClick = onNavigateToAssignments,
@@ -473,6 +486,7 @@ fun LazyListScope.teacherContent(
             val innerCardBg = if (isDark) Color(0xFF1B1B1E) else Color(0xFFF8FAFC)
             val textPrimary = if (isDark) Color(0xFFF1F5F9) else Color(0xFF0F172A)
             val textTertiary = if (isDark) Color(0xFF64748B) else Color(0xFF94A3B8)
+            val statusMeta = resolveAssignmentStatusMeta(assignment = assignment, activeAccentColor = TeacherNeon)
 
             Surface(
                 modifier = Modifier
@@ -481,7 +495,7 @@ fun LazyListScope.teacherContent(
                     .clickable(onClick = onNavigateToAssignments),
                 shape = RoundedCornerShape(22.dp),
                 color = cardBg,
-                border = BorderStroke(1.dp, cardBorder),
+                border = BorderStroke(1.dp, if (statusMeta.isAttentionRequired) statusMeta.color.copy(alpha = 0.45f) else cardBorder),
                 shadowElevation = 0.dp,
             ) {
                 Row(
@@ -501,7 +515,7 @@ fun LazyListScope.teacherContent(
                             overflow = TextOverflow.Ellipsis,
                         )
 
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(5.dp))
 
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
@@ -510,50 +524,70 @@ fun LazyListScope.teacherContent(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
+                                    .background(statusMeta.color.copy(alpha = if (isDark) 0.18f else 0.12f))
+                                    .border(0.8.dp, statusMeta.color.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp),
+                            ) {
+                                Text(
+                                    text = statusMeta.label,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = statusMeta.color,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
                                     .background(innerCardBg)
                                     .padding(horizontal = 6.dp, vertical = 2.dp),
                             ) {
                                 Text(
                                     text = formatClassName(assignment.className ?: assignment.subjectName),
-                                    fontSize = 10.5.sp,
+                                    fontSize = 10.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = textTertiary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
                                 )
                             }
-
-                            Text("•", fontSize = 8.sp, color = textTertiary)
-
-                            Text(
-                                text = formatDueDate(assignment.dueAt),
-                                fontSize = 11.sp,
-                                color = textTertiary,
-                            )
                         }
 
-                        if (assignment.createdAt.isNotBlank()) {
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = "Diterbitkan: ${com.schoolos.android.core.common.formatPublishTimestamp(assignment.createdAt)}",
-                                fontSize = 10.5.sp,
-                                color = textTertiary
-                            )
+                        Spacer(Modifier.height(4.dp))
+
+                        val submissionInfo = when {
+                            assignment.totalStudents > 0 -> " • ${assignment.submittedCount}/${assignment.totalStudents} Kumpul"
+                            assignment.submittedCount > 0 -> " • ${assignment.submittedCount} Kumpul"
+                            else -> ""
                         }
+                        Text(
+                            text = "${statusMeta.dueLine}$submissionInfo",
+                            fontSize = 10.5.sp,
+                            fontWeight = if (statusMeta.isAttentionRequired) FontWeight.SemiBold else FontWeight.Normal,
+                            color = if (statusMeta.isAttentionRequired) statusMeta.color else textTertiary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
 
                     Spacer(Modifier.width(10.dp))
 
+                    val actionText = if (assignment.isReadyToGrade) "Nilai" else "Periksa"
+                    val actionColor = if (assignment.isReadyToGrade) NeonWarning else TeacherNeon
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(8.dp))
-                            .background(TeacherNeon.copy(alpha = 0.12f))
-                            .border(1.dp, TeacherNeon.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
+                            .background(actionColor.copy(alpha = 0.12f))
+                            .border(1.dp, actionColor.copy(alpha = 0.35f), RoundedCornerShape(8.dp))
                             .padding(horizontal = 10.dp, vertical = 6.dp),
                     ) {
                         Text(
-                            text = "Periksa",
+                            text = actionText,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = TeacherNeon,
+                            color = actionColor,
                         )
                     }
                 }
@@ -1338,4 +1372,179 @@ private fun formatSubjectAbbreviation(rawSubject: String?): String {
         return formattedParts.joinToString(" & ")
     }
     return abbreviateSingleSubject(s)
+}
+
+internal data class AssignmentCardStatusMeta(
+    val label: String,
+    val color: Color,
+    val dueLine: String,
+    val isAttentionRequired: Boolean,
+)
+
+@Composable
+internal fun resolveAssignmentStatusMeta(
+    assignment: Assignment,
+    activeAccentColor: Color,
+): AssignmentCardStatusMeta {
+    val isScheduled = assignment.isScheduled || assignment.status.equals("draft", ignoreCase = true)
+    val isExpired = !isScheduled && assignment.isExpiredOrClosed
+    val ungraded = assignment.effectiveUngradedCount
+    val dueFormatted = assignment.dueAt?.takeIf { it.isNotBlank() }?.let {
+        com.schoolos.android.core.common.formatPublishTimestamp(it)
+    }
+
+    return when {
+        isScheduled -> AssignmentCardStatusMeta(
+            label = "Terjadwal",
+            color = NeonWarning,
+            dueLine = assignment.releaseAt?.takeIf { it.isNotBlank() }?.let {
+                "Terjadwal: ${com.schoolos.android.core.common.formatPublishTimestamp(it)}"
+            } ?: "Menunggu Jadwal Tayang",
+            isAttentionRequired = false,
+        )
+        assignment.isReadyToGrade -> AssignmentCardStatusMeta(
+            label = if (isExpired) "Siap Dinilai ($ungraded)" else "Perlu Dinilai ($ungraded)",
+            color = NeonWarning,
+            dueLine = if (dueFormatted != null) {
+                "${if (isExpired) "Lewat tenggat" else "Tenggat"}: $dueFormatted"
+            } else {
+                "Menunggu penilaian tutor"
+            },
+            isAttentionRequired = true,
+        )
+        isExpired && assignment.submittedCount > 0 -> AssignmentCardStatusMeta(
+            label = "Selesai Dinilai",
+            color = activeAccentColor,
+            dueLine = dueFormatted?.let { "Lewat tenggat: $it" } ?: "Tenggat berakhir",
+            isAttentionRequired = false,
+        )
+        isExpired -> AssignmentCardStatusMeta(
+            label = "Tenggat Berakhir",
+            color = NeonError,
+            dueLine = dueFormatted?.let { "Lewat tenggat: $it" } ?: "Tenggat berakhir",
+            isAttentionRequired = true,
+        )
+        else -> AssignmentCardStatusMeta(
+            label = "Aktif",
+            color = activeAccentColor,
+            dueLine = formatDueDate(assignment.dueAt),
+            isAttentionRequired = false,
+        )
+    }
+}
+
+@Composable
+internal fun GradingReadyWarningCard(
+    readyAssignments: List<Assignment>,
+    isPrincipal: Boolean,
+    onClick: () -> Unit,
+) {
+    val isDark = LocalIsDarkTheme.current
+    val cardBg = if (isDark) Color(0xFF1F160A) else Color(0xFFFFFBEB)
+    val cardBorder = NeonWarning.copy(alpha = if (isDark) 0.55f else 0.65f)
+    val textPrimary = if (isDark) Color.White else Color(0xFF0F172A)
+    val textSecondary = if (isDark) Color(0xFFD6D3D1) else Color(0xFF475569)
+
+    val totalTasks = readyAssignments.size
+    val totalUngraded = readyAssignments.sumOf { it.effectiveUngradedCount.coerceAtLeast(1) }
+    val pastDueCount = readyAssignments.count { it.isExpiredOrClosed }
+    val topTitle = readyAssignments.firstOrNull()?.title?.ifBlank { "Tugas Siswa" } ?: "Tugas Siswa"
+
+    val title = if (isPrincipal) {
+        "Supervisi: $totalTasks Tugas Siap Dinilai"
+    } else {
+        "Tugas Siap Dinilai ($totalUngraded Berkas)"
+    }
+    val subtitle = when {
+        isPrincipal && pastDueCount > 0 ->
+            "$pastDueCount tugas melewati tenggat (mis. \"$topTitle\") dengan $totalUngraded berkas belum dinilai."
+        isPrincipal ->
+            "$totalUngraded pengumpulan siswa pada $totalTasks tugas menunggu koreksi tutor."
+        pastDueCount > 0 ->
+            "$pastDueCount tugas sudah lewat tenggat (mis. \"$topTitle\") dengan $totalUngraded jawaban siap Anda nilai."
+        else ->
+            "$totalTasks tugas memiliki $totalUngraded jawaban siswa yang siap dikoreksi sekarang."
+    }
+    val actionLabel = if (isPrincipal) "Pantau" else "Nilai"
+
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(22.dp),
+        color = cardBg,
+        border = BorderStroke(1.2.dp, cardBorder),
+        shadowElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(NeonWarning.copy(alpha = 0.18f))
+                    .border(1.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = Icons.Outlined.WarningAmber,
+                    contentDescription = null,
+                    tint = NeonWarning,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Spacer(Modifier.height(2.dp))
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = textSecondary,
+                    lineHeight = 15.sp,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(NeonWarning.copy(alpha = 0.16f))
+                    .border(1.dp, NeonWarning.copy(alpha = 0.4f), RoundedCornerShape(10.dp))
+                    .padding(horizontal = 10.dp, vertical = 6.dp),
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Text(
+                        text = actionLabel,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeonWarning,
+                    )
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                        contentDescription = null,
+                        tint = NeonWarning,
+                        modifier = Modifier.size(12.dp),
+                    )
+                }
+            }
+        }
+    }
 }

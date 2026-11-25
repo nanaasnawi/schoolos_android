@@ -89,6 +89,7 @@ data class HomeUiState(
     val teacherQuizzesCount: String = "0",
     val teacherMaterialsCount: String = "0",
     val teacherAssignments: List<Assignment> = emptyList(),
+    val assignmentsReadyToGrade: List<Assignment> = emptyList(),
     val teacherAnnouncements: List<Notification> = emptyList(),
     val activeSessionSubject: String = "-",
     val activeSessionClass: String = "-",
@@ -116,6 +117,7 @@ data class HomeUiState(
     val gtkSupervisionOverview: GtkSupervisionOverview? = null,
     val userIdentifier: String = "",
     val studentAssignments: List<Assignment> = emptyList(),
+    val studyTracker: com.schoolos.android.domain.model.StudyTracker? = null,
     val streakDays: Int = 5,
     val isExecutingDecision: Boolean = false,
     val isRefreshing: Boolean = false,
@@ -547,6 +549,13 @@ class HomeViewModel @Inject constructor(
                 timber.log.Timber.w(err, "Failed to load student weekly activity")
             }
 
+            // Single Source of Truth: Pusat Belajar & Status Tugas
+            progressRepository.getStudyTracker().onSuccess { tracker ->
+                _state.update { it.copy(studyTracker = tracker) }
+            }.onFailure { err ->
+                timber.log.Timber.w(err, "Failed to load student study tracker")
+            }
+
             val studentEnrolledClass = (currentAuth.className ?: auth.className)?.trim()?.takeIf { it.isNotBlank() && !it.equals("ALL", ignoreCase = true) }
 
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
@@ -556,7 +565,11 @@ class HomeViewModel @Inject constructor(
                         (a.className.isNullOrBlank() && com.schoolos.android.core.designsystem.matchesClassFilter(a.title, studentEnrolledClass))
                     }
                 } else assignments
-                _state.update { it.copy(assignmentsCount = scopedAssignments.size.toString(), studentAssignments = scopedAssignments) }
+                val activePendingCount = scopedAssignments.count { a ->
+                    val isCompleted = a.status.equals("submitted", ignoreCase = true) || a.status.equals("graded", ignoreCase = true)
+                    !isCompleted && !isAssignmentPastDue(a.dueAt)
+                }
+                _state.update { it.copy(assignmentsCount = activePendingCount.toString(), studentAssignments = scopedAssignments) }
             }
 
             quizRepository.getQuizzes(classId = "").onSuccess { quizzes ->
@@ -747,10 +760,7 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(totalStudentsCount = students.size.toString()) }
             }
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
-                _state.update { it.copy(
-                    teacherPendingCount = assignments.size.toString(),
-                    teacherAssignments = assignments.take(4),
-                ) }
+                applyStaffAssignments(assignments)
             }
             notificationRepository.getNotifications(page = 1).onSuccess { notifs ->
                 _state.update { it.copy(
@@ -795,10 +805,7 @@ class HomeViewModel @Inject constructor(
                 _state.update { it.copy(totalStudentsCount = students.size.toString()) }
             }
             assignmentRepository.getAssignments(classId = "").onSuccess { assignments ->
-                _state.update { it.copy(
-                    teacherPendingCount = assignments.size.toString(),
-                    teacherAssignments = assignments.take(4),
-                ) }
+                applyStaffAssignments(assignments)
             }
             notificationRepository.getNotifications(page = 1).onSuccess { notifs ->
                 _state.update { it.copy(
@@ -886,6 +893,27 @@ class HomeViewModel @Inject constructor(
         isSyncInProgress = false
     }
 }
+
+    private fun applyStaffAssignments(assignments: List<Assignment>) {
+        val readyToGrade = assignments
+            .filter { it.isReadyToGrade }
+            .sortedWith(
+                compareByDescending<Assignment> { it.isExpiredOrClosed }
+                    .thenByDescending { it.effectiveUngradedCount }
+            )
+        val activeNotYetReady = assignments.filter { !it.isReadyToGrade && !it.isExpiredOrClosed && !it.isScheduled }
+        val expiredClosedDone = assignments.filter { it.isExpiredOrClosed && !it.isReadyToGrade }
+        val scheduled = assignments.filter { !it.isExpiredOrClosed && it.isScheduled }
+        val prioritized = (readyToGrade + activeNotYetReady + expiredClosedDone + scheduled).distinctBy { it.id }
+
+        _state.update {
+            it.copy(
+                teacherPendingCount = assignments.size.toString(),
+                teacherAssignments = prioritized.take(4),
+                assignmentsReadyToGrade = readyToGrade,
+            )
+        }
+    }
 
     private fun isTeacherSession(session: LearningSession, teacherUserId: String, teacherName: String): Boolean {
         val cleanUserId = teacherUserId.trim()
@@ -995,6 +1023,24 @@ class HomeViewModel @Inject constructor(
         return null
     }
 
+    private fun isAssignmentPastDue(dueAt: String?): Boolean {
+        val raw = dueAt?.trim()?.takeIf { it.isNotEmpty() } ?: return false
+        return try {
+            Instant.parse(raw).isBefore(Instant.now())
+        } catch (_: Exception) {
+            try {
+                ZonedDateTime.parse(raw).toInstant().isBefore(Instant.now())
+            } catch (_: Exception) {
+                try {
+                    LocalDate.parse(raw.substringBefore("T").substringBefore(" "))
+                        .isBefore(LocalDate.now(ZoneId.of("Asia/Jakarta")))
+                } catch (_: Exception) {
+                    false
+                }
+            }
+        }
+    }
+
     private fun parseDate(iso: String): LocalDate? {
         return try {
             Instant.parse(iso).atZone(ZoneId.systemDefault()).toLocalDate()
@@ -1014,6 +1060,17 @@ class HomeViewModel @Inject constructor(
         readingHistoryManager.saveReadingProgress(studentId, item)
         val updatedHistory = readingHistoryManager.getReadingHistory(studentId).filter { !it.isCompleted }
         _state.update { it.copy(activeReadingHistory = updatedHistory) }
+        val targetMaterialId = item.materialId?.trim()?.takeIf { it.isNotEmpty() }
+        if (targetMaterialId != null) {
+            viewModelScope.launch {
+                progressRepository.updateReadingProgress(targetMaterialId, item.currentPage, item.isCompleted)
+                    .onSuccess {
+                        progressRepository.getStudyTracker().onSuccess { tracker ->
+                            _state.update { it.copy(studyTracker = tracker) }
+                        }
+                    }
+            }
+        }
     }
 
     fun startReadingSibiBook(book: LibraryBook): BookReadingItem {
@@ -1036,8 +1093,22 @@ class HomeViewModel @Inject constructor(
     fun markBookCompleted(bookId: String) {
         val studentId = currentAuth.userId ?: ""
         readingHistoryManager.markBookCompleted(studentId, bookId)
-        val updatedHistory = readingHistoryManager.getReadingHistory(studentId).filter { !it.isCompleted }
+        val allHistory = readingHistoryManager.getReadingHistory(studentId)
+        val completedItem = allHistory.firstOrNull { it.id == bookId }
+        val updatedHistory = allHistory.filter { !it.isCompleted }
         _state.update { it.copy(activeReadingHistory = updatedHistory) }
+        val targetMaterialId = completedItem?.materialId?.trim()?.takeIf { it.isNotEmpty() }
+        if (targetMaterialId != null) {
+            viewModelScope.launch {
+                val finalPage = completedItem.endPage ?: completedItem.totalPages
+                progressRepository.updateReadingProgress(targetMaterialId, finalPage, true)
+                    .onSuccess {
+                        progressRepository.getStudyTracker().onSuccess { tracker ->
+                            _state.update { it.copy(studyTracker = tracker) }
+                        }
+                    }
+            }
+        }
     }
 
     fun logout() {

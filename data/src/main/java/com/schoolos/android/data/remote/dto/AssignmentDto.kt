@@ -23,4 +23,9 @@ data class AssignmentDto(
     val questions: List<AssignmentQuestionDto> = emptyList(),
     @SerialName("release_at") val releaseAt: String? = null,
     @SerialName("has_game_questions") val hasGameQuestions: Boolean = false,
+    @SerialName("total_students") val totalStudents: Int? = null,
+    @SerialName("submitted_count") val submittedCount: Int? = null,
+    @SerialName("graded_count") val gradedCount: Int? = null,
+    @SerialName("ungraded_count") val ungradedCount: Int? = null,
+    @SerialName("is_past_due") val isPastDue: Boolean = false,
 )

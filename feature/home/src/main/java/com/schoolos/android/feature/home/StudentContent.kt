@@ -79,6 +79,7 @@ fun LazyListScope.studentContent(
     studentNisn: String = "",
     streakDays: Int = 0,
     studentAssignments: List<Assignment> = emptyList(),
+    studyTracker: com.schoolos.android.domain.model.StudyTracker? = null,
 ) {
     // ── 0. KARTU SAPAAN PERSONAL (GREETING HERO CARD) ────────────────────────
     item {
@@ -266,6 +267,7 @@ fun LazyListScope.studentContent(
             weeklyActivity = weeklyActivity,
             studentAssignments = studentAssignments,
             activeReadingHistory = activeReadingHistory,
+            studyTracker = studyTracker,
             onNavigateToMaterials = onNavigateToLearning,
             onNavigateToAssignments = onNavigateToAssignments,
             onNavigateToQuizzes = onNavigateToQuizzes,
@@ -1651,17 +1653,70 @@ private data class AndroidTrackerItem(
     val statusBadge: String,
     val badgeColor: Color,
     val progressPercent: Int? = null,
+    val score: Double? = null,
+    val maxScore: Double? = null,
     val timestampLabel: String,
     val reasonNote: String? = null,
     val actionLabel: String,
     val rawBook: BookReadingItem? = null,
 )
 
+private fun com.schoolos.android.domain.model.StudyTrackerItem.toAndroidTrackerItem(
+    tabKey: String,
+    activeReadingHistory: List<BookReadingItem>,
+): AndroidTrackerItem {
+    val badgeColor = when (badgeVariant.lowercase()) {
+        "success" -> Color(0xFF10B981)
+        "danger" -> Color(0xFFEF4444)
+        "info" -> Color(0xFF0284C7)
+        else -> Color(0xFFF59E0B)
+    }
+    val actionLabel = when (itemType.uppercase()) {
+        "MATERIAL" -> when (tabKey) {
+            "history" -> "Baca Lagi"
+            "in_progress" -> if ((progressPercent ?: 0) > 0) "Lanjutkan" else "Buka Materi"
+            else -> "Buka Materi"
+        }
+        "ASSIGNMENT" -> when (tabKey) {
+            "in_progress" -> if (statusBadge.contains("Perbaikan", ignoreCase = true)) "Perbaiki Tugas" else "Kirimkan"
+            "missed" -> "Kirimkan"
+            else -> "Lihat Tugas"
+        }
+        "QUIZ" -> when (tabKey) {
+            "in_progress" -> if (statusBadge.contains("Berlangsung", ignoreCase = true)) "Lanjut Ujian" else "Ikuti Kuis"
+            "missed" -> "Ikuti Kuis"
+            else -> "Hasil Kuis"
+        }
+        else -> "Pelajari Materi"
+    }
+    val matchingBook = if (itemType.equals("MATERIAL", ignoreCase = true)) {
+        activeReadingHistory.firstOrNull { it.materialId == id || it.id == id }
+    } else null
+
+    return AndroidTrackerItem(
+        id = id,
+        title = title,
+        subjectName = subjectName,
+        category = itemType.uppercase(),
+        subType = subType.orEmpty(),
+        statusBadge = statusBadge,
+        badgeColor = badgeColor,
+        progressPercent = progressPercent,
+        score = score,
+        maxScore = maxScore,
+        timestampLabel = timestampLabel,
+        reasonNote = reasonNote,
+        actionLabel = actionLabel,
+        rawBook = matchingBook,
+    )
+}
+
 @Composable
 internal fun HomeStudentStudyTrackerWidget(
     weeklyActivity: WeeklyActivity?,
     studentAssignments: List<Assignment>,
     activeReadingHistory: List<BookReadingItem>,
+    studyTracker: com.schoolos.android.domain.model.StudyTracker? = null,
     onNavigateToMaterials: () -> Unit,
     onNavigateToAssignments: () -> Unit,
     onNavigateToQuizzes: () -> Unit,
@@ -1678,15 +1733,21 @@ internal fun HomeStudentStudyTrackerWidget(
     val textSecondary = if (isDark) Color(0xFF94A3B8) else Color(0xFF64748B)
 
     var activeTab by remember { mutableStateOf("missed") } // "missed", "in_progress", "history"
+    var showAllItems by remember(activeTab) { mutableStateOf(false) }
 
     val todayIso = remember {
         try {
-            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).format(Date())
+            SimpleDateFormat("yyyy-MM-dd", Locale.getDefault()).apply {
+                timeZone = TimeZone.getTimeZone("Asia/Jakarta")
+            }.format(Date())
         } catch (_: Exception) { "" }
     }
 
-    // 1. Riwayat Belajar (Selesai dipelajari / dikerjakan)
-    val historyItems = remember(weeklyActivity, studentAssignments, activeReadingHistory) {
+    // 1. Riwayat Belajar (Backend SSOT when available, fallback local weekly + submitted)
+    val historyItems = remember(studyTracker, weeklyActivity, studentAssignments, activeReadingHistory) {
+        if (studyTracker != null) {
+            return@remember studyTracker.history.items.map { it.toAndroidTrackerItem("history", activeReadingHistory) }
+        }
         val list = mutableListOf<AndroidTrackerItem>()
 
         weeklyActivity?.days?.forEach { day ->
@@ -1729,7 +1790,7 @@ internal fun HomeStudentStudyTrackerWidget(
                         progressPercent = 100,
                         timestampLabel = a.updatedAt.take(10),
                         reasonNote = "Lembar tugas sudah diserahkan kepada guru pengampu.",
-                        actionLabel = "Buka Tugas"
+                        actionLabel = "Lihat Tugas"
                     )
                 )
             }
@@ -1738,16 +1799,20 @@ internal fun HomeStudentStudyTrackerWidget(
         list
     }
 
-    // 2. Terlewat / Belum Dikerjakan (Semua tugas yang belum tuntas, baik yang lalu maupun yang sekarang)
-    val missedItems = remember(studentAssignments, todayIso) {
+    // 2. Terlewat (Backend SSOT when available, fallback strictly past-due assignments)
+    val missedItems = remember(studyTracker, studentAssignments, activeReadingHistory, todayIso) {
+        if (studyTracker != null) {
+            return@remember studyTracker.missed.items.map { it.toAndroidTrackerItem("missed", activeReadingHistory) }
+        }
         val list = mutableListOf<AndroidTrackerItem>()
 
         studentAssignments.filter { a ->
             val notCompleted = !a.status.equals("submitted", true) && !a.status.equals("graded", true) && !a.status.equals("returned", true)
-            notCompleted
-        }.forEach { a ->
             val dueIso = a.dueAt?.take(10) ?: ""
             val isPastDue = dueIso.isNotBlank() && dueIso < todayIso
+            notCompleted && isPastDue
+        }.forEach { a ->
+            val dueIso = a.dueAt?.take(10) ?: ""
             list.add(
                 AndroidTrackerItem(
                     id = a.id,
@@ -1755,21 +1820,23 @@ internal fun HomeStudentStudyTrackerWidget(
                     subjectName = a.subjectName ?: "Mata Pelajaran",
                     category = "ASSIGNMENT",
                     subType = a.assignmentType,
-                    statusBadge = if (isPastDue) "Lewat Tenggat" else "Belum Dikerjakan",
-                    badgeColor = if (isPastDue) Color(0xFFEF4444) else Color(0xFFF59E0B),
-                    timestampLabel = if (dueIso.isNotBlank()) "Tenggat: $dueIso" else "Aktif",
-                    reasonNote = if (isPastDue) "Tenggat waktu pengumpulan telah lewat. Segera kerjakan dan serahkan kepada guru." else "Tugas belum kamu kumpulkan. Klik untuk melihat detail dan petunjuk tugas.",
-                    actionLabel = "Kirim Tugas"
+                    statusBadge = "Lewat Tenggat",
+                    badgeColor = Color(0xFFEF4444),
+                    timestampLabel = if (dueIso.isNotBlank()) "Tenggat: $dueIso" else "Lewat Tenggat",
+                    reasonNote = "Tenggat waktu pengumpulan telah lewat. Segera kerjakan dan serahkan kepada guru.",
+                    actionLabel = "Kirimkan"
                 )
             )
         }
 
-        list.sortBy { item -> if (item.statusBadge == "Lewat Tenggat") 0 else 1 }
         list
     }
 
-    // 3. Belum Selesai (Materi dibaca sebagian & revisi guru)
-    val inProgressItems = remember(activeReadingHistory, studentAssignments) {
+    // 3. Belum Selesai (Backend SSOT when available, fallback partial reads + returned + active unexpired assignments)
+    val inProgressItems = remember(studyTracker, activeReadingHistory, studentAssignments, todayIso) {
+        if (studyTracker != null) {
+            return@remember studyTracker.inProgress.items.map { it.toAndroidTrackerItem("in_progress", activeReadingHistory) }
+        }
         val list = mutableListOf<AndroidTrackerItem>()
 
         activeReadingHistory.filter { !it.isCompleted && it.currentPage > 1 }.forEach { b ->
@@ -1803,7 +1870,30 @@ internal fun HomeStudentStudyTrackerWidget(
                     badgeColor = Color(0xFFEF4444),
                     timestampLabel = "Dikembalikan Guru",
                     reasonNote = "Guru pengampu meminta kamu memperbaiki lembar tugas ini dan mengirimkannya kembali.",
-                    actionLabel = "Perbaiki"
+                    actionLabel = "Perbaiki Tugas"
+                )
+            )
+        }
+
+        studentAssignments.filter { a ->
+            val notCompleted = !a.status.equals("submitted", true) && !a.status.equals("graded", true) && !a.status.equals("returned", true)
+            val dueIso = a.dueAt?.take(10) ?: ""
+            val isPastDue = dueIso.isNotBlank() && dueIso < todayIso
+            notCompleted && !isPastDue
+        }.forEach { a ->
+            val dueIso = a.dueAt?.take(10) ?: ""
+            list.add(
+                AndroidTrackerItem(
+                    id = a.id,
+                    title = a.title,
+                    subjectName = a.subjectName ?: "Mata Pelajaran",
+                    category = "ASSIGNMENT",
+                    subType = a.assignmentType,
+                    statusBadge = "Belum Dikerjakan",
+                    badgeColor = Color(0xFFF59E0B),
+                    timestampLabel = if (dueIso.isNotBlank()) "Tenggat: $dueIso" else "Tugas Aktif",
+                    reasonNote = "Tugas aktif belum kamu kumpulkan. Buka untuk melihat petunjuk dan soal.",
+                    actionLabel = "Kirimkan"
                 )
             )
         }
@@ -1863,6 +1953,10 @@ internal fun HomeStudentStudyTrackerWidget(
             }
 
             // 3 Shortcut Tabs: Terlewat (Kiri), Belum Selesai (Tengah), Riwayat Belajar (Kanan)
+            val missedCount = studyTracker?.missed?.totalCount ?: missedItems.size
+            val inProgressCount = studyTracker?.inProgress?.totalCount ?: inProgressItems.size
+            val historyCount = studyTracker?.history?.totalCount ?: historyItems.size
+
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -1871,7 +1965,7 @@ internal fun HomeStudentStudyTrackerWidget(
                 TrackerShortcutTab(
                     title = "Terlewat",
                     subtitle = "Perlu dikejar",
-                    count = missedItems.size,
+                    count = missedCount,
                     isSelected = activeTab == "missed",
                     accentColor = Color(0xFFEF4444),
                     modifier = Modifier.weight(1f),
@@ -1882,7 +1976,7 @@ internal fun HomeStudentStudyTrackerWidget(
                 TrackerShortcutTab(
                     title = "Belum Selesai",
                     subtitle = "Lanjut belajar",
-                    count = inProgressItems.size,
+                    count = inProgressCount,
                     isSelected = activeTab == "in_progress",
                     accentColor = Color(0xFFF59E0B),
                     modifier = Modifier.weight(1f),
@@ -1893,7 +1987,7 @@ internal fun HomeStudentStudyTrackerWidget(
                 TrackerShortcutTab(
                     title = "Riwayat Belajar",
                     subtitle = "Sudah tuntas",
-                    count = historyItems.size,
+                    count = historyCount,
                     isSelected = activeTab == "history",
                     accentColor = Color(0xFF10B981),
                     modifier = Modifier.weight(1f),
@@ -1901,11 +1995,36 @@ internal fun HomeStudentStudyTrackerWidget(
                 )
             }
 
-            // Tab Content List
+            // Tab Header Description + Content List
             val currentItems = when (activeTab) {
                 "missed" -> missedItems
                 "in_progress" -> inProgressItems
                 else -> historyItems
+            }
+            val currentTabTitle = when (activeTab) {
+                "missed" -> "${studyTracker?.missed?.title ?: "Terlewat"} ($missedCount)"
+                "in_progress" -> "${studyTracker?.inProgress?.title ?: "Belum Selesai"} ($inProgressCount)"
+                else -> "${studyTracker?.history?.title ?: "Riwayat Belajar"} ($historyCount)"
+            }
+            val currentTabDesc = when (activeTab) {
+                "missed" -> studyTracker?.missed?.description ?: "Materi sebelum hari ini, tugas lewat tenggat, dan kuis/sesi yang terlewat."
+                "in_progress" -> studyTracker?.inProgress?.description ?: "Materi hari ini atau sedang dibaca, tugas aktif/revisi guru, & kuis aktif."
+                else -> studyTracker?.history?.description ?: "Materi yang sudah tuntas kamu pelajari serta tugas dan kuis yang selesai."
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(
+                    text = currentTabTitle,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textPrimary,
+                )
+                Text(
+                    text = currentTabDesc,
+                    fontSize = 10.5.sp,
+                    lineHeight = 14.sp,
+                    color = textSecondary,
+                )
             }
 
             val emptyMessage = when (activeTab) {
@@ -1936,8 +2055,9 @@ internal fun HomeStudentStudyTrackerWidget(
                     }
                 }
             } else {
+                val visibleItems = if (showAllItems) currentItems else currentItems.take(5)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    currentItems.take(5).forEach { item ->
+                    visibleItems.forEach { item ->
                         Surface(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -2095,8 +2215,44 @@ internal fun HomeStudentStudyTrackerWidget(
                                         fontSize = 10.sp,
                                         color = textSecondary
                                     )
+                                    if (item.score != null) {
+                                        val scoreText = if (item.maxScore != null && item.maxScore > 0) {
+                                            "Nilai: ${item.score.toInt()}/${item.maxScore.toInt()}"
+                                        } else {
+                                            "Nilai: ${item.score.toInt()}"
+                                        }
+                                        Text(
+                                            text = scoreText,
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = Color(0xFF10B981)
+                                        )
+                                    }
                                 }
                             }
+                        }
+                    }
+
+                    if (currentItems.size > 5) {
+                        Surface(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(12.dp))
+                                .clickable { showAllItems = !showAllItems },
+                            shape = RoundedCornerShape(12.dp),
+                            color = if (isDark) Color(0xFF161618) else Color(0xFFF8FAFC),
+                            border = BorderStroke(1.dp, if (isDark) Color(0xFF27272A) else cardBorder)
+                        ) {
+                            Text(
+                                text = if (showAllItems) "Tampilkan Lebih Sedikit" else "Lihat Semua (${currentItems.size})",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF6366F1),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 9.dp)
+                            )
                         }
                     }
                 }

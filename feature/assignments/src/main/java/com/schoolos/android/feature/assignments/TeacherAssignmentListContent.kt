@@ -32,6 +32,7 @@ fun LazyListScope.teacherAssignmentListContent(
     activeItems: List<Assignment>,
     dueSoonItems: List<Assignment>,
     scheduledItems: List<Assignment> = emptyList(),
+    closedItems: List<Assignment> = emptyList(),
     selectedTab: String,
     onAssignmentClick: (String) -> Unit
 ) {
@@ -39,24 +40,70 @@ fun LazyListScope.teacherAssignmentListContent(
     val showScheduled = showAll || selectedTab == "Terjadwal"
     val showDueSoon = showAll || selectedTab == "Perlu Dinilai"
     val showActive = showAll || selectedTab == "Aktif"
+    val showClosed = showAll || selectedTab == "Berakhir"
 
     val hasAnyItems = (showScheduled && scheduledItems.isNotEmpty()) ||
             (showDueSoon && dueSoonItems.isNotEmpty()) ||
-            (showActive && activeItems.isNotEmpty())
+            (showActive && activeItems.isNotEmpty()) ||
+            (showClosed && closedItems.isNotEmpty())
 
     if (!hasAnyItems) {
         item {
             TeacherAssignmentEmptyState(selectedTab = selectedTab)
         }
     } else {
-        if (showScheduled && scheduledItems.isNotEmpty()) {
-            renderTeacherSection("Draf Terjadwal", scheduledItems, onAssignmentClick)
+        if ((showAll || selectedTab == "Perlu Dinilai") && dueSoonItems.isNotEmpty()) {
+            val totalUngraded = dueSoonItems.sumOf { it.effectiveUngradedCount }
+            item {
+                val isDark = LocalIsDarkTheme.current
+                val warningBg = if (isDark) Color(0xFF31220A) else Color(0xFFFFFBEB)
+                val warningBorder = if (isDark) Color(0xFFFBBF24).copy(alpha = 0.45f) else Color(0xFFFCD34D)
+                val warningFg = if (isDark) Color(0xFFFBBF24) else Color(0xFFB45309)
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(16.dp),
+                    color = warningBg,
+                    border = BorderStroke(1.dp, warningBorder),
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    ) {
+                        Icon(
+                            painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
+                            contentDescription = null,
+                            tint = warningFg,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Peringatan Penilaian: ${dueSoonItems.size} Tugas Siap Dinilai",
+                                fontSize = 12.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = warningFg,
+                            )
+                            Text(
+                                text = "$totalUngraded jawaban siswa menunggu pemeriksaan & input nilai.",
+                                fontSize = 11.sp,
+                                color = warningFg.copy(alpha = 0.88f),
+                            )
+                        }
+                    }
+                }
+            }
         }
         if (showDueSoon && dueSoonItems.isNotEmpty()) {
             renderTeacherSection("Perlu Dinilai", dueSoonItems, onAssignmentClick)
         }
         if (showActive && activeItems.isNotEmpty()) {
             renderTeacherSection("Tugas Berjalan", activeItems, onAssignmentClick)
+        }
+        if (showScheduled && scheduledItems.isNotEmpty()) {
+            renderTeacherSection("Draf Terjadwal", scheduledItems, onAssignmentClick)
+        }
+        if (showClosed && closedItems.isNotEmpty()) {
+            renderTeacherSection("Tenggat Berakhir", closedItems, onAssignmentClick)
         }
     }
 }
@@ -73,8 +120,9 @@ private fun TeacherAssignmentEmptyState(selectedTab: String) {
 
     val (title, subtitle) = when (selectedTab) {
         "Terjadwal" -> "Tidak Ada Tugas Terjadwal" to "Belum ada draf penugasan terjadwal untuk rombel ini."
-        "Aktif" -> "Tidak Ada Tugas Berjalan" to "Belum ada penugasan yang sedang aktif saat ini."
-        "Perlu Dinilai" -> "Semua Tugas Sudah Dinilai" to "Tidak ada tugas siswa yang menunggu penilaian."
+        "Aktif" -> "Tidak Ada Tugas Berjalan" to "Belum ada penugasan yang sedang aktif sebelum tenggat waktu."
+        "Perlu Dinilai" -> "Semua Tugas Sudah Dinilai" to "Tidak ada jawaban siswa yang menunggu penilaian."
+        "Berakhir" -> "Belum Ada Tugas Berakhir" to "Belum ada tugas yang melewati tenggat waktu."
         else -> "Tugas Tidak Ditemukan" to "Belum ada penugasan pada kategori ini."
     }
 
@@ -209,6 +257,26 @@ private fun TeacherAssignmentCard(
         shadowElevation = 0.dp
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            val isScheduled = assignment.isScheduled || assignment.status.equals("draft", ignoreCase = true)
+            val isExpired = !isScheduled && assignment.isExpiredOrClosed
+            val ungraded = assignment.effectiveUngradedCount
+            val isReadyToGrade = assignment.isReadyToGrade
+            val statusLabel = when {
+                isScheduled -> "Terjadwal"
+                isReadyToGrade && isExpired -> "Siap Dinilai ($ungraded)"
+                isReadyToGrade -> "Perlu Dinilai ($ungraded)"
+                isExpired && assignment.submittedCount > 0 -> "Selesai Dinilai"
+                isExpired -> "Tenggat Berakhir"
+                else -> "Aktif"
+            }
+            val statusColor = when {
+                isReadyToGrade -> NeonWarning
+                isExpired && assignment.submittedCount > 0 -> teacherAccentColor
+                isExpired -> Color(0xFFEF4444)
+                isScheduled -> NeonWarning
+                else -> teacherAccentColor
+            }
+
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -217,14 +285,14 @@ private fun TeacherAssignmentCard(
                     modifier = Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (isDark) Color(0xFF064E3B).copy(alpha = 0.35f) else Color(0xFFECFDF5))
-                        .border(1.dp, if (isDark) Color(0xFF10B981).copy(alpha = 0.4f) else Color(0xFFA7F3D0), RoundedCornerShape(12.dp)),
+                        .background(statusColor.copy(alpha = if (isDark) 0.18f else 0.12f))
+                        .border(1.dp, statusColor.copy(alpha = 0.38f), RoundedCornerShape(12.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
                         painter = painterResource(id = CoreR.drawable.ic_modern_tasks),
                         contentDescription = null,
-                        tint = teacherAccentColor,
+                        tint = statusColor,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -257,10 +325,71 @@ private fun TeacherAssignmentCard(
                         overflow = TextOverflow.Ellipsis
                     )
 
-                    val isScheduled = assignment.isScheduled || assignment.status == "draft"
-                    val targetDate = if (isScheduled) assignment.releaseAt ?: assignment.createdAt else assignment.createdAt
+                    Spacer(Modifier.height(6.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .background(statusColor.copy(alpha = if (isDark) 0.18f else 0.12f))
+                                .border(0.8.dp, statusColor.copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                .padding(horizontal = 7.dp, vertical = 2.dp)
+                        ) {
+                            Text(
+                                text = statusLabel,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = statusColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        if (assignment.submittedCount > 0 || assignment.totalStudents > 0) {
+                            val subText = if (assignment.totalStudents > 0) {
+                                "${assignment.submittedCount}/${assignment.totalStudents} Kumpul"
+                            } else {
+                                "${assignment.submittedCount} Kumpul"
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(innerCardBg)
+                                    .border(0.8.dp, innerCardBorder, RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = subText,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = textSecondary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    val targetDate = when {
+                        isScheduled -> assignment.releaseAt ?: assignment.createdAt
+                        !assignment.dueAt.isNullOrBlank() -> assignment.dueAt!!
+                        else -> assignment.createdAt
+                    }
                     if (targetDate.isNotBlank()) {
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(5.dp))
+                        val dateTint = when {
+                            isScheduled -> NeonWarning
+                            isReadyToGrade -> NeonWarning
+                            isExpired -> Color(0xFFEF4444)
+                            else -> textTertiary
+                        }
+                        val datePrefix = when {
+                            isScheduled -> "Terjadwal"
+                            !assignment.dueAt.isNullOrBlank() -> if (isExpired) "Lewat tenggat" else "Tenggat"
+                            else -> "Diterbitkan"
+                        }
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(5.dp)
@@ -268,18 +397,14 @@ private fun TeacherAssignmentCard(
                             Icon(
                                 painter = painterResource(id = CoreR.drawable.ic_modern_clock),
                                 contentDescription = null,
-                                tint = if (isScheduled) NeonWarning else textTertiary,
+                                tint = dateTint,
                                 modifier = Modifier.size(12.dp)
                             )
                             Text(
-                                text = if (isScheduled) {
-                                    "Terjadwal: ${formatPublishTimestamp(targetDate)}"
-                                } else {
-                                    "Diterbitkan: ${formatPublishTimestamp(targetDate)}"
-                                },
+                                text = "$datePrefix: ${formatPublishTimestamp(targetDate)}",
                                 fontSize = 10.5.sp,
-                                fontWeight = FontWeight.Normal,
-                                color = if (isScheduled) NeonWarning else textTertiary,
+                                fontWeight = if (isReadyToGrade || isExpired) FontWeight.SemiBold else FontWeight.Normal,
+                                color = dateTint,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )

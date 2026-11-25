@@ -47,6 +47,7 @@ fun TeacherSessionDetailContent(
     onOpenMaterials: (String) -> Unit,
     onOpenMaterialDetail: (String) -> Unit = {},
     onOpenAssignmentDetail: (String) -> Unit = {},
+    isResourcesLoading: Boolean = false,
     todayMaterials: List<com.schoolos.android.domain.model.LearningMaterial> = emptyList(),
     todayAssignments: List<com.schoolos.android.domain.model.Assignment> = emptyList(),
     accentColor: Color,
@@ -252,6 +253,23 @@ fun TeacherSessionDetailContent(
         }
 
         // ── 3. BAHAN AJAR & TUGAS SESI INI ─────────────────────────────
+        if (todayMaterials.isEmpty() && todayAssignments.isEmpty()) {
+            SessionResourcesPlaceholderCard(
+                sectionTitle = "Bahan Ajar & Tugas Sesi Ini",
+                isResourcesLoading = isResourcesLoading,
+                isTodaySession = isTodaySession,
+                isTeacherView = true,
+                teacherName = session.teacherName,
+                isDark = isDark,
+                cardBg = cardBg,
+                cardBorder = cardBorder,
+                textPrimary = textPrimary,
+                textSecondary = textSecondary,
+                textTertiary = textTertiary,
+                accentColor = skyFg,
+                onActionClick = { onOpenMaterials(subjectArg) },
+            )
+        }
         if (todayMaterials.isNotEmpty() || todayAssignments.isNotEmpty()) {
             Surface(
                 modifier = Modifier.fillMaxWidth(),

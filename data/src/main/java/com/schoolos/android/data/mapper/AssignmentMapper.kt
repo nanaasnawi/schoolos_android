@@ -63,6 +63,11 @@ fun AssignmentDto.toDomain() = Assignment(
     questions = questions.map { it.toDomain() },
     releaseAt = releaseAt,
     hasGameQuestions = hasGameQuestions,
+    totalStudents = totalStudents ?: 0,
+    submittedCount = submittedCount ?: 0,
+    gradedCount = gradedCount ?: 0,
+    ungradedCount = ungradedCount ?: 0,
+    isPastDue = isPastDue,
 )
 
 fun SubmissionDto.toDomain() = AssignmentSubmission(

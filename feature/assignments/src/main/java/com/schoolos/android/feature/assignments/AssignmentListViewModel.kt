@@ -200,26 +200,37 @@ class AssignmentListViewModel @Inject constructor(
         val dueSoon = mutableListOf<Assignment>()
         val completed = mutableListOf<Assignment>()
         val scheduled = mutableListOf<Assignment>()
+        val isStaff = isTeacher || isPrincipal
 
         for (a in assignments) {
-            if (a.isScheduled || a.status == "draft") {
+            if (a.isScheduled || a.status.equals("draft", ignoreCase = true)) {
                 scheduled.add(a)
                 continue
             }
-            when (a.status) {
-                "submitted", "graded" -> completed.add(a)
-                else -> {
-                    val dueAt = a.dueAt?.let {
-                        try {
-                            Instant.parse(it)
-                        } catch (_: Exception) {
-                            null
+            if (isStaff) {
+                when {
+                    a.isReadyToGrade -> dueSoon.add(a)
+                    a.isExpiredOrClosed -> completed.add(a)
+                    else -> active.add(a)
+                }
+            } else {
+                when (a.status.lowercase()) {
+                    "submitted", "graded" -> completed.add(a)
+                    else -> {
+                        val dueAt = a.dueAt?.let {
+                            try {
+                                Instant.parse(it)
+                            } catch (_: Exception) {
+                                try {
+                                    java.time.ZonedDateTime.parse(it).toInstant()
+                                } catch (_: Exception) { null }
+                            }
                         }
-                    }
-                    if (dueAt != null && ChronoUnit.DAYS.between(now, dueAt) <= 3 && ChronoUnit.DAYS.between(now, dueAt) >= 0) {
-                        dueSoon.add(a)
-                    } else {
-                        active.add(a)
+                        if (dueAt != null && ChronoUnit.DAYS.between(now, dueAt) <= 3 && ChronoUnit.DAYS.between(now, dueAt) >= 0) {
+                            dueSoon.add(a)
+                        } else {
+                            active.add(a)
+                        }
                     }
                 }
             }
@@ -227,8 +238,12 @@ class AssignmentListViewModel @Inject constructor(
 
         return Grouped(
             active = active.sortedByDescending { it.createdAt },
-            dueSoon = dueSoon.sortedByDescending { it.createdAt },
-            completed = completed.sortedByDescending { it.updatedAt },
+            dueSoon = dueSoon.sortedWith(
+                compareByDescending<Assignment> { it.isExpiredOrClosed }
+                    .thenByDescending { it.effectiveUngradedCount }
+                    .thenByDescending { it.createdAt }
+            ),
+            completed = completed.sortedByDescending { it.dueAt ?: it.updatedAt },
             scheduled = scheduled.sortedByDescending { it.releaseAt ?: it.createdAt },
         )
     }

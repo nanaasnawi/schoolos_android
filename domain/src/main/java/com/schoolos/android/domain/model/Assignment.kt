@@ -20,6 +20,11 @@ data class Assignment(
     val questions: List<AssignmentQuestion> = emptyList(),
     val releaseAt: String? = null,
     val hasGameQuestions: Boolean = false,
+    val totalStudents: Int = 0,
+    val submittedCount: Int = 0,
+    val gradedCount: Int = 0,
+    val ungradedCount: Int = 0,
+    val isPastDue: Boolean = false,
 ) {
     val hasAnyGame: Boolean
         get() = hasGameQuestions || questions.any {
@@ -30,4 +35,27 @@ data class Assignment(
         get() = status.equals("draft", ignoreCase = true) || (!releaseAt.isNullOrBlank() && try {
             java.time.Instant.parse(releaseAt).isAfter(java.time.Instant.now())
         } catch (_: Exception) { false })
+
+    val isExpiredOrClosed: Boolean
+        get() = isPastDue ||
+            status.equals("closed", ignoreCase = true) ||
+            status.equals("archived", ignoreCase = true) ||
+            (!dueAt.isNullOrBlank() && try {
+                java.time.Instant.parse(dueAt).isBefore(java.time.Instant.now())
+            } catch (_: Exception) {
+                try {
+                    java.time.ZonedDateTime.parse(dueAt).toInstant().isBefore(java.time.Instant.now())
+                } catch (_: Exception) {
+                    try {
+                        java.time.LocalDate.parse(dueAt.substringBefore("T").substringBefore(" "))
+                            .isBefore(java.time.LocalDate.now(java.time.ZoneId.of("Asia/Jakarta")))
+                    } catch (_: Exception) { false }
+                }
+            })
+
+    val effectiveUngradedCount: Int
+        get() = if (ungradedCount > 0) ungradedCount else (submittedCount - gradedCount).coerceAtLeast(0)
+
+    val isReadyToGrade: Boolean
+        get() = !isScheduled && effectiveUngradedCount > 0
 }
